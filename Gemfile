@@ -65,6 +65,10 @@ end
 group :development do
   # Use console on exceptions pages [https://github.com/rails/web-console]
   gem "web-console"
+
+  # Live reload en desarrollo: refresca el navegador al guardar vistas/CSS/JS
+  # (morph de HTML + recarga de CSS en caliente). Usa Action Cable.
+  gem "hotwire-spark"
 end
 
 group :test do
