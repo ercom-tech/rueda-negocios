@@ -1,21 +1,47 @@
-<% content_for :title, "Inicio · Rueda de Negocios" %>
+<% content_for :title, "Menú · Rueda de Negocios" %>
 
-<div class="mx-auto max-w-3xl">
-  <h1 class="text-2xl font-bold text-neutral-900">Rueda de Negocios</h1>
+<div class="relative min-h-screen w-full overflow-hidden bg-black">
+  <%# Patrón de herramientas a todo lo ancho (mismo asset que el login) %>
+  <div class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.18]"
+       style="background-image: url('<%= image_path "tools_pattern_white.svg" %>');"></div>
 
-  <% if @active_round %>
-    <p class="mt-2 text-neutral-600">
-      Rueda activa: <span class="font-semibold"><%= @active_round.name %></span>
-      <% if @active_round.starts_on && @active_round.ends_on %>
-        · <%= @active_round.starts_on.strftime("%d") %>–<%= @active_round.ends_on.strftime("%d de %B de %Y") %>
-      <% end %>
-    </p>
-  <% else %>
-    <p class="mt-2 text-neutral-600">No hay una rueda activa cargada todavía.</p>
-  <% end %>
+  <div class="relative z-10 flex min-h-screen flex-col px-6 py-6 sm:px-10 lg:px-[7%] lg:py-8">
+    <%# ── Barra superior: logo + pills de contexto + cerrar sesión ── %>
+    <header class="flex flex-wrap items-center justify-between gap-4">
+      <%= image_tag "fecego_logo_white.png", alt: "FECEGO", class: "h-14 w-auto" %>
 
-  <p class="mt-6 text-sm text-neutral-500">
-    Placeholder de inicio. La navegación (productos, clientes, etc.) llega en los
-    siguientes arcos.
-  </p>
+      <div class="flex flex-wrap items-center gap-3 text-sm">
+        <span class="rounded-full bg-[#F4EEDB] px-5 py-2.5 text-neutral-800">
+          Usuario: <span class="font-semibold"><%= current_user.full_name.presence || current_user.username %></span>
+        </span>
+        <span class="rounded-full bg-[#F4EEDB] px-5 py-2.5 text-neutral-800">
+          Proveedor: <span class="font-semibold"><%= @supplier_name.presence || "—" %></span>
+        </span>
+        <%= button_to "Cerrar sesión", logout_path, method: :delete,
+              class: "rounded-full bg-neutral-400 px-5 py-2.5 font-semibold text-neutral-900 transition-colors hover:bg-neutral-300" %>
+      </div>
+    </header>
+
+    <%# ── Contenido: izq (título + ilustración) · der (tarjetas) ── %>
+    <div class="grid flex-1 items-center gap-10 py-10 lg:grid-cols-2 lg:gap-14">
+      <div>
+        <h1 class="text-5xl font-extrabold leading-[1.03] text-white sm:text-6xl">
+          ¿Qué quieres<br>hacer hoy?
+        </h1>
+        <%= image_tag "expo_illustration.svg", alt: "Expo · Rueda de Negocios",
+              class: "mt-12 w-full max-w-lg" %>
+      </div>
+
+      <div class="flex flex-col gap-5">
+        <%= render "menu_card", href: "#", accent: :coral, icon: "icon_register_order.svg",
+              title: "Registrar pedido", desc: "Envía pedidos confirmados directamente a surtido." %>
+        <%= render "menu_card", href: "#", accent: :yellow, icon: "icon_sales_reports.svg",
+              title: "Reportes de venta", desc: "Visualiza tus métricas y resultados del evento." %>
+        <%= render "menu_card", href: "#", accent: :yellow, icon: "icon_client_attendance.svg",
+              title: "Asistencia de clientes", desc: "Monitorea qué clientes ya fueron atendidos y cuáles siguen pendientes." %>
+        <%= render "menu_card", href: "#", accent: :yellow, icon: "icon_generate_quote.svg",
+              title: "Generar cotización", desc: "Simula el pedido de tu cliente antes de confirmar la compra." %>
+      </div>
+    </div>
+  </div>
 </div>

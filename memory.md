@@ -13,9 +13,11 @@ descubrimiento del esquema de **pedidos** (sync-up, alta en ERP).
 **Fase A COMPLETADA** (app `rueda-negocios`): `rails new` + modelos del dataset
 local, migrado y validado.
 
-**Fase B — arco LOGIN COMPLETADO**: autenticación de capturistas (bcrypt del
-ERP) + pantalla de login con el diseño de referencia. La navegación de catálogos
-se hará en arcos siguientes, que el usuario irá indicando pantalla por pantalla.
+**Fase B — arcos LOGIN y MENÚ COMPLETADOS**: autenticación de capturistas
+(bcrypt del ERP) + login, y el **menú** (`home#index`, "¿Qué quieres hacer hoy?")
+con 4 opciones. Las pantallas de cada opción llegan en arcos siguientes, que el
+usuario irá indicando una por una. Commit inicial: login. Diseños desde
+`docs/design-reference/{login,menu}`.
 
 ## Decisiones tomadas
 
@@ -108,12 +110,28 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
   se reemplaza cuando lleguen las pantallas de navegación.
 - **Tests:** `test/integration/authentication_flow_test.rb` (5 casos, verdes).
 
+### Fase B — arco menú (decisiones)
+
+- **`home#index` = menú** ("¿Qué quieres hacer hoy?"), landing autenticado.
+  Usa el layout `auth` (shell oscuro full-bleed, reusado del login).
+- **4 opciones** (= arcos futuros): Registrar pedido (tarjeta coral), Reportes
+  de venta, Asistencia de clientes, Generar cotización (amarillas). Partial
+  `home/_menu_card`. Hoy enlazan a `#`; se cablean cuando se construya cada una.
+- **Assets** copiados a `app/assets/images` con nombres propios: `expo_illustration.svg`
+  e `icon_{register_order,sales_reports,client_attendance,generate_quote}.svg`.
+- **Barra superior:** logo + pills `Usuario` (real, `current_user`) y `Proveedor`
+  (placeholder `—`) + `Cerrar sesión`.
+
 ## Riesgos / puntos abiertos
 
 - 🔴 **Entrada de pedidos al ERP:** no existe interfaz previa; hay que crear
   el endpoint en `rueda-api` que inserte en la BD del ERP replicando sus
   reglas. Requiere **descubrimiento del esquema de pedidos del ERP** antes de
   codificar el sync-up. Mayor riesgo.
+- **Relación usuario→proveedor:** el menú muestra "Proveedor: <X>" (pill), pero
+  el modelo `User` NO tiene proveedor asociado. ¿El capturista está ligado a un
+  proveedor (atiende su stand), se elige por sesión, o viene del ERP? Por
+  definir; hoy es placeholder `—`.
 - **Punto único de falla:** la laptop-servidor. Definir backups (pg_dump a
   USB/otro equipo) y quizá laptop de respaldo.
 - **Origen de precios/beneficios de la rueda:** RESUELTO el hallazgo — el ERP

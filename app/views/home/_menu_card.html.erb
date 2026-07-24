@@ -1,0 +1,15 @@
+<%#
+  Tarjeta de opción del menú.
+  Locals: href, accent (:coral | :yellow), icon, title, desc
+%>
+<% coral = accent == :coral %>
+<% bg          = coral ? "bg-[#CE6150]"      : "bg-[#F1D24E]" %>
+<% title_color = coral ? "text-white"        : "text-neutral-900" %>
+<% desc_color  = coral ? "text-white/90"     : "text-neutral-800/75" %>
+
+<%= link_to href,
+      class: "flex items-center gap-6 rounded-[1.75rem] #{bg} px-7 py-5 shadow-lg transition-transform hover:scale-[1.015]" do %>
+  <%= image_tag icon, alt: "", class: "h-14 w-14 shrink-0" %>
+  <h3 class="w-36 shrink-0 text-xl font-extrabold leading-tight <%= title_color %>"><%= title %></h3>
+  <p class="text-sm leading-snug <%= desc_color %>"><%= desc %></p>
+<% end %>
