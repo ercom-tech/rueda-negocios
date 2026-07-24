@@ -8,5 +8,7 @@ class Supplier < ApplicationRecord
 
   has_and_belongs_to_many :business_rounds, join_table: :business_round_suppliers
 
+  has_many :business_round_people, dependent: :destroy
+
   validates :erp_supplier_id, presence: true, uniqueness: true
 end

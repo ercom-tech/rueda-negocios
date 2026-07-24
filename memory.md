@@ -120,7 +120,22 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
 - **Assets** copiados a `app/assets/images` con nombres propios: `expo_illustration.svg`
   e `icon_{register_order,sales_reports,client_attendance,generate_quote}.svg`.
 - **Barra superior:** logo + pills `Usuario` (real, `current_user`) y `Proveedor`
-  (placeholder `—`) + `Cerrar sesión`.
+  + `Cerrar sesión`.
+- **Proveedor del capturista** (pill) — RESUELTO: modelado con
+  `BusinessRoundPerson` (mapea `cnf_rueda_negocios_persona`, tabla
+  `business_round_people`): liga `User` (persona) ↔ `Supplier` ↔ `BusinessRound`
+  (+ marca opcional, `consecutivo`).
+- **Multi-proveedor:** un capturista puede representar a **varios** proveedores
+  (el ERP lo permite vía `consecutivo`). `User#suppliers_in(round)` devuelve
+  todos. Se maneja con un **proveedor activo por sesión** (`session[:supplier_id]`):
+  helpers `active_round` / `available_suppliers` / `current_supplier` en
+  `ApplicationController`; 1 proveedor → autoselección, >1 → **selector** en el
+  pill (`shared/_supplier_pill`, controller Stimulus `form-submit`, ruta
+  `PATCH /active-supplier` → `ActiveSuppliersController`).
+  **Hoy el proveedor activo es solo contexto/etiqueta: NO restringe la captura**
+  (un pedido puede mezclar proveedores). Regla a definir si cambia.
+- **Seed dev:** liga al capturista con 2 proveedores (Hitools, Truper) para
+  probar el caso multi.
 
 ## Riesgos / puntos abiertos
 
@@ -128,10 +143,6 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
   el endpoint en `rueda-api` que inserte en la BD del ERP replicando sus
   reglas. Requiere **descubrimiento del esquema de pedidos del ERP** antes de
   codificar el sync-up. Mayor riesgo.
-- **Relación usuario→proveedor:** el menú muestra "Proveedor: <X>" (pill), pero
-  el modelo `User` NO tiene proveedor asociado. ¿El capturista está ligado a un
-  proveedor (atiende su stand), se elige por sesión, o viene del ERP? Por
-  definir; hoy es placeholder `—`.
 - **Punto único de falla:** la laptop-servidor. Definir backups (pg_dump a
   USB/otro equipo) y quizá laptop de respaldo.
 - **Origen de precios/beneficios de la rueda:** RESUELTO el hallazgo — el ERP

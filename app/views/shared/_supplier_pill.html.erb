@@ -1,0 +1,21 @@
+<%#
+  Pill de "Proveedor" en la barra superior.
+  - 0 proveedores → "—"
+  - 1 proveedor   → etiqueta estática
+  - varios        → selector (cambia el proveedor activo de la sesión)
+%>
+<% if available_suppliers.size > 1 %>
+  <%= form_with url: active_supplier_path, method: :patch, data: { controller: "form-submit" } do %>
+    <label class="flex items-center gap-1 rounded-full bg-[#F4EEDB] px-5 py-2.5 text-neutral-800">
+      Proveedor:
+      <%= select_tag :supplier_id,
+            options_for_select(available_suppliers.map { |s| [s.name, s.id] }, current_supplier&.id),
+            class: "cursor-pointer bg-transparent font-semibold outline-none",
+            data: { action: "change->form-submit#submit" } %>
+    </label>
+  <% end %>
+<% else %>
+  <span class="rounded-full bg-[#F4EEDB] px-5 py-2.5 text-neutral-800">
+    Proveedor: <span class="font-semibold"><%= current_supplier&.name || "—" %></span>
+  </span>
+<% end %>

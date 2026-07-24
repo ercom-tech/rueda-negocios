@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_24_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_24_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -52,6 +52,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_24_130000) do
     t.index ["business_round_id"], name: "index_business_round_clients_on_business_round_id"
     t.index ["client_id"], name: "index_business_round_clients_on_client_id"
     t.index ["salesperson_id"], name: "index_business_round_clients_on_salesperson_id"
+  end
+
+  create_table "business_round_people", force: :cascade do |t|
+    t.bigint "brand_id"
+    t.bigint "business_round_id", null: false
+    t.integer "consecutivo", default: 1, null: false
+    t.datetime "created_at", null: false
+    t.bigint "supplier_id", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["brand_id"], name: "index_business_round_people_on_brand_id"
+    t.index ["business_round_id", "user_id", "consecutivo"], name: "idx_brp_round_user_consec", unique: true
+    t.index ["business_round_id"], name: "index_business_round_people_on_business_round_id"
+    t.index ["supplier_id"], name: "index_business_round_people_on_supplier_id"
+    t.index ["user_id"], name: "index_business_round_people_on_user_id"
   end
 
   create_table "business_round_salespeople", id: false, force: :cascade do |t|
@@ -173,6 +188,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_24_130000) do
   add_foreign_key "business_round_clients", "business_rounds"
   add_foreign_key "business_round_clients", "clients"
   add_foreign_key "business_round_clients", "salespeople"
+  add_foreign_key "business_round_people", "brands"
+  add_foreign_key "business_round_people", "business_rounds"
+  add_foreign_key "business_round_people", "suppliers"
+  add_foreign_key "business_round_people", "users"
   add_foreign_key "business_round_salespeople", "business_rounds"
   add_foreign_key "business_round_salespeople", "salespeople"
   add_foreign_key "business_round_suppliers", "business_rounds"
