@@ -1,0 +1,118 @@
+# Esquema ERP — catálogos de la rueda de negocios
+
+Mapa del esquema del ERP de FECEGO (Postgres 16) para el **sync-down**: el
+dataset de catálogos que `rueda-api` exporta y la app puebla en su Postgres
+local antes del evento.
+
+Descubierto por inspección de la BD viva (no de los repos Ruby). Todos los
+joins y la integridad referencial se verificaron contra datos reales de un
+respaldo con 3 ruedas cargadas (Veracruz / Chiapas / Oaxaca 2026).
+
+## Conexión y convenciones
+
+- Conexión de descubrimiento: `psql -p 1702 -d fecego` (Postgres.app local).
+- Esquema: **`fecego`** (el otro es `fecego_cfdi`). `search_path` incluye ambos.
+- **Filtrar SIEMPRE `id_empresa = 1`.** El ERP es multi-empresa y toda PK
+  arranca con `id_empresa`.
+- Patrón global de tablas: PK compuesta que inicia con `id_empresa`, bandera
+  `baja boolean` (borrado lógico — filtrar `baja = false`), y auditoría
+  `id_usuario_crea / fecha_crea / hora_crea` + `..._modifica`. Los
+  `id_usuario_*` apuntan a `cnf_persona.id_persona`.
+
+## Entidades base (catálogos)
+
+### clientes → `fecego.vta_cliente`
+- PK: `(id_empresa, clave_cliente)`. `clave_cliente varchar(6)` es el
+  identificador de negocio; existe además `id_cliente int` (id numérico alterno).
+- Campos: `nombre varchar(100)`, `nombre_comercial varchar(200)`,
+  `apellido_paterno/materno`, `id_vendedor int` (FK → `vta_vendedor`),
+  `linea_credito`, `dias_credito`, `id_sucursal`, `id_giro`, `id_canalventa`,
+  `tipo_precio varchar(2)`, `aprobado bool`, `baja bool`.
+
+### usuarios / login → `fecego.cnf_persona` + `fecego.cnf_persona_has_metodoidentifica`
+- **Ojo con el nombre:** la tabla es `cnf_persona_has_metodoidentifica`
+  (SIN guion bajo entre "metodo" e "identifica").
+- `cnf_persona` PK `(id_empresa, id_persona)`: `nombre`, `apellido_paterno`,
+  `apellido_materno`, `id_rol`, `rfc varchar(13)`, `curp`, `id_vendedor int`,
+  `inactivo bool`, `baja bool`.
+- `cnf_persona_has_metodoidentifica` PK `(id_empresa, id_persona,
+  id_metodoidentifica)`: **credenciales** `username varchar(25)`,
+  `password text`, `password_hash varchar(256)`. Catálogo de método:
+  `cnf_metodo_identifica`.
+- **Regla:** el login SIEMPRE se resuelve contra `cnf_persona` +
+  `cnf_persona_has_metodoidentifica`, nunca contra `vta_vendedor`.
+
+### vendedores → `fecego.vta_vendedor`
+- PK `(id_empresa, id_vendedor)`. `nombre varchar(100)` (desnormalizado),
+  `id_persona int` (FK → `cnf_persona`), `prefijo varchar(2)`,
+  `id_coordinador_venta`, `id_coordinador_credito`, `baja bool`.
+- La persona física vive en `cnf_persona` vía `id_persona`. Cuidado:
+  a veces `id_persona = 0` (vendedor sin persona ligada).
+
+### proveedores → `fecego.com_proveedor`
+- PK `(id_empresa, id_proveedor)`. `clave varchar(6)` (código legible, ej.
+  `ITWPOL`), `nombre varchar(100)`, `denominacion_comercial varchar(100)`,
+  `tipo_persona varchar(1)`, `dias_credito`, `baja bool`.
+
+### marcas → `fecego.com_marca`
+- PK `(id_empresa, id_marca)`. `nombre varchar(50)`, `clave varchar(2)`,
+  `baja bool`. (NO existe `cnf_marca`.)
+
+### productos → `fecego.com_producto`
+- PK `(id_empresa, id_producto)`. **El SKU/código oficial de FECEGO es
+  `id_producto`** (entero, la PK). NO usar `com_producto_has_sku` como código
+  oficial: esa tabla es el SKU del proveedor (su PK incluye `id_proveedor`).
+- Campos: `id_marca int` (**FK directa** → `com_marca`), `nombre varchar(40)`,
+  `nombre_publico varchar(50)`, `descripcion_corta varchar(300)`,
+  `descripcion_larga text`, `modelo`, `numero_parte`,
+  `id_unidadmedida int` (FK → `cnf_unidad_medida`),
+  `id_categoria / id_subcategoria1 / id_subcategoria2`,
+  `id_claveprodserv` (clave SAT), `existencia`, `clasificacion`, `baja bool`.
+- **Precios:** `fecego.com_producto_has_precio`, PK `(id_empresa, id_producto,
+  consecutivo)`. Columnas relevantes: `precio_lista`, `mayoreo_precio`,
+  `publico_precio`, `intermedio_precio`, `internet_precio`, versiones
+  `_con_iva` y `_redondeo`, precios de crédito (`cred_*`), `id_moneda`, `iva`,
+  `igi`, factores de descuento `factor_descto1..5`. Filtrar `baja = false`.
+
+## Relaciones producto ↔ marca ↔ proveedor
+
+- **producto → marca:** columna directa `com_producto.id_marca`.
+- **producto → proveedor:** tabla puente `com_proveedor_has_producto`
+  PK `(id_empresa, id_proveedor, id_producto)` — relación N:M.
+- **proveedor → marca:** tabla puente `com_proveedor_has_marca`
+  PK `(id_empresa, id_proveedor, id_marca)`.
+
+## Módulo rueda de negocios (nativo del ERP)
+
+Existe como módulo del ERP (no es concepto nuevo). 6 tablas, todas con PK que
+arranca `(id_empresa, id_rueda, …)`. Joins e integridad verificados con datos
+(0 huérfanos).
+
+| Tabla | PK | Rol / FKs |
+|---|---|---|
+| `cnf_rueda_negocios` | `(id_empresa, id_rueda)` | Cabecera del evento: `nombre varchar(50)`, `anio`, `fecha_inicio date`, `fecha_fin date`, `id_pais`, `consec_estado`, `consec_municipio`, `comentarios`, `baja`. |
+| `cnf_rueda_negocios_proveedor` | `(…, id_proveedor)` | Proveedores participantes. `id_proveedor` → `com_proveedor`. |
+| `cnf_rueda_negocios_marca` | `(…, id_marca)` | Marcas participantes. `id_marca` → `com_marca`. |
+| `cnf_rueda_negocios_vendedor` | `(…, id_vendedor)` | Vendedores asignados. `id_vendedor` → `vta_vendedor` → `cnf_persona`. |
+| `cnf_rueda_negocios_cliente` | `(…, id_vendedor, clave_cliente)` | Clientes registrados **con flujo de aprobación** ventas/crédito: `aprobado_ventas`, `aprobado_credito`, `id_usuario_aprueba_*`, `motivo_rechazo_credito`, crédito autorizado (`limite_credito_autorizado`, `saldo_facturas_autorizado`, `disponible_autorizado`, `por_facturar_autorizado`). `clave_cliente` → `vta_cliente`. |
+| `cnf_rueda_negocios_persona` | `(…, id_persona, consecutivo)` | Personas de contacto/expositores por proveedor-marca. `id_persona` → `cnf_persona`, con `id_proveedor` e `id_marca` (marca puede venir `0`). |
+
+## Precios especiales por rueda — hueco pendiente
+
+**No existe** en el esquema del ERP una tabla de precio ligada a `id_rueda`.
+Los precios provienen del catálogo general `com_producto_has_precio` (con sus
+niveles mayoreo/público/intermedio/crédito y `factor_descto1..5`). Existen
+además, fuera del módulo rueda y sin ligarse a `id_rueda`:
+`vta_convenio_precio`, `vta_precio_mayoreo_pos_hist`, `com_precio_csv_hist`.
+
+→ El "precio/beneficio especial por rueda" es **concepto a definir** en la app
+nueva (modelo propio con FK a `id_rueda` + `id_producto`, o reúso del catálogo
+general). Decisión diferida.
+
+## Notas de integridad (verificadas con datos)
+
+- `cnf_rueda_negocios_cliente` → `vta_cliente`: 0 huérfanos.
+- `cnf_rueda_negocios_vendedor` → `vta_vendedor`: 0 huérfanos.
+- Cadena `rueda_vendedor → vta_vendedor → cnf_persona`: OK.
+- `cnf_rueda_negocios_persona`: las personas de contacto tienen ids altos
+  (ej. 90092-90094, nombre "PROVEEDOR") ligadas a `com_proveedor`.

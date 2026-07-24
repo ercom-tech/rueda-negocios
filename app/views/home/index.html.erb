@@ -1,0 +1,21 @@
+<% content_for :title, "Inicio · Rueda de Negocios" %>
+
+<div class="mx-auto max-w-3xl">
+  <h1 class="text-2xl font-bold text-neutral-900">Rueda de Negocios</h1>
+
+  <% if @active_round %>
+    <p class="mt-2 text-neutral-600">
+      Rueda activa: <span class="font-semibold"><%= @active_round.name %></span>
+      <% if @active_round.starts_on && @active_round.ends_on %>
+        · <%= @active_round.starts_on.strftime("%d") %>–<%= @active_round.ends_on.strftime("%d de %B de %Y") %>
+      <% end %>
+    </p>
+  <% else %>
+    <p class="mt-2 text-neutral-600">No hay una rueda activa cargada todavía.</p>
+  <% end %>
+
+  <p class="mt-6 text-sm text-neutral-500">
+    Placeholder de inicio. La navegación (productos, clientes, etc.) llega en los
+    siguientes arcos.
+  </p>
+</div>

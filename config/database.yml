@@ -1,0 +1,43 @@
+# PostgreSQL. Conexión parametrizada por ENV (cargada de .env vía dotenv-rails
+# en development/test), consistente con los proyectos fecego-b2b.
+#
+# La app es dueña de toda su base (schema public por defecto); no comparte
+# esquema con otros servicios como el portal-v2.
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  host:     <%= ENV.fetch("DB_HOST", "localhost") %>
+  port:     <%= ENV.fetch("DB_PORT", 5432) %>
+  username: <%= ENV.fetch("DB_USER", nil) %>
+  password: <%= ENV.fetch("DB_PASSWORD", nil) %>
+
+development:
+  <<: *default
+  database: <%= ENV.fetch("DB_NAME", "rueda_negocios_development") %>
+
+# Warning: The database defined as "test" will be erased and
+# re-generated from your development database when you run "rake".
+test:
+  <<: *default
+  database: <%= ENV.fetch("DB_NAME_TEST", "rueda_negocios_test") %>
+
+# Producción multi-database (mismo patrón que portal-v2): primary para el
+# dominio de la app, y BDs separadas para Solid Cache / Queue / Cable en el
+# mismo cluster.
+production:
+  primary: &primary_production
+    <<: *default
+    database: <%= ENV.fetch("DB_NAME", "rueda_negocios_production") %>
+  cache:
+    <<: *primary_production
+    database: <%= ENV.fetch("DB_NAME", "rueda_negocios_production") %>_cache
+    migrations_paths: db/cache_migrate
+  queue:
+    <<: *primary_production
+    database: <%= ENV.fetch("DB_NAME", "rueda_negocios_production") %>_queue
+    migrations_paths: db/queue_migrate
+  cable:
+    <<: *primary_production
+    database: <%= ENV.fetch("DB_NAME", "rueda_negocios_production") %>_cable
+    migrations_paths: db/cable_migrate

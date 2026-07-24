@@ -1,0 +1,52 @@
+<% content_for :title, "Inicia sesión · Rueda de Negocios" %>
+
+<div class="relative min-h-screen w-full overflow-hidden bg-black">
+  <%# Patrón de herramientas (asset de referencia) a todo lo ancho %>
+  <div class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.18]"
+       style="background-image: url('<%= image_path "tools_pattern_white.svg" %>');"></div>
+
+  <%# ── Barra amarilla: full height, sin redondear, angosta, pegada a la derecha ── %>
+  <div class="absolute inset-y-0 right-0 hidden w-[9%] bg-[#EDC94C] lg:block"></div>
+
+  <%# Fila: contenido (define el alto) + tarjeta (iguala ese alto) %>
+  <div class="relative z-10 lg:flex lg:items-stretch">
+    <%# ── Contenido izquierdo: bloque alineado arriba (espacio arriba = espacio izq) ── %>
+    <div class="max-w-xl px-8 pt-8 pb-14 sm:px-12 sm:pt-12 lg:pl-[7%] lg:pt-[7%]">
+      <%= image_tag "fecego_logo_white.png", alt: "FECEGO", class: "h-20 w-auto" %>
+
+      <h1 class="mt-10 text-4xl font-extrabold uppercase leading-[1.05] tracking-tight text-[#F4EEDB] sm:text-5xl">
+        Bienvenido a mi espacio rueda de negocios
+      </h1>
+      <p class="mt-5 max-w-md text-lg font-medium leading-snug text-[#F4EEDB]/90">
+        Un evento creado por Ferretera Central del Golfo desde el 2023.
+      </p>
+
+      <h2 class="mt-10 text-2xl font-bold text-[#F4EEDB]">Inicia sesión</h2>
+
+      <div class="mt-4 max-w-md rounded-2xl bg-[#F4EEDB] p-6 text-neutral-800 shadow-xl sm:p-8">
+        <%= form_with url: login_path, method: :post, class: "space-y-5" do |f| %>
+          <div>
+            <%= f.label :username, "Usuario", class: "mb-1 block text-sm font-semibold" %>
+            <%= f.text_field :username, autofocus: true, autocomplete: "username",
+                  class: "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-[#EDC94C] focus:ring-2 focus:ring-[#EDC94C]/40" %>
+          </div>
+
+          <div>
+            <%= f.label :password, "Contraseña", class: "mb-1 block text-sm font-semibold" %>
+            <%= f.password_field :password, autocomplete: "current-password",
+                  class: "w-full rounded-lg border border-neutral-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-[#EDC94C] focus:ring-2 focus:ring-[#EDC94C]/40" %>
+          </div>
+
+          <%= f.submit "Enviar",
+                class: "w-full cursor-pointer rounded-lg bg-[#EDC94C] px-4 py-2.5 text-sm font-bold text-neutral-900 transition-colors hover:bg-[#e3bd3a]" %>
+        <% end %>
+      </div>
+    </div>
+
+    <%# ── Tarjeta del evento: iguala el alto del bloque izquierdo; margen der = izq ── %>
+    <div class="hidden lg:flex lg:flex-1 lg:justify-end lg:pr-[7%] lg:pt-[7%] lg:pb-14">
+      <%= image_tag "event_card_oaxaca.svg", alt: "Rueda de Negocios · Oaxaca 2026",
+            class: "h-full w-auto max-w-full rounded-3xl object-contain drop-shadow-2xl" %>
+    </div>
+  </div>
+</div>
