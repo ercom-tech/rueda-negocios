@@ -94,10 +94,20 @@ class OrdersController < ApplicationController
   private
 
   def client_search(query)
-    like = "%#{query.to_s.strip}%"
+    q = ActiveRecord::Base.sanitize_sql_like(query.to_s.strip)
+    return Client.none if q.blank?
+
+    like   = "%#{q}%"
+    prefix = "#{q}%"
+    # Relevancia: primero los que EMPIEZAN con lo tecleado (en comercial o
+    # nombre), luego alfabético por comercial (o nombre si no hay comercial).
+    relevance = ActiveRecord::Base.sanitize_sql_array([
+      "CASE WHEN commercial_name ILIKE :p OR name ILIKE :p THEN 0 ELSE 1 END, " \
+      "COALESCE(NULLIF(commercial_name, ''), name)", { p: prefix }
+    ])
     Client.includes(:salesperson)
           .where("name ILIKE :q OR commercial_name ILIKE :q OR erp_client_key ILIKE :q", q: like)
-          .order(:name).limit(10)
+          .order(Arel.sql(relevance)).limit(10)
   end
 
   def apply_header_defaults
