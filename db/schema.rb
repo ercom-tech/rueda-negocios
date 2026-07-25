@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_25_153508) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_25_163728) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -249,6 +249,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_25_153508) do
     t.index ["erp_salesperson_id"], name: "index_salespeople_on_erp_salesperson_id", unique: true
   end
 
+  create_table "settings", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "selected_round_erp_id"
+    t.string "selected_round_name"
+    t.datetime "updated_at", null: false
+  end
+
   create_table "suppliers", force: :cascade do |t|
     t.string "code"
     t.string "commercial_name"
@@ -257,6 +264,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_25_153508) do
     t.string "name"
     t.datetime "updated_at", null: false
     t.index ["erp_supplier_id"], name: "index_suppliers_on_erp_supplier_id", unique: true
+  end
+
+  create_table "sync_runs", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "finished_at"
+    t.string "kind", null: false
+    t.text "message"
+    t.datetime "started_at"
+    t.string "status", default: "running", null: false
+    t.jsonb "summary", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.index ["kind", "created_at"], name: "index_sync_runs_on_kind_and_created_at"
   end
 
   create_table "users", force: :cascade do |t|

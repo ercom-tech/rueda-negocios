@@ -7,15 +7,13 @@ namespace :sync do
     base = ENV.fetch("RUEDA_API_URL") { abort "Falta RUEDA_API_URL (base de rueda-api, p.ej. http://localhost:4568)" }
     id   = ENV.fetch("RUEDA_ID")      { abort "Falta RUEDA_ID (id_rueda del ERP a descargar)" }
 
-    root = base.end_with?("/") ? base : "#{base}/"
-    url  = URI.join(root, "ruedas/#{id}/export")
-
-    puts "[sync:down] GET #{url}"
-    res = Net::HTTP.get_response(url)
-    abort "[sync:down] HTTP #{res.code} desde #{url}" unless res.is_a?(Net::HTTPSuccess)
-
-    data = JSON.parse(res.body)
-    puts "[sync:down] descargado #{(res.body.bytesize / 1024.0).round} KB"
+    puts "[sync:down] descargando rueda #{id} desde #{base}"
+    data = begin
+      Sync::ApiClient.new(base).fetch_export(id)
+    rescue Sync::ApiClient::Error => e
+      abort "[sync:down] #{e.message}"
+    end
+    puts "[sync:down] descargado (#{data['products']&.size || 0} productos)"
 
     result = nil
     begin

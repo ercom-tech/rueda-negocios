@@ -49,4 +49,11 @@ class ApplicationController < ActionController::Base
 
     redirect_to login_path, alert: "Inicia sesión para continuar."
   end
+
+  # Restringe una acción al rol server (operador del sync).
+  def require_server
+    return if current_user&.can_see_all_orders?
+
+    redirect_to root_path, alert: "Esta sección es solo para el equipo servidor."
+  end
 end

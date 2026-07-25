@@ -1,0 +1,49 @@
+<% content_for :title, "Elegir rueda · Rueda de Negocios" %>
+
+<div class="relative min-h-screen w-full overflow-hidden bg-black">
+  <div class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.18]"
+       style="background-image: url('<%= image_path "tools_pattern_white.svg" %>');"></div>
+
+  <div class="relative z-10 mx-auto flex min-h-screen w-full max-w-4xl flex-col px-6 py-8 lg:px-10">
+    <header class="flex items-center justify-between gap-4">
+      <%= image_tag "fecego_logo_white.png", alt: "FECEGO", class: "h-12 w-auto" %>
+      <%= link_to "← Volver al menú", root_path,
+            class: "rounded-full bg-neutral-400 px-5 py-2.5 text-sm font-semibold text-neutral-900 transition-colors hover:bg-neutral-300" %>
+    </header>
+
+    <h1 class="mt-10 text-4xl font-extrabold text-white sm:text-5xl">Elige la rueda a trabajar</h1>
+    <p class="mt-2 text-white/60">
+      La rueda seleccionada es la que se descarga al obtener la información del servidor.
+    </p>
+
+    <div class="mt-8 flex flex-col gap-4 pb-10">
+      <% if @rounds.blank? %>
+        <p class="rounded-2xl bg-white/5 px-6 py-8 text-center text-white/50">
+          No hay ruedas disponibles (o no se pudo contactar al servidor).
+        </p>
+      <% end %>
+
+      <% @rounds.each do |r| %>
+        <% current = r["erp_round_id"] == @selected %>
+        <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl px-6 py-5 shadow-lg
+                    <%= current ? "bg-[#F4EEDB] text-neutral-900 ring-2 ring-[#F1D24E]" : "bg-white/5 text-white" %>">
+          <div>
+            <h3 class="text-xl font-bold"><%= r["name"] %></h3>
+            <p class="mt-1 text-sm <%= current ? "text-neutral-700" : "text-white/60" %>">
+              <%= r["location"] %> · <%= r["year"] %>
+              <% if r["starts_on"] %>· <%= r["starts_on"] %><% if r["ends_on"] %> a <%= r["ends_on"] %><% end %><% end %>
+            </p>
+          </div>
+
+          <% if current %>
+            <span class="rounded-full bg-[#F1D24E] px-5 py-2 text-sm font-bold text-neutral-900">Seleccionada</span>
+          <% else %>
+            <%= button_to "Seleccionar", server_select_round_path, method: :patch,
+                  params: { erp_round_id: r["erp_round_id"], name: r["name"] },
+                  class: "rounded-full bg-[#CE6150] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#b9553f]" %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

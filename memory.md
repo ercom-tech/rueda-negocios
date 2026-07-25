@@ -339,6 +339,49 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
   IVA por partida, totales cuadran; idempotencia confirmada; pedido de prueba
   limpiado del ERP.
 
+### Fase D — Panel del servidor (UI de sync) (decisiones)
+
+- **El rol `server` opera el sync desde la UI** (antes solo rakes). Al entrar el
+  servidor ve, en el mismo menú (`home#index`, bifurcado por rol), 3 tarjetas:
+  **Elegir rueda**, **Obtener información** (sync-down) y **Transmitir pedidos**
+  (sync-up) + Reportes. El capturista sigue viendo su menú de captura.
+- **Decisiones del usuario:** ejecución en **background job** (no bloquear);
+  **tarjetas en el mismo menú** (no panel separado); el `server` es **seedeado**
+  (ya existente) y su rol se preserva.
+- **rueda-api `GET /ruedas`** (`RuedaApi::Rounds`) — lista las ruedas del ERP
+  para elegir cuál trabajar.
+- **rueda-negocios:**
+  - `Setting` (singleton local): `selected_round_erp_id` + `selected_round_name`
+    (guarda el nombre al elegir, para mostrarlo sin depender del sync).
+  - `SyncRun` (kind down/up, status running/completed/failed, summary jsonb):
+    historial/estado de cada sync. `after_update_commit` hace **broadcast Turbo
+    Stream** al stream `"sync_status"` → el menú se actualiza en vivo al terminar
+    el job (sin recargar).
+  - `Sync::ApiClient` (antes `Sync::Client` — **renombrado** porque `Client`
+    colisiona con el modelo dentro de `module Sync`): `list_rounds`,
+    `fetch_export`. Reusado por rake y jobs.
+  - Jobs `SyncDownJob` / `SyncUpJob`: crean/cierran el `SyncRun`, corren
+    `Sync::Down`/`Sync::Up`. `solid_queue` en prod (corre dentro de Puma con
+    `SOLID_QUEUE_IN_PUMA`); `async` en dev.
+  - Guarda `require_server` + `ServerController` (rounds, select_round,
+    sync_down, sync_up). Evita disparar un sync si ya hay uno `running`.
+- **Validado end-to-end en el navegador** (rueda-negocios en :3001 con
+  `RUEDA_API_URL`, rueda-api en :4568): login server → elegir Oaxaca → obtener
+  información (job → "✓ Listo · 13,196 productos…" vía Turbo Stream) → transmitir
+  (job → "✓ Listo · 0 pedidos").
+- **Trampa de layout:** `turbo_stream_from` renderiza un
+  `<turbo-cable-stream-source>` que, si cae dentro de un grid, cuenta como celda
+  y descuadra el layout. Va FUERA del grid (en `home/index`, antes de la barra);
+  el partial del menú server es un solo `<div>` (la columna derecha), igual que
+  el del capturista. Las cards usan un **grid de columnas fijas**
+  (`grid-cols-[3.5rem_11rem_minmax(0,1fr)]`: icono·título·desc) para alinear
+  título/descripción entre sí pese a mezclar `link_to` y `button_to` (el `<form>`
+  del button descuadra un layout basado en `flex`). Íconos Heroicons (outline),
+  coloreados con `currentColor` según la card.
+- **Trampa:** `allow_browser versions: :modern` (ApplicationController) bloquea
+  con 403 las sesiones de `ActionDispatch::Integration` (UA no reconocido) — no
+  es bug; validar la UI con navegador real o request specs con UA moderno.
+
 ## Riesgos / puntos abiertos
 
 - **Entrada de pedidos al ERP (sync-up)** — DESCUBIERTO → `docs/erp-esquema-pedidos.md`.

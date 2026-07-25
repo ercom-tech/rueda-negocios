@@ -1,0 +1,76 @@
+<%#
+  Menú del rol server: operación del sync (columna derecha del grid, un solo
+  div — igual que el menú del capturista). Cada card usa el MISMO grid de 3
+  columnas fijas (icono · título · descripción) para alinear las 4 cards pese a
+  mezclar link y botón. El título va CENTRADO en su columna (mismo aire a ambos
+  lados, `text-right` interno para el corte a 2 líneas) y la descripción a la
+  izquierda — igual que `menu_card`. Íconos Heroicons (outline). El
+  turbo_stream_from vive en el index, fuera del grid.
+  Locals: setting, sync_down, sync_up.
+%>
+<% has_round = setting.selected_round_erp_id.present? %>
+<% grid  = "grid grid-cols-[3.5rem_11rem_minmax(0,1fr)] items-center gap-6" %>
+<% title = "justify-self-center text-right text-2xl font-extrabold leading-tight" %>
+<% desc  = "text-left text-xl leading-snug" %>
+
+<div class="flex flex-col gap-5">
+  <%# ── 1. Elegir rueda (coral) — Heroicon calendar-days ────────── %>
+  <%= link_to server_rounds_path,
+        class: "#{grid} rounded-[1.75rem] bg-[#CE6150] px-7 py-5 shadow-lg transition-transform hover:scale-[1.015]" do %>
+    <svg class="h-14 w-14 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+    </svg>
+    <h3 class="<%= title %> whitespace-nowrap text-white">Elegir rueda</h3>
+    <p class="<%= desc %> text-white/90">
+      <% if has_round %>
+        Actual: <span class="font-semibold"><%= setting.selected_round_name.presence || "Rueda ##{setting.selected_round_erp_id}" %></span>
+      <% else %>
+        Ninguna seleccionada todavía.
+      <% end %>
+    </p>
+  <% end %>
+
+  <%# ── 2. Obtener información / sync-down (amarilla) — arrow-down-tray ── %>
+  <div class="rounded-[1.75rem] bg-[#F1D24E] px-7 py-5 shadow-lg"
+       data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
+    <button type="button" data-action="modal#open" <%= "disabled" unless has_round %>
+            class="<%= grid %> w-full transition-transform enabled:hover:scale-[1.015] disabled:opacity-50">
+      <svg class="h-14 w-14 text-neutral-900" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+      </svg>
+      <h3 class="<%= title %> text-neutral-900"><%= safe_join(["Obtener", "información"], tag.br) %></h3>
+      <p class="<%= desc %> text-neutral-800/75">Descarga los datos de la rueda desde el servidor.</p>
+    </button>
+    <%= render "server/sync_status", kind: "down", run: sync_down %>
+    <%= render "home/confirm_dialog", title: "Obtener información",
+          message: "Se descargarán los datos de la rueda seleccionada y se reemplazará la información local. ¿Continuar?",
+          confirm_label: "Sí, obtener", path: server_sync_down_path %>
+  </div>
+
+  <%# ── 3. Transmitir pedidos / sync-up (amarilla) — arrow-up-tray ── %>
+  <div class="rounded-[1.75rem] bg-[#F1D24E] px-7 py-5 shadow-lg"
+       data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
+    <button type="button" data-action="modal#open"
+            class="<%= grid %> w-full transition-transform hover:scale-[1.015]">
+      <svg class="h-14 w-14 text-neutral-900" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+      </svg>
+      <h3 class="<%= title %> text-neutral-900"><%= safe_join(["Transmitir", "pedidos"], tag.br) %></h3>
+      <p class="<%= desc %> text-neutral-800/75">Envía los pedidos capturados al ERP.</p>
+    </button>
+    <%= render "server/sync_status", kind: "up", run: sync_up %>
+    <%= render "home/confirm_dialog", title: "Transmitir pedidos",
+          message: "Se enviarán al ERP los pedidos capturados que aún no se han transmitido. ¿Continuar?",
+          confirm_label: "Sí, transmitir", path: server_sync_up_path %>
+  </div>
+
+  <%# ── 4. Reportes (amarilla) — chart-bar ──────────────────────── %>
+  <%= link_to reports_path,
+        class: "#{grid} rounded-[1.75rem] bg-[#F1D24E] px-7 py-5 shadow-lg transition-transform hover:scale-[1.015]" do %>
+    <svg class="h-14 w-14 text-neutral-900" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+    </svg>
+    <h3 class="<%= title %> text-neutral-900"><%= safe_join(["Reportes", "de venta"], tag.br) %></h3>
+    <p class="<%= desc %> text-neutral-800/75">Consulta todos los pedidos capturados en el evento.</p>
+  <% end %>
+</div>

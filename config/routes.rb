@@ -10,6 +10,14 @@ Rails.application.routes.draw do
   # Proveedor activo en la sesión (cuando el capturista representa a varios).
   patch "active-supplier", to: "active_suppliers#update", as: :active_supplier
 
+  # Panel del servidor (operación del sync). Solo rol server.
+  scope "servidor", as: :server, controller: :server do
+    get   "ruedas",     action: :rounds,       as: :rounds        # elegir rueda
+    patch "ruedas",     action: :select_round, as: :select_round  # guardar elección
+    post  "sync-down",  action: :sync_down,    as: :sync_down     # obtener información
+    post  "sync-up",    action: :sync_up,      as: :sync_up       # transmitir pedidos
+  end
+
   # Reportes de venta (hub de reportes).
   get "reportes", to: "reports#index", as: :reports
   get "reportes/pedidos-capturados", to: "reports#captured_orders", as: :captured_orders_report

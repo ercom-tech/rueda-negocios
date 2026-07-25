@@ -10,7 +10,9 @@ module Sync
   # endpoint del ERP no duplica un pedido ya insertado (PK de negocio). Un
   # reintento tras una caída retoma justo lo que faltó.
   class Up
-    def initialize(api_base)
+    def initialize(api_base = ENV["RUEDA_API_URL"])
+      raise Sync::ApiClient::Error, "RUEDA_API_URL no configurada" if api_base.to_s.strip.empty?
+
       root = api_base.end_with?("/") ? api_base : "#{api_base}/"
       @endpoint = URI.join(root, "pedidos")
     end

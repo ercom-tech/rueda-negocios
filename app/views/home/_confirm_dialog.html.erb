@@ -1,0 +1,22 @@
+<%#
+  Diálogo de confirmación. Va DENTRO de un contenedor con
+  data-controller="modal"; el botón que lo abre usa data-action="modal#open".
+  Locals: title, message, confirm_label, path, method (default :post).
+%>
+<div data-modal-target="dialog" style="display:none" class="fixed inset-0 z-50 items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/50" data-action="click->modal#close"></div>
+  <div class="relative w-full max-w-md rounded-3xl bg-[#EDC94C] p-6 shadow-2xl sm:p-8">
+    <div class="rounded-2xl bg-black py-4 text-center">
+      <h3 class="text-xl font-extrabold text-white"><%= title %></h3>
+    </div>
+    <p class="mt-6 text-center text-lg text-neutral-900"><%= message %></p>
+    <div class="mt-8 flex justify-center gap-3">
+      <button type="button" data-action="modal#close"
+              class="rounded-full bg-neutral-700 px-6 py-2.5 font-bold text-white transition-colors hover:bg-neutral-600">
+        Cancelar
+      </button>
+      <%= button_to confirm_label, path, method: (local_assigns[:method] || :post),
+            class: "rounded-full bg-[#CE6150] px-6 py-2.5 font-bold text-white transition-colors hover:bg-[#bd5343]" %>
+    </div>
+  </div>
+</div>
