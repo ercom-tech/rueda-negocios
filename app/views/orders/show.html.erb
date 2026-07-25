@@ -1,0 +1,37 @@
+<% content_for :title, "Pedido · Rueda de Negocios" %>
+
+<div class="relative min-h-screen w-full overflow-hidden bg-[#F4EFE0] text-neutral-900">
+  <div class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.12]"
+       style="background-image: url('<%= image_path "tools_pattern_black.svg" %>');"></div>
+
+  <header class="relative z-10 flex items-center justify-between bg-[#EDC94C] px-6 py-4 sm:px-10 lg:px-[7%]">
+    <h1 class="text-2xl font-extrabold sm:text-3xl">Levantamiento de pedido</h1>
+    <%= link_to root_path, title: "Volver al menú" do %>
+      <%= image_tag "fecego_logo_white.png", alt: "FECEGO", class: "h-9 w-auto invert" %>
+    <% end %>
+  </header>
+
+  <div class="relative z-10 mx-auto max-w-3xl px-6 py-10 lg:px-[7%]">
+    <div class="rounded-3xl bg-[#EDC94C] p-6 sm:p-8">
+      <div class="rounded-2xl bg-black py-4 text-center">
+        <h2 class="text-2xl font-extrabold text-white">Encabezado guardado</h2>
+      </div>
+
+      <dl class="mt-6 space-y-2 text-neutral-900">
+        <div class="flex justify-between gap-4"><dt class="font-semibold">Cliente:</dt><dd><%= @order.client.name %> (<%= @order.client.erp_client_key %>)</dd></div>
+        <div class="flex justify-between gap-4"><dt class="font-semibold">Tipo:</dt><dd><%= @order.invoice? ? "Factura" : "Remisión" %></dd></div>
+        <% if @order.invoice? %>
+          <div class="flex justify-between gap-4"><dt class="font-semibold">RFC:</dt><dd><%= @order.client_tax_profile&.label %></dd></div>
+          <div class="flex justify-between gap-4"><dt class="font-semibold">Uso de CFDI:</dt><dd><%= @order.cfdi_use&.label %></dd></div>
+        <% else %>
+          <div class="flex justify-between gap-4"><dt class="font-semibold">Remisión:</dt><dd><%= @order.client_receipt_profile&.label %></dd></div>
+        <% end %>
+        <div class="flex justify-between gap-4"><dt class="font-semibold">Entrega:</dt><dd><%= @order.client_branch&.label %></dd></div>
+      </dl>
+
+      <p class="mt-6 rounded-2xl bg-black/5 px-5 py-4 text-center text-sm text-neutral-700">
+        Detalle del pedido (paso 2) — próximamente.
+      </p>
+    </div>
+  </div>
+</div>

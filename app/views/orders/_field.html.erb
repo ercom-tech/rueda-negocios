@@ -1,0 +1,7 @@
+<%# Campo con etiqueta y "pill" negro. Recibe `label` y un bloque con el control. %>
+<label class="block">
+  <span class="mb-1 block text-sm font-semibold text-neutral-900"><%= label %></span>
+  <div class="rounded-full bg-black px-5 py-3">
+    <%= yield %>
+  </div>
+</label>

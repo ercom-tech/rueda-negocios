@@ -13,11 +13,11 @@ descubrimiento del esquema de **pedidos** (sync-up, alta en ERP).
 **Fase A COMPLETADA** (app `rueda-negocios`): `rails new` + modelos del dataset
 local, migrado y validado.
 
-**Fase B — LOGIN, MENÚ y hub de REPORTES**: autenticación de capturistas
-(bcrypt del ERP) + login; el **menú** (`home#index`, "¿Qué quieres hacer hoy?")
-con 4 opciones; y el **hub de reportes** (`reports#index`, `/reportes`) con 4
-sub-reportes. El resto de pantallas llega en arcos siguientes, que el usuario
-irá indicando una por una. Diseños desde `docs/design-reference/{login,menu,reportes}`.
+**Fase B — LOGIN, MENÚ, hub de REPORTES y PEDIDO (paso 1)**: autenticación
+(bcrypt) + login; **menú** (`home#index`); **hub de reportes** (`reports#index`,
+`/reportes`); y el **encabezado del pedido** (`orders#new`, paso 1 de 3). Faltan
+el detalle (paso 2) y el resumen/envío (paso 3). Diseños desde
+`docs/design-reference/{login,menu,reportes,pedidos}`.
 
 ## Decisiones tomadas
 
@@ -124,9 +124,9 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
 - **Proveedor del capturista** (pill) — RESUELTO: modelado con
   `BusinessRoundPerson` (mapea `cnf_rueda_negocios_persona`, tabla
   `business_round_people`): liga `User` (persona) ↔ `Supplier` ↔ `BusinessRound`
-  (+ marca opcional, `consecutivo`).
+  (+ marca opcional, `position` = el `consecutivo` del ERP).
 - **Multi-proveedor:** un capturista puede representar a **varios** proveedores
-  (el ERP lo permite vía `consecutivo`). `User#suppliers_in(round)` devuelve
+  (el ERP lo permite vía `consecutivo` → local `position`). `User#suppliers_in(round)` devuelve
   todos. Se maneja con un **proveedor activo por sesión** (`session[:supplier_id]`):
   helpers `active_round` / `available_suppliers` / `current_supplier` en
   `ApplicationController`; 1 proveedor → autoselección, >1 → **selector** en el
@@ -150,6 +150,28 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
   ventas. Enlazan a `#` (cada reporte se construye después).
 - Íconos negros uniformes vía `brightness-0` (el asset de "ventas" venía coral).
   Assets: `icon_{captured_orders,attendance_report,products_report,sales_report}.svg`.
+
+### Fase B — Pedido, Arco 1 / encabezado (decisiones)
+
+- **`Order`** (borrador): belongs_to user (capturista) / business_round / client.
+  **NO lleva proveedor** — un pedido puede mezclar productos de varios
+  proveedores; el proveedor activo es solo contexto de sesión. `kind`
+  (invoice/remission), `status` (draft/submitted), `erp_folio` (nulo hasta sync).
+- **Datos fiscales del cliente** (nuevos modelos): `ClientTaxProfile` (RFC +
+  razón social + uso CFDI default), `ClientReceiptProfile` (remisión),
+  `ClientBranch` (sucursal), `CfdiUse` (catálogo SAT), `Client.email`. Todos con
+  `erp_*` para el sync (mapeo fino con el ERP se valida en el arco de sync).
+- **Paso 1 (`orders#new`):** tema **claro/crema** (patrón negro `tools_pattern_black.svg`,
+  copiado de `12.svg`), header amarillo. Dos paneles: "Datos del cliente"
+  (clave → carga; Factura/Remisión con toggle Stimulus `order-kind`; CFDI; RFC/
+  razón social; dirección) y "Catálogo de clientes" (busca por nombre → clave/
+  nombre/vendedor). Defaults: is_default o primero; CFDI = default del RFC.
+- **Validación** en `Order` (`header_selections_present`): Factura exige RFC +
+  CFDI; Remisión exige remisión (si hay); sucursal obligatoria si el cliente
+  tiene. Al guardar → `orders#show` (resumen; placeholder de paso 2).
+- La card "Registrar pedido" del menú enlaza a `orders#new`.
+- **Seed:** 2 clientes demo — C0001 (2 RFC, 2 sucursales) y C0002 (uno de cada)
+  — + catálogo CFDI (G01/G03/P01) + vendedor.
 
 ## Riesgos / puntos abiertos
 

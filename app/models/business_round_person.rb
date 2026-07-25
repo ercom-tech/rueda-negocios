@@ -7,5 +7,5 @@ class BusinessRoundPerson < ApplicationRecord
   belongs_to :supplier
   belongs_to :brand, optional: true
 
-  validates :user_id, uniqueness: { scope: %i[business_round_id consecutivo] }
+  validates :user_id, uniqueness: { scope: %i[business_round_id position] }
 end

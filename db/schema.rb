@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_24_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_24_150600) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -57,13 +57,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_24_140000) do
   create_table "business_round_people", force: :cascade do |t|
     t.bigint "brand_id"
     t.bigint "business_round_id", null: false
-    t.integer "consecutivo", default: 1, null: false
     t.datetime "created_at", null: false
+    t.integer "position", default: 1, null: false
     t.bigint "supplier_id", null: false
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.index ["brand_id"], name: "index_business_round_people_on_brand_id"
-    t.index ["business_round_id", "user_id", "consecutivo"], name: "idx_brp_round_user_consec", unique: true
+    t.index ["business_round_id", "user_id", "position"], name: "idx_brp_round_user_position", unique: true
     t.index ["business_round_id"], name: "index_business_round_people_on_business_round_id"
     t.index ["supplier_id"], name: "index_business_round_people_on_supplier_id"
     t.index ["user_id"], name: "index_business_round_people_on_user_id"
@@ -98,18 +98,86 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_24_140000) do
     t.index ["erp_round_id"], name: "index_business_rounds_on_erp_round_id", unique: true
   end
 
+  create_table "cfdi_uses", force: :cascade do |t|
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.string "description"
+    t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_cfdi_uses_on_code", unique: true
+  end
+
+  create_table "client_branches", force: :cascade do |t|
+    t.string "address"
+    t.bigint "client_id", null: false
+    t.datetime "created_at", null: false
+    t.integer "erp_branch_id"
+    t.boolean "is_default", default: false, null: false
+    t.string "name"
+    t.datetime "updated_at", null: false
+    t.index ["client_id"], name: "index_client_branches_on_client_id"
+    t.index ["erp_branch_id"], name: "index_client_branches_on_erp_branch_id"
+  end
+
+  create_table "client_receipt_profiles", force: :cascade do |t|
+    t.bigint "client_id", null: false
+    t.datetime "created_at", null: false
+    t.integer "erp_receipt_profile_id"
+    t.boolean "is_default", default: false, null: false
+    t.string "name"
+    t.datetime "updated_at", null: false
+    t.index ["client_id"], name: "index_client_receipt_profiles_on_client_id"
+    t.index ["erp_receipt_profile_id"], name: "index_client_receipt_profiles_on_erp_receipt_profile_id"
+  end
+
+  create_table "client_tax_profiles", force: :cascade do |t|
+    t.string "business_name"
+    t.bigint "client_id", null: false
+    t.datetime "created_at", null: false
+    t.bigint "default_cfdi_use_id"
+    t.integer "erp_tax_profile_id"
+    t.boolean "is_default", default: false, null: false
+    t.string "rfc", null: false
+    t.datetime "updated_at", null: false
+    t.index ["client_id"], name: "index_client_tax_profiles_on_client_id"
+    t.index ["default_cfdi_use_id"], name: "index_client_tax_profiles_on_default_cfdi_use_id"
+    t.index ["erp_tax_profile_id"], name: "index_client_tax_profiles_on_erp_tax_profile_id"
+  end
+
   create_table "clients", force: :cascade do |t|
     t.boolean "approved", default: false, null: false
     t.string "commercial_name"
     t.datetime "created_at", null: false
     t.integer "credit_days"
     t.decimal "credit_limit", precision: 14, scale: 2
+    t.string "email"
     t.string "erp_client_key", null: false
     t.string "name"
     t.bigint "salesperson_id"
     t.datetime "updated_at", null: false
     t.index ["erp_client_key"], name: "index_clients_on_erp_client_key", unique: true
     t.index ["salesperson_id"], name: "index_clients_on_salesperson_id"
+  end
+
+  create_table "orders", force: :cascade do |t|
+    t.bigint "business_round_id", null: false
+    t.bigint "cfdi_use_id"
+    t.bigint "client_branch_id"
+    t.bigint "client_id", null: false
+    t.bigint "client_receipt_profile_id"
+    t.bigint "client_tax_profile_id"
+    t.datetime "created_at", null: false
+    t.string "erp_folio"
+    t.string "kind", default: "invoice", null: false
+    t.string "status", default: "draft", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["business_round_id"], name: "index_orders_on_business_round_id"
+    t.index ["cfdi_use_id"], name: "index_orders_on_cfdi_use_id"
+    t.index ["client_branch_id"], name: "index_orders_on_client_branch_id"
+    t.index ["client_id"], name: "index_orders_on_client_id"
+    t.index ["client_receipt_profile_id"], name: "index_orders_on_client_receipt_profile_id"
+    t.index ["client_tax_profile_id"], name: "index_orders_on_client_tax_profile_id"
+    t.index ["user_id"], name: "index_orders_on_user_id"
   end
 
   create_table "prices", force: :cascade do |t|
@@ -196,7 +264,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_24_140000) do
   add_foreign_key "business_round_salespeople", "salespeople"
   add_foreign_key "business_round_suppliers", "business_rounds"
   add_foreign_key "business_round_suppliers", "suppliers"
+  add_foreign_key "client_branches", "clients"
+  add_foreign_key "client_receipt_profiles", "clients"
+  add_foreign_key "client_tax_profiles", "cfdi_uses", column: "default_cfdi_use_id"
+  add_foreign_key "client_tax_profiles", "clients"
   add_foreign_key "clients", "salespeople"
+  add_foreign_key "orders", "business_rounds"
+  add_foreign_key "orders", "cfdi_uses"
+  add_foreign_key "orders", "client_branches"
+  add_foreign_key "orders", "client_receipt_profiles"
+  add_foreign_key "orders", "client_tax_profiles"
+  add_foreign_key "orders", "clients"
+  add_foreign_key "orders", "users"
   add_foreign_key "prices", "products"
   add_foreign_key "product_suppliers", "products"
   add_foreign_key "product_suppliers", "suppliers"

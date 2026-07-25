@@ -13,6 +13,11 @@ Rails.application.routes.draw do
   # Reportes de venta (hub de reportes).
   get "reportes", to: "reports#index", as: :reports
 
+  # Levantamiento de pedido.
+  resources :orders, only: %i[new create show] do
+    collection { get :client_options } # autocompletado del buscador de cliente
+  end
+
   # Menú principal (destino post-login).
   root "home#index"
 end

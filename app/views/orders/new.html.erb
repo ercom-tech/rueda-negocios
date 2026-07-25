@@ -1,0 +1,118 @@
+<% content_for :title, "Levantamiento de pedido · Rueda de Negocios" %>
+
+<div class="relative min-h-screen w-full overflow-hidden bg-[#F4EFE0] text-neutral-900">
+  <%# Patrón de herramientas (negro, tenue) sobre el fondo claro %>
+  <div class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.12]"
+       style="background-image: url('<%= image_path "tools_pattern_black.svg" %>');"></div>
+
+  <%# ── Header amarillo ── %>
+  <header class="relative z-10 flex items-center justify-between bg-[#EDC94C] px-6 py-4 sm:px-10 lg:px-[7%]">
+    <h1 class="text-2xl font-extrabold sm:text-3xl">Levantamiento de pedido</h1>
+    <%= link_to root_path, title: "Volver al menú" do %>
+      <%= image_tag "fecego_logo_white.png", alt: "FECEGO", class: "h-9 w-auto invert" %>
+    <% end %>
+  </header>
+
+  <%# ── Card única (ancha): Datos del cliente ── %>
+  <div class="relative z-10 mx-auto max-w-5xl px-6 py-10 lg:px-[7%]">
+    <section class="rounded-3xl bg-[#EDC94C] p-6 sm:p-8">
+      <div class="rounded-2xl bg-black py-4 text-center">
+        <h2 class="text-2xl font-extrabold text-white">Datos del cliente</h2>
+      </div>
+
+      <div class="mt-6 space-y-5">
+        <%# Buscador de cliente con autocompletado (clave o nombre) %>
+        <div class="relative" data-controller="autocomplete"
+             data-autocomplete-url-value="<%= client_options_orders_path %>"
+             data-action="click@window->autocomplete#hide">
+          <%= form_with url: new_order_path, method: :get do %>
+            <div class="flex items-center gap-3 rounded-full bg-black px-5 py-3 text-white">
+              <span aria-hidden="true">🔍</span>
+              <%= text_field_tag :client_key, (@client ? "#{@client.erp_client_key} - #{@client.name}" : nil),
+                    placeholder: "Buscar cliente por clave o nombre",
+                    autocomplete: "off",
+                    data: { autocomplete_target: "input", action: "input->autocomplete#search keydown->autocomplete#navigate" },
+                    class: "w-full bg-transparent outline-none placeholder:text-white/60" %>
+            </div>
+          <% end %>
+          <div data-autocomplete-target="results" class="absolute inset-x-0 top-full z-20 mt-1"></div>
+        </div>
+
+        <% if @client %>
+          <p class="text-sm text-neutral-700">
+            Vendedor: <span class="font-semibold"><%= @client.salesperson&.name || "—" %></span>
+          </p>
+
+          <%= form_with model: @order, url: orders_path, method: :post,
+                data: { controller: "order-kind" }, class: "space-y-5" do |f| %>
+            <%= f.hidden_field :client_id, value: @client.id %>
+
+            <%# Fila: Tipo (Factura/Remisión) + Uso de CFDI %>
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <div>
+                <span class="mb-1 block text-sm font-semibold">Tipo de pedido</span>
+                <div class="flex items-center gap-6 rounded-full bg-black px-6 py-3 text-white">
+                  <label class="flex cursor-pointer items-center gap-2">
+                    <%= f.radio_button :kind, "invoice", class: "accent-[#EDC94C]",
+                          data: { action: "change->order-kind#toggle" } %> Factura
+                  </label>
+                  <label class="flex cursor-pointer items-center gap-2">
+                    <%= f.radio_button :kind, "remission", class: "accent-[#EDC94C]",
+                          data: { action: "change->order-kind#toggle" } %> Remisión
+                  </label>
+                </div>
+              </div>
+
+              <div data-order-kind-target="invoice">
+                <%= render "field", label: "Uso de CFDI" do %>
+                  <%= f.select :cfdi_use_id,
+                        options_for_select(@cfdi_uses.map { |c| [c.label, c.id] }, @order.cfdi_use_id),
+                        { include_blank: "— Selecciona —" },
+                        class: "w-full bg-black text-white outline-none" %>
+                <% end %>
+              </div>
+            </div>
+
+            <%# Línea completa: Nombre o razón social (Factura) / Remisión %>
+            <div data-order-kind-target="invoice">
+              <%= render "field", label: "Nombre o razón social (RFC)" do %>
+                <%= f.select :client_tax_profile_id,
+                      options_for_select(@client.tax_profiles.map { |t| [t.label, t.id] }, @order.client_tax_profile_id),
+                      { include_blank: "— Selecciona —" },
+                      class: "w-full bg-black text-white outline-none" %>
+              <% end %>
+            </div>
+
+            <div data-order-kind-target="remission">
+              <%= render "field", label: "Remisión" do %>
+                <%= f.select :client_receipt_profile_id,
+                      options_for_select(@client.receipt_profiles.map { |r| [r.label, r.id] }, @order.client_receipt_profile_id),
+                      { include_blank: "— Selecciona —" },
+                      class: "w-full bg-black text-white outline-none" %>
+              <% end %>
+            </div>
+
+            <%# Línea completa: Dirección de entrega %>
+            <div>
+              <%= render "field", label: "Dirección de entrega" do %>
+                <%= f.select :client_branch_id,
+                      options_for_select(@client.branches.map { |b| [b.label, b.id] }, @order.client_branch_id),
+                      { include_blank: "— Selecciona —" },
+                      class: "w-full bg-black text-white outline-none" %>
+              <% end %>
+            </div>
+
+            <div class="pt-2 text-center">
+              <%= f.submit "Continuar a levantamiento de pedido",
+                    class: "cursor-pointer rounded-full bg-[#CE6150] px-8 py-3 font-bold text-white transition-colors hover:bg-[#bd5343]" %>
+            </div>
+          <% end %>
+        <% else %>
+          <p class="rounded-2xl bg-black/5 px-5 py-4 text-sm text-neutral-700">
+            Busca al cliente por clave o nombre para comenzar.
+          </p>
+        <% end %>
+      </div>
+    </section>
+  </div>
+</div>
