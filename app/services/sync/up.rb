@@ -39,7 +39,7 @@ module Sync
 
     def pending
       Order.captured.where(erp_folio: nil)
-           .includes(:user, :order_items, :client_tax_profile, :cfdi_use,
+           .includes(:user, { order_items: :product }, :client_tax_profile, :cfdi_use,
                      :client_branch, client: :salesperson)
     end
 

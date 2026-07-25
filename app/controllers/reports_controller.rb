@@ -8,7 +8,7 @@ class ReportsController < ApplicationController
   # equipo-servidor ve todos (para transmitirlos al ERP).
   def captured_orders
     scope = current_user.can_see_all_orders? ? Order.all : current_user.orders
-    @orders = scope.includes(:client, :user).order(created_at: :desc)
+    @orders = scope.includes(:client, :user, :order_items).order(created_at: :desc)
     @all_scope = current_user.can_see_all_orders?
   end
 end

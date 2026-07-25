@@ -37,7 +37,7 @@ namespace :sync do
   task up: :environment do
     base = ENV.fetch("RUEDA_API_URL") { abort "Falta RUEDA_API_URL (base de rueda-api, p.ej. http://localhost:4568)" }
 
-    pending = Order.submitted.where(erp_folio: nil).count
+    pending = Order.captured.where(erp_folio: nil).count
     puts "[sync:up] pedidos por transmitir: #{pending}"
 
     r = Sync::Up.new(base).run!

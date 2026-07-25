@@ -3,6 +3,24 @@
 Bitácora de decisiones y contexto del proyecto. Se actualiza conforme
 avanzamos (paso **Documentar** del flujo PAIVD).
 
+## Auditoría 2026-07-25 — remediación (por severidad, de + a -)
+
+Auditoría en 5 ejes (usabilidad, doc↔código, convenciones, calidad/patrones,
+seguridad). Reporte: artifact "Auditoría — rueda-negocios & rueda-api".
+Estado de los hallazgos ALTA:
+
+- [x] **A1** `rake sync:up` usaba `Order.submitted` (scope inexistente) →
+  `Order.captured` en `lib/tasks/sync.rake:40`.
+- [x] **A2** contraseña del server sin default en producción: `db/seeds.rb`
+  exige `SEED_SERVER_PASSWORD` en prod; default `rueda2026` solo dev/test.
+- [x] **A3** N+1: `Sync::Up#pending` precarga `order_items: :product`;
+  `ReportsController#captured_orders` precarga `:order_items`.
+- [ ] **A4** cobertura de tests del sync + alta al ERP (arco propio).
+- [ ] **A5** errores del encabezado no señalan el campo faltante.
+- [ ] **A6** enlaces "muertos" (`href:#`) con apariencia de activos.
+
+Media/baja/diferidos: ver el artifact de auditoría.
+
 ## Estado actual
 
 Estructura de repos definida; ambos en GitHub (org **ercom-tech**):

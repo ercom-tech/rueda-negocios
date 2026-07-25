@@ -11,13 +11,21 @@
 
 SERVER_ERP_ID = 0 # reservado para la app; el ERP nunca usa 0 como id_persona.
 
+# La contraseña NO tiene default en producción: se exige SEED_SERVER_PASSWORD
+# para no dejar una credencial real en el repo. En dev/test hay un default cómodo.
+password = ENV["SEED_SERVER_PASSWORD"]
+if password.blank?
+  abort "Define SEED_SERVER_PASSWORD para sembrar el usuario server." if Rails.env.production?
+  password = "rueda2026" # solo desarrollo/test
+end
+
 server = User.find_or_initialize_by(erp_person_id: SERVER_ERP_ID)
 if server.new_record?
   server.username = ENV.fetch("SEED_SERVER_USERNAME", "servidor")
   server.name     = "Servidor"
   server.role     = "server"
   server.active   = true
-  server.password = ENV.fetch("SEED_SERVER_PASSWORD", "rueda2026")
+  server.password = password
   server.save!
   puts "Seed: usuario server '#{server.username}' creado."
 else
