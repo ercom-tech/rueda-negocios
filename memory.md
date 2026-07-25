@@ -6,14 +6,18 @@ avanzamos (paso **Documentar** del flujo PAIVD).
 ## Estado actual
 
 Estructura de repos definida y ambos con `git init`.
-**Descubrimiento del esquema de catálogos del ERP (sync-down) COMPLETADO** y
-verificado contra BD viva → `docs/erp-esquema-catalogos.md`. Pendiente aún el
-descubrimiento del esquema de **pedidos** (sync-up, alta en ERP).
+**Descubrimiento del esquema del ERP COMPLETADO** (contra BD dev `fecego` @1702):
+catálogos/sync-down → `docs/erp-esquema-catalogos.md`; **pedidos/sync-up (alta)**
+→ `docs/erp-esquema-pedidos.md`.
 
 **Fase A COMPLETADA** (app `rueda-negocios`): `rails new` + modelos del dataset
 local, migrado y validado.
 
-**Fase B — LOGIN, MENÚ, hub de REPORTES y PEDIDO (paso 1)**: autenticación
+**Fase C/D — EN CURSO:** descubrimiento del alta de pedidos hecho
+(`docs/erp-esquema-pedidos.md`). Sigue: scaffolding de `rueda-api` (Sinatra),
+export/sync-down y alta/sync-up.
+
+**Fase B — LOGIN, MENÚ, hub de REPORTES y PEDIDO completo**: autenticación
 (bcrypt) + login; **menú** (`home#index`); **hub de reportes** (`reports#index`,
 `/reportes`); y el **pedido completo** — encabezado (`orders#new`, paso 1),
 **detalle** (`orders#show`, paso 2) y **resumen/envío** (`orders#summary`, paso 3).
@@ -233,10 +237,17 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
 
 ## Riesgos / puntos abiertos
 
-- 🔴 **Entrada de pedidos al ERP:** no existe interfaz previa; hay que crear
-  el endpoint en `rueda-api` que inserte en la BD del ERP replicando sus
-  reglas. Requiere **descubrimiento del esquema de pedidos del ERP** antes de
-  codificar el sync-up. Mayor riesgo.
+- **Entrada de pedidos al ERP (sync-up)** — DESCUBIERTO → `docs/erp-esquema-pedidos.md`.
+  El ERP inserta en `fecego.vta_pedido` (cabecera, PK `id_empresa/clave_cliente/
+  fecha_pedido/hora_pedido`) + `vta_pedido_detalle`. Ya existe el patrón de
+  **pedidos de ruta transmitidos** (`transmitido`, `clave_pedido_ruta`) — la rueda
+  encaja ahí. **Folio `clave_pedido` se asigna EN LA TRANSMISIÓN** (prefijo del
+  `cnf_persona` del capturista + consecutivo = último con ese prefijo +1) → `erp_folio`.
+  `estatus=CAPTUR`; `id_vendedor` = el del cliente; `bodega` sin uso;
+  `clave_pedido_ruta` NO es nuestro (lo llena la planeación de ruta de FECEGO).
+  IVA por partida confirmado. **Pendiente:** campos de config (`c_FormaPago`/
+  `c_MetodoPago`/`condicion_pago`/`tipo_precio`/`id_negociaciontipo`/`id_enviotipo`)
+  + idempotencia del reintento.
 - **Punto único de falla:** la laptop-servidor. Definir backups (pg_dump a
   USB/otro equipo) y quizá laptop de respaldo.
 - **Origen de precios/beneficios de la rueda:** RESUELTO el hallazgo — el ERP
