@@ -12,6 +12,7 @@ Rails.application.routes.draw do
 
   # Reportes de venta (hub de reportes).
   get "reportes", to: "reports#index", as: :reports
+  get "reportes/pedidos-capturados", to: "reports#captured_orders", as: :captured_orders_report
 
   # Levantamiento de pedido.
   resources :orders, only: %i[new create show] do

@@ -12,6 +12,13 @@ class User < ApplicationRecord
   has_many :suppliers, through: :business_round_people
   has_many :orders, dependent: :destroy
 
+  # capturista: ve solo sus pedidos. server: el equipo-servidor, ve todos.
+  enum :role, { capturista: "capturista", server: "server" }, default: "capturista"
+
+  def can_see_all_orders?
+    server?
+  end
+
   validates :erp_person_id, presence: true, uniqueness: true
   validates :username, presence: true, uniqueness: true
   validates :password_digest, presence: true

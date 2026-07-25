@@ -218,6 +218,19 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
 - **Diferido:** envío por **correo** real (SMTP; offline se difiere al sync) y
   **WhatsApp** (stub). Los botones existen y responden.
 
+### Fase B — reporte "Pedidos capturados" + roles (decisiones)
+
+- **Rol en `User`** (enum `role`: `capturista` | `server`, default capturista).
+  `User#can_see_all_orders?` = `server?`. Mapeo fino con el ERP (`cnf_persona.id_rol`)
+  se define en el sync.
+- **Regla validada (importante para rueda-api / uso real):** un **capturista ve
+  solo SUS pedidos** (`current_user.orders`); el **equipo-servidor ve TODOS**
+  (`Order.all`) — para transmitirlos al ERP. `ReportsController#captured_orders`
+  (`/reportes/pedidos-capturados`, card del hub) con badge "Mis pedidos" /
+  "Todos los pedidos".
+- **Seed:** usuarios `servidor` (rol server) y `capturista2`, + un pedido de
+  capturista2 para demostrar el scoping. Ambos con `rueda2026`.
+
 ## Riesgos / puntos abiertos
 
 - 🔴 **Entrada de pedidos al ERP:** no existe interfaz previa; hay que crear

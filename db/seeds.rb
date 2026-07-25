@@ -104,6 +104,33 @@ hitools = Supplier.find_by(erp_supplier_id: 501)
   ProductSupplier.find_or_create_by!(product: product, supplier: hitools) { |ps| ps.supplier_sku = "HIT-#{a[:id]}" } if hitools
 end
 
+# Usuarios para validar el reporte por rol.
+servidor = User.find_or_initialize_by(username: "servidor")
+if servidor.new_record?
+  servidor.attributes = { erp_person_id: 1002, name: "Servidor", role: "server", active: true }
+  servidor.password = "rueda2026"
+  servidor.save!
+end
+
+cap2 = User.find_or_initialize_by(username: "capturista2")
+if cap2.new_record?
+  cap2.attributes = { erp_person_id: 1003, name: "Ana", paternal_surname: "Ramírez", role: "capturista", active: true }
+  cap2.password = "rueda2026"
+  cap2.save!
+end
+
+# Pedido capturado por capturista2 (el capturista original NO lo ve; el servidor SÍ).
+if cap2.orders.none?
+  o = Order.create!(
+    user: cap2, business_round: round, client: client_b, kind: "invoice",
+    client_tax_profile: client_b.tax_profiles.first, cfdi_use: g01,
+    client_branch: client_b.branches.first, status: "submitted"
+  )
+  o.update!(local_folio: "RN-#{o.id.to_s.rjust(6, '0')}")
+  martillo = Product.find_by(erp_product_id: 98821)
+  o.order_items.create!(martillo.to_order_item_attributes.merge(position: 1, quantity: 5, discount_percent: 0))
+end
+
 puts "Seed dev listo:"
 puts "  rueda: #{round.name} (activa=#{round.active})"
 puts "  usuario: #{user.username} / rueda2026"
