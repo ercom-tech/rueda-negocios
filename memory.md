@@ -14,8 +14,11 @@ catálogos/sync-down → `docs/erp-esquema-catalogos.md`; **pedidos/sync-up (alt
 local, migrado y validado.
 
 **Fase C/D — EN CURSO:** descubrimiento del alta de pedidos hecho
-(`docs/erp-esquema-pedidos.md`). Sigue: scaffolding de `rueda-api` (Sinatra),
-export/sync-down y alta/sync-up.
+(`docs/erp-esquema-pedidos.md`). `rueda-api` scaffoldeada (Sinatra) con el
+**export del dataset VALIDADO end-to-end**, y el **rake `sync:down` en la app
+VALIDADO** (consume el export, replace del catálogo, deja la BD idéntica al
+export). Sigue: alta de pedidos en el ERP (**sync-up**) — endpoint en rueda-api
++ rake, con los campos de config pendientes de confirmar con FECEGO.
 
 **Fase B — LOGIN, MENÚ, hub de REPORTES y PEDIDO completo**: autenticación
 (bcrypt) + login; **menú** (`home#index`); **hub de reportes** (`reports#index`,
@@ -235,6 +238,71 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
 - **Seed:** usuarios `servidor` (rol server) y `capturista2`, + un pedido de
   capturista2 para demostrar el scoping. Ambos con `rueda2026`.
 
+### Fase C — `rueda-api` export / sync-down (decisiones)
+
+- **Endpoint único:** `GET /ruedas/:id/export` → arma TODO el dataset de la
+  rueda en un solo JSON (`RuedaApi::Export.for_rueda`). Acotado a `id_empresa=1`
+  y a la rueda. Validado con Oaxaca (`id_rueda=3`): 200, ~3.6 MB, **47 clientes,
+  15 vendedores, 3 usuarios, 24 usos CFDI, 18 proveedores, 1 marca, 13,196
+  productos**.
+- **Llaves del JSON** (las que consumirá el sync-down): `round`, `cfdi_uses`,
+  `users`, `salespeople`, `suppliers`, `brands`, `clients` (con `tax_profiles`/
+  `receipt_profiles`/`branches` anidados vía `jsonb_agg`), `products` (con
+  `supplier_skus` y precio/IVA/tope embebidos).
+- **Scope de productos:** unión **marca ∪ proveedor** participante de la rueda
+  (`p.id_marca IN marcas` OR `EXISTS com_proveedor_has_producto IN provs`).
+- **Scope de clientes:** solo los **registrados en la rueda**
+  (`cnf_rueda_negocios_cliente`), no todo el padrón.
+- **Precio:** primer renglón vigente de `com_producto_has_precio` (LATERAL,
+  `ORDER BY consecutivo LIMIT 1`) → `public_price`/`wholesale_price`/`tax_rate`/
+  `max_discount`.
+- **`description` del producto = `com_producto.nombre`** (decisión del usuario;
+  no `nombre_publico`/`descripcion_corta`). **Unidad = `cnf_unidad_medida.
+  abreviacion`** (no existe `clave`).
+- **Decimales:** el ERP devuelve NUMERIC como `BigDecimal` y la gema `json` lo
+  serializa en notación científica (`"0.47108e3"`). Se pasa por `deep_coerce`
+  → **string decimal plano** (`"471.08"`) para no perder precisión; rueda-negocios
+  lo castea a `decimal`. NO usar Float para montos.
+- **`baja = false` en TODO:** los catálogos principales ya filtraban; se agregó
+  también en las **7 tablas puente** (`cnf_rueda_negocios_*`,
+  `com_proveedor_has_producto`, `com_producto_has_sku`). Sin esto se colaban
+  relaciones dadas de baja (p.ej. SKUs muertos en `supplier_skus`).
+- **Trampa de validación:** un server viejo (previo a la ruta) puede quedar
+  ocupando el puerto → `rackup` nuevo falla el bind silenciosamente y el viejo
+  responde 404 al endpoint nuevo. Matar procesos `puma`/`rackup` huérfanos antes
+  de probar.
+
+### Fase D — rake `sync:down` en `rueda-negocios` (decisiones)
+
+- **`rake sync:down`** (`lib/tasks/sync.rake`) → `Sync::Down`
+  (`app/services/sync/down.rb`). Baja `GET {RUEDA_API_URL}/ruedas/{RUEDA_ID}/export`
+  con `Net::HTTP` (stdlib, sin gema nueva) y puebla el Postgres local dentro de
+  una transacción. ENV `RUEDA_API_URL` + `RUEDA_ID` en `.env`.
+- **Estrategia = REPLACE, no merge** (decisión del usuario). Es un *refresh
+  pre-evento*: deja el catálogo local **idéntico al export**. Borra el catálogo
+  (hijos→padres, respetando FKs; vacía también las tablas de membresía aún no
+  usadas) y reinserta con `insert_all`. Validado: totales en BD == export exacto,
+  0 residuo.
+- **Guarda:** `Sync::Down::GuardError` si `Order.exists?` → el rake **aborta**
+  con mensaje. El sync-down no debe correr sobre pedidos ya capturados (evita
+  romper FKs / perder captura). Validado.
+- **Usuarios = excepción al replace:** merge por `erp_person_id` **sin tocar
+  `role`** + cleanup de capturistas que ya no vienen del ERP. **Nunca borra un
+  `server`.**
+- **Rol `server` = usuario SEEDEADO** (decisión del usuario, sobre promoción).
+  `db/seeds.rb` ahora crea SOLO ese usuario, con identidad sintética
+  `erp_person_id = 0` (reservado app; el ERP nunca usa 0) para que el cleanup lo
+  preserve siempre. Credenciales por ENV `SEED_SERVER_USERNAME`/
+  `SEED_SERVER_PASSWORD` (fallback dev `servidor`/`rueda2026`). El resto del
+  dataset (rueda/clientes/productos/capturistas) YA NO se seedea → viene por
+  `sync:down`. En dev: `db:reset` (crea server) + `sync:down` (puebla catálogo).
+- **Migración `users.prefix`** (`20260725073308`): guarda el prefijo del ERP
+  (`cnf_persona.prefijo`, p.ej. "1A") que necesita el folio del sync-up.
+- **SKUs de proveedores fuera de la rueda:** se omiten (no hay proveedor local);
+  el rake reporta el conteo. Con Oaxaca: 0 omitidos.
+- **`record_timestamps: true`** en `insert_all`/`upsert_all` para que Rails
+  llene `created_at`/`updated_at`.
+
 ## Riesgos / puntos abiertos
 
 - **Entrada de pedidos al ERP (sync-up)** — DESCUBIERTO → `docs/erp-esquema-pedidos.md`.
@@ -263,11 +331,19 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
 
 ## Próximos pasos
 
-1. **Fase B (resto)** — pantallas de navegación read-only, una por una según
-   indique el usuario (productos con marca/proveedor/precio, clientes, rueda
-   activa). El login ya está.
-2. **Fase C** — API `rueda-api` (Sinatra) + endpoint de export del dataset.
-3. **Fase D** — rake sync-down en la app que consume el export y puebla el
-   Postgres local (reemplaza el seed dev).
-4. Más adelante: descubrir el esquema de **pedidos** del ERP (sync-up / alta) e
-   implementar la captura.
+1. **Sync-up (alta de pedidos en el ERP)** — el mayor riesgo restante:
+   - Endpoint nuevo en `rueda-api` que inserta en `fecego.vta_pedido` +
+     `vta_pedido_detalle` (ver `docs/erp-esquema-pedidos.md`), asigna el folio
+     `clave_pedido` (prefijo del capturista + consecutivo) en la transmisión y
+     lo devuelve.
+   - Rake `sync:up` en la app que transmite pedidos `submitted`, marca
+     `transmitido`/`erp_folio`. Idempotente y reintentable.
+   - **Antes:** confirmar con FECEGO los campos de config pendientes
+     (`c_FormaPago`/`c_MetodoPago`/`condicion_pago`/`tipo_precio`/
+     `id_negociaciontipo`/`id_enviotipo`) + estrategia de idempotencia.
+2. **Fase B (resto)** — pantallas read-only pendientes (productos, clientes,
+   rueda activa) y otras del menú (asistencia de clientes, cotización).
+3. **Membresía de rueda en el export/sync** — `business_round_people`
+   (capturista↔proveedor/marca), `brands_suppliers`, `business_round_*`. Hoy el
+   export no las trae y el sync-down solo las vacía. Definir cuando la UI las
+   necesite (p.ej. `suppliers_in` del capturista).
