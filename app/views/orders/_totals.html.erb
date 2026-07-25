@@ -1,0 +1,7 @@
+<%# Totales del pedido. `order` local. Id "order-totals" para el Turbo replace. %>
+<div id="order-totals" class="w-full overflow-hidden rounded-2xl border border-black/10 bg-white text-sm lg:w-80">
+  <div class="flex justify-between px-5 py-2"><span>Subtotal</span><span><%= number_to_currency(order.subtotal) %></span></div>
+  <div class="flex justify-between px-5 py-2"><span>Descuento</span><span><%= number_to_currency(order.discount_total) %></span></div>
+  <div class="flex justify-between px-5 py-2"><span>IVA</span><span><%= number_to_currency(order.tax_total) %></span></div>
+  <div class="flex justify-between bg-[#CE6150] px-5 py-3 font-bold text-white"><span>Total</span><span><%= number_to_currency(order.total) %></span></div>
+</div>

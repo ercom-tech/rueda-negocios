@@ -82,6 +82,28 @@ ClientBranch.find_or_create_by!(client: client_b, name: "Única") do |b|
   b.address = "Blvd. Sur 50, Oaxaca"; b.is_default = true
 end
 
+# Marcas y productos demo (para la búsqueda del detalle del pedido).
+stanley = Brand.find_or_create_by!(erp_brand_id: 10) { |b| b.name = "Stanley"; b.code = "ST" }
+truper  = Brand.find_or_create_by!(erp_brand_id: 11) { |b| b.name = "Truper"; b.code = "TR" }
+hitools = Supplier.find_by(erp_supplier_id: 501)
+
+[
+  { id: 91384,  desc: "Rotomartillo Stanley", part: "45670", unit: "PZA", model: "STDR5010", price: 1534.00, brand: stanley },
+  { id: 98821,  desc: "Martillo",             part: "54321", unit: "PZA", model: "MG-1000",  price: 120.00,  brand: truper },
+  { id: 18831,  desc: "Clavo 2\"",            part: "76543", unit: "KG",  model: "CL-2",     price: 40.00,   brand: truper },
+  { id: 348282, desc: "Pala",                 part: "53223", unit: "PZA", model: "PT-16",    price: 300.00,  brand: truper },
+  { id: 823272, desc: "Broca 3/4",            part: "87654", unit: "PZA", model: "BR-34",    price: 30.00,   brand: stanley }
+].each do |a|
+  product = Product.find_or_create_by!(erp_product_id: a[:id]) do |p|
+    p.description = a[:desc]; p.part_number = a[:part]; p.unit = a[:unit]
+    p.model = a[:model]; p.brand = a[:brand]; p.stock = 100
+  end
+  Price.find_or_create_by!(product: product) do |pr|
+    pr.public_price = a[:price]; pr.wholesale_price = (a[:price] * 0.9).round(2); pr.tax_rate = 16
+  end
+  ProductSupplier.find_or_create_by!(product: product, supplier: hitools) { |ps| ps.supplier_sku = "HIT-#{a[:id]}" } if hitools
+end
+
 puts "Seed dev listo:"
 puts "  rueda: #{round.name} (activa=#{round.active})"
 puts "  usuario: #{user.username} / rueda2026"

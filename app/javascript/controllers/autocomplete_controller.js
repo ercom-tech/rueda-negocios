@@ -71,7 +71,7 @@ export default class extends Controller {
   }
 
   get items() {
-    return Array.from(this.resultsTarget.querySelectorAll("a"))
+    return Array.from(this.resultsTarget.querySelectorAll("a, button"))
   }
 
   clear() {

@@ -15,8 +15,8 @@ local, migrado y validado.
 
 **Fase B — LOGIN, MENÚ, hub de REPORTES y PEDIDO (paso 1)**: autenticación
 (bcrypt) + login; **menú** (`home#index`); **hub de reportes** (`reports#index`,
-`/reportes`); y el **encabezado del pedido** (`orders#new`, paso 1 de 3). Faltan
-el detalle (paso 2) y el resumen/envío (paso 3). Diseños desde
+`/reportes`); y el **pedido** — encabezado (`orders#new`, paso 1) y **detalle**
+(`orders#show`, paso 2). Falta el resumen/envío (paso 3). Diseños desde
 `docs/design-reference/{login,menu,reportes,pedidos}`.
 
 ## Decisiones tomadas
@@ -172,6 +172,28 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
 - La card "Registrar pedido" del menú enlaza a `orders#new`.
 - **Seed:** 2 clientes demo — C0001 (2 RFC, 2 sucursales) y C0002 (uno de cada)
   — + catálogo CFDI (G01/G03/P01) + vendedor.
+
+### Fase B — Pedido, Arco 2 / detalle (decisiones)
+
+- **`OrderItem`** (partida): snapshot de código/descripción/no.parte/unidad/precio/
+  IVA (`tax_rate`) del producto al agregarlo. `position` = consecutivo. Line total
+  = cantidad × precio (descuento e IVA se aplican al agregado, como la referencia).
+- **Datos nuevos:** `Product.model` (modelo, para búsqueda), `Price.tax_rate` (IVA,
+  del ERP `com_producto_has_precio.iva`), `Order.observations`.
+- **Totales en `Order`:** subtotal=Σ(cant×precio); descuento=Σ(línea×%); **IVA=
+  Σ(base×tax_rate del producto)**; total=subtotal−descuento+IVA. (Los números de
+  `paso2.png` eran ilustrativos; se validará el manejo fiscal exacto en el sync.)
+- **Búsqueda de producto** (`Product.search`): código FECEGO (`erp_product_id`),
+  código proveedor (`product_suppliers.supplier_sku`), nombre (`description`),
+  modelo, número de parte.
+- **Pantalla `orders#show`** (paso 2, tema claro): resumen del encabezado + buscador
+  de producto con autocompletado + tabla de partidas (todas las columnas, bordes
+  redondos, borrar por fila, editar cantidad/descuento en línea) + totales +
+  observaciones. **Interacciones vía Turbo Streams** (`OrderItemsController`
+  create/update/destroy → reemplaza `#order-detail`). Auto-guardado de observaciones.
+- Botones: **Editar** → paso 1; **Cancelar** → menú (turbo_confirm); **Enviar** →
+  `#` (Arco 3). Los `turbo_confirm` usan diálogo nativo (ok para el usuario).
+- **Seed:** 5 productos demo (con precio, IVA 16%, modelo, No. parte, SKU proveedor).
 
 ## Riesgos / puntos abiertos
 

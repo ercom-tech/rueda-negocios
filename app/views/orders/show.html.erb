@@ -1,4 +1,4 @@
-<% content_for :title, "Pedido · Rueda de Negocios" %>
+<% content_for :title, "Levantamiento de pedido · Rueda de Negocios" %>
 
 <div class="relative min-h-screen w-full overflow-hidden bg-[#F4EFE0] text-neutral-900">
   <div class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.12]"
@@ -11,27 +11,65 @@
     <% end %>
   </header>
 
-  <div class="relative z-10 mx-auto max-w-3xl px-6 py-10 lg:px-[7%]">
-    <div class="rounded-3xl bg-[#EDC94C] p-6 sm:p-8">
-      <div class="rounded-2xl bg-black py-4 text-center">
-        <h2 class="text-2xl font-extrabold text-white">Encabezado guardado</h2>
+  <div class="relative z-10 w-full space-y-6 px-6 py-8 lg:px-[7%]">
+    <%# ── Barra: # Pedido + acciones ── %>
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <span class="rounded-full bg-neutral-400/80 px-5 py-2.5 text-sm font-semibold text-neutral-900">
+        # Pedido <%= @order.erp_folio.presence || "(borrador)" %>
+      </span>
+      <div class="flex items-center gap-3">
+        <%= link_to "Editar", new_order_path(client_key: @order.client.erp_client_key),
+              class: "rounded-full bg-[#EDC94C] px-6 py-2.5 font-bold text-neutral-900 hover:bg-[#e3bd3a]" %>
+        <%= link_to "Cancelar", root_path,
+              data: { turbo_confirm: "¿Cancelar el pedido y volver al menú?" },
+              class: "rounded-full bg-[#EDC94C] px-6 py-2.5 font-bold text-neutral-900 hover:bg-[#e3bd3a]" %>
+        <%= link_to "Enviar", "#",
+              class: "rounded-full bg-[#CE6150] px-6 py-2.5 font-bold text-white hover:bg-[#bd5343]" %>
       </div>
+    </div>
 
-      <dl class="mt-6 space-y-2 text-neutral-900">
-        <div class="flex justify-between gap-4"><dt class="font-semibold">Cliente:</dt><dd><%= @order.client.name %> (<%= @order.client.erp_client_key %>)</dd></div>
-        <div class="flex justify-between gap-4"><dt class="font-semibold">Tipo:</dt><dd><%= @order.invoice? ? "Factura" : "Remisión" %></dd></div>
-        <% if @order.invoice? %>
-          <div class="flex justify-between gap-4"><dt class="font-semibold">RFC:</dt><dd><%= @order.client_tax_profile&.label %></dd></div>
-          <div class="flex justify-between gap-4"><dt class="font-semibold">Uso de CFDI:</dt><dd><%= @order.cfdi_use&.label %></dd></div>
-        <% else %>
-          <div class="flex justify-between gap-4"><dt class="font-semibold">Remisión:</dt><dd><%= @order.client_receipt_profile&.label %></dd></div>
-        <% end %>
-        <div class="flex justify-between gap-4"><dt class="font-semibold">Entrega:</dt><dd><%= @order.client_branch&.label %></dd></div>
-      </dl>
+    <%# ── Resumen del encabezado (solo lectura) ── %>
+    <div class="grid grid-cols-1 gap-2 rounded-2xl bg-black p-5 text-sm text-white sm:grid-cols-2">
+      <div>Clave del cliente: <span class="font-semibold"><%= @order.client.erp_client_key %></span></div>
+      <div>Nombre o razón social:
+        <span class="font-semibold"><%= @order.invoice? ? @order.client_tax_profile&.business_name : @order.client.name %></span>
+      </div>
+      <div>Tipo: <span class="font-semibold"><%= @order.invoice? ? "Factura" : "Remisión" %></span>
+        <%= " · Uso de CFDI: #{@order.cfdi_use&.code}" if @order.invoice? %>
+      </div>
+      <div>Dirección de entrega: <span class="font-semibold"><%= @order.client_branch&.name %></span></div>
+    </div>
 
-      <p class="mt-6 rounded-2xl bg-black/5 px-5 py-4 text-center text-sm text-neutral-700">
-        Detalle del pedido (paso 2) — próximamente.
-      </p>
+    <%# ── Buscador de producto (autocompletado) ── %>
+    <div class="relative" data-controller="autocomplete"
+         data-autocomplete-url-value="<%= product_options_order_path(@order) %>"
+         data-action="click@window->autocomplete#hide">
+      <div class="flex items-center gap-3 rounded-full bg-black px-5 py-3 text-white">
+        <span aria-hidden="true">🔍</span>
+        <input type="text" autocomplete="off"
+               placeholder="Agregar producto: código FECEGO/proveedor, nombre, modelo o No. de parte"
+               data-autocomplete-target="input"
+               data-action="input->autocomplete#search keydown->autocomplete#navigate"
+               class="w-full bg-transparent outline-none placeholder:text-white/60" />
+      </div>
+      <div id="product-search-results" data-autocomplete-target="results"
+           class="absolute inset-x-0 top-full z-20 mt-1"></div>
+    </div>
+
+    <%# ── Tabla de partidas (Turbo) ── %>
+    <%= render "items_table", order: @order %>
+
+    <%# ── Observaciones (izquierda) + Totales (derecha) ── %>
+    <div class="flex flex-col gap-6 lg:flex-row lg:items-stretch">
+      <%= form_with url: observations_order_path(@order), method: :patch,
+            data: { controller: "form-submit" }, class: "flex flex-1 flex-col" do %>
+        <%= text_area_tag :observations, @order.observations,
+              placeholder: "Observaciones",
+              data: { action: "change->form-submit#submit" },
+              class: "h-full min-h-32 w-full rounded-2xl border border-black/10 bg-white p-4 outline-none placeholder:text-neutral-500 focus:border-[#EDC94C]" %>
+      <% end %>
+
+      <%= render "totals", order: @order %>
     </div>
   </div>
 </div>

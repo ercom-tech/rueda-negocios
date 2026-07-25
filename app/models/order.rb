@@ -10,11 +10,33 @@ class Order < ApplicationRecord
   belongs_to :client_branch,          optional: true
   belongs_to :cfdi_use,               optional: true
 
+  has_many :order_items, -> { order(:position) }, dependent: :destroy
+
   enum :kind,   { invoice: "invoice", remission: "remission" }
   enum :status, { draft: "draft", submitted: "submitted" }
 
   validates :kind, presence: true
   validate  :header_selections_present
+
+  def subtotal
+    order_items.sum(&:line_total)
+  end
+
+  def discount_total
+    order_items.sum(&:discount_amount)
+  end
+
+  def tax_total
+    order_items.sum(&:tax_amount)
+  end
+
+  def total
+    subtotal - discount_total + tax_total
+  end
+
+  def next_item_position
+    (order_items.maximum(:position) || 0) + 1
+  end
 
   private
 

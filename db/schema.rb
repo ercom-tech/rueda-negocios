@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_24_150600) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_24_160300) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -158,6 +158,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_24_150600) do
     t.index ["salesperson_id"], name: "index_clients_on_salesperson_id"
   end
 
+  create_table "order_items", force: :cascade do |t|
+    t.string "code"
+    t.datetime "created_at", null: false
+    t.string "description"
+    t.decimal "discount_percent", precision: 5, scale: 2, default: "0.0", null: false
+    t.bigint "order_id", null: false
+    t.string "part_number"
+    t.integer "position", default: 1, null: false
+    t.bigint "product_id"
+    t.decimal "quantity", precision: 14, scale: 3, default: "1.0", null: false
+    t.decimal "tax_rate", precision: 5, scale: 2, default: "0.0", null: false
+    t.string "unit"
+    t.decimal "unit_price", precision: 14, scale: 4, default: "0.0", null: false
+    t.datetime "updated_at", null: false
+    t.index ["order_id", "position"], name: "index_order_items_on_order_id_and_position"
+    t.index ["order_id"], name: "index_order_items_on_order_id"
+    t.index ["product_id"], name: "index_order_items_on_product_id"
+  end
+
   create_table "orders", force: :cascade do |t|
     t.bigint "business_round_id", null: false
     t.bigint "cfdi_use_id"
@@ -168,6 +187,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_24_150600) do
     t.datetime "created_at", null: false
     t.string "erp_folio"
     t.string "kind", default: "invoice", null: false
+    t.text "observations"
     t.string "status", default: "draft", null: false
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
@@ -184,6 +204,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_24_150600) do
     t.datetime "created_at", null: false
     t.bigint "product_id", null: false
     t.decimal "public_price", precision: 14, scale: 4
+    t.decimal "tax_rate", precision: 5, scale: 2
     t.datetime "updated_at", null: false
     t.decimal "wholesale_price", precision: 14, scale: 4
     t.index ["product_id"], name: "index_prices_on_product_id", unique: true
@@ -207,6 +228,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_24_150600) do
     t.integer "erp_product_id", null: false
     t.decimal "max_discount", precision: 5, scale: 2
     t.decimal "min_sale_quantity", precision: 14, scale: 3
+    t.string "model"
     t.string "part_number"
     t.decimal "stock", precision: 14, scale: 2
     t.string "unit"
@@ -269,6 +291,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_24_150600) do
   add_foreign_key "client_tax_profiles", "cfdi_uses", column: "default_cfdi_use_id"
   add_foreign_key "client_tax_profiles", "clients"
   add_foreign_key "clients", "salespeople"
+  add_foreign_key "order_items", "orders"
+  add_foreign_key "order_items", "products"
   add_foreign_key "orders", "business_rounds"
   add_foreign_key "orders", "cfdi_uses"
   add_foreign_key "orders", "client_branches"

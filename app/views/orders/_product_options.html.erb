@@ -1,0 +1,23 @@
+<%# Sugerencias del buscador de producto. Locals: order, products. %>
+<% if products.any? %>
+  <ul class="max-h-80 overflow-auto rounded-2xl border border-black/10 bg-white shadow-xl">
+    <% products.each do |product| %>
+      <li>
+        <%= button_to order_order_items_path(order, product_id: product.id),
+              class: "flex w-full items-center justify-between gap-4 px-5 py-3 text-left hover:bg-neutral-100" do %>
+          <span>
+            <span class="font-semibold text-neutral-900"><%= product.description %></span>
+            <span class="block text-xs text-neutral-600">
+              Código <%= product.erp_product_id %> · Modelo <%= product.model %> · <%= number_to_currency(product.price&.public_price) %>
+            </span>
+          </span>
+          <span class="shrink-0 rounded-full bg-black px-3 py-1 text-xs font-semibold text-white">Agregar</span>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+<% else %>
+  <div class="rounded-2xl border border-black/10 bg-white px-5 py-3 text-sm text-neutral-600 shadow-xl">
+    Sin resultados.
+  </div>
+<% end %>

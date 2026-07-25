@@ -15,7 +15,12 @@ Rails.application.routes.draw do
 
   # Levantamiento de pedido.
   resources :orders, only: %i[new create show] do
-    collection { get :client_options } # autocompletado del buscador de cliente
+    collection { get :client_options }         # autocompletado del buscador de cliente
+    member do
+      get   :product_options                   # autocompletado del buscador de producto
+      patch :observations                      # guarda observaciones
+    end
+    resources :order_items, only: %i[create update destroy] # partidas (Turbo)
   end
 
   # Menú principal (destino post-login).

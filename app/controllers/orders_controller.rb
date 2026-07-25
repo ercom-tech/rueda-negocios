@@ -36,6 +36,21 @@ class OrdersController < ApplicationController
     @order = current_user.orders.find(params[:id])
   end
 
+  # Sugerencias del buscador de producto (código FECEGO/proveedor, nombre,
+  # modelo, número de parte).
+  def product_options
+    @order = current_user.orders.find(params[:id])
+    @products = params[:q].present? ? Product.search(params[:q]).includes(:price).limit(10) : Product.none
+    render partial: "product_options", locals: { order: @order, products: @products }, layout: false
+  end
+
+  # Guarda observaciones (auto-save silencioso).
+  def observations
+    order = current_user.orders.find(params[:id])
+    order.update(observations: params[:observations])
+    head :no_content
+  end
+
   private
 
   def client_search(query)
