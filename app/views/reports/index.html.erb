@@ -1,0 +1,31 @@
+<% content_for :title, "Reportes de venta · Rueda de Negocios" %>
+
+<div class="relative flex min-h-screen w-full flex-col overflow-hidden bg-black">
+  <%# Patrón de herramientas a pantalla completa (detrás de todo) %>
+  <div class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.18]"
+       style="background-image: url('<%= image_path "tools_pattern_white.svg" %>');"></div>
+
+  <%# ── Header amarillo semi-transparente: deja ver el patrón del fondo ── %>
+  <header class="relative z-10 flex items-center justify-between bg-[#EDC94C] px-6 py-4 sm:px-10 lg:px-[7%]">
+    <h1 class="text-2xl font-extrabold text-neutral-900 sm:text-3xl">Reportes de venta</h1>
+    <%= link_to root_path, title: "Volver al menú" do %>
+      <%= image_tag "fecego_logo_white.png", alt: "FECEGO", class: "h-9 w-auto invert" %>
+    <% end %>
+  </header>
+
+  <%# ── Cuerpo: tarjetas de reporte centradas ── %>
+  <div class="relative z-10 flex flex-1 items-center justify-center px-6 py-16">
+    <div class="w-full max-w-5xl">
+      <div class="grid grid-cols-2 gap-6 sm:gap-8 lg:grid-cols-4">
+        <%= render "report_card", href: "#", icon: "icon_captured_orders.svg",
+              label: ["Pedidos", "capturados"] %>
+        <%= render "report_card", href: "#", icon: "icon_attendance_report.svg",
+              label: ["Reporte de", "asistencia"] %>
+        <%= render "report_card", href: "#", icon: "icon_products_report.svg",
+              label: ["Reporte de", "productos"] %>
+        <%= render "report_card", href: "#", icon: "icon_sales_report.svg",
+              label: ["Reporte de", "ventas"] %>
+      </div>
+    </div>
+  </div>
+</div>

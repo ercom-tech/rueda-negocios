@@ -13,11 +13,11 @@ descubrimiento del esquema de **pedidos** (sync-up, alta en ERP).
 **Fase A COMPLETADA** (app `rueda-negocios`): `rails new` + modelos del dataset
 local, migrado y validado.
 
-**Fase B — arcos LOGIN y MENÚ COMPLETADOS**: autenticación de capturistas
-(bcrypt del ERP) + login, y el **menú** (`home#index`, "¿Qué quieres hacer hoy?")
-con 4 opciones. Las pantallas de cada opción llegan en arcos siguientes, que el
-usuario irá indicando una por una. Commit inicial: login. Diseños desde
-`docs/design-reference/{login,menu}`.
+**Fase B — LOGIN, MENÚ y hub de REPORTES**: autenticación de capturistas
+(bcrypt del ERP) + login; el **menú** (`home#index`, "¿Qué quieres hacer hoy?")
+con 4 opciones; y el **hub de reportes** (`reports#index`, `/reportes`) con 4
+sub-reportes. El resto de pantallas llega en arcos siguientes, que el usuario
+irá indicando una por una. Diseños desde `docs/design-reference/{login,menu,reportes}`.
 
 ## Decisiones tomadas
 
@@ -136,6 +136,20 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
   (un pedido puede mezclar proveedores). Regla a definir si cambia.
 - **Seed dev:** liga al capturista con 2 proveedores (Hitools, Truper) para
   probar el caso multi.
+
+### Fase B — hub de reportes (decisiones)
+
+- **`ReportsController#index`** en `/reportes` (layout `auth`). La card
+  "Reportes de venta" del menú enlaza aquí.
+- **Patrón de pantalla interna:** header amarillo full-width (título + logo que
+  regresa al menú; logo blanco con `invert` sobre el amarillo) + cuerpo negro
+  con patrón + contenido centrado. Minimalista (sin pills de usuario/proveedor
+  ni logout, por decisión del usuario).
+- **4 sub-reportes** (tarjetas cuadradas amarillas, partial `reports/_report_card`):
+  Pedidos capturados, Reporte de asistencia, Reporte de productos, Reporte de
+  ventas. Enlazan a `#` (cada reporte se construye después).
+- Íconos negros uniformes vía `brightness-0` (el asset de "ventas" venía coral).
+  Assets: `icon_{captured_orders,attendance_report,products_report,sales_report}.svg`.
 
 ## Riesgos / puntos abiertos
 

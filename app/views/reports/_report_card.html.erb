@@ -1,0 +1,9 @@
+<%#
+  Tarjeta cuadrada del hub de reportes.
+  Locals: href, icon, label (String o Array de líneas)
+%>
+<%= link_to href,
+      class: "flex aspect-square flex-col items-center justify-center gap-5 rounded-3xl bg-[#EDC94C] p-6 text-center shadow-lg transition-transform hover:scale-[1.03]" do %>
+  <%= image_tag icon, alt: "", class: "h-20 w-20 brightness-0" %>
+  <span class="text-xl font-bold leading-tight text-neutral-900"><%= safe_join(Array(label), tag.br) %></span>
+<% end %>

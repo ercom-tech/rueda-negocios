@@ -10,7 +10,9 @@ Rails.application.routes.draw do
   # Proveedor activo en la sesión (cuando el capturista representa a varios).
   patch "active-supplier", to: "active_suppliers#update", as: :active_supplier
 
-  # Placeholder autenticado (destino post-login). La navegación real llega en
-  # arcos siguientes.
+  # Reportes de venta (hub de reportes).
+  get "reportes", to: "reports#index", as: :reports
+
+  # Menú principal (destino post-login).
   root "home#index"
 end
