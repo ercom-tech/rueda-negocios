@@ -409,6 +409,27 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
 
 ## Riesgos / puntos abiertos
 
+- **Empaquetado / deployment del "servidor" (PENDIENTE definir)** — cómo instalar
+  la app en el equipo del evento y servirla en la LAN. Análisis:
+  - **El proyecto ya tiene** `Dockerfile` (producción), `bin/docker-entrypoint`,
+    `.dockerignore` y `config/deploy.yml` (Kamal). Falta un `docker-compose.yml`
+    (app + Postgres) para el modo "todo en un equipo".
+  - **Windows:** Docker Desktop (requiere WSL2, con fricción) o VM Linux como
+    plan B. Ruby/Postgres nativo en Windows: frágil, **desaconsejado**.
+  - **Linux (preferido; encaja con la infra Linux de FECEGO):**
+    - **Docker Compose** + `restart: unless-stopped` → reproducible, portable,
+      auto-arranque al boot. **Recomendado.**
+    - **Nativo + systemd** (Ruby por rbenv/asdf + Postgres del sistema, Puma con
+      `SOLID_QUEUE_IN_PUMA`) → más ligero pero menos portable entre distros.
+  - **A resolver al empacar:** `RAILS_ENV=production` (SECRET_KEY_BASE/master key,
+    assets precompilados, `config.hosts` para la IP de la LAN); persistencia
+    (volumen Postgres + `pg_dump` a USB); **offline** (pre-descargar las imágenes
+    Docker en la oficina); primer arranque (`db:prepare` + seed del server +
+    `sync:down`).
+  - **Decisión pendiente:** plataforma (Windows/Linux) y método (Docker Compose
+    vs nativo/systemd). Parte de la fase de deployment/strengthening.
+
+
 - **Entrada de pedidos al ERP (sync-up)** — DESCUBIERTO → `docs/erp-esquema-pedidos.md`.
   El ERP inserta en `fecego.vta_pedido` (cabecera, PK `id_empresa/clave_cliente/
   fecha_pedido/hora_pedido`) + `vta_pedido_detalle`. Ya existe el patrón de
