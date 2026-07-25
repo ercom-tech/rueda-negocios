@@ -6,7 +6,7 @@ module Sync
   # rueda-api. Cada pedido enviado recibe su folio del ERP (`clave_pedido`),
   # que se guarda en `erp_folio` + se marca `transmitted_at`.
   #
-  # Idempotente por diseño: solo toma pedidos `submitted` sin `erp_folio`, y el
+  # Idempotente por diseño: solo toma pedidos `captured` sin `erp_folio`, y el
   # endpoint del ERP no duplica un pedido ya insertado (PK de negocio). Un
   # reintento tras una caída retoma justo lo que faltó.
   class Up
@@ -24,7 +24,7 @@ module Sync
         res = post(build_payload(order))
         if res.is_a?(Net::HTTPSuccess)
           folio = JSON.parse(res.body)["clave_pedido"]
-          order.update!(erp_folio: folio, transmitted_at: Time.current)
+          order.update!(erp_folio: folio, transmitted_at: Time.current, status: "transmitted")
           results[:transmitted] << { local: order.local_folio, erp: folio }
         else
           msg = parse_error(res)
@@ -38,7 +38,7 @@ module Sync
     private
 
     def pending
-      Order.submitted.where(erp_folio: nil)
+      Order.captured.where(erp_folio: nil)
            .includes(:user, :order_items, :client_tax_profile, :cfdi_use,
                      :client_branch, client: :salesperson)
     end

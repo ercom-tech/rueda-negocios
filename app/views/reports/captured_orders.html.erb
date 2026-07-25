@@ -38,8 +38,11 @@
               <td class="px-4 py-3"><%= order.user.full_name.presence || order.user.username %></td>
               <td class="px-4 py-3 text-right"><%= number_to_currency(order.total) %></td>
               <td class="px-4 py-3 text-center">
-                <span class="rounded-full px-3 py-1 text-xs font-semibold <%= order.submitted? ? "bg-emerald-100 text-emerald-800" : "bg-neutral-200 text-neutral-700" %>">
-                  <%= order.submitted? ? "Enviado" : "Borrador" %>
+                <% status_color = { "draft" => "bg-neutral-200 text-neutral-700",
+                                    "captured" => "bg-amber-100 text-amber-800",
+                                    "transmitted" => "bg-emerald-100 text-emerald-800" } %>
+                <span class="rounded-full px-3 py-1 text-xs font-semibold <%= status_color[order.status] %>">
+                  <%= order.status_label %>
                 </span>
               </td>
               <td class="px-4 py-3 text-right"><%= order.created_at.strftime("%d/%m/%Y %H:%M") %></td>

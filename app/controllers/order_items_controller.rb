@@ -1,5 +1,6 @@
 class OrderItemsController < ApplicationController
   before_action :set_order
+  before_action :ensure_editable
 
   # Agrega un producto como partida (snapshot). Responde con Turbo Stream.
   def create
@@ -26,6 +27,13 @@ class OrderItemsController < ApplicationController
 
   def set_order
     @order = current_user.orders.find(params[:order_id])
+  end
+
+  # Un pedido transmitido al ERP ya no se puede editar.
+  def ensure_editable
+    return if @order.editable?
+
+    head :forbidden
   end
 
   def item_params

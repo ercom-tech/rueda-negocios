@@ -47,17 +47,21 @@ class OrdersController < ApplicationController
   # Guarda observaciones (auto-save silencioso).
   def observations
     order = current_user.orders.find(params[:id])
+    return head(:forbidden) unless order.editable?
+
     order.update(observations: params[:observations])
     head :no_content
   end
 
-  # Finaliza el pedido (folio) y va al resumen (paso 3).
+  # Finaliza la captura (folio local) y va al resumen (paso 3).
   def submit
     @order = current_user.orders.find(params[:id])
-    if @order.submit!
+    return redirect_to @order, alert: "Un pedido transmitido no se puede editar." unless @order.editable?
+
+    if @order.capture!
       redirect_to summary_order_path(@order)
     else
-      redirect_to @order, alert: "Agrega al menos un producto antes de enviar."
+      redirect_to @order, alert: "Agrega al menos un producto antes de guardar."
     end
   end
 

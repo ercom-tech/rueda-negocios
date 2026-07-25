@@ -13,7 +13,9 @@ class Order < ApplicationRecord
   has_many :order_items, -> { order(:position) }, dependent: :destroy
 
   enum :kind,   { invoice: "invoice", remission: "remission" }
-  enum :status, { draft: "draft", submitted: "submitted" }
+  # draft: en captura · captured: finalizado por el capturista, editable ·
+  # transmitted: ya en el ERP (folio asignado), NO editable.
+  enum :status, { draft: "draft", captured: "captured", transmitted: "transmitted" }
 
   validates :kind, presence: true
   validate  :header_selections_present
@@ -38,11 +40,22 @@ class Order < ApplicationRecord
     (order_items.maximum(:position) || 0) + 1
   end
 
-  # Finaliza el pedido: asigna folio local y lo marca como enviado.
-  def submit!
+  # Finaliza la captura: asigna folio local y marca el pedido como capturado.
+  def capture!
     return false if order_items.empty?
 
-    update!(status: "submitted", local_folio: local_folio.presence || generate_local_folio)
+    update!(status: "captured", local_folio: local_folio.presence || generate_local_folio)
+  end
+
+  # Editable mientras no se haya transmitido al ERP.
+  def editable?
+    !transmitted?
+  end
+
+  STATUS_LABELS = { "draft" => "Borrador", "captured" => "Capturado", "transmitted" => "Transmitido" }.freeze
+
+  def status_label
+    STATUS_LABELS.fetch(status, status)
   end
 
   def folio

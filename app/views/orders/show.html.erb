@@ -14,17 +14,30 @@
   <div class="relative z-10 w-full space-y-6 px-6 py-8 lg:px-[7%]">
     <%# ── Barra: # Pedido + acciones ── %>
     <div class="flex flex-wrap items-center justify-between gap-4">
-      <span class="rounded-full bg-neutral-400/80 px-5 py-2.5 text-sm font-semibold text-neutral-900">
-        # Pedido <%= @order.erp_folio.presence || "(borrador)" %>
-      </span>
       <div class="flex items-center gap-3">
-        <%= link_to "Editar", new_order_path(client_key: @order.client.erp_client_key),
-              class: "rounded-full bg-[#EDC94C] px-6 py-2.5 font-bold text-neutral-900 hover:bg-[#e3bd3a]" %>
-        <%= link_to "Cancelar", root_path,
-              data: { turbo_confirm: "¿Cancelar el pedido y volver al menú?" },
-              class: "rounded-full bg-[#EDC94C] px-6 py-2.5 font-bold text-neutral-900 hover:bg-[#e3bd3a]" %>
-        <%= link_to "Enviar", submit_order_path(@order), data: { turbo_method: :post },
-              class: "rounded-full bg-[#CE6150] px-6 py-2.5 font-bold text-white hover:bg-[#bd5343]" %>
+        <span class="rounded-full bg-neutral-400/80 px-5 py-2.5 text-sm font-semibold text-neutral-900">
+          # Pedido <%= @order.erp_folio.presence || @order.local_folio.presence || "(borrador)" %>
+        </span>
+        <span class="rounded-full px-4 py-2.5 text-sm font-semibold
+                     <%= @order.transmitted? ? "bg-emerald-600 text-white" : "bg-black/80 text-white" %>">
+          <%= @order.status_label %>
+        </span>
+      </div>
+      <div class="flex items-center gap-3">
+        <% if @order.editable? %>
+          <%= link_to "Editar", new_order_path(client_key: @order.client.erp_client_key),
+                class: "rounded-full bg-[#EDC94C] px-6 py-2.5 font-bold text-neutral-900 hover:bg-[#e3bd3a]" %>
+          <%= link_to "Cancelar", root_path,
+                data: { turbo_confirm: "¿Cancelar el pedido y volver al menú?" },
+                class: "rounded-full bg-[#EDC94C] px-6 py-2.5 font-bold text-neutral-900 hover:bg-[#e3bd3a]" %>
+          <%= link_to "Guardar", submit_order_path(@order), data: { turbo_method: :post },
+                class: "rounded-full bg-[#CE6150] px-6 py-2.5 font-bold text-white hover:bg-[#bd5343]" %>
+        <% else %>
+          <%= link_to "Ver PDF", pdf_order_path(@order),
+                class: "rounded-full bg-black px-6 py-2.5 font-bold text-white hover:bg-neutral-800" %>
+          <%= link_to "Volver al menú", root_path,
+                class: "rounded-full bg-[#EDC94C] px-6 py-2.5 font-bold text-neutral-900 hover:bg-[#e3bd3a]" %>
+        <% end %>
       </div>
     </div>
 
@@ -40,33 +53,41 @@
       <div>Dirección de entrega: <span class="font-semibold"><%= @order.client_branch&.name %></span></div>
     </div>
 
-    <%# ── Buscador de producto (autocompletado) ── %>
-    <div class="relative" data-controller="autocomplete"
-         data-autocomplete-url-value="<%= product_options_order_path(@order) %>"
-         data-action="click@window->autocomplete#hide">
-      <div class="flex items-center gap-3 rounded-full bg-black px-5 py-3 text-white">
-        <span aria-hidden="true">🔍</span>
-        <input type="text" autocomplete="off"
-               placeholder="Agregar producto: código FECEGO/proveedor, nombre, modelo o No. de parte"
-               data-autocomplete-target="input"
-               data-action="input->autocomplete#search keydown->autocomplete#navigate"
-               class="w-full bg-transparent outline-none placeholder:text-white/60" />
+    <%# ── Buscador de producto (autocompletado) — solo si editable ── %>
+    <% if @order.editable? %>
+      <div class="relative" data-controller="autocomplete"
+           data-autocomplete-url-value="<%= product_options_order_path(@order) %>"
+           data-action="click@window->autocomplete#hide">
+        <div class="flex items-center gap-3 rounded-full bg-black px-5 py-3 text-white">
+          <span aria-hidden="true">🔍</span>
+          <input type="text" autocomplete="off"
+                 placeholder="Agregar producto: código FECEGO/proveedor, nombre, modelo o No. de parte"
+                 data-autocomplete-target="input"
+                 data-action="input->autocomplete#search keydown->autocomplete#navigate"
+                 class="w-full bg-transparent outline-none placeholder:text-white/60" />
+        </div>
+        <div id="product-search-results" data-autocomplete-target="results"
+             class="absolute inset-x-0 top-full z-20 mt-1"></div>
       </div>
-      <div id="product-search-results" data-autocomplete-target="results"
-           class="absolute inset-x-0 top-full z-20 mt-1"></div>
-    </div>
+    <% end %>
 
     <%# ── Tabla de partidas (Turbo) ── %>
     <%= render "items_table", order: @order %>
 
     <%# ── Observaciones (izquierda) + Totales (derecha) ── %>
     <div class="flex flex-col gap-6 lg:flex-row lg:items-stretch">
-      <%= form_with url: observations_order_path(@order), method: :patch,
-            data: { controller: "form-submit" }, class: "flex flex-1 flex-col" do %>
-        <%= text_area_tag :observations, @order.observations,
-              placeholder: "Observaciones",
-              data: { action: "change->form-submit#submit" },
-              class: "h-full min-h-32 w-full rounded-2xl border border-black/10 bg-white p-4 outline-none placeholder:text-neutral-500 focus:border-[#EDC94C]" %>
+      <% if @order.editable? %>
+        <%= form_with url: observations_order_path(@order), method: :patch,
+              data: { controller: "form-submit" }, class: "flex flex-1 flex-col" do %>
+          <%= text_area_tag :observations, @order.observations,
+                placeholder: "Observaciones",
+                data: { action: "change->form-submit#submit" },
+                class: "h-full min-h-32 w-full rounded-2xl border border-black/10 bg-white p-4 outline-none placeholder:text-neutral-500 focus:border-[#EDC94C]" %>
+        <% end %>
+      <% else %>
+        <div class="min-h-32 flex-1 whitespace-pre-line rounded-2xl border border-black/10 bg-white p-4 text-neutral-700">
+          <%= @order.observations.presence || "Sin observaciones." %>
+        </div>
       <% end %>
 
       <%= render "totals", order: @order %>

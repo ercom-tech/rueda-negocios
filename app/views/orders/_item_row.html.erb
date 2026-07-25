@@ -1,9 +1,11 @@
 <%# Fila de partida. Locals: order, item. %>
 <tr class="border-t border-black/10 text-center">
   <td class="px-2 py-2">
-    <%= button_to order_order_item_path(order, item), method: :delete,
-          class: "text-lg text-neutral-400 hover:text-red-600",
-          form: { data: { turbo_confirm: "¿Quitar producto?" } } do %>🗑<% end %>
+    <% if order.editable? %>
+      <%= button_to order_order_item_path(order, item), method: :delete,
+            class: "text-lg text-neutral-400 hover:text-red-600",
+            form: { data: { turbo_confirm: "¿Quitar producto?" } } do %>🗑<% end %>
+    <% end %>
   </td>
   <td class="px-3 py-2"><%= item.position %></td>
   <td class="px-3 py-2"><%= item.code %></td>
@@ -11,12 +13,16 @@
   <td class="px-3 py-2"><%= item.part_number %></td>
 
   <td class="px-3 py-2">
-    <%= form_with model: item, url: order_order_item_path(order, item), method: :patch,
-          data: { controller: "form-submit" } do |f| %>
-      <%= f.number_field :quantity, min: 1, step: "any",
-            value: number_with_precision(item.quantity, strip_insignificant_zeros: true),
-            data: { action: "change->form-submit#submit" },
-            class: "w-16 rounded-lg border border-neutral-300 px-2 py-1 text-center outline-none focus:border-[#EDC94C]" %>
+    <% if order.editable? %>
+      <%= form_with model: item, url: order_order_item_path(order, item), method: :patch,
+            data: { controller: "form-submit" } do |f| %>
+        <%= f.number_field :quantity, min: 1, step: "any",
+              value: number_with_precision(item.quantity, strip_insignificant_zeros: true),
+              data: { action: "change->form-submit#submit" },
+              class: "w-16 rounded-lg border border-neutral-300 px-2 py-1 text-center outline-none focus:border-[#EDC94C]" %>
+      <% end %>
+    <% else %>
+      <%= number_with_precision(item.quantity, strip_insignificant_zeros: true) %>
     <% end %>
   </td>
 
@@ -24,15 +30,19 @@
   <td class="px-3 py-2"><%= number_to_currency(item.unit_price) %></td>
 
   <td class="px-3 py-2">
-    <%= form_with model: item, url: order_order_item_path(order, item), method: :patch,
-          data: { controller: "form-submit" } do |f| %>
-      <div class="flex items-center justify-center gap-1">
-        <%= f.number_field :discount_percent, min: 0, max: 100, step: "any",
-              value: number_with_precision(item.discount_percent, strip_insignificant_zeros: true),
-              data: { action: "change->form-submit#submit" },
-              class: "w-14 rounded-lg border border-neutral-300 px-2 py-1 text-center outline-none focus:border-[#EDC94C]" %>
-        <span>%</span>
-      </div>
+    <% if order.editable? %>
+      <%= form_with model: item, url: order_order_item_path(order, item), method: :patch,
+            data: { controller: "form-submit" } do |f| %>
+        <div class="flex items-center justify-center gap-1">
+          <%= f.number_field :discount_percent, min: 0, max: 100, step: "any",
+                value: number_with_precision(item.discount_percent, strip_insignificant_zeros: true),
+                data: { action: "change->form-submit#submit" },
+                class: "w-14 rounded-lg border border-neutral-300 px-2 py-1 text-center outline-none focus:border-[#EDC94C]" %>
+          <span>%</span>
+        </div>
+      <% end %>
+    <% else %>
+      <%= number_with_precision(item.discount_percent, strip_insignificant_zeros: true) %>%
     <% end %>
   </td>
 

@@ -383,6 +383,30 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
   con 403 las sesiones de `ActionDispatch::Integration` (UA no reconocido) — no
   es bug; validar la UI con navegador real o request specs con UA moderno.
 
+### Estatus del pedido — captured / transmitted (decisiones)
+
+- **Enum `status` = `draft → captured → transmitted`** (reemplaza `submitted`).
+  `draft`=Borrador (en captura), `captured`=Capturado (finalizado por el
+  capturista, **editable**), `transmitted`=Transmitido (ya en el ERP, **NO
+  editable**). Migración de datos `20260725184048` (submitted→captured; y
+  →transmitted si tenía erp_folio).
+- **`Order#submit!` → `capture!`** (pone `status: captured`). El botón del paso 2
+  (`orders/show`) dice **"Guardar"** (antes "Enviar"); mensajes ajustados.
+- **`capture` sigue editable hasta transmitir** (decisión del usuario); solo
+  `transmitted` bloquea. `Order#editable? = !transmitted?`.
+- **Bloqueo de edición** (backend + UI): `OrderItemsController` before_action
+  `ensure_editable` (403) y guardas en `orders#submit`/`observations`. En
+  `orders/show`, si no es editable se ocultan buscador, controles de partida
+  (cantidad/descuento/borrar → texto plano) y observaciones (solo lectura);
+  acciones = solo "Ver PDF" + "Volver al menú".
+- **Transmisión (sync-up):** selecciona `Order.captured.where(erp_folio: nil)` y
+  al transmitir pone `status: "transmitted"` (+ `erp_folio` + `transmitted_at`).
+- **Etiquetas** (`Order#status_label` = Borrador/Capturado/Transmitido) usadas en
+  el reporte (badge de color por estado), el PDF (`Estatus:` + `Transmitido:`
+  usa `transmitted_at`) y `orders/show`.
+- Validado en navegador: captura muestra "Guardar"/"Capturado" editable;
+  transmitido queda de solo lectura.
+
 ## Riesgos / puntos abiertos
 
 - **Entrada de pedidos al ERP (sync-up)** — DESCUBIERTO → `docs/erp-esquema-pedidos.md`.

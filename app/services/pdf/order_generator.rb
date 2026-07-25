@@ -137,9 +137,9 @@ module Pdf
       vendor = @order.client.salesperson
       [
         "Capturado: #{@order.created_at.strftime('%d/%m/%Y %H:%M')}    Renglones: #{@order.order_items.size}",
-        ("Transmitido: #{@order.updated_at.strftime('%d/%m/%Y %H:%M')}" if @order.submitted?),
+        ("Transmitido: #{@order.transmitted_at.strftime('%d/%m/%Y %H:%M')}" if @order.transmitted? && @order.transmitted_at),
         ("Vendedor: #{[vendor.erp_salesperson_id, vendor.name].compact.join(' ')}" if vendor),
-        "Estatus: #{@order.submitted? ? 'ENVIADO' : 'BORRADOR'}"
+        "Estatus: #{@order.status_label.upcase}"
       ].compact.join("\n")
     end
 
