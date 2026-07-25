@@ -20,7 +20,7 @@ gem "tailwindcss-rails"
 gem "jbuilder"
 
 # Paginación liviana (misma elección que portal-v2).
-gem "pagy", "~> 9.0"
+gem "pagy", "~> 43.6"
 
 # Generación de PDF del pedido en Ruby puro (funciona offline).
 gem "prawn", "~> 2.5"
