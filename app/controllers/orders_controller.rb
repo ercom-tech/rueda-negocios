@@ -51,6 +51,42 @@ class OrdersController < ApplicationController
     head :no_content
   end
 
+  # Finaliza el pedido (folio) y va al resumen (paso 3).
+  def submit
+    @order = current_user.orders.find(params[:id])
+    if @order.submit!
+      redirect_to summary_order_path(@order)
+    else
+      redirect_to @order, alert: "Agrega al menos un producto antes de enviar."
+    end
+  end
+
+  # Paso 3: resumen con opciones (PDF / correo / WhatsApp).
+  def summary
+    @order = current_user.orders.find(params[:id])
+  end
+
+  # Descarga del PDF del pedido.
+  def pdf
+    @order = current_user.orders.find(params[:id])
+    send_data Pdf::OrderGenerator.new(@order).render,
+              filename: "pedido-#{@order.folio}.pdf", type: "application/pdf", disposition: "attachment"
+  end
+
+  # (Diferido) envío por correo — offline no hay SMTP; se enviará al sincronizar.
+  def send_email
+    @order = current_user.orders.find(params[:id])
+    email = params[:email].presence || @order.client.email
+    redirect_to summary_order_path(@order),
+                notice: "Correo programado para #{email} (se enviará al sincronizar)."
+  end
+
+  # (Stub) envío por WhatsApp.
+  def send_whatsapp
+    @order = current_user.orders.find(params[:id])
+    redirect_to summary_order_path(@order), alert: "Envío por WhatsApp: próximamente."
+  end
+
   private
 
   def client_search(query)

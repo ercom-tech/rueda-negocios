@@ -19,6 +19,11 @@ Rails.application.routes.draw do
     member do
       get   :product_options                   # autocompletado del buscador de producto
       patch :observations                      # guarda observaciones
+      post  :submit                            # finaliza (folio) → resumen
+      get   :summary                           # paso 3: resumen con opciones
+      get   :pdf                               # descarga PDF del pedido
+      post  :send_email                        # (diferido) envío por correo
+      post  :send_whatsapp                     # (stub) envío por WhatsApp
     end
     resources :order_items, only: %i[create update destroy] # partidas (Turbo)
   end

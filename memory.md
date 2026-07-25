@@ -15,9 +15,9 @@ local, migrado y validado.
 
 **Fase B — LOGIN, MENÚ, hub de REPORTES y PEDIDO (paso 1)**: autenticación
 (bcrypt) + login; **menú** (`home#index`); **hub de reportes** (`reports#index`,
-`/reportes`); y el **pedido** — encabezado (`orders#new`, paso 1) y **detalle**
-(`orders#show`, paso 2). Falta el resumen/envío (paso 3). Diseños desde
-`docs/design-reference/{login,menu,reportes,pedidos}`.
+`/reportes`); y el **pedido completo** — encabezado (`orders#new`, paso 1),
+**detalle** (`orders#show`, paso 2) y **resumen/envío** (`orders#summary`, paso 3).
+Diseños desde `docs/design-reference/{login,menu,reportes,pedidos}`.
 
 ## Decisiones tomadas
 
@@ -194,6 +194,29 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
 - Botones: **Editar** → paso 1; **Cancelar** → menú (turbo_confirm); **Enviar** →
   `#` (Arco 3). Los `turbo_confirm` usan diálogo nativo (ok para el usuario).
 - **Seed:** 5 productos demo (con precio, IVA 16%, modelo, No. parte, SKU proveedor).
+
+### Fase B — Pedido, Arco 3 / envío + resumen (decisiones)
+
+- **`Order.submit!`**: exige ≥1 partida → `status: submitted` + asigna
+  **`local_folio`** (`RN-000123`, offline; el `erp_folio` llega en el sync).
+  `Order#folio` = local o erp.
+- **`orders#submit`** (POST, botón Enviar del paso 2) → **`orders#summary`** (paso 3).
+- **Paso 3 (`summary`)**: panel "Resumen del pedido" con folio + 3 opciones
+  (Generar PDF / Enviar por correo / Enviar por WhatsApp) + Terminar (→ menú).
+- **Enviar por correo = MODAL** (Stimulus `modal`, overlay + cierre backdrop/Esc/
+  Regresar): correo registrado + input para otro.
+- **Generar PDF:** implementado con **prawn** (`Pdf::OrderGenerator`, offline).
+  **Replica el formato IMPRESO del ERP** (muestras `PedidoKE*.pdf` del b2b, en
+  `portal-v2/tmp/letter_opener`): logo fecego + datos de empresa, "PEDIDO" +
+  CLAVE/Fecha, bloque cliente (POR FACTURAR/RFC/razón social o remisión) +
+  atributos (capturado/transmitido/vendedor/estatus), tabla con bordes
+  (Código/Descripción/Unidad/Cantidad/Precio/Monto/%Dto./Subtotal/%IVA/Total),
+  **importe en letra** (conversor español propio) y totales. `orders#pdf` →
+  descarga. Íconos `icon_{pdf,mail,whatsapp}.svg`.
+- **Logo oscuro:** `fecego_logo_dark.png` = `logo_fecego.png` del b2b (blanco)
+  invertido a negro (con chunky_png, una vez) para el PDF en fondo blanco.
+- **Diferido:** envío por **correo** real (SMTP; offline se difiere al sync) y
+  **WhatsApp** (stub). Los botones existen y responden.
 
 ## Riesgos / puntos abiertos
 

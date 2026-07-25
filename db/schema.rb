@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_24_160300) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_24_170000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -187,6 +187,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_24_160300) do
     t.datetime "created_at", null: false
     t.string "erp_folio"
     t.string "kind", default: "invoice", null: false
+    t.string "local_folio"
     t.text "observations"
     t.string "status", default: "draft", null: false
     t.datetime "updated_at", null: false
@@ -197,6 +198,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_24_160300) do
     t.index ["client_id"], name: "index_orders_on_client_id"
     t.index ["client_receipt_profile_id"], name: "index_orders_on_client_receipt_profile_id"
     t.index ["client_tax_profile_id"], name: "index_orders_on_client_tax_profile_id"
+    t.index ["local_folio"], name: "index_orders_on_local_folio", unique: true
     t.index ["user_id"], name: "index_orders_on_user_id"
   end
 

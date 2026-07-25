@@ -23,7 +23,7 @@
         <%= link_to "Cancelar", root_path,
               data: { turbo_confirm: "¿Cancelar el pedido y volver al menú?" },
               class: "rounded-full bg-[#EDC94C] px-6 py-2.5 font-bold text-neutral-900 hover:bg-[#e3bd3a]" %>
-        <%= link_to "Enviar", "#",
+        <%= link_to "Enviar", submit_order_path(@order), data: { turbo_method: :post },
               class: "rounded-full bg-[#CE6150] px-6 py-2.5 font-bold text-white hover:bg-[#bd5343]" %>
       </div>
     </div>

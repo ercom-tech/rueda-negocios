@@ -38,7 +38,23 @@ class Order < ApplicationRecord
     (order_items.maximum(:position) || 0) + 1
   end
 
+  # Finaliza el pedido: asigna folio local y lo marca como enviado.
+  def submit!
+    return false if order_items.empty?
+
+    update!(status: "submitted", local_folio: local_folio.presence || generate_local_folio)
+  end
+
+  def folio
+    local_folio.presence || erp_folio.presence
+  end
+
   private
+
+  def generate_local_folio
+    "RN-#{id.to_s.rjust(6, "0")}"
+  end
+
 
   # Fuerza los datos obligatorios del encabezado (paso 1).
   def header_selections_present

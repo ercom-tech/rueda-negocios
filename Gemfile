@@ -22,6 +22,10 @@ gem "jbuilder"
 # Paginación liviana (misma elección que portal-v2).
 gem "pagy", "~> 9.0"
 
+# Generación de PDF del pedido en Ruby puro (funciona offline).
+gem "prawn", "~> 2.5"
+gem "prawn-table", "~> 0.2"
+
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 gem "bcrypt", "~> 3.1.7"
 

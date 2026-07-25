@@ -1,0 +1,76 @@
+<% content_for :title, "Resumen del pedido · Rueda de Negocios" %>
+
+<div class="relative min-h-screen w-full overflow-hidden bg-[#F4EFE0] text-neutral-900">
+  <div class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.12]"
+       style="background-image: url('<%= image_path "tools_pattern_black.svg" %>');"></div>
+
+  <header class="relative z-10 flex items-center justify-between bg-[#EDC94C] px-6 py-4 sm:px-10 lg:px-[7%]">
+    <h1 class="text-2xl font-extrabold sm:text-3xl">Levantamiento de pedido</h1>
+    <%= link_to root_path, title: "Volver al menú" do %>
+      <%= image_tag "fecego_logo_white.png", alt: "FECEGO", class: "h-9 w-auto invert" %>
+    <% end %>
+  </header>
+
+  <div class="relative z-10 mx-auto max-w-xl px-6 py-12"
+       data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
+    <section class="rounded-3xl bg-[#EDC94C] p-6 sm:p-8">
+      <div class="rounded-2xl bg-black py-4 text-center">
+        <h2 class="text-2xl font-extrabold text-white">Resumen del pedido</h2>
+      </div>
+
+      <p class="mt-4 text-center text-sm text-neutral-800">
+        Pedido <span class="font-bold">#<%= @order.folio %></span> guardado correctamente.
+      </p>
+
+      <div class="mt-6 space-y-4">
+        <%= link_to pdf_order_path(@order),
+              class: "flex items-center gap-4 rounded-2xl bg-black px-6 py-5 text-lg font-semibold text-white transition-colors hover:bg-neutral-800" do %>
+          <%= image_tag "icon_pdf.svg", alt: "", class: "h-8 w-8" %> Generar PDF
+        <% end %>
+
+        <button type="button" data-action="modal#open"
+                class="flex w-full items-center gap-4 rounded-2xl bg-black px-6 py-5 text-left text-lg font-semibold text-white transition-colors hover:bg-neutral-800">
+          <%= image_tag "icon_mail.svg", alt: "", class: "h-8 w-8" %> Enviar por correo
+        </button>
+
+        <%= link_to send_whatsapp_order_path(@order), data: { turbo_method: :post },
+              class: "flex items-center gap-4 rounded-2xl bg-black px-6 py-5 text-lg font-semibold text-white transition-colors hover:bg-neutral-800" do %>
+          <%= image_tag "icon_whatsapp.svg", alt: "", class: "h-8 w-8" %> Enviar por WhatsApp
+        <% end %>
+
+        <div class="pt-2 text-center">
+          <%= link_to "Terminar", root_path,
+                class: "inline-block rounded-full bg-[#CE6150] px-8 py-3 font-bold text-white transition-colors hover:bg-[#bd5343]" %>
+        </div>
+      </div>
+    </section>
+
+    <%# ── Modal: Enviar por correo ── %>
+    <div data-modal-target="dialog" style="display:none"
+         class="fixed inset-0 z-50 items-center justify-center p-4">
+      <div class="absolute inset-0 bg-black/50" data-action="click->modal#close"></div>
+      <div class="relative w-full max-w-md rounded-3xl bg-[#EDC94C] p-6 sm:p-8">
+        <div class="rounded-2xl bg-black py-4 text-center">
+          <h3 class="text-xl font-extrabold text-white">Enviar por correo</h3>
+        </div>
+
+        <%= form_with url: send_email_order_path(@order), method: :post, class: "mt-6 space-y-4" do %>
+          <div class="rounded-2xl bg-black px-5 py-3 text-sm text-white">
+            Correo registrado: <span class="font-semibold"><%= @order.client.email.presence || "—" %></span>
+          </div>
+          <label class="block">
+            <span class="mb-1 block text-sm font-semibold">O enviar a otro correo</span>
+            <%= email_field_tag :email, nil, placeholder: "correo@ejemplo.com",
+                  class: "w-full rounded-full bg-black px-5 py-3 text-white outline-none placeholder:text-white/60" %>
+          </label>
+          <div class="flex justify-center gap-3 pt-2">
+            <button type="button" data-action="modal#close"
+                    class="rounded-full bg-[#CE6150] px-6 py-2.5 font-bold text-white hover:bg-[#bd5343]">Regresar</button>
+            <%= submit_tag "Enviar",
+                  class: "cursor-pointer rounded-full bg-[#CE6150] px-6 py-2.5 font-bold text-white hover:bg-[#bd5343]" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

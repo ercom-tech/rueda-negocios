@@ -24,4 +24,9 @@ class OrderItem < ApplicationRecord
   def tax_amount
     taxable * (tax_rate / 100)
   end
+
+  # Total de la partida con IVA (para el PDF, estilo b2b).
+  def total
+    taxable + tax_amount
+  end
 end
