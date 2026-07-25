@@ -2,9 +2,13 @@
 <tr class="border-t border-black/10 text-center">
   <td class="px-2 py-2">
     <% if order.editable? %>
-      <%= button_to order_order_item_path(order, item), method: :delete,
-            class: "text-lg text-neutral-400 hover:text-red-600",
-            form: { data: { turbo_confirm: "¿Quitar producto?" } } do %>🗑<% end %>
+      <div data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
+        <button type="button" data-action="modal#open" aria-label="Quitar producto"
+                class="text-lg text-neutral-400 transition-colors hover:text-red-600">🗑</button>
+        <%= render "home/confirm_dialog", title: "Quitar producto",
+              message: "¿Quitar \"#{item.description}\" del pedido?",
+              confirm_label: "Sí, quitar", path: order_order_item_path(order, item), method: :delete %>
+      </div>
     <% end %>
   </td>
   <td class="px-3 py-2"><%= item.position %></td>

@@ -25,7 +25,7 @@
       </div>
       <div class="flex items-center gap-3">
         <% if @order.editable? %>
-          <%= link_to "Editar", new_order_path(client_key: @order.client.erp_client_key),
+          <%= link_to "Editar", edit_order_path(@order),
                 class: "rounded-full bg-[#EDC94C] px-6 py-2.5 font-bold text-neutral-900 hover:bg-[#e3bd3a]" %>
           <%= link_to "Cancelar", root_path,
                 data: { turbo_confirm: "¿Cancelar el pedido y volver al menú?" },
@@ -41,27 +41,51 @@
       </div>
     </div>
 
-    <%# ── Resumen del encabezado (solo lectura) ── %>
-    <div class="grid grid-cols-1 gap-2 rounded-2xl bg-black p-5 text-sm text-white sm:grid-cols-2">
-      <div>Clave del cliente: <span class="font-semibold"><%= @order.client.erp_client_key %></span></div>
-      <div>Nombre o razón social:
-        <span class="font-semibold"><%= @order.invoice? ? @order.client_tax_profile&.business_name : @order.client.name %></span>
+    <%# ── Resumen del encabezado (solo lectura) — 4 columnas × 2 filas ── %>
+    <div class="grid grid-cols-2 gap-x-6 gap-y-4 rounded-2xl bg-black p-5 text-sm text-white sm:grid-cols-4">
+      <%# Fila 1 %>
+      <div>
+        <span class="block text-xs text-white/50">Clave del cliente</span>
+        <span class="font-semibold"><%= @order.client.erp_client_key %></span>
       </div>
-      <div>Tipo: <span class="font-semibold"><%= @order.invoice? ? "Factura" : "Remisión" %></span>
-        <%= " · Uso de CFDI: #{@order.cfdi_use&.code}" if @order.invoice? %>
+      <div>
+        <span class="block text-xs text-white/50">Nombre comercial</span>
+        <span class="font-semibold"><%= @order.client.commercial_name.presence || "—" %></span>
       </div>
-      <div>Dirección de entrega: <span class="font-semibold"><%= @order.client_branch&.name %></span></div>
+      <div>
+        <span class="block text-xs text-white/50">Nombre / razón social</span>
+        <span class="font-semibold"><%= (@order.invoice? ? @order.client_tax_profile&.business_name : @order.client.name).presence || "—" %></span>
+      </div>
+      <div>
+        <span class="block text-xs text-white/50">Vendedor</span>
+        <span class="font-semibold"><%= @order.client.salesperson&.name || "—" %></span>
+      </div>
+
+      <%# Fila 2 %>
+      <div>
+        <span class="block text-xs text-white/50">Tipo</span>
+        <span class="font-semibold"><%= @order.invoice? ? "Factura" : "Remisión" %></span>
+      </div>
+      <div>
+        <span class="block text-xs text-white/50">Uso de CFDI</span>
+        <span class="font-semibold"><%= @order.invoice? ? (@order.cfdi_use&.code || "—") : "—" %></span>
+      </div>
+      <div class="hidden sm:block"></div>
+      <div>
+        <span class="block text-xs text-white/50">Dirección de entrega</span>
+        <span class="font-semibold"><%= @order.client_branch&.name || "—" %></span>
+      </div>
     </div>
 
     <%# ── Buscador de producto (autocompletado) — solo si editable ── %>
     <% if @order.editable? %>
       <div class="relative" data-controller="autocomplete"
            data-autocomplete-url-value="<%= product_options_order_path(@order) %>"
-           data-action="click@window->autocomplete#hide">
+           data-action="click@window->autocomplete#hide turbo:submit-end->autocomplete#reset">
         <div class="flex items-center gap-3 rounded-full bg-black px-5 py-3 text-white">
           <span aria-hidden="true">🔍</span>
           <input type="text" autocomplete="off"
-                 placeholder="Agregar producto: código FECEGO/proveedor, nombre, modelo o No. de parte"
+                 placeholder="Busca por código FECEGO, código del proveedor, nombre, modelo o número de parte"
                  data-autocomplete-target="input"
                  data-action="input->autocomplete#search keydown->autocomplete#navigate"
                  class="w-full bg-transparent outline-none placeholder:text-white/60" />

@@ -27,9 +27,11 @@ export default class extends Controller {
   }
 
   async fetch(q) {
-    const res = await fetch(`${this.urlValue}?q=${encodeURIComponent(q)}`, {
-      headers: { Accept: "text/html" }
-    })
+    // La URL base puede ya traer query (p.ej. order_id al editar); se agrega q
+    // con URLSearchParams para no romperla con un segundo "?".
+    const url = new URL(this.urlValue, window.location.origin)
+    url.searchParams.set("q", q)
+    const res = await fetch(url, { headers: { Accept: "text/html" } })
     this.resultsTarget.innerHTML = await res.text()
     this.index = -1
   }
@@ -77,6 +79,14 @@ export default class extends Controller {
   clear() {
     this.resultsTarget.innerHTML = ""
     this.index = -1
+  }
+
+  // Tras agregar (submit del resultado), limpia el input y los resultados y
+  // reenfoca para encadenar una nueva búsqueda.
+  reset() {
+    this.inputTarget.value = ""
+    this.clear()
+    this.inputTarget.focus()
   }
 
   // Cierra el dropdown al hacer click fuera.

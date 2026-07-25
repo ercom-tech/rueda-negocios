@@ -6,13 +6,14 @@
 %>
 <% if available_suppliers.size > 1 %>
   <%= form_with url: active_supplier_path, method: :patch, data: { controller: "form-submit" } do %>
-    <label class="flex items-center gap-1 rounded-full bg-[#F4EEDB] px-5 py-2.5 text-neutral-800">
-      Proveedor:
-      <%= select_tag :supplier_id,
-            options_for_select(available_suppliers.map { |s| [s.name, s.id] }, current_supplier&.id),
-            class: "cursor-pointer bg-transparent font-semibold outline-none",
-            data: { action: "change->form-submit#submit" } %>
-    </label>
+    <div class="flex items-center gap-2 rounded-full bg-[#F4EEDB] px-5 py-2.5 text-neutral-800">
+      <span>Proveedor:</span>
+      <%= render "shared/custom_select", name: "supplier_id", include_blank: false,
+            options: available_suppliers.map { |s| [s.name, s.id] }, selected: current_supplier&.id,
+            input_data: { action: "change->form-submit#submit" },
+            button_class: "flex items-center gap-1 font-semibold text-neutral-800",
+            panel_class: "absolute left-0 top-full z-30 mt-1 min-w-52 overflow-auto rounded-2xl border border-black/10 bg-white shadow-xl" %>
+    </div>
   <% end %>
 <% else %>
   <span class="rounded-full bg-[#F4EEDB] px-5 py-2.5 text-neutral-800">

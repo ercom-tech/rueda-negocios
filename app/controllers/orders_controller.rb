@@ -17,7 +17,8 @@ class OrdersController < ApplicationController
   # Sugerencias del autocompletado (clave o nombre).
   def client_options
     @clients = params[:q].present? ? client_search(params[:q]) : Client.none
-    render partial: "client_options", locals: { clients: @clients }, layout: false
+    order = current_user.orders.find_by(id: params[:order_id])
+    render partial: "client_options", locals: { clients: @clients, order: order }, layout: false
   end
 
   def create
@@ -34,6 +35,42 @@ class OrdersController < ApplicationController
 
   def show
     @order = current_user.orders.find(params[:id])
+  end
+
+  # Editar el encabezado del MISMO pedido (conserva las partidas). Puede cambiar
+  # el cliente desde el buscador (recarga sobre el mismo pedido).
+  def edit
+    @order = current_user.orders.find(params[:id])
+    return redirect_to @order, alert: "Un pedido transmitido no se puede editar." unless @order.editable?
+
+    if params[:client_key].present?
+      key   = params[:client_key].to_s.strip.split(/\s[–-]\s/).first.to_s.strip
+      nuevo = Client.find_by(erp_client_key: key) || client_search(key).first
+      if nuevo && nuevo != @order.client
+        @order.client = nuevo
+        # Los perfiles del encabezado eran del cliente anterior: se resetean.
+        @order.client_tax_profile = @order.client_branch = @order.client_receipt_profile = @order.cfdi_use = nil
+      end
+    end
+
+    @client    = @order.client
+    @cfdi_uses = CfdiUse.order(:code)
+    apply_header_defaults
+    render :new
+  end
+
+  def update
+    @order = current_user.orders.find(params[:id])
+    return redirect_to @order, alert: "Un pedido transmitido no se puede editar." unless @order.editable?
+
+    if @order.update(order_params)
+      redirect_to @order, notice: "Encabezado actualizado."
+    else
+      @client    = @order.client
+      @cfdi_uses = CfdiUse.order(:code)
+      flash.now[:alert] = "Revisa los datos obligatorios del encabezado."
+      render :new, status: :unprocessable_entity
+    end
   end
 
   # Sugerencias del buscador de producto (código FECEGO/proveedor, nombre,

@@ -1,9 +1,10 @@
-<%# Sugerencias del autocompletado. `clients` es una colección. %>
+<%# Sugerencias del autocompletado. Locals: clients; order (opcional, si se está
+    editando un pedido → el cambio de cliente recae sobre el mismo pedido). %>
 <% if clients.any? %>
   <ul class="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-xl">
     <% clients.each do |c| %>
       <li>
-        <%= link_to new_order_path(client_key: c.erp_client_key),
+        <%= link_to (order ? edit_order_path(order, client_key: c.erp_client_key) : new_order_path(client_key: c.erp_client_key)),
               class: "flex items-center justify-between gap-4 px-5 py-3 hover:bg-neutral-100" do %>
           <span>
             <span class="flex flex-wrap items-baseline gap-x-2">

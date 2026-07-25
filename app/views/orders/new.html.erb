@@ -23,9 +23,9 @@
       <div class="mt-6 space-y-5">
         <%# Buscador de cliente con autocompletado (clave o nombre) %>
         <div class="relative" data-controller="autocomplete"
-             data-autocomplete-url-value="<%= client_options_orders_path %>"
+             data-autocomplete-url-value="<%= client_options_orders_path(order_id: @order.persisted? ? @order.id : nil) %>"
              data-action="click@window->autocomplete#hide">
-          <%= form_with url: new_order_path, method: :get do %>
+          <%= form_with url: (@order.persisted? ? edit_order_path(@order) : new_order_path), method: :get do %>
             <div class="flex items-center gap-3 rounded-full bg-black px-5 py-3 text-white">
               <span aria-hidden="true">🔍</span>
               <%= text_field_tag :client_key, (@client ? "#{@client.erp_client_key} - #{@client.commercial_name.presence || @client.name}" : nil),
@@ -44,7 +44,7 @@
             <span>Vendedor: <span class="font-semibold"><%= @client.salesperson&.name || "—" %></span></span>
           </div>
 
-          <%= form_with model: @order, url: orders_path, method: :post,
+          <%= form_with model: @order,
                 data: { controller: "order-kind" }, class: "space-y-5" do |f| %>
             <%= f.hidden_field :client_id, value: @client.id %>
 
@@ -65,46 +65,34 @@
               </div>
 
               <div data-order-kind-target="invoice">
-                <%= render "field", label: "Uso de CFDI" do %>
-                  <%= f.select :cfdi_use_id,
-                        options_for_select(@cfdi_uses.map { |c| [c.label, c.id] }, @order.cfdi_use_id),
-                        { include_blank: "— Selecciona —" },
-                        class: "w-full bg-black text-white outline-none" %>
-                <% end %>
+                <span class="mb-1 block text-sm font-semibold text-neutral-900">Uso de CFDI</span>
+                <%= render "shared/custom_select", name: "order[cfdi_use_id]", filterable: true,
+                      options: @cfdi_uses.map { |c| [c.label, c.id] }, selected: @order.cfdi_use_id %>
               </div>
             </div>
 
             <%# Línea completa: Nombre o razón social (Factura) / Remisión %>
             <div data-order-kind-target="invoice">
-              <%= render "field", label: "Nombre o razón social (RFC)" do %>
-                <%= f.select :client_tax_profile_id,
-                      options_for_select(@client.tax_profiles.map { |t| [t.label, t.id] }, @order.client_tax_profile_id),
-                      { include_blank: "— Selecciona —" },
-                      class: "w-full bg-black text-white outline-none" %>
-              <% end %>
+              <span class="mb-1 block text-sm font-semibold text-neutral-900">Nombre o razón social (RFC)</span>
+              <%= render "shared/custom_select", name: "order[client_tax_profile_id]",
+                    options: @client.tax_profiles.map { |t| [t.label, t.id] }, selected: @order.client_tax_profile_id %>
             </div>
 
             <div data-order-kind-target="remission">
-              <%= render "field", label: "Remisión" do %>
-                <%= f.select :client_receipt_profile_id,
-                      options_for_select(@client.receipt_profiles.map { |r| [r.label, r.id] }, @order.client_receipt_profile_id),
-                      { include_blank: "— Selecciona —" },
-                      class: "w-full bg-black text-white outline-none" %>
-              <% end %>
+              <span class="mb-1 block text-sm font-semibold text-neutral-900">Remisión</span>
+              <%= render "shared/custom_select", name: "order[client_receipt_profile_id]",
+                    options: @client.receipt_profiles.map { |r| [r.label, r.id] }, selected: @order.client_receipt_profile_id %>
             </div>
 
             <%# Línea completa: Dirección de entrega %>
             <div>
-              <%= render "field", label: "Dirección de entrega" do %>
-                <%= f.select :client_branch_id,
-                      options_for_select(@client.branches.map { |b| [b.label, b.id] }, @order.client_branch_id),
-                      { include_blank: "— Selecciona —" },
-                      class: "w-full bg-black text-white outline-none" %>
-              <% end %>
+              <span class="mb-1 block text-sm font-semibold text-neutral-900">Dirección de entrega</span>
+              <%= render "shared/custom_select", name: "order[client_branch_id]",
+                    options: @client.branches.map { |b| [b.label, b.id] }, selected: @order.client_branch_id %>
             </div>
 
             <div class="pt-2 text-center">
-              <%= f.submit "Continuar a levantamiento de pedido",
+              <%= f.submit (@order.persisted? ? "Guardar cambios" : "Continuar a levantamiento de pedido"),
                     class: "cursor-pointer rounded-full bg-[#CE6150] px-8 py-3 font-bold text-white transition-colors hover:bg-[#bd5343]" %>
             </div>
           <% end %>

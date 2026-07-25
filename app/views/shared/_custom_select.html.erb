@@ -1,0 +1,64 @@
+<%#
+  Combo box custom (dropdown estilizado). Reemplaza <select> nativo.
+  Locals:
+    name        — name del input hidden (ej "order[cfdi_use_id]" o "supplier_id")
+    options     — array de [label, value]
+    selected    — value seleccionado (o nil)
+    placeholder — texto sin selección (default "— Selecciona —")
+    filterable  — muestra campo de filtro de texto (default false)
+    include_blank — permite opción vacía (default true)
+    button_class / panel_class — override de estilo (opcional)
+    input_data  — data-attrs extra para el hidden input (ej form-submit)
+%>
+<% placeholder   ||= "— Selecciona —" %>
+<% include_blank   = local_assigns.fetch(:include_blank, true) %>
+<% filterable      = !!local_assigns[:filterable] %>
+<% selected_label  = options.find { |(_l, v)| v.to_s == selected.to_s }&.first %>
+<% hidden_data     = (local_assigns[:input_data] || {}).merge(select_target: "input") %>
+<% btn_class       = local_assigns[:button_class] ||
+                     "flex w-full items-center justify-between gap-2 rounded-full bg-black px-5 py-3 text-left text-white" %>
+
+<div class="relative" data-controller="select"
+     data-select-filterable-value="<%= filterable %>"
+     data-action="click@window->select#hide">
+  <button type="button" data-select-target="button" data-action="select#toggle" class="<%= btn_class %>">
+    <span data-select-target="label" class="truncate <%= "opacity-60" if selected_label.nil? %>">
+      <%= selected_label || placeholder %>
+    </span>
+    <svg class="h-4 w-4 shrink-0 opacity-70" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+    </svg>
+  </button>
+
+  <%= hidden_field_tag name, selected, data: hidden_data %>
+
+  <div data-select-target="panel" hidden
+       class="<%= local_assigns[:panel_class] || "absolute inset-x-0 top-full z-30 mt-1 max-h-72 overflow-auto rounded-2xl border border-black/10 bg-white shadow-xl" %>">
+    <% if filterable %>
+      <div class="sticky top-0 border-b border-black/5 bg-white p-2">
+        <input type="text" data-select-target="filter"
+               data-action="input->select#filter keydown->select#navigate"
+               placeholder="Filtrar…"
+               class="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900 outline-none focus:border-[#EDC94C]" />
+      </div>
+    <% end %>
+    <ul data-select-target="list" class="py-1 text-neutral-900">
+      <% if include_blank %>
+        <li>
+          <button type="button" data-action="select#choose" data-value="" data-label="<%= placeholder %>"
+                  class="block w-full px-4 py-2.5 text-left text-sm text-neutral-500 hover:bg-neutral-100">
+            <%= placeholder %>
+          </button>
+        </li>
+      <% end %>
+      <% options.each do |(label, value)| %>
+        <li>
+          <button type="button" data-action="select#choose" data-value="<%= value %>" data-label="<%= label %>"
+                  class="block w-full px-4 py-2.5 text-left text-sm hover:bg-neutral-100">
+            <%= label %>
+          </button>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+</div>
