@@ -1,24 +1,64 @@
-# README
+# rueda-negocios
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+App web para capturar pedidos durante las **ruedas de negocios** de FECEGO, con
+operación **offline** en el sitio del evento.
 
-Things you may want to cover:
+Modelo **una laptop = servidor LAN**: una laptop corre la app + su Postgres local
+y hace de servidor en la red del evento; los demás equipos solo necesitan un
+navegador apuntando a ella. El sync con el ERP ocurre cuando la laptop tiene
+conexión (por defecto, desde la oficina antes/después del evento).
 
-* Ruby version
+Proyecto **independiente** (no aditivo al `fecego-b2b`; ese es solo referencia de
+stack y patrones). La API que habla con el ERP vive en el repo aparte
+[`rueda-api`](https://github.com/ercom-tech/rueda-api).
 
-* System dependencies
+## Stack
 
-* Configuration
+Ruby 3.3.7 · Rails 8 + Hotwire (Turbo/Stimulus, importmap) + Tailwind v4 ·
+Postgres 16/17 · bcrypt · Solid Queue (jobs) · dotenv-rails · prawn (PDF).
 
-* Database creation
+## Correr en desarrollo
 
-* Database initialization
+```sh
+bundle install
+cp .env.example .env        # ajusta credenciales de Postgres si hace falta
+bin/rails db:prepare        # crea, migra y siembra (usuario server: servidor/rueda2026)
+bin/dev                     # Rails + Tailwind watch (Procfile.dev)
+```
 
-* How to run the test suite
+`bin/rails db:seed` crea **solo** el usuario del rol `server`
+(`servidor` / `rueda2026`, configurable por `SEED_SERVER_USERNAME` /
+`SEED_SERVER_PASSWORD`). El resto del dataset (rueda, clientes, productos,
+capturistas) se puebla con el **sync-down** desde `rueda-api`.
 
-* Services (job queues, cache servers, search engines, etc.)
+## Sync con el ERP
 
-* Deployment instructions
+Requiere `rueda-api` accesible; configúrala en `.env`
+(`RUEDA_API_URL`, `RUEDA_ID`).
 
-* ...
+- **sync-down** (poblar la BD local con los datos de la rueda, *reemplaza* el
+  catálogo local): `bin/rails sync:down`
+- **sync-up** (transmitir los pedidos capturados al ERP, idempotente):
+  `bin/rails sync:up`
+
+Ambos también se operan desde la UI: al entrar el usuario `server` ve un panel
+para **elegir rueda**, **obtener información** (sync-down) y **transmitir
+pedidos** (sync-up), que corren en background (Solid Queue) y reflejan su estado
+en vivo (Turbo Streams).
+
+## Roles
+
+- **capturista** — captura pedidos y ve los suyos.
+- **server** — opera el sync y ve todos los pedidos.
+
+## Documentación
+
+- `CLAUDE.md` — contexto de negocio, arquitectura y forma de trabajo (flujo PAIVD).
+- `memory.md` — bitácora de decisiones y puntos abiertos.
+- `docs/erp-esquema-catalogos.md` — esquema de lectura del ERP (sync-down).
+- `docs/erp-esquema-pedidos.md` — esquema de alta de pedidos en el ERP (sync-up).
+
+## Seguridad
+
+El endurecimiento (HTTPS, tokens, allowlist, proxy en AWS) queda para una fase
+posterior de *strengthening*. Ver `CLAUDE.md`.

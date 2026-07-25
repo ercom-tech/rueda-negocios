@@ -5,7 +5,8 @@ avanzamos (paso **Documentar** del flujo PAIVD).
 
 ## Estado actual
 
-Estructura de repos definida y ambos con `git init`.
+Estructura de repos definida; ambos en GitHub (org **ercom-tech**):
+`ercom-tech/rueda-negocios` y `ercom-tech/rueda-api`, rama `master`.
 **Descubrimiento del esquema del ERP COMPLETADO** (contra BD dev `fecego` @1702):
 catálogos/sync-down → `docs/erp-esquema-catalogos.md`; **pedidos/sync-up (alta)**
 → `docs/erp-esquema-pedidos.md`.
