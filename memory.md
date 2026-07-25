@@ -13,12 +13,13 @@ catálogos/sync-down → `docs/erp-esquema-catalogos.md`; **pedidos/sync-up (alt
 **Fase A COMPLETADA** (app `rueda-negocios`): `rails new` + modelos del dataset
 local, migrado y validado.
 
-**Fase C/D — EN CURSO:** descubrimiento del alta de pedidos hecho
-(`docs/erp-esquema-pedidos.md`). `rueda-api` scaffoldeada (Sinatra) con el
-**export del dataset VALIDADO end-to-end**, y el **rake `sync:down` en la app
-VALIDADO** (consume el export, replace del catálogo, deja la BD idéntica al
-export). Sigue: alta de pedidos en el ERP (**sync-up**) — endpoint en rueda-api
-+ rake, con los campos de config pendientes de confirmar con FECEGO.
+**Fase C/D — sync completo VALIDADO end-to-end contra el ERP dev:**
+- **sync-down:** export en rueda-api (`GET /ruedas/:id/export`) + `rake sync:down`
+  (replace del catálogo, deja la BD local idéntica al export).
+- **sync-up:** alta de pedidos en rueda-api (`POST /pedidos`, folio + idempotencia)
+  + `rake sync:up` (transmite pedidos, guarda `erp_folio`/`transmitted_at`).
+- **Pendiente con FECEGO:** confirmar los defaults de config de la cabecera
+  (ya escritos con la moda del ERP en `OrderCreate::HEADER_DEFAULTS`).
 
 **Fase B — LOGIN, MENÚ, hub de REPORTES y PEDIDO completo**: autenticación
 (bcrypt) + login; **menú** (`home#index`); **hub de reportes** (`reports#index`,
@@ -303,6 +304,41 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
 - **`record_timestamps: true`** en `insert_all`/`upsert_all` para que Rails
   llene `created_at`/`updated_at`.
 
+### Fase D — sync-up (alta de pedidos en el ERP) (decisiones)
+
+- **rueda-api `POST /pedidos`** (`RuedaApi::OrderCreate`) inserta en
+  `fecego.vta_pedido` + `vta_pedido_detalle` y devuelve `clave_pedido`. Todo en
+  una transacción con `pg_advisory_xact_lock(hashtext(prefijo))` para serializar
+  la asignación de folio por prefijo.
+- **Folio** = prefijo del capturista (`cnf_persona.prefijo` vía `id_persona`) +
+  consecutivo (`MAX(substring(clave_pedido FROM 3)::int)+1`, filtrando
+  `~ '^[0-9]+$'` para no reventar el cast), a 4 dígitos.
+- **Idempotencia:** antes de insertar busca por la PK de negocio
+  `(id_empresa, clave_cliente, fecha_pedido, hora_pedido)`; si existe, devuelve
+  su folio con `idempotent:true` sin reinsertar. Validado por ambos lados.
+- **Defaults de config ESCRITOS** (moda de ~486k pedidos transmitidos; PENDIENTE
+  confirmar con FECEGO, se ajustan en `HEADER_DEFAULTS`): `c_FormaPago="99"`,
+  `c_MetodoPago="PPD"`, `condicion_pago="50"`, `tipo_precio="MA"`,
+  `id_negociaciontipo=1`, `id_enviotipo=1`, `estatus_actual="CAPTUR"`.
+  `id_vendedor` = el del cliente; `id_usuario_crea/transmision` = erp_person_id
+  del capturista; `transmitido=true`.
+- **rueda-negocios `rake sync:up`** (`Sync::Up`): toma `Order.submitted` sin
+  `erp_folio`, hace POST, y al éxito guarda `erp_folio` + `transmitted_at`
+  (columna nueva, migración `20260725153508`). Idempotente: no re-transmite lo
+  que ya tiene folio.
+- **Hora de captura:** `created_at.localtime` → `fecha_pedido`/`hora_pedido` (el
+  ERP maneja horas locales; `created_at` es UTC). Estable → sirve de llave de
+  idempotencia.
+- **`id_producto` del detalle** = `order_item.product.erp_product_id`.
+- **Trampa Sequel:** `Sequel.function(:current_time)` emite `current_time()` con
+  paréntesis → error en PG; usar la constante `Sequel::CURRENT_TIME` (y
+  `Sequel::CURRENT_DATE`). Y al usar heredoc `<<~SQL` en `DB.fetch`, TODOS los
+  args van en la misma línea física del `<<~SQL` o Ruby se los come como cuerpo.
+- **Validado end-to-end** contra el ERP dev: pedido factura (cliente ABAISM,
+  capturista makita1/prefijo 1A) → folio `1A0016`, cabecera+detalle correctos,
+  IVA por partida, totales cuadran; idempotencia confirmada; pedido de prueba
+  limpiado del ERP.
+
 ## Riesgos / puntos abiertos
 
 - **Entrada de pedidos al ERP (sync-up)** — DESCUBIERTO → `docs/erp-esquema-pedidos.md`.
@@ -331,16 +367,9 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
 
 ## Próximos pasos
 
-1. **Sync-up (alta de pedidos en el ERP)** — el mayor riesgo restante:
-   - Endpoint nuevo en `rueda-api` que inserta en `fecego.vta_pedido` +
-     `vta_pedido_detalle` (ver `docs/erp-esquema-pedidos.md`), asigna el folio
-     `clave_pedido` (prefijo del capturista + consecutivo) en la transmisión y
-     lo devuelve.
-   - Rake `sync:up` en la app que transmite pedidos `submitted`, marca
-     `transmitido`/`erp_folio`. Idempotente y reintentable.
-   - **Antes:** confirmar con FECEGO los campos de config pendientes
-     (`c_FormaPago`/`c_MetodoPago`/`condicion_pago`/`tipo_precio`/
-     `id_negociaciontipo`/`id_enviotipo`) + estrategia de idempotencia.
+1. **Confirmar con FECEGO** los defaults de config de la cabecera del pedido
+   (ya escritos en `OrderCreate::HEADER_DEFAULTS` con la moda del ERP) y si
+   alguno debe salir del cliente en vez de ser fijo.
 2. **Fase B (resto)** — pantallas read-only pendientes (productos, clientes,
    rueda activa) y otras del menú (asistencia de clientes, cotización).
 3. **Membresía de rueda en el export/sync** — `business_round_people`

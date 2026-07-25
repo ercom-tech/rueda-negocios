@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_25_073308) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_25_153508) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -190,6 +190,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_25_073308) do
     t.string "local_folio"
     t.text "observations"
     t.string "status", default: "draft", null: false
+    t.datetime "transmitted_at"
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.index ["business_round_id"], name: "index_orders_on_business_round_id"

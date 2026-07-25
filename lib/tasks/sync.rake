@@ -34,4 +34,20 @@ namespace :sync do
     puts "[sync:down] SKUs omitidos (proveedor fuera de la rueda): #{s[:skipped_skus]}"
     puts "[sync:down] listo."
   end
+
+  desc "Transmite los pedidos capturados al ERP vía rueda-api (idempotente). ENV: RUEDA_API_URL"
+  task up: :environment do
+    base = ENV.fetch("RUEDA_API_URL") { abort "Falta RUEDA_API_URL (base de rueda-api, p.ej. http://localhost:4568)" }
+
+    pending = Order.submitted.where(erp_folio: nil).count
+    puts "[sync:up] pedidos por transmitir: #{pending}"
+
+    r = Sync::Up.new(base).run!
+
+    r[:transmitted].each { |t| puts "  ✓ #{t[:local]} → folio ERP #{t[:erp]}" }
+    r[:failed].each      { |f| puts "  ✗ #{f[:local]} (HTTP #{f[:status]}): #{f[:error]}" }
+    puts "[sync:up] transmitidos: #{r[:transmitted].size}, fallidos: #{r[:failed].size}"
+    abort "[sync:up] hubo pedidos fallidos." if r[:failed].any?
+    puts "[sync:up] listo."
+  end
 end
