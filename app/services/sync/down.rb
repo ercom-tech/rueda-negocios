@@ -120,7 +120,7 @@ module Sync
     # --- Usuarios (capturistas): merge + cleanup, preservando servers -----
 
     def import_users
-      erp_keys = @data["users"].map { |u| u["erp_person_id"] }
+      erp_keys = @data["users"].map { |u| u["erp_person_id"] }.compact
 
       rows = []
       @data["users"].each do |u|
@@ -138,10 +138,15 @@ module Sync
       User.upsert_all(rows, unique_by: :erp_person_id, record_timestamps: true) if rows.any?
 
       # Cleanup: capturistas que ya no vienen del ERP. Nunca borra un `server`
-      # (el seedeado no está en el export y debe sobrevivir).
-      stale = User.capturista.where.not(erp_person_id: erp_keys)
-      @removed_users = stale.pluck(:username)
-      stale.delete_all
+      # (el seedeado no está en el export y debe sobrevivir). Guarda: si el
+      # export no trae usuarios (`erp_keys` vacío) NO se limpia nada —
+      # `where.not(col: [])` equivale a "todos" y borraría a los capturistas
+      # existentes (pérdida de datos ante un export vacío o malformado).
+      if erp_keys.any?
+        stale = User.capturista.where.not(erp_person_id: erp_keys)
+        @removed_users = stale.pluck(:username)
+        stale.delete_all
+      end
       @stats["users"] = rows.size
     end
 

@@ -74,5 +74,15 @@ module Sync
       assert_not User.exists?(stale.id), "un capturista fuera del export debe eliminarse"
       assert User.exists?(username: "makita1"), "el capturista del export debe existir"
     end
+
+    test "un export sin usuarios NO borra a los capturistas existentes" do
+      existente = User.create!(erp_person_id: 90092, username: "makita1", password: "x", role: "capturista")
+
+      result = Down.new(export_data.merge("users" => [])).run!
+
+      assert User.exists?(existente.id),
+             "erp_keys vacío no debe disparar el cleanup (where.not(col: []) borraría a todos)"
+      assert_empty result.summary[:removed_users]
+    end
   end
 end
