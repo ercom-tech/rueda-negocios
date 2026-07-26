@@ -156,8 +156,17 @@ Reporte: artifact "Auditoría — rueda-negocios & rueda-api" (segunda-auditoria
   (pending solo re-selecciona captured, quedaría atascado); M3 — `ApiClient#get`
   envuelve `JSON::ParserError` en `ApiClient::Error` (el panel muestra flash,
   no 500). Tests: 4 nuevos (aislamiento de lote incluido); suite 28/106.
-- [ ] Bloques 3-5 (MEDIA): trigram (M4), UX (M5-M7), contrato+docs (M8-M9).
-  Luego BAJA.
+- [x] **Bloque 3 (M4, índices trigram):** migración `pg_trgm` + 8 índices GIN
+  `gin_trgm_ops` (products: description/model/part_number/`CAST(erp_product_id
+  AS TEXT)` como índice de expresión —el opclass va INLINE en el string, la
+  opción `opclass:` solo aplica a columnas—; product_suppliers.supplier_sku;
+  clients: name/commercial_name/erp_client_key). `Product.search` reestructurado:
+  el SKU salió del OR-con-LEFT-JOIN (que impedía índices por tabla) a una rama
+  `UNION` dentro de `id IN (…)` — cada rama entra por su índice (BitmapOr).
+  De paso `sanitize_sql_like` (cierra B17). Medido: 34.5 ms (seq scan 13,196
+  filas) → **0.17 ms** (~200×), conteos idénticos (39/20). Clientes (47 filas):
+  el planner elige seq scan correctamente; el índice queda para cuando crezca.
+- [ ] Bloques 4-5 (MEDIA): UX (M5-M7), contrato+docs (M8-M9). Luego BAJA.
 
 ## Estado actual
 

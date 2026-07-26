@@ -11,17 +11,20 @@ class Product < ApplicationRecord
   validates :erp_product_id, presence: true, uniqueness: true
 
   # Búsqueda por código FECEGO, código de proveedor (SKU), nombre, modelo o
-  # número de parte.
+  # número de parte. El SKU va en una rama UNION aparte (no en el mismo OR con
+  # LEFT JOIN): un OR que cruza el join impide usar índices por tabla; así cada
+  # rama entra por su índice trigram (BitmapOr en products, GIN en supplier_sku).
   scope :search, ->(query) {
-    like = "%#{query.to_s.strip}%"
-    left_joins(:product_suppliers)
-      .where(
-        "CAST(products.erp_product_id AS TEXT) ILIKE :q OR products.description ILIKE :q " \
-        "OR products.model ILIKE :q OR products.part_number ILIKE :q " \
-        "OR product_suppliers.supplier_sku ILIKE :q",
-        q: like
+    like = "%#{sanitize_sql_like(query.to_s.strip)}%"
+    where(<<~SQL, q: like)
+      products.id IN (
+        SELECT id FROM products
+         WHERE CAST(erp_product_id AS TEXT) ILIKE :q OR description ILIKE :q
+            OR model ILIKE :q OR part_number ILIKE :q
+        UNION
+        SELECT product_id FROM product_suppliers WHERE supplier_sku ILIKE :q
       )
-      .distinct
+    SQL
   }
 
   # Snapshot para crear una partida de pedido.

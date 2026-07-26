@@ -10,9 +10,10 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_25_184048) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_26_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+  enable_extension "pg_trgm"
 
   create_table "brands", force: :cascade do |t|
     t.string "code"
@@ -154,7 +155,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_25_184048) do
     t.string "name"
     t.bigint "salesperson_id"
     t.datetime "updated_at", null: false
+    t.index ["commercial_name"], name: "index_clients_on_commercial_name_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["erp_client_key"], name: "index_clients_on_erp_client_key", unique: true
+    t.index ["erp_client_key"], name: "index_clients_on_erp_client_key_trgm", opclass: :gin_trgm_ops, using: :gin
+    t.index ["name"], name: "index_clients_on_name_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["salesperson_id"], name: "index_clients_on_salesperson_id"
   end
 
@@ -222,6 +226,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_25_184048) do
     t.index ["product_id", "supplier_id"], name: "index_product_suppliers_on_product_id_and_supplier_id", unique: true
     t.index ["product_id"], name: "index_product_suppliers_on_product_id"
     t.index ["supplier_id"], name: "index_product_suppliers_on_supplier_id"
+    t.index ["supplier_sku"], name: "index_product_suppliers_on_supplier_sku_trgm", opclass: :gin_trgm_ops, using: :gin
   end
 
   create_table "products", force: :cascade do |t|
@@ -236,8 +241,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_25_184048) do
     t.decimal "stock", precision: 14, scale: 2
     t.string "unit"
     t.datetime "updated_at", null: false
+    t.index "((erp_product_id)::text) gin_trgm_ops", name: "index_products_on_erp_product_id_text_trgm", using: :gin
     t.index ["brand_id"], name: "index_products_on_brand_id"
+    t.index ["description"], name: "index_products_on_description_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["erp_product_id"], name: "index_products_on_erp_product_id", unique: true
+    t.index ["model"], name: "index_products_on_model_trgm", opclass: :gin_trgm_ops, using: :gin
+    t.index ["part_number"], name: "index_products_on_part_number_trgm", opclass: :gin_trgm_ops, using: :gin
   end
 
   create_table "salespeople", force: :cascade do |t|
