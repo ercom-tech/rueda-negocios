@@ -51,10 +51,10 @@ class OrdersController < ApplicationController
     return redirect_to @order, alert: "Un pedido transmitido no se puede editar." unless @order.editable?
 
     if params[:client_key].present?
-      key   = params[:client_key].to_s.strip.split(/\s[–-]\s/).first.to_s.strip
-      nuevo = Client.find_by(erp_client_key: key) || client_search(key).first
-      if nuevo && nuevo != @order.client
-        @order.client = nuevo
+      key        = params[:client_key].to_s.strip.split(/\s[–-]\s/).first.to_s.strip
+      new_client = Client.find_by(erp_client_key: key) || client_search(key).first
+      if new_client && new_client != @order.client
+        @order.client = new_client
         # Los perfiles del encabezado eran del cliente anterior: se resetean.
         @order.client_tax_profile = @order.client_branch = @order.client_receipt_profile = @order.cfdi_use = nil
       end

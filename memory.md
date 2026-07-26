@@ -92,9 +92,17 @@ BAJA (por grupos temáticos; 14 hallazgos + login-throttling movido a strengthen
     cerrar sesión es reversible → `button_to` directo en los 3 lugares (se quitó
     el modal de logout del rol server en `home/index`).
   - Saludo neutro: "Bienvenido, …" → "Hola, …" (`sessions_controller`).
-- [ ] Grupo B (rueda-api API menor + perf), D (convenciones/limpieza/docs).
-  Rutas ES/EN: recomendado NO tocar. Login throttling → va con la fase de
-  strengthening (D1–D4 diferidos).
+- [x] **Grupo D (convenciones/limpieza/docs):**
+  - Borrado `hello_controller.js` (scaffolding sin usar; sin referencias).
+  - Docs Postgres: README rueda-negocios "16/17" → "16" (consenso con CLAUDE.md
+    y docs; el ERP corre 16, aunque el dev local del usuario es 17.10 Postgres.app).
+  - README rueda-api: sección "## Tests" con `bundle exec rake test`.
+  - `orders_controller`: variable local `nuevo` → `new_client`. NO se tocaron
+    `prefijo`/`id_rueda` en rueda-api: son columnas reales del ERP
+    (`cnf_persona.prefijo`, `r.id_rueda`); renombrarlas rompería la
+    correspondencia variable↔columna en el SQL (el hallazgo los clasificó mal).
+- [ ] Grupo B (rueda-api API menor + perf) — pendiente. Rutas ES/EN: NO tocar.
+  Login throttling → fase de strengthening (D1–D4 diferidos).
 - [x] **A5** errores del encabezado: panel "Faltan datos obligatorios: …" +
   ring rojo en los `custom_select` inválidos (`invalid:` en el partial).
 - [x] **A6** tarjetas no implementadas (menú + reportes) marcadas "Próximamente"

@@ -15,7 +15,7 @@ stack y patrones). La API que habla con el ERP vive en el repo aparte
 ## Stack
 
 Ruby 3.3.7 · Rails 8 + Hotwire (Turbo/Stimulus, importmap) + Tailwind v4 ·
-Postgres 16/17 · bcrypt · Solid Queue (jobs) · dotenv-rails · prawn (PDF).
+Postgres 16 · bcrypt · Solid Queue (jobs) · dotenv-rails · prawn (PDF).
 
 ## Correr en desarrollo
 
