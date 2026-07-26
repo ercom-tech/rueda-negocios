@@ -119,6 +119,13 @@ BAJA (por grupos temáticos; 14 hallazgos + login-throttling movido a strengthen
   ring rojo en los `custom_select` inválidos (`invalid:` en el partial).
 - [x] **A6** tarjetas no implementadas (menú + reportes) marcadas "Próximamente"
   (atenuadas, no clickeables) vía `soon:` en `_menu_card`/`_report_card`.
+  - **Ajuste posterior (a pedido del usuario):** en el home (`_menu_card`) el
+    badge "Próximamente" pasó de arriba-derecha a **abajo-derecha**; en ambos
+    hubs el badge es **amarillo sólido** (`bg-brand-gold` + ring/sombra) en vez
+    de gris translúcido. Clave de diseño: para que el badge resalte a plena
+    opacidad, el estado "soon" atenúa el **contenido** con `opacity-60` y el
+    **fondo** con alpha (`bg-brand-*/60`) — el alpha en el color NO afecta a los
+    hijos, `opacity` sí. Validado en navegador (capturista + reportes).
 
 Media/baja/diferidos: ver el artifact de auditoría.
 
