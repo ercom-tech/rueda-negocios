@@ -149,9 +149,13 @@ class OrdersController < ApplicationController
 
   def apply_header_defaults
     @order.kind ||= "invoice"
-    @order.client_tax_profile     ||= @client.tax_profiles.find_by(is_default: true) || @client.tax_profiles.first
+    # El ERP no marca un perfil fiscal/remisión "principal": si el cliente tiene
+    # varios, NO preseleccionamos ninguno (evita elegir el RFC equivocado en
+    # silencio); el capturista lo escoge. Con uno solo, sí lo preseleccionamos.
+    @order.client_tax_profile     ||= @client.tax_profiles.first     if @client.tax_profiles.count == 1
+    @order.client_receipt_profile ||= @client.receipt_profiles.first if @client.receipt_profiles.count == 1
+    # Sucursal sí tiene default real en el ERP (sucursal = 1).
     @order.client_branch          ||= @client.branches.find_by(is_default: true) || @client.branches.first
-    @order.client_receipt_profile ||= @client.receipt_profiles.find_by(is_default: true) || @client.receipt_profiles.first
     @order.cfdi_use               ||= @order.client_tax_profile&.default_cfdi_use
   end
 

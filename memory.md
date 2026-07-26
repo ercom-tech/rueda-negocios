@@ -32,8 +32,15 @@ MEDIA (por bloques temáticos; ver artifact de auditoría):
 - [x] **Bloque 3 (quick wins):** M2 (anclar `config.hosts`), M8 (ruta/acción
   `submit`→`capture`), M10 (`Order::STATUS_COLORS` centralizado), M17 (rubocop en
   rueda-api, corre limpio), M18 (docs: idempotencia resuelta, `Order.captured`).
-- [ ] Bloque 4 (M9 tokens de color), Bloque 5 (M1/M3/M4/M5 correctitud ERP),
-  Bloque 6 (M6 timeouts), Bloque 7 (M7/M11-M16 UX/a11y).
+- [x] **Bloque 5 (correctitud ERP):** M1 (no autoseleccionar el fiscal cuando
+  el cliente tiene varios — el ERP no marca principal; `apply_header_defaults`);
+  M3 (rueda-api `OrderCreate#validate!`: existencia de cliente/vendedor/productos
+  + coherencia de montos, SIN recomputar precios de rueda); M4 (idempotencia por
+  la PK única de `vta_pedido` con `rescue Sequel::UniqueConstraintViolation`);
+  M5 (`next_folio` deriva el corte de `length(prefijo)`). Tests rueda-api: 11 en
+  verde.
+- [ ] Bloque 4 (M9 tokens de color), Bloque 6 (M6 timeouts),
+  Bloque 7 (M7/M11-M16 UX/a11y).
 - [x] **A5** errores del encabezado: panel "Faltan datos obligatorios: …" +
   ring rojo en los `custom_select` inválidos (`invalid:` en el partial).
 - [x] **A6** tarjetas no implementadas (menú + reportes) marcadas "Próximamente"
