@@ -84,9 +84,17 @@ BAJA (por grupos temáticos; 14 hallazgos + login-throttling movido a strengthen
     no filtra `e.message` al cliente. Tests rack-test (test/application_test.rb,
     carga `app/application.rb` con LOGGER stub, sin config/application.rb).
   Todo validado (suite + navegador para el flash de descuento).
-- [ ] Grupo B (rueda-api API menor + perf), C (UX/inclusividad), D (convenciones/
-  limpieza/docs). Rutas ES/EN: recomendado NO tocar. Login throttling → va con
-  la fase de strengthening (D1–D4 diferidos).
+- [x] **Grupo C (UX/inclusividad):**
+  - Touch targets ≥44px en `_item_row`: botón 🗑 (`h-11 w-11`) y campos
+    cantidad/descuento (`h-11`). Medido en navegador (44×44 / 64×44).
+  - Confirmaciones: el `turbo-confirm` nativo ya no existía (migró al modal en
+    M15). Criterio unificado: el modal se reserva para lo destructivo/pesado;
+    cerrar sesión es reversible → `button_to` directo en los 3 lugares (se quitó
+    el modal de logout del rol server en `home/index`).
+  - Saludo neutro: "Bienvenido, …" → "Hola, …" (`sessions_controller`).
+- [ ] Grupo B (rueda-api API menor + perf), D (convenciones/limpieza/docs).
+  Rutas ES/EN: recomendado NO tocar. Login throttling → va con la fase de
+  strengthening (D1–D4 diferidos).
 - [x] **A5** errores del encabezado: panel "Faltan datos obligatorios: …" +
   ring rojo en los `custom_select` inválidos (`invalid:` en el partial).
 - [x] **A6** tarjetas no implementadas (menú + reportes) marcadas "Próximamente"

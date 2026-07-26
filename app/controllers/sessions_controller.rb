@@ -13,7 +13,7 @@ class SessionsController < ApplicationController
     if user&.active? && user.authenticate(params[:password].to_s)
       reset_session # evita session fixation
       session[:user_id] = user.id
-      redirect_to root_path, notice: "Bienvenido, #{user.full_name.presence || user.username}."
+      redirect_to root_path, notice: "Hola, #{user.full_name.presence || user.username}."
     else
       flash.now[:alert] = "Usuario o contraseña incorrectos."
       render :new, status: :unprocessable_entity

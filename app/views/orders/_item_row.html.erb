@@ -4,7 +4,7 @@
     <% if order.editable? %>
       <div data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
         <button type="button" data-action="modal#open" aria-label="Quitar producto"
-                class="text-lg text-neutral-400 transition-colors hover:text-red-600">🗑</button>
+                class="inline-flex h-11 w-11 items-center justify-center text-lg text-neutral-400 transition-colors hover:text-red-600">🗑</button>
         <%= render "home/confirm_dialog", title: "Quitar producto",
               message: "¿Quitar \"#{item.description}\" del pedido?",
               confirm_label: "Sí, quitar", path: order_order_item_path(order, item), method: :delete %>
@@ -23,7 +23,7 @@
         <%= f.number_field :quantity, min: 1, step: "any",
               value: number_with_precision(item.quantity, strip_insignificant_zeros: true),
               data: { action: "change->form-submit#submit" },
-              class: "w-16 rounded-lg border border-neutral-300 px-2 py-1 text-center outline-none focus:border-brand-gold" %>
+              class: "h-11 w-16 rounded-lg border border-neutral-300 px-2 text-center outline-none focus:border-brand-gold" %>
       <% end %>
     <% else %>
       <%= number_with_precision(item.quantity, strip_insignificant_zeros: true) %>
@@ -41,7 +41,7 @@
           <%= f.number_field :discount_percent, min: 0, max: 100, step: "any",
                 value: number_with_precision(item.discount_percent, strip_insignificant_zeros: true),
                 data: { action: "change->form-submit#submit" },
-                class: "w-14 rounded-lg border border-neutral-300 px-2 py-1 text-center outline-none focus:border-brand-gold" %>
+                class: "h-11 w-16 rounded-lg border border-neutral-300 px-2 text-center outline-none focus:border-brand-gold" %>
           <span>%</span>
         </div>
       <% end %>
