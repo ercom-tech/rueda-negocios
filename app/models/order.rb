@@ -54,8 +54,19 @@ class Order < ApplicationRecord
 
   STATUS_LABELS = { "draft" => "Borrador", "captured" => "Capturado", "transmitted" => "Transmitido" }.freeze
 
+  # Clases Tailwind del badge de estatus (mismas en reporte y detalle).
+  STATUS_COLORS = {
+    "draft"       => "bg-neutral-200 text-neutral-700",
+    "captured"    => "bg-amber-100 text-amber-800",
+    "transmitted" => "bg-emerald-100 text-emerald-800"
+  }.freeze
+
   def status_label
     STATUS_LABELS.fetch(status, status)
+  end
+
+  def status_color
+    STATUS_COLORS.fetch(status, STATUS_COLORS["draft"])
   end
 
   def folio

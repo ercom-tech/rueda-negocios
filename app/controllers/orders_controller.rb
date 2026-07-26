@@ -91,7 +91,7 @@ class OrdersController < ApplicationController
   end
 
   # Finaliza la captura (folio local) y va al resumen (paso 3).
-  def submit
+  def capture
     @order = current_user.orders.find(params[:id])
     return redirect_to @order, alert: "Un pedido transmitido no se puede editar." unless @order.editable?
 

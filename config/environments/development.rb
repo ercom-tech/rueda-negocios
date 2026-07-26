@@ -79,6 +79,6 @@ Rails.application.configure do
   # Permitir acceso desde la LAN del evento (otros equipos entran por la IP de
   # la laptop-servidor). Por rango de subred privada, no por IP fija, para que
   # siga funcionando si el DHCP cambia la dirección.
-  config.hosts << /192\.168\.\d{1,3}\.\d{1,3}/
-  config.hosts << /10\.\d{1,3}\.\d{1,3}\.\d{1,3}/
+  config.hosts << /\A192\.168\.\d{1,3}\.\d{1,3}\z/
+  config.hosts << /\A10\.\d{1,3}\.\d{1,3}\.\d{1,3}\z/
 end

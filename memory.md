@@ -26,7 +26,14 @@ Estado de los hallazgos ALTA:
     una vez); mock fresco por test (`remove_const`/`const_set`) para no arrastrar
     estado de transacción tras un rollback.
 
-**ALTA: todos resueltos (A1–A6).** Siguen los MEDIA (ver artifact de auditoría).
+**ALTA: todos resueltos (A1–A6).**
+
+MEDIA (por bloques temáticos; ver artifact de auditoría):
+- [x] **Bloque 3 (quick wins):** M2 (anclar `config.hosts`), M8 (ruta/acción
+  `submit`→`capture`), M10 (`Order::STATUS_COLORS` centralizado), M17 (rubocop en
+  rueda-api, corre limpio), M18 (docs: idempotencia resuelta, `Order.captured`).
+- [ ] Bloque 4 (M9 tokens de color), Bloque 5 (M1/M3/M4/M5 correctitud ERP),
+  Bloque 6 (M6 timeouts), Bloque 7 (M7/M11-M16 UX/a11y).
 - [x] **A5** errores del encabezado: panel "Faltan datos obligatorios: …" +
   ring rojo en los `custom_select` inválidos (`invalid:` en el partial).
 - [x] **A6** tarjetas no implementadas (menú + reportes) marcadas "Próximamente"
@@ -354,7 +361,7 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
   `id_negociaciontipo=1`, `id_enviotipo=1`, `estatus_actual="CAPTUR"`.
   `id_vendedor` = el del cliente; `id_usuario_crea/transmision` = erp_person_id
   del capturista; `transmitido=true`.
-- **rueda-negocios `rake sync:up`** (`Sync::Up`): toma `Order.submitted` sin
+- **rueda-negocios `rake sync:up`** (`Sync::Up`): toma `Order.captured` sin
   `erp_folio`, hace POST, y al éxito guarda `erp_folio` + `transmitted_at`
   (columna nueva, migración `20260725153508`). Idempotente: no re-transmite lo
   que ya tiene folio.
@@ -469,9 +476,10 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
   `cnf_persona` del capturista + consecutivo = último con ese prefijo +1) → `erp_folio`.
   `estatus=CAPTUR`; `id_vendedor` = el del cliente; `bodega` sin uso;
   `clave_pedido_ruta` NO es nuestro (lo llena la planeación de ruta de FECEGO).
-  IVA por partida confirmado. **Pendiente:** campos de config (`c_FormaPago`/
-  `c_MetodoPago`/`condicion_pago`/`tipo_precio`/`id_negociaciontipo`/`id_enviotipo`)
-  + idempotencia del reintento.
+  IVA por partida confirmado. Idempotencia del reintento **RESUELTA**
+  (`OrderCreate.find_existing` por la PK de negocio). **Pendiente:** solo los
+  campos de config (`c_FormaPago`/`c_MetodoPago`/`condicion_pago`/`tipo_precio`/
+  `id_negociaciontipo`/`id_enviotipo`), a confirmar con FECEGO.
 - **Punto único de falla:** la laptop-servidor. Definir backups (pg_dump a
   USB/otro equipo) y quizá laptop de respaldo.
 - **Origen de precios/beneficios de la rueda:** RESUELTO el hallazgo — el ERP

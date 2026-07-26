@@ -18,8 +18,7 @@
         <span class="rounded-full bg-neutral-400/80 px-5 py-2.5 text-sm font-semibold text-neutral-900">
           # Pedido <%= @order.erp_folio.presence || @order.local_folio.presence || "(borrador)" %>
         </span>
-        <span class="rounded-full px-4 py-2.5 text-sm font-semibold
-                     <%= @order.transmitted? ? "bg-emerald-600 text-white" : "bg-black/80 text-white" %>">
+        <span class="rounded-full px-4 py-2.5 text-sm font-semibold <%= @order.status_color %>">
           <%= @order.status_label %>
         </span>
       </div>
@@ -30,7 +29,7 @@
           <%= link_to "Cancelar", root_path,
                 data: { turbo_confirm: "¿Cancelar el pedido y volver al menú?" },
                 class: "rounded-full bg-[#EDC94C] px-6 py-2.5 font-bold text-neutral-900 hover:bg-[#e3bd3a]" %>
-          <%= link_to "Guardar", submit_order_path(@order), data: { turbo_method: :post },
+          <%= link_to "Guardar", capture_order_path(@order), data: { turbo_method: :post },
                 class: "rounded-full bg-[#CE6150] px-6 py-2.5 font-bold text-white hover:bg-[#bd5343]" %>
         <% else %>
           <%= link_to "Ver PDF", pdf_order_path(@order),

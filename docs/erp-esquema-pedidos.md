@@ -99,5 +99,10 @@ Desglose **por partida**: `iva_porcentaje` + `iva_monto`, `descto_porcentaje` +
 1. **Campos de configuración** de la cabecera: `"c_FormaPago"`, `"c_MetodoPago"`,
    `condicion_pago`, `tipo_precio`, `id_negociaciontipo`, `id_enviotipo`. ¿De dónde
    salen para un pedido de rueda (defaults del cliente en el ERP, o fijos)?
-2. **Idempotencia** al reintentar la transmisión: la PK usa fecha/hora de captura
-   (da unicidad), pero definir cómo evitar duplicados si un reintento reinserta.
+   Hoy usan defaults en `OrderCreate::HEADER_DEFAULTS` (moda del ERP).
+
+## Resuelto
+
+- **Idempotencia** al reintentar la transmisión: `OrderCreate.find_existing`
+  busca por la PK de negocio `(id_empresa, clave_cliente, fecha_pedido,
+  hora_pedido)` y devuelve el folio con `idempotent: true` sin reinsertar.
