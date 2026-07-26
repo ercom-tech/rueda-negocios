@@ -149,8 +149,15 @@ Reporte: artifact "Auditoría — rueda-negocios & rueda-api" (segunda-auditoria
     → `Error` 422 "colisión de idempotencia" en vez de responder idempotente.
     El sync-up lo marca fallido y visible (remedio: recapturar el pedido). El
     reintento legítimo (mismo contenido) sigue idempotente. Tests: 16 en verde.
-- [ ] Bloques 2-5 (MEDIA): robustez sync (M1-M3), trigram (M4), UX (M5-M7),
-  contrato+docs (M8-M9). Luego BAJA.
+- [x] **Bloque 2 (robustez sync, M1-M3):** M1 — `JSON::ParserError` y
+  `ApiClient::Error` en el rescue por pedido de `Sync::Up#run!` (un 200 no-JSON
+  marca fallido ese pedido y el lote sigue); M2 — guard `folio.to_s.strip.empty?`
+  → un 2xx sin `clave_pedido` es fallido reintentable, nunca transmitido-sin-folio
+  (pending solo re-selecciona captured, quedaría atascado); M3 — `ApiClient#get`
+  envuelve `JSON::ParserError` en `ApiClient::Error` (el panel muestra flash,
+  no 500). Tests: 4 nuevos (aislamiento de lote incluido); suite 28/106.
+- [ ] Bloques 3-5 (MEDIA): trigram (M4), UX (M5-M7), contrato+docs (M8-M9).
+  Luego BAJA.
 
 ## Estado actual
 

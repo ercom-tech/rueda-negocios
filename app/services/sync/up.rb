@@ -24,15 +24,22 @@ module Sync
         res = post(build_payload(order))
         if res.is_a?(Net::HTTPSuccess)
           folio = JSON.parse(res.body)["clave_pedido"]
+          # Un 2xx sin folio es una respuesta rota: marcarlo transmitido con
+          # erp_folio nil lo atascaría para siempre (pending solo re-selecciona
+          # captured). Mejor fallido y reintentable.
+          raise ApiClient::Error, "respuesta sin clave_pedido" if folio.to_s.strip.empty?
+
           order.update!(erp_folio: folio, transmitted_at: Time.current, status: "transmitted")
           results[:transmitted] << { local: order.local_folio, erp: folio }
         else
           msg = parse_error(res)
           results[:failed] << { local: order.local_folio, status: res.code, error: msg }
         end
-      rescue SystemCallError, SocketError, Timeout::Error, Net::ReadTimeout => e
-        # Un error de red en un pedido no aborta la transmisión: se marca
-        # fallido y se sigue (el sync-up es reintentable).
+      rescue SystemCallError, SocketError, Timeout::Error, Net::ReadTimeout,
+             JSON::ParserError, ApiClient::Error => e
+        # Un error de red o una respuesta rota (200 no-JSON, 200 sin folio) en
+        # un pedido no aborta la transmisión: se marca fallido y se sigue (el
+        # sync-up es reintentable).
         results[:failed] << { local: order.local_folio, status: "—", error: e.message }
       end
 

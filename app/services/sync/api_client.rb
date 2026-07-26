@@ -40,6 +40,10 @@ module Sync
       JSON.parse(res.body)
     rescue SystemCallError, SocketError, Timeout::Error, Net::ReadTimeout => e
       raise Error, "no se pudo conectar con rueda-api (#{uri}): #{e.message}"
+    rescue JSON::ParserError
+      # Respuesta 2xx con cuerpo no-JSON (proxy, HTML de error): error propio
+      # para que el panel del server muestre el flash en vez de un 500 crudo.
+      raise Error, "respuesta inválida de rueda-api (#{uri}): no es JSON"
     end
   end
 end

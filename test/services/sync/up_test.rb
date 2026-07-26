@@ -80,5 +80,38 @@ module Sync
       assert_nil @order.reload.erp_folio
       assert @order.captured?
     end
+
+    test "un 200 con cuerpo no-JSON marca fallido ese pedido y sigue con el resto" do
+      order2 = Order.new(user: @user, business_round: @round, client: @client,
+                         kind: "remission", status: "captured", local_folio: "RN-000002")
+      order2.order_items.build(product: @product, quantity: 1, unit_price: 50,
+                               discount_percent: 0, tax_rate: 16, code: "3", description: "Rotomartillo", unit: "PZA")
+      order2.save!
+
+      # 1ª respuesta (para @order): HTML de proxy; 2ª (para order2): válida.
+      stub_request(:post, "#{API}/pedidos")
+        .to_return({ status: 200, body: "<html>gateway</html>" },
+                   { status: 201, body: { clave_pedido: "1A0008" }.to_json })
+
+      result = Up.new(API).run!
+
+      assert_equal 1, result[:failed].size, "el pedido con respuesta rota debe fallar"
+      assert_equal 1, result[:transmitted].size, "el resto del lote debe transmitirse"
+      assert @order.reload.captured?, "sigue capturado para reintentar"
+      assert_equal "1A0008", order2.reload.erp_folio
+    end
+
+    test "un 200 sin clave_pedido NO marca el pedido como transmitido" do
+      stub_request(:post, "#{API}/pedidos")
+        .to_return(status: 200, body: { idempotent: false }.to_json)
+
+      result = Up.new(API).run!
+
+      assert_empty result[:transmitted]
+      assert_equal 1, result[:failed].size
+      @order.reload
+      assert @order.captured?, "sin folio no puede darse por transmitido"
+      assert_nil @order.erp_folio
+    end
   end
 end
