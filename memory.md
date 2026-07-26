@@ -101,8 +101,15 @@ BAJA (por grupos temáticos; 14 hallazgos + login-throttling movido a strengthen
     `prefijo`/`id_rueda` en rueda-api: son columnas reales del ERP
     (`cnf_persona.prefijo`, `r.id_rueda`); renombrarlas rompería la
     correspondencia variable↔columna en el SQL (el hallazgo los clasificó mal).
-- [ ] Grupo B (rueda-api API menor + perf) — pendiente. Rutas ES/EN: NO tocar.
-  Login throttling → fase de strengthening (D1–D4 diferidos).
+- [x] **Grupo B (rueda-api export):** `deep_coerce` (recorría ~13k productos en
+  memoria para BigDecimal→string) eliminado; los 5 NUMERIC de `products` se
+  castean con `trim_scale(...)::text` en SQL (precios idénticos, enteros sin
+  `.0`, cero notación científica). `#{EMPRESA}` interpolado → placeholder `?`.
+  Validado byte a byte contra la BD dev (rueda 3): JSON semánticamente idéntico,
+  ~80 KB más chico. **AUDITORÍA CERRADA.**
+- No abordados por decisión: rutas ES/EN (mezcla deliberada), login throttling
+  (→ strengthening con D1–D4 diferidos), y `prefijo`/`id_rueda` en rueda-api
+  (espejan columnas del ERP).
 - [x] **A5** errores del encabezado: panel "Faltan datos obligatorios: …" +
   ring rojo en los `custom_select` inválidos (`invalid:` en el partial).
 - [x] **A6** tarjetas no implementadas (menú + reportes) marcadas "Próximamente"
