@@ -18,11 +18,12 @@ class OrderItemsController < ApplicationController
     if item.update(item_params)
       render turbo_stream: detail_streams
     else
-      # No revertir en silencio: repinta con el valor válido anterior y avisa.
+      # No revertir en silencio: repinta con el valor válido anterior y avisa
+      # con el motivo real (cantidad ≤ 0, descuento sobre el máximo, etc.).
       render turbo_stream: [
         *detail_streams,
         turbo_stream.replace("flash", partial: "shared/flash",
-                                      locals: { alert: "Cantidad o descuento inválido: la cantidad debe ser mayor a 0." })
+                                      locals: { alert: item.errors.full_messages.to_sentence })
       ]
     end
   end
