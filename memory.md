@@ -15,7 +15,12 @@ Estado de los hallazgos ALTA:
   exige `SEED_SERVER_PASSWORD` en prod; default `rueda2026` solo dev/test.
 - [x] **A3** N+1: `Sync::Up#pending` precarga `order_items: :product`;
   `ReportsController#captured_orders` precarga `:order_items`.
-- [ ] **A4** cobertura de tests del sync + alta al ERP (arco propio).
+- [~] **A4** cobertura de tests:
+  - [x] **A4a** rueda-negocios (Minitest + webmock): `order_test` (totales/estado),
+    `sync/down_test` (guarda, replace, preserva server, cleanup), `sync/up_test`
+    (transmite, idempotencia, payload, fallo). 12 tests, suite en verde (17 total).
+  - [ ] **A4b** rueda-api: harness de test (rack-test) + `OrderCreate` (folio,
+    idempotencia). Requiere decidir BD de test vs. mocks de Sequel.
 - [x] **A5** errores del encabezado: panel "Faltan datos obligatorios: …" +
   ring rojo en los `custom_select` inválidos (`invalid:` en el partial).
 - [x] **A6** tarjetas no implementadas (menú + reportes) marcadas "Próximamente"
