@@ -4,9 +4,19 @@
 <% alert  = local_assigns.fetch(:alert,  flash[:alert]) %>
 <div id="flash" class="pointer-events-none fixed inset-x-0 top-4 z-50 flex flex-col items-center gap-2 px-4">
   <% if notice.present? %>
-    <div role="status" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white shadow-lg"><%= notice %></div>
+    <div role="status" data-controller="flash"
+         class="pointer-events-auto flex items-center gap-3 rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white shadow-lg">
+      <span><%= notice %></span>
+      <button type="button" data-action="flash#dismiss" aria-label="Cerrar aviso"
+              class="-mr-1 text-white/80 transition-colors hover:text-white">&times;</button>
+    </div>
   <% end %>
   <% if alert.present? %>
-    <div role="alert" class="rounded-lg bg-red-600 px-4 py-2 text-sm text-white shadow-lg"><%= alert %></div>
+    <div role="alert" data-controller="flash" data-flash-delay-value="8000"
+         class="pointer-events-auto flex items-center gap-3 rounded-lg bg-red-600 px-4 py-2 text-sm text-white shadow-lg">
+      <span><%= alert %></span>
+      <button type="button" data-action="flash#dismiss" aria-label="Cerrar aviso"
+              class="-mr-1 text-white/80 transition-colors hover:text-white">&times;</button>
+    </div>
   <% end %>
 </div>

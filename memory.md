@@ -53,9 +53,15 @@ MEDIA (por bloques temáticos; ver artifact de auditoría):
   con el valor válido anterior y avisa por Turbo Stream, no revierte en silencio);
   M15 (acción `Orders#destroy` "Descartar pedido" con modal de confirmación en
   `show`, solo si `editable?`). Validado en navegador.
-- [ ] Bloque 7b (a11y): M11 (modales role/aria/focus-trap), M12 (teclado en
-  `custom_select` no filtrable), M13 (autocomplete loading/error/ARIA), M16
-  (flash cierre/auto-dismiss/aria-live). Luego los BAJA.
+- [x] **Bloque 7b-i (a11y modal/flash):** M11 (`_confirm_dialog` con
+  `role="dialog"`/`aria-modal`/`aria-labelledby`/`aria-describedby` e ids únicos;
+  `modal_controller` mueve el foco al primer control, atrapa Tab dentro
+  —focus-trap enganchado internamente, sin tocar las 5 vistas— y al cerrar
+  restaura el foco previo); M16 (`flash_controller` nuevo: auto-dismiss 5s/8s +
+  botón ✕; el mensaje lleva `pointer-events-auto`). Validado en navegador
+  (Tab cicla, Esc cierra y restaura foco, ✕ cierra).
+- [ ] Bloque 7b-ii (a11y): M12 (teclado en `custom_select` no filtrable),
+  M13 (autocomplete loading/error/ARIA). Luego los BAJA.
 - [x] **A5** errores del encabezado: panel "Faltan datos obligatorios: …" +
   ring rojo en los `custom_select` inválidos (`invalid:` en el partial).
 - [x] **A6** tarjetas no implementadas (menú + reportes) marcadas "Próximamente"
