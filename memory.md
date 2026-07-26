@@ -19,8 +19,14 @@ Estado de los hallazgos ALTA:
   - [x] **A4a** rueda-negocios (Minitest + webmock): `order_test` (totales/estado),
     `sync/down_test` (guarda, replace, preserva server, cleanup), `sync/up_test`
     (transmite, idempotencia, payload, fallo). 12 tests, suite en verde (17 total).
-  - [ ] **A4b** rueda-api: harness de test (rack-test) + `OrderCreate` (folio,
-    idempotencia). Requiere decidir BD de test vs. mocks de Sequel.
+  - [x] **A4b** rueda-api: harness Minitest con `Sequel.mock` (sin conectar al
+    ERP) + `order_create_test` (folio prefijo+consecutivo, idempotencia, prefijo
+    faltante, capturista ausente, N partidas). 6 tests en verde.
+    Trampas resueltas: `DB.sqls` de Sequel.mock **se drena al leerse** (capturar
+    una vez); mock fresco por test (`remove_const`/`const_set`) para no arrastrar
+    estado de transacción tras un rollback.
+
+**ALTA: todos resueltos (A1–A6).** Siguen los MEDIA (ver artifact de auditoría).
 - [x] **A5** errores del encabezado: panel "Faltan datos obligatorios: …" +
   ring rojo en los `custom_select` inválidos (`invalid:` en el partial).
 - [x] **A6** tarjetas no implementadas (menú + reportes) marcadas "Próximamente"
