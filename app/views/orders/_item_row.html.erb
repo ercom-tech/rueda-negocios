@@ -1,7 +1,7 @@
 <%# Fila de partida. Locals: order, item. %>
 <tr class="border-t border-black/10 text-center">
   <td class="px-2 py-2">
-    <% if order.editable? %>
+    <% if can_edit_order?(order) %>
       <div data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
         <button type="button" data-action="modal#open" aria-label="Quitar producto"
                 class="inline-flex h-11 w-11 items-center justify-center text-lg text-neutral-400 transition-colors hover:text-red-600">🗑</button>
@@ -17,7 +17,7 @@
   <td class="px-3 py-2"><%= item.part_number %></td>
 
   <td class="px-3 py-2">
-    <% if order.editable? %>
+    <% if can_edit_order?(order) %>
       <%= form_with model: item, url: order_order_item_path(order, item), method: :patch,
             data: { controller: "form-submit" } do |f| %>
         <%= f.number_field :quantity, min: 1, step: "any",
@@ -34,7 +34,7 @@
   <td class="px-3 py-2"><%= number_to_currency(item.unit_price) %></td>
 
   <td class="px-3 py-2">
-    <% if order.editable? %>
+    <% if can_edit_order?(order) %>
       <%= form_with model: item, url: order_order_item_path(order, item), method: :patch,
             data: { controller: "form-submit" } do |f| %>
         <div class="flex items-center justify-center gap-1">

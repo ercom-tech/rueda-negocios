@@ -33,7 +33,10 @@
         <tbody>
           <% @orders.each do |order| %>
             <tr class="border-t border-black/10">
-              <td class="px-4 py-3 font-semibold"><%= order.folio.presence || "(borrador)" %></td>
+              <td class="px-4 py-3 font-semibold">
+                <%= link_to (order.folio.presence || "(borrador)"), order_path(order), title: "Abrir pedido",
+                      class: "underline decoration-brand-gold decoration-2 underline-offset-4 hover:text-brand-coral" %>
+              </td>
               <td class="px-4 py-3"><%= order.client.name %></td>
               <td class="px-4 py-3"><%= order.user.full_name.presence || order.user.username %></td>
               <td class="px-4 py-3 text-right"><%= number_to_currency(order.total) %></td>

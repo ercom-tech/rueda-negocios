@@ -34,7 +34,7 @@ class OrdersController < ApplicationController
   end
 
   def show
-    @order = current_user.orders.find(params[:id])
+    @order = accessible_orders.find(params[:id])
   end
 
   # Cancelar la captura: descarta el pedido (solo si aún es editable).
@@ -111,12 +111,12 @@ class OrdersController < ApplicationController
 
   # Paso 3: resumen con opciones (PDF / correo / WhatsApp).
   def summary
-    @order = current_user.orders.find(params[:id])
+    @order = accessible_orders.find(params[:id])
   end
 
   # Descarga del PDF del pedido.
   def pdf
-    @order = current_user.orders.find(params[:id])
+    @order = accessible_orders.find(params[:id])
     send_data Pdf::OrderGenerator.new(@order).render,
               filename: "pedido-#{@order.folio}.pdf", type: "application/pdf", disposition: "attachment"
   end
@@ -136,6 +136,13 @@ class OrdersController < ApplicationController
   end
 
   private
+
+  # Lectura (show/summary/pdf): el server puede abrir cualquier pedido — ya los
+  # ve todos en el reporte. La escritura sigue restringida al dueño
+  # (current_user.orders en el resto de acciones).
+  def accessible_orders
+    current_user.can_see_all_orders? ? Order.all : current_user.orders
+  end
 
   def client_search(query)
     q = ActiveRecord::Base.sanitize_sql_like(query.to_s.strip)

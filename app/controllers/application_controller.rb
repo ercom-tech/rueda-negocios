@@ -7,12 +7,19 @@ class ApplicationController < ActionController::Base
 
   before_action :require_login
 
-  helper_method :current_user, :logged_in?, :active_round, :available_suppliers, :current_supplier
+  helper_method :current_user, :logged_in?, :active_round, :available_suppliers,
+                :current_supplier, :can_edit_order?
 
   private
 
   def current_user
     @current_user ||= User.find_by(id: session[:user_id]) if session[:user_id]
+  end
+
+  # Un pedido lo edita solo su capturista (y mientras no esté transmitido).
+  # El rol server puede VER cualquier pedido, pero no editarlo.
+  def can_edit_order?(order)
+    order.editable? && order.user_id == current_user&.id
   end
 
   def logged_in?

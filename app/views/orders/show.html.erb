@@ -23,7 +23,7 @@
         </span>
       </div>
       <div class="flex items-center gap-3">
-        <% if @order.editable? %>
+        <% if can_edit_order?(@order) %>
           <%= link_to "Editar", edit_order_path(@order),
                 class: "rounded-full bg-brand-gold px-6 py-2.5 font-bold text-neutral-900 hover:bg-brand-gold-dark" %>
           <div class="inline-block" data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
@@ -80,8 +80,8 @@
       </div>
     </div>
 
-    <%# ── Buscador de producto (autocompletado) — solo si editable ── %>
-    <% if @order.editable? %>
+    <%# ── Buscador de producto (autocompletado) — solo si el dueño puede editar ── %>
+    <% if can_edit_order?(@order) %>
       <div class="relative" data-controller="autocomplete"
            data-autocomplete-url-value="<%= product_options_order_path(@order) %>"
            data-action="click@window->autocomplete#hide turbo:submit-end->autocomplete#reset">
@@ -106,7 +106,7 @@
 
     <%# ── Observaciones (izquierda) + Totales (derecha) ── %>
     <div class="flex flex-col gap-6 lg:flex-row lg:items-stretch">
-      <% if @order.editable? %>
+      <% if can_edit_order?(@order) %>
         <%= form_with url: observations_order_path(@order), method: :patch,
               data: { controller: "form-submit" }, class: "flex flex-1 flex-col" do %>
           <%= text_area_tag :observations, @order.observations,

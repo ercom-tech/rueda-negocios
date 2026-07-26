@@ -129,6 +129,29 @@ BAJA (por grupos temáticos; 14 hallazgos + login-throttling movido a strengthen
 
 Media/baja/diferidos: ver el artifact de auditoría.
 
+## Auditoría 2026-07-26 (2ª pasada, post-remediación) — remediación
+
+Reporte: artifact "Auditoría — rueda-negocios & rueda-api" (segunda-auditoria).
+2 ALTA · 9 MEDIA · 24 BAJA · 0 vulnerabilidades de seguridad nuevas.
+
+- [x] **Bloque 1 (ALTA):**
+  - **A1 camino de regreso al pedido:** filas del reporte enlazan a `order_path`;
+    "Volver al pedido" en el resumen. Lectura (`show`/`summary`/`pdf`) usa
+    `accessible_orders` (server → todos, capturista → suyos); la escritura sigue
+    solo del dueño. Vistas usan `can_edit_order?(order)` (helper en
+    ApplicationController: `editable? && dueño`) en vez de `order.editable?` —
+    el server abre cualquier pedido en solo lectura. Validado en navegador con
+    ambos roles.
+  - **A2 colisión de idempotencia:** FECEGO NO tolera microsegundos en
+    `hora_pedido` (confirmado por el usuario) → la solución es detección:
+    `find_existing` ahora trae folio + total + # partidas; si hay match por
+    (cliente, fecha, hora) pero el contenido difiere (total > $0.01 o # partidas)
+    → `Error` 422 "colisión de idempotencia" en vez de responder idempotente.
+    El sync-up lo marca fallido y visible (remedio: recapturar el pedido). El
+    reintento legítimo (mismo contenido) sigue idempotente. Tests: 16 en verde.
+- [ ] Bloques 2-5 (MEDIA): robustez sync (M1-M3), trigram (M4), UX (M5-M7),
+  contrato+docs (M8-M9). Luego BAJA.
+
 ## Estado actual
 
 Estructura de repos definida; ambos en GitHub (org **ercom-tech**):
