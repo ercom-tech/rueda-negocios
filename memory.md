@@ -16,8 +16,10 @@ Estado de los hallazgos ALTA:
 - [x] **A3** N+1: `Sync::Up#pending` precarga `order_items: :product`;
   `ReportsController#captured_orders` precarga `:order_items`.
 - [ ] **A4** cobertura de tests del sync + alta al ERP (arco propio).
-- [ ] **A5** errores del encabezado no señalan el campo faltante.
-- [ ] **A6** enlaces "muertos" (`href:#`) con apariencia de activos.
+- [x] **A5** errores del encabezado: panel "Faltan datos obligatorios: …" +
+  ring rojo en los `custom_select` inválidos (`invalid:` en el partial).
+- [x] **A6** tarjetas no implementadas (menú + reportes) marcadas "Próximamente"
+  (atenuadas, no clickeables) vía `soon:` en `_menu_card`/`_report_card`.
 
 Media/baja/diferidos: ver el artifact de auditoría.
 

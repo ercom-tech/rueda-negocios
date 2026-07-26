@@ -17,6 +17,7 @@
 <% hidden_data     = (local_assigns[:input_data] || {}).merge(select_target: "input") %>
 <% btn_class       = local_assigns[:button_class] ||
                      "flex w-full items-center justify-between gap-2 rounded-full bg-black px-5 py-3 text-left text-white" %>
+<% btn_class += " ring-2 ring-red-500" if local_assigns[:invalid] %>
 
 <div class="relative" data-controller="select"
      data-select-filterable-value="<%= filterable %>"

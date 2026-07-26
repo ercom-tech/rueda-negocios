@@ -58,9 +58,9 @@
                 title: ["Registrar", "pedido"], desc: "Envía pedidos confirmados directamente a surtido." %>
           <%= render "menu_card", href: reports_path, accent: :yellow, icon: "icon_sales_reports.svg",
                 title: ["Reportes", "de venta"], desc: "Visualiza tus métricas y resultados del evento." %>
-          <%= render "menu_card", href: "#", accent: :yellow, icon: "icon_client_attendance.svg",
+          <%= render "menu_card", href: "#", accent: :yellow, icon: "icon_client_attendance.svg", soon: true,
                 title: ["Asistencia", "de clientes"], desc: "Monitorea qué clientes ya fueron atendidos y cuáles siguen pendientes." %>
-          <%= render "menu_card", href: "#", accent: :yellow, icon: "icon_generate_quote.svg",
+          <%= render "menu_card", href: "#", accent: :yellow, icon: "icon_generate_quote.svg", soon: true,
                 title: ["Generar", "cotización"], desc: "Simula el pedido de tu cliente antes de confirmar la compra." %>
         </div>
       <% end %>

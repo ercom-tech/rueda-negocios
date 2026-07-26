@@ -1,18 +1,28 @@
 <%#
   Tarjeta de opción del menú.
   Locals: href, accent (:coral | :yellow), icon, title (String o Array de
-  líneas — respeta el corte del diseño), desc
+  líneas — respeta el corte del diseño), desc, soon (bool — "Próximamente").
 %>
 <% coral = accent == :coral %>
 <% bg          = coral ? "bg-[#CE6150]"      : "bg-[#F1D24E]" %>
 <% title_color = coral ? "text-white"        : "text-neutral-900" %>
 <% desc_color  = coral ? "text-white/90"     : "text-neutral-800/75" %>
+<% soon = local_assigns[:soon] %>
+<% base = "relative flex items-center gap-6 rounded-[1.75rem] #{bg} px-7 py-5 shadow-lg" %>
 
-<%= link_to href,
-      class: "flex items-center gap-6 rounded-[1.75rem] #{bg} px-7 py-5 shadow-lg transition-transform hover:scale-[1.015]" do %>
+<% inner = capture do %>
   <%= image_tag icon, alt: "", class: "h-14 w-14 shrink-0" %>
   <div class="flex w-44 shrink-0 justify-center">
     <h3 class="text-right text-2xl font-extrabold leading-tight <%= title_color %>"><%= safe_join(Array(title), tag.br) %></h3>
   </div>
   <p class="text-xl leading-snug <%= desc_color %>"><%= desc %></p>
+  <% if soon %>
+    <span class="absolute right-4 top-3 rounded-full bg-black/25 px-3 py-1 text-xs font-semibold <%= title_color %>">Próximamente</span>
+  <% end %>
+<% end %>
+
+<% if soon %>
+  <div class="<%= base %> cursor-not-allowed opacity-60" aria-disabled="true" title="Próximamente"><%= inner %></div>
+<% else %>
+  <%= link_to href, class: "#{base} transition-transform hover:scale-[1.015]" do %><%= inner %><% end %>
 <% end %>

@@ -48,6 +48,16 @@
                 data: { controller: "order-kind" }, class: "space-y-5" do |f| %>
             <%= f.hidden_field :client_id, value: @client.id %>
 
+            <%# Resumen de campos faltantes tras un submit inválido %>
+            <% if @order.errors.any? %>
+              <% field_labels = { "cfdi_use_id" => "Uso de CFDI", "client_tax_profile_id" => "Nombre o razón social",
+                                  "client_receipt_profile_id" => "Remisión", "client_branch_id" => "Dirección de entrega" } %>
+              <div class="rounded-2xl bg-[#CE6150] px-5 py-3 text-sm font-semibold text-white">
+                Faltan datos obligatorios:
+                <%= @order.errors.attribute_names.map { |a| field_labels[a.to_s] || a.to_s.humanize }.uniq.join(", ") %>.
+              </div>
+            <% end %>
+
             <%# Fila: Tipo (Factura/Remisión) + Uso de CFDI %>
             <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
@@ -67,6 +77,7 @@
               <div data-order-kind-target="invoice">
                 <span class="mb-1 block text-sm font-semibold text-neutral-900">Uso de CFDI</span>
                 <%= render "shared/custom_select", name: "order[cfdi_use_id]", filterable: true,
+                      invalid: @order.errors[:cfdi_use_id].any?,
                       options: @cfdi_uses.map { |c| [c.label, c.id] }, selected: @order.cfdi_use_id %>
               </div>
             </div>
@@ -75,12 +86,14 @@
             <div data-order-kind-target="invoice">
               <span class="mb-1 block text-sm font-semibold text-neutral-900">Nombre o razón social (RFC)</span>
               <%= render "shared/custom_select", name: "order[client_tax_profile_id]",
+                    invalid: @order.errors[:client_tax_profile_id].any?,
                     options: @client.tax_profiles.map { |t| [t.label, t.id] }, selected: @order.client_tax_profile_id %>
             </div>
 
             <div data-order-kind-target="remission">
               <span class="mb-1 block text-sm font-semibold text-neutral-900">Remisión</span>
               <%= render "shared/custom_select", name: "order[client_receipt_profile_id]",
+                    invalid: @order.errors[:client_receipt_profile_id].any?,
                     options: @client.receipt_profiles.map { |r| [r.label, r.id] }, selected: @order.client_receipt_profile_id %>
             </div>
 
@@ -88,6 +101,7 @@
             <div>
               <span class="mb-1 block text-sm font-semibold text-neutral-900">Dirección de entrega</span>
               <%= render "shared/custom_select", name: "order[client_branch_id]",
+                    invalid: @order.errors[:client_branch_id].any?,
                     options: @client.branches.map { |b| [b.label, b.id] }, selected: @order.client_branch_id %>
             </div>
 
