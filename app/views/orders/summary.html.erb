@@ -11,8 +11,7 @@
     <% end %>
   </header>
 
-  <div class="relative z-10 mx-auto max-w-xl px-6 py-12"
-       data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
+  <div class="relative z-10 mx-auto max-w-xl px-6 py-12">
     <section class="rounded-3xl bg-brand-gold p-6 sm:p-8">
       <div class="rounded-2xl bg-black py-4 text-center">
         <h2 class="text-2xl font-extrabold text-white">Resumen del pedido</h2>
@@ -28,14 +27,14 @@
           <%= image_tag "icon_pdf.svg", alt: "", class: "h-8 w-8" %> Generar PDF
         <% end %>
 
-        <button type="button" data-action="modal#open"
-                class="flex w-full items-center gap-4 rounded-2xl bg-black px-6 py-5 text-left text-lg font-semibold text-white transition-colors hover:bg-neutral-800">
-          <%= image_tag "icon_mail.svg", alt: "", class: "h-8 w-8" %> Enviar por correo
-        </button>
-
-        <%= link_to send_whatsapp_order_path(@order), data: { turbo_method: :post },
-              class: "flex items-center gap-4 rounded-2xl bg-black px-6 py-5 text-lg font-semibold text-white transition-colors hover:bg-neutral-800" do %>
-          <%= image_tag "icon_whatsapp.svg", alt: "", class: "h-8 w-8" %> Enviar por WhatsApp
+        <%# Correo y WhatsApp aún no implementados: se muestran deshabilitados
+            para no confirmar un envío que no ocurre. %>
+        <% [["Enviar por correo", "icon_mail.svg"], ["Enviar por WhatsApp", "icon_whatsapp.svg"]].each do |label, icon| %>
+          <div class="flex w-full cursor-not-allowed items-center gap-4 rounded-2xl bg-neutral-400 px-6 py-5 text-lg font-semibold text-white opacity-60"
+               aria-disabled="true" title="Próximamente">
+            <%= image_tag icon, alt: "", class: "h-8 w-8" %> <%= label %>
+            <span class="ml-auto rounded-full bg-black/25 px-3 py-1 text-xs font-semibold">Próximamente</span>
+          </div>
         <% end %>
 
         <div class="pt-2 text-center">
@@ -44,33 +43,5 @@
         </div>
       </div>
     </section>
-
-    <%# ── Modal: Enviar por correo ── %>
-    <div data-modal-target="dialog" style="display:none"
-         class="fixed inset-0 z-50 items-center justify-center p-4">
-      <div class="absolute inset-0 bg-black/50" data-action="click->modal#close"></div>
-      <div class="relative w-full max-w-md rounded-3xl bg-brand-gold p-6 sm:p-8">
-        <div class="rounded-2xl bg-black py-4 text-center">
-          <h3 class="text-xl font-extrabold text-white">Enviar por correo</h3>
-        </div>
-
-        <%= form_with url: send_email_order_path(@order), method: :post, class: "mt-6 space-y-4" do %>
-          <div class="rounded-2xl bg-black px-5 py-3 text-sm text-white">
-            Correo registrado: <span class="font-semibold"><%= @order.client.email.presence || "—" %></span>
-          </div>
-          <label class="block">
-            <span class="mb-1 block text-sm font-semibold">O enviar a otro correo</span>
-            <%= email_field_tag :email, nil, placeholder: "correo@ejemplo.com",
-                  class: "w-full rounded-full bg-black px-5 py-3 text-white outline-none placeholder:text-white/60" %>
-          </label>
-          <div class="flex justify-center gap-3 pt-2">
-            <button type="button" data-action="modal#close"
-                    class="rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white hover:bg-brand-coral-dark">Regresar</button>
-            <%= submit_tag "Enviar",
-                  class: "cursor-pointer rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white hover:bg-brand-coral-dark" %>
-          </div>
-        <% end %>
-      </div>
-    </div>
   </div>
 </div>

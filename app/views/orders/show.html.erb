@@ -26,9 +26,13 @@
         <% if @order.editable? %>
           <%= link_to "Editar", edit_order_path(@order),
                 class: "rounded-full bg-brand-gold px-6 py-2.5 font-bold text-neutral-900 hover:bg-brand-gold-dark" %>
-          <%= link_to "Cancelar", root_path,
-                data: { turbo_confirm: "¿Cancelar el pedido y volver al menú?" },
-                class: "rounded-full bg-brand-gold px-6 py-2.5 font-bold text-neutral-900 hover:bg-brand-gold-dark" %>
+          <div class="inline-block" data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
+            <button type="button" data-action="modal#open"
+                    class="rounded-full bg-brand-gold px-6 py-2.5 font-bold text-neutral-900 hover:bg-brand-gold-dark">Cancelar</button>
+            <%= render "home/confirm_dialog", title: "Descartar pedido",
+                  message: "Se descartará este pedido en captura y no se guardará. ¿Continuar?",
+                  confirm_label: "Sí, descartar", path: order_path(@order), method: :delete %>
+          </div>
           <%= link_to "Guardar", capture_order_path(@order), data: { turbo_method: :post },
                 class: "rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white hover:bg-brand-coral-dark" %>
         <% else %>

@@ -47,7 +47,15 @@ MEDIA (por bloques temáticos; ver artifact de auditoría):
   `brand-coral`/`brand-coral-dark`/`brand-cream`. ~64 usos de hex migrados en 16
   vistas; unificados los 3 pares divergentes (#f1d24e→gold, #f4efe0→cream,
   #b9553f→coral-dark). Fuente única de verdad.
-- [ ] Bloque 7 (M7/M11-M16 UX/a11y). Luego los BAJA.
+- [x] **Bloque 7a (UX):** M7 (correo/WhatsApp en `summary` atenuados con badge
+  "Próximamente", sin modal ni acción — se enviarán al sincronizar); M14 (`flash`
+  con `id` estable + locals `notice/alert`; al fallar `OrderItems#update` repinta
+  con el valor válido anterior y avisa por Turbo Stream, no revierte en silencio);
+  M15 (acción `Orders#destroy` "Descartar pedido" con modal de confirmación en
+  `show`, solo si `editable?`). Validado en navegador.
+- [ ] Bloque 7b (a11y): M11 (modales role/aria/focus-trap), M12 (teclado en
+  `custom_select` no filtrable), M13 (autocomplete loading/error/ARIA), M16
+  (flash cierre/auto-dismiss/aria-live). Luego los BAJA.
 - [x] **A5** errores del encabezado: panel "Faltan datos obligatorios: …" +
   ring rojo en los `custom_select` inválidos (`invalid:` en el partial).
 - [x] **A6** tarjetas no implementadas (menú + reportes) marcadas "Próximamente"

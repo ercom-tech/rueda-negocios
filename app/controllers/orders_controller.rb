@@ -37,6 +37,13 @@ class OrdersController < ApplicationController
     @order = current_user.orders.find(params[:id])
   end
 
+  # Cancelar la captura: descarta el pedido (solo si aún es editable).
+  def destroy
+    order = current_user.orders.find(params[:id])
+    order.destroy if order.editable?
+    redirect_to root_path, notice: "Pedido descartado."
+  end
+
   # Editar el encabezado del MISMO pedido (conserva las partidas). Puede cambiar
   # el cliente desde el buscador (recarga sobre el mismo pedido).
   def edit

@@ -23,7 +23,7 @@ Rails.application.routes.draw do
   get "reportes/pedidos-capturados", to: "reports#captured_orders", as: :captured_orders_report
 
   # Levantamiento de pedido.
-  resources :orders, only: %i[new create show edit update] do
+  resources :orders, only: %i[new create show edit update destroy] do
     collection { get :client_options }         # autocompletado del buscador de cliente
     member do
       get   :product_options                   # autocompletado del buscador de producto

@@ -1,10 +1,12 @@
-<% if notice.present? || alert.present? %>
-  <div class="fixed inset-x-0 top-4 z-50 flex flex-col items-center gap-2 px-4">
-    <% if notice.present? %>
-      <div class="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white shadow-lg"><%= notice %></div>
-    <% end %>
-    <% if alert.present? %>
-      <div class="rounded-lg bg-red-600 px-4 py-2 text-sm text-white shadow-lg"><%= alert %></div>
-    <% end %>
-  </div>
-<% end %>
+<%# Contenedor siempre presente (id "flash") para poder reemplazarlo por Turbo
+    Stream. Locals opcionales notice/alert (por defecto, los del flash). %>
+<% notice = local_assigns.fetch(:notice, flash[:notice]) %>
+<% alert  = local_assigns.fetch(:alert,  flash[:alert]) %>
+<div id="flash" class="pointer-events-none fixed inset-x-0 top-4 z-50 flex flex-col items-center gap-2 px-4">
+  <% if notice.present? %>
+    <div role="status" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white shadow-lg"><%= notice %></div>
+  <% end %>
+  <% if alert.present? %>
+    <div role="alert" class="rounded-lg bg-red-600 px-4 py-2 text-sm text-white shadow-lg"><%= alert %></div>
+  <% end %>
+</div>

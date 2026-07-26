@@ -14,8 +14,17 @@ class OrderItemsController < ApplicationController
   end
 
   def update
-    @order.order_items.find(params[:id]).update(item_params)
-    render turbo_stream: detail_streams
+    item = @order.order_items.find(params[:id])
+    if item.update(item_params)
+      render turbo_stream: detail_streams
+    else
+      # No revertir en silencio: repinta con el valor válido anterior y avisa.
+      render turbo_stream: [
+        *detail_streams,
+        turbo_stream.replace("flash", partial: "shared/flash",
+                                      locals: { alert: "Cantidad o descuento inválido: la cantidad debe ser mayor a 0." })
+      ]
+    end
   end
 
   def destroy
