@@ -39,8 +39,10 @@ MEDIA (por bloques temáticos; ver artifact de auditoría):
   la PK única de `vta_pedido` con `rescue Sequel::UniqueConstraintViolation`);
   M5 (`next_folio` deriva el corte de `length(prefijo)`). Tests rueda-api: 11 en
   verde.
-- [ ] Bloque 4 (M9 tokens de color), Bloque 6 (M6 timeouts),
-  Bloque 7 (M7/M11-M16 UX/a11y).
+- [x] **Bloque 6 (robustez sync):** M6 — timeouts HTTP configurables
+  (`RUEDA_API_OPEN_TIMEOUT`/`READ_TIMEOUT`) en `ApiClient`/`Sync::Up`; un error
+  de red por pedido marca fallido y continúa (no aborta la transmisión).
+- [ ] Bloque 4 (M9 tokens de color), Bloque 7 (M7/M11-M16 UX/a11y).
 - [x] **A5** errores del encabezado: panel "Faltan datos obligatorios: …" +
   ring rojo en los `custom_select` inválidos (`invalid:` en el partial).
 - [x] **A6** tarjetas no implementadas (menú + reportes) marcadas "Próximamente"

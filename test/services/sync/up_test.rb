@@ -69,5 +69,16 @@ module Sync
       assert_nil @order.reload.erp_folio
       assert @order.captured?, "sigue capturado para reintentar"
     end
+
+    test "un timeout de red marca el pedido fallido sin abortar la transmisión" do
+      stub_request(:post, "#{API}/pedidos").to_timeout
+
+      result = Up.new(API).run!
+
+      assert_empty result[:transmitted]
+      assert_equal 1, result[:failed].size
+      assert_nil @order.reload.erp_folio
+      assert @order.captured?
+    end
   end
 end

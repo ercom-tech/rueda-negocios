@@ -30,6 +30,10 @@ module Sync
           msg = parse_error(res)
           results[:failed] << { local: order.local_folio, status: res.code, error: msg }
         end
+      rescue SystemCallError, SocketError, Timeout::Error, Net::ReadTimeout => e
+        # Un error de red en un pedido no aborta la transmisión: se marca
+        # fallido y se sigue (el sync-up es reintentable).
+        results[:failed] << { local: order.local_folio, status: "—", error: e.message }
       end
 
       results
@@ -81,6 +85,8 @@ module Sync
 
     def post(payload)
       http = Net::HTTP.new(@endpoint.host, @endpoint.port)
+      http.open_timeout = ApiClient::OPEN_TIMEOUT
+      http.read_timeout = ApiClient::READ_TIMEOUT
       req  = Net::HTTP::Post.new(@endpoint, "Content-Type" => "application/json")
       req.body = payload.to_json
       http.request(req)

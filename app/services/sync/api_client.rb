@@ -7,6 +7,11 @@ module Sync
   class ApiClient
     class Error < StandardError; end
 
+    # Timeouts (segundos). El export (13k productos) necesita un read amplio;
+    # ambos configurables por ENV para afinarlos según la red del evento.
+    OPEN_TIMEOUT = Integer(ENV.fetch("RUEDA_API_OPEN_TIMEOUT", 10))
+    READ_TIMEOUT = Integer(ENV.fetch("RUEDA_API_READ_TIMEOUT", 120))
+
     def initialize(api_base = ENV["RUEDA_API_URL"])
       raise Error, "RUEDA_API_URL no configurada" if api_base.to_s.strip.empty?
 
@@ -26,11 +31,14 @@ module Sync
     private
 
     def get(uri)
-      res = Net::HTTP.get_response(uri)
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.open_timeout = OPEN_TIMEOUT
+      http.read_timeout = READ_TIMEOUT
+      res = http.request(Net::HTTP::Get.new(uri))
       raise Error, "HTTP #{res.code} desde #{uri}" unless res.is_a?(Net::HTTPSuccess)
 
       JSON.parse(res.body)
-    rescue SystemCallError, SocketError, Timeout::Error => e
+    rescue SystemCallError, SocketError, Timeout::Error, Net::ReadTimeout => e
       raise Error, "no se pudo conectar con rueda-api (#{uri}): #{e.message}"
     end
   end
