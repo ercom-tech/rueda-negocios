@@ -89,11 +89,14 @@
           <span aria-hidden="true">🔍</span>
           <input type="text" autocomplete="off"
                  placeholder="Busca por código FECEGO, código del proveedor, nombre, modelo o número de parte"
+                 role="combobox" aria-autocomplete="list" aria-expanded="false"
+                 aria-controls="product-search-results" aria-label="Buscar producto"
                  data-autocomplete-target="input"
                  data-action="input->autocomplete#search keydown->autocomplete#navigate"
                  class="w-full bg-transparent outline-none placeholder:text-white/60" />
         </div>
-        <div id="product-search-results" data-autocomplete-target="results"
+        <div id="product-search-results" role="listbox" aria-label="Resultados de producto"
+             data-autocomplete-target="results"
              class="absolute inset-x-0 top-full z-20 mt-1"></div>
       </div>
     <% end %>

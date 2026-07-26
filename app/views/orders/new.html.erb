@@ -31,11 +31,13 @@
               <%= text_field_tag :client_key, (@client ? "#{@client.erp_client_key} - #{@client.commercial_name.presence || @client.name}" : nil),
                     placeholder: "Buscar cliente por clave o nombre",
                     autocomplete: "off",
+                    role: "combobox", aria: { autocomplete: "list", expanded: "false", controls: "client-search-results", label: "Buscar cliente" },
                     data: { autocomplete_target: "input", action: "input->autocomplete#search keydown->autocomplete#navigate" },
                     class: "w-full bg-transparent outline-none placeholder:text-white/60" %>
             </div>
           <% end %>
-          <div data-autocomplete-target="results" class="absolute inset-x-0 top-full z-20 mt-1"></div>
+          <div id="client-search-results" role="listbox" aria-label="Resultados de cliente"
+               data-autocomplete-target="results" class="absolute inset-x-0 top-full z-20 mt-1"></div>
         </div>
 
         <% if @client %>

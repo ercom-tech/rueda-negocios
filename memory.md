@@ -60,8 +60,16 @@ MEDIA (por bloques temáticos; ver artifact de auditoría):
   restaura el foco previo); M16 (`flash_controller` nuevo: auto-dismiss 5s/8s +
   botón ✕; el mensaje lleva `pointer-events-auto`). Validado en navegador
   (Tab cicla, Esc cierra y restaura foco, ✕ cierra).
-- [ ] Bloque 7b-ii (a11y): M12 (teclado en `custom_select` no filtrable),
-  M13 (autocomplete loading/error/ARIA). Luego los BAJA.
+- [x] **Bloque 7b-ii (a11y select/autocomplete):** M12 (`custom_select` navega
+  con teclado también cuando NO es filtrable —el botón recibe `keydown->navigate`
+  y ↑/↓ abre el panel—; ARIA completo: botón `aria-haspopup/aria-expanded`, `ul`
+  `role="listbox"`, opciones `role="option"`/`aria-selected`, `aria-activedescendant`
+  en el elemento con foco); M13 (`autocomplete` muestra "Buscando…" (role=status)
+  y, ante fallo de red, aviso `role=alert` en vez de reventar en silencio; input
+  `role="combobox"` con `aria-expanded`/`aria-activedescendant`; resultados
+  `role="listbox"`/`option`). Validado en navegador (teclado en select no
+  filtrable, activedescendant, y error de red simulado interceptando fetch).
+  **Con esto MEDIA queda cerrado; siguen los BAJA.**
 - [x] **A5** errores del encabezado: panel "Faltan datos obligatorios: …" +
   ring rojo en los `custom_select` inválidos (`invalid:` en el partial).
 - [x] **A6** tarjetas no implementadas (menú + reportes) marcadas "Próximamente"

@@ -8,6 +8,10 @@ import { Controller } from "@hotwired/stimulus"
 //   data-autocomplete-target="results" en el contenedor del dropdown
 //   data-autocomplete-url-value="/orders/client_options"
 //   data-action="input->autocomplete#search keydown->autocomplete#navigate"
+//
+// Accesibilidad: el input es role="combobox" con aria-expanded/aria-activedescendant;
+// mientras busca muestra "Buscando…" (role=status) y ante un fallo de red muestra
+// un aviso de error (role=alert), en vez de fallar en silencio.
 export default class extends Controller {
   static targets = ["input", "results"]
   static values = { url: String }
@@ -27,13 +31,22 @@ export default class extends Controller {
   }
 
   async fetch(q) {
-    // La URL base puede ya traer query (p.ej. order_id al editar); se agrega q
-    // con URLSearchParams para no romperla con un segundo "?".
-    const url = new URL(this.urlValue, window.location.origin)
-    url.searchParams.set("q", q)
-    const res = await fetch(url, { headers: { Accept: "text/html" } })
-    this.resultsTarget.innerHTML = await res.text()
-    this.index = -1
+    this.showStatus("Buscando…", "status", "text-neutral-500")
+    try {
+      // La URL base puede ya traer query (p.ej. order_id al editar); se agrega q
+      // con URLSearchParams para no romperla con un segundo "?".
+      const url = new URL(this.urlValue, window.location.origin)
+      url.searchParams.set("q", q)
+      const res = await fetch(url, { headers: { Accept: "text/html" } })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+      this.resultsTarget.innerHTML = await res.text()
+      this.index = -1
+      this.tagOptions()
+      this.setExpanded(this.items.length > 0)
+    } catch (e) {
+      this.showStatus("No se pudo buscar. Revisa la conexión e inténtalo de nuevo.", "alert", "text-red-600")
+    }
   }
 
   navigate(event) {
@@ -69,16 +82,42 @@ export default class extends Controller {
     this.items.forEach((el, i) => {
       el.style.backgroundColor = i === this.index ? "rgb(229 229 229)" : ""
     })
-    this.items[this.index]?.scrollIntoView({ block: "nearest" })
+    const current = this.items[this.index]
+    if (current) this.inputTarget.setAttribute("aria-activedescendant", current.id)
+    else this.inputTarget.removeAttribute("aria-activedescendant")
+    current?.scrollIntoView({ block: "nearest" })
   }
 
   get items() {
     return Array.from(this.resultsTarget.querySelectorAll("a, button"))
   }
 
+  // Marca cada resultado como option del combobox y le asigna un id estable
+  // para poder referirlo desde aria-activedescendant.
+  tagOptions() {
+    this.items.forEach((el, i) => {
+      el.setAttribute("role", "option")
+      el.id ||= `${this.resultsTarget.id || "ac"}-opt-${i}`
+    })
+  }
+
+  showStatus(text, role, colorClass) {
+    this.resultsTarget.innerHTML =
+      `<div role="${role}" class="rounded-2xl border border-black/10 bg-white px-5 py-3 text-sm ${colorClass} shadow-xl">${text}</div>`
+    this.index = -1
+    this.inputTarget.removeAttribute("aria-activedescendant")
+    this.setExpanded(true)
+  }
+
+  setExpanded(open) {
+    this.inputTarget.setAttribute("aria-expanded", open ? "true" : "false")
+  }
+
   clear() {
     this.resultsTarget.innerHTML = ""
     this.index = -1
+    this.setExpanded(false)
+    this.inputTarget.removeAttribute("aria-activedescendant")
   }
 
   // Tras agregar (submit del resultado), limpia el input y los resultados y

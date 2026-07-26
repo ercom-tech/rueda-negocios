@@ -6,6 +6,11 @@ import { Controller } from "@hotwired/stimulus"
 // Esc o clic afuera.
 // Uso: data-controller="select" con targets button/label/input/panel/list
 //   (filter opcional) y data-action="click@window->select#hide".
+//
+// Accesibilidad: el botón es aria-haspopup="listbox" y refleja aria-expanded;
+// la lista es role="listbox" con options role="option"/aria-selected. El
+// resaltado del teclado se expone con aria-activedescendant en el elemento con
+// foco (el botón, o el campo de filtro cuando es filtrable).
 export default class extends Controller {
   static targets = ["button", "label", "input", "panel", "filter", "list"]
   static values = { filterable: Boolean }
@@ -22,6 +27,7 @@ export default class extends Controller {
   open() {
     this.panelTarget.hidden = false
     this.index = -1
+    this.buttonTarget.setAttribute("aria-expanded", "true")
     if (this.filterableValue && this.hasFilterTarget) {
       this.filterTarget.value = ""
       this.applyFilter("")
@@ -32,6 +38,8 @@ export default class extends Controller {
   close() {
     this.panelTarget.hidden = true
     this.index = -1
+    this.buttonTarget.setAttribute("aria-expanded", "false")
+    this.focusHost.removeAttribute("aria-activedescendant")
   }
 
   choose(event) {
@@ -39,6 +47,10 @@ export default class extends Controller {
     this.inputTarget.value = btn.dataset.value
     this.labelTarget.textContent = btn.dataset.label
     this.labelTarget.classList.toggle("opacity-60", btn.dataset.value === "")
+    this.optionItems.forEach((li) => {
+      const opt = li.querySelector("button")
+      opt.setAttribute("aria-selected", opt === btn ? "true" : "false")
+    })
     this.close()
     this.buttonTarget.focus()
     this.inputTarget.dispatchEvent(new Event("change", { bubbles: true }))
@@ -57,6 +69,15 @@ export default class extends Controller {
   }
 
   navigate(event) {
+    // Con el panel cerrado, las flechas lo abren (foco en el botón).
+    if (this.panelTarget.hidden) {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        event.preventDefault()
+        this.open()
+      }
+      return
+    }
+
     const items = this.visibleItems
     if (items.length === 0) return
 
@@ -86,11 +107,19 @@ export default class extends Controller {
     items.forEach((li, i) => {
       li.querySelector("button").style.backgroundColor = i === this.index ? "rgb(229 229 229)" : ""
     })
+    const current = items[this.index]?.querySelector("button")
+    if (current) this.focusHost.setAttribute("aria-activedescendant", current.id)
     items[this.index]?.scrollIntoView({ block: "nearest" })
   }
 
   hide(event) {
     if (!this.element.contains(event.target)) this.close()
+  }
+
+  // Elemento con foco mientras el panel está abierto: el campo de filtro si es
+  // filtrable, el botón en caso contrario.
+  get focusHost() {
+    return this.filterableValue && this.hasFilterTarget ? this.filterTarget : this.buttonTarget
   }
 
   get optionItems() {

@@ -18,11 +18,15 @@
 <% btn_class       = local_assigns[:button_class] ||
                      "flex w-full items-center justify-between gap-2 rounded-full bg-black px-5 py-3 text-left text-white" %>
 <% btn_class += " ring-2 ring-red-500" if local_assigns[:invalid] %>
+<% sel_id = "sel-#{SecureRandom.hex(4)}" %>
 
 <div class="relative" data-controller="select"
      data-select-filterable-value="<%= filterable %>"
      data-action="click@window->select#hide">
-  <button type="button" data-select-target="button" data-action="select#toggle" class="<%= btn_class %>">
+  <button type="button" data-select-target="button"
+          data-action="select#toggle keydown->select#navigate"
+          aria-haspopup="listbox" aria-expanded="false" aria-controls="<%= sel_id %>-list"
+          class="<%= btn_class %>">
     <span data-select-target="label" class="truncate <%= "opacity-60" if selected_label.nil? %>">
       <%= selected_label || placeholder %>
     </span>
@@ -39,22 +43,27 @@
       <div class="sticky top-0 border-b border-black/5 bg-white p-2">
         <input type="text" data-select-target="filter"
                data-action="input->select#filter keydown->select#navigate"
-               placeholder="Filtrar…"
+               placeholder="Filtrar…" aria-label="Filtrar opciones" aria-controls="<%= sel_id %>-list"
                class="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900 outline-none focus:border-brand-gold" />
       </div>
     <% end %>
-    <ul data-select-target="list" class="py-1 text-neutral-900">
+    <ul id="<%= sel_id %>-list" data-select-target="list" role="listbox" aria-label="<%= placeholder %>"
+        class="py-1 text-neutral-900">
       <% if include_blank %>
-        <li>
-          <button type="button" data-action="select#choose" data-value="" data-label="<%= placeholder %>"
+        <li role="presentation">
+          <button type="button" role="option" id="<%= sel_id %>-opt-blank"
+                  aria-selected="<%= selected.to_s == "" %>"
+                  data-action="select#choose" data-value="" data-label="<%= placeholder %>"
                   class="block w-full px-4 py-2.5 text-left text-sm text-neutral-500 hover:bg-neutral-100">
             <%= placeholder %>
           </button>
         </li>
       <% end %>
-      <% options.each do |(label, value)| %>
-        <li>
-          <button type="button" data-action="select#choose" data-value="<%= value %>" data-label="<%= label %>"
+      <% options.each_with_index do |(label, value), i| %>
+        <li role="presentation">
+          <button type="button" role="option" id="<%= sel_id %>-opt-<%= i %>"
+                  aria-selected="<%= value.to_s == selected.to_s %>"
+                  data-action="select#choose" data-value="<%= value %>" data-label="<%= label %>"
                   class="block w-full px-4 py-2.5 text-left text-sm hover:bg-neutral-100">
             <%= label %>
           </button>
