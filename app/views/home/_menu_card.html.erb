@@ -8,21 +8,28 @@
 <% title_color = coral ? "text-white"        : "text-neutral-900" %>
 <% desc_color  = coral ? "text-white/90"     : "text-neutral-800/75" %>
 <% soon = local_assigns[:soon] %>
-<% base = "relative flex items-center gap-6 rounded-[1.75rem] #{bg} px-7 py-5 shadow-lg" %>
+<%# En "Próximamente" el fondo se atenúa con alpha (bg .../60), que —a diferencia
+    de opacity— NO afecta a los hijos, así el badge queda a plena opacidad. %>
+<% card_bg = soon ? (coral ? "bg-brand-coral/60" : "bg-brand-gold/60") : bg %>
+<% base = "relative flex rounded-[1.75rem] #{card_bg} px-7 py-5 shadow-lg" %>
 
 <% inner = capture do %>
-  <%= image_tag icon, alt: "", class: "h-14 w-14 shrink-0" %>
-  <div class="flex w-44 shrink-0 justify-center">
-    <h3 class="text-right text-2xl font-extrabold leading-tight <%= title_color %>"><%= safe_join(Array(title), tag.br) %></h3>
+  <%# El contenido se atenúa cuando es "Próximamente"; el badge NO (queda a
+      plena opacidad, en amarillo sólido, para resaltar sobre la card apagada). %>
+  <div class="flex flex-1 items-center gap-6 <%= "opacity-60" if soon %>">
+    <%= image_tag icon, alt: "", class: "h-14 w-14 shrink-0" %>
+    <div class="flex w-44 shrink-0 justify-center">
+      <h3 class="text-right text-2xl font-extrabold leading-tight <%= title_color %>"><%= safe_join(Array(title), tag.br) %></h3>
+    </div>
+    <p class="text-xl leading-snug <%= desc_color %>"><%= desc %></p>
   </div>
-  <p class="text-xl leading-snug <%= desc_color %>"><%= desc %></p>
   <% if soon %>
-    <span class="absolute right-4 top-3 rounded-full bg-black/25 px-3 py-1 text-xs font-semibold <%= title_color %>">Próximamente</span>
+    <span class="absolute bottom-3 right-4 rounded-full bg-brand-gold px-3 py-1 text-xs font-semibold text-neutral-900 shadow-md ring-1 ring-black/10">Próximamente</span>
   <% end %>
 <% end %>
 
 <% if soon %>
-  <div class="<%= base %> cursor-not-allowed opacity-60" aria-disabled="true" title="Próximamente"><%= inner %></div>
+  <div class="<%= base %> cursor-not-allowed" aria-disabled="true" title="Próximamente"><%= inner %></div>
 <% else %>
-  <%= link_to href, class: "#{base} transition-transform hover:scale-[1.015]" do %><%= inner %><% end %>
+  <%= link_to href, class: "#{base} gap-6 items-center transition-transform hover:scale-[1.015]" do %><%= inner %><% end %>
 <% end %>
