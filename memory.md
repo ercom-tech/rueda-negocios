@@ -70,6 +70,23 @@ MEDIA (por bloques temáticos; ver artifact de auditoría):
   `role="listbox"`/`option`). Validado en navegador (teclado en select no
   filtrable, activedescendant, y error de red simulado interceptando fetch).
   **Con esto MEDIA queda cerrado; siguen los BAJA.**
+
+BAJA (por grupos temáticos; 14 hallazgos + login-throttling movido a strengthening):
+- [x] **Grupo A (correctitud/robustez):**
+  - Bug pérdida de datos: `Sync::Down#import_users` borraba a TODOS los
+    capturistas si el export venía sin usuarios (`where.not(col: [])` → `AND 1=1`).
+    Fix: cleanup solo si `erp_keys.any?` + `.compact`. Test nuevo. (rueda-negocios)
+  - Tope de descuento server-side: `OrderItem#discount_within_limits` valida
+    contra `product.max_discount` (%; 0 = sin descuento, nil = hasta 100).
+    Mensajes en `:base` (evita cambiar default_locale). `OrderItems#update`
+    muestra el error real en el flash. Tests de modelo. (rueda-negocios)
+  - rueda-api: `POST /pedidos` con JSON inválido → 400 (antes 500); `/health`
+    no filtra `e.message` al cliente. Tests rack-test (test/application_test.rb,
+    carga `app/application.rb` con LOGGER stub, sin config/application.rb).
+  Todo validado (suite + navegador para el flash de descuento).
+- [ ] Grupo B (rueda-api API menor + perf), C (UX/inclusividad), D (convenciones/
+  limpieza/docs). Rutas ES/EN: recomendado NO tocar. Login throttling → va con
+  la fase de strengthening (D1–D4 diferidos).
 - [x] **A5** errores del encabezado: panel "Faltan datos obligatorios: …" +
   ring rojo en los `custom_select` inválidos (`invalid:` en el partial).
 - [x] **A6** tarjetas no implementadas (menú + reportes) marcadas "Próximamente"
