@@ -5,7 +5,7 @@
 %>
 <div data-modal-target="dialog" style="display:none" class="fixed inset-0 z-50 items-center justify-center p-4">
   <div class="absolute inset-0 bg-black/50" data-action="click->modal#close"></div>
-  <div class="relative w-full max-w-md rounded-3xl bg-[#EDC94C] p-6 shadow-2xl sm:p-8">
+  <div class="relative w-full max-w-md rounded-3xl bg-brand-gold p-6 shadow-2xl sm:p-8">
     <div class="rounded-2xl bg-black py-4 text-center">
       <h3 class="text-xl font-extrabold text-white"><%= title %></h3>
     </div>
@@ -16,7 +16,7 @@
         Cancelar
       </button>
       <%= button_to confirm_label, path, method: (local_assigns[:method] || :post),
-            class: "rounded-full bg-[#CE6150] px-6 py-2.5 font-bold text-white transition-colors hover:bg-[#bd5343]" %>
+            class: "rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
     </div>
   </div>
 </div>

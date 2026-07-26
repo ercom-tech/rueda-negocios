@@ -42,7 +42,12 @@ MEDIA (por bloques temáticos; ver artifact de auditoría):
 - [x] **Bloque 6 (robustez sync):** M6 — timeouts HTTP configurables
   (`RUEDA_API_OPEN_TIMEOUT`/`READ_TIMEOUT`) en `ApiClient`/`Sync::Up`; un error
   de red por pedido marca fallido y continúa (no aborta la transmisión).
-- [ ] Bloque 4 (M9 tokens de color), Bloque 7 (M7/M11-M16 UX/a11y).
+- [x] **Bloque 4 (tokens de color):** M9 — paleta de marca en `@theme`
+  (`app/assets/tailwind/application.css`): `brand-gold`/`brand-gold-dark`/
+  `brand-coral`/`brand-coral-dark`/`brand-cream`. ~64 usos de hex migrados en 16
+  vistas; unificados los 3 pares divergentes (#f1d24e→gold, #f4efe0→cream,
+  #b9553f→coral-dark). Fuente única de verdad.
+- [ ] Bloque 7 (M7/M11-M16 UX/a11y). Luego los BAJA.
 - [x] **A5** errores del encabezado: panel "Faltan datos obligatorios: …" +
   ring rojo en los `custom_select` inválidos (`invalid:` en el partial).
 - [x] **A6** tarjetas no implementadas (menú + reportes) marcadas "Próximamente"

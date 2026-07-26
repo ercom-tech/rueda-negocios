@@ -1,10 +1,10 @@
 <% content_for :title, "Levantamiento de pedido · Rueda de Negocios" %>
 
-<div class="relative min-h-screen w-full overflow-hidden bg-[#F4EFE0] text-neutral-900">
+<div class="relative min-h-screen w-full overflow-hidden bg-brand-cream text-neutral-900">
   <div class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.12]"
        style="background-image: url('<%= image_path "tools_pattern_black.svg" %>');"></div>
 
-  <header class="relative z-10 flex items-center justify-between bg-[#EDC94C] px-6 py-4 sm:px-10 lg:px-[7%]">
+  <header class="relative z-10 flex items-center justify-between bg-brand-gold px-6 py-4 sm:px-10 lg:px-[7%]">
     <h1 class="text-2xl font-extrabold sm:text-3xl">Levantamiento de pedido</h1>
     <%= link_to root_path, title: "Volver al menú" do %>
       <%= image_tag "fecego_logo_white.png", alt: "FECEGO", class: "h-9 w-auto invert" %>
@@ -25,17 +25,17 @@
       <div class="flex items-center gap-3">
         <% if @order.editable? %>
           <%= link_to "Editar", edit_order_path(@order),
-                class: "rounded-full bg-[#EDC94C] px-6 py-2.5 font-bold text-neutral-900 hover:bg-[#e3bd3a]" %>
+                class: "rounded-full bg-brand-gold px-6 py-2.5 font-bold text-neutral-900 hover:bg-brand-gold-dark" %>
           <%= link_to "Cancelar", root_path,
                 data: { turbo_confirm: "¿Cancelar el pedido y volver al menú?" },
-                class: "rounded-full bg-[#EDC94C] px-6 py-2.5 font-bold text-neutral-900 hover:bg-[#e3bd3a]" %>
+                class: "rounded-full bg-brand-gold px-6 py-2.5 font-bold text-neutral-900 hover:bg-brand-gold-dark" %>
           <%= link_to "Guardar", capture_order_path(@order), data: { turbo_method: :post },
-                class: "rounded-full bg-[#CE6150] px-6 py-2.5 font-bold text-white hover:bg-[#bd5343]" %>
+                class: "rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white hover:bg-brand-coral-dark" %>
         <% else %>
           <%= link_to "Ver PDF", pdf_order_path(@order),
                 class: "rounded-full bg-black px-6 py-2.5 font-bold text-white hover:bg-neutral-800" %>
           <%= link_to "Volver al menú", root_path,
-                class: "rounded-full bg-[#EDC94C] px-6 py-2.5 font-bold text-neutral-900 hover:bg-[#e3bd3a]" %>
+                class: "rounded-full bg-brand-gold px-6 py-2.5 font-bold text-neutral-900 hover:bg-brand-gold-dark" %>
         <% end %>
       </div>
     </div>
@@ -105,7 +105,7 @@
           <%= text_area_tag :observations, @order.observations,
                 placeholder: "Observaciones",
                 data: { action: "change->form-submit#submit" },
-                class: "h-full min-h-32 w-full rounded-2xl border border-black/10 bg-white p-4 outline-none placeholder:text-neutral-500 focus:border-[#EDC94C]" %>
+                class: "h-full min-h-32 w-full rounded-2xl border border-black/10 bg-white p-4 outline-none placeholder:text-neutral-500 focus:border-brand-gold" %>
         <% end %>
       <% else %>
         <div class="min-h-32 flex-1 whitespace-pre-line rounded-2xl border border-black/10 bg-white p-4 text-neutral-700">

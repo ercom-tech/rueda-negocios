@@ -1,1 +1,11 @@
 @import "tailwindcss";
+
+/* Paleta de marca FECEGO. Fuente única de verdad: antes estos colores estaban
+   hardcodeados ~60 veces con variantes casi-idénticas que habían divergido. */
+@theme {
+  --color-brand-gold: #edc94c;       /* dorado principal (unifica #f1d24e) */
+  --color-brand-gold-dark: #e3bd3a;  /* hover del dorado */
+  --color-brand-coral: #ce6150;      /* coral (acciones) */
+  --color-brand-coral-dark: #bd5343; /* hover del coral (unifica #b9553f) */
+  --color-brand-cream: #f4eedb;      /* crema de fondo (unifica #f4efe0) */
+}

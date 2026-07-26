@@ -1,12 +1,12 @@
 <% content_for :title, "Levantamiento de pedido · Rueda de Negocios" %>
 
-<div class="relative min-h-screen w-full overflow-hidden bg-[#F4EFE0] text-neutral-900">
+<div class="relative min-h-screen w-full overflow-hidden bg-brand-cream text-neutral-900">
   <%# Patrón de herramientas (negro, tenue) sobre el fondo claro %>
   <div class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.12]"
        style="background-image: url('<%= image_path "tools_pattern_black.svg" %>');"></div>
 
   <%# ── Header amarillo ── %>
-  <header class="relative z-10 flex items-center justify-between bg-[#EDC94C] px-6 py-4 sm:px-10 lg:px-[7%]">
+  <header class="relative z-10 flex items-center justify-between bg-brand-gold px-6 py-4 sm:px-10 lg:px-[7%]">
     <h1 class="text-2xl font-extrabold sm:text-3xl">Levantamiento de pedido</h1>
     <%= link_to root_path, title: "Volver al menú" do %>
       <%= image_tag "fecego_logo_white.png", alt: "FECEGO", class: "h-9 w-auto invert" %>
@@ -15,7 +15,7 @@
 
   <%# ── Card única (ancha): Datos del cliente ── %>
   <div class="relative z-10 mx-auto max-w-5xl px-6 py-10 lg:px-[7%]">
-    <section class="rounded-3xl bg-[#EDC94C] p-6 sm:p-8">
+    <section class="rounded-3xl bg-brand-gold p-6 sm:p-8">
       <div class="rounded-2xl bg-black py-4 text-center">
         <h2 class="text-2xl font-extrabold text-white">Datos del cliente</h2>
       </div>
@@ -52,7 +52,7 @@
             <% if @order.errors.any? %>
               <% field_labels = { "cfdi_use_id" => "Uso de CFDI", "client_tax_profile_id" => "Nombre o razón social",
                                   "client_receipt_profile_id" => "Remisión", "client_branch_id" => "Dirección de entrega" } %>
-              <div class="rounded-2xl bg-[#CE6150] px-5 py-3 text-sm font-semibold text-white">
+              <div class="rounded-2xl bg-brand-coral px-5 py-3 text-sm font-semibold text-white">
                 Faltan datos obligatorios:
                 <%= @order.errors.attribute_names.map { |a| field_labels[a.to_s] || a.to_s.humanize }.uniq.join(", ") %>.
               </div>
@@ -64,11 +64,11 @@
                 <span class="mb-1 block text-sm font-semibold">Tipo de pedido</span>
                 <div class="flex items-center gap-6 rounded-full bg-black px-6 py-3 text-white">
                   <label class="flex cursor-pointer items-center gap-2">
-                    <%= f.radio_button :kind, "invoice", class: "accent-[#EDC94C]",
+                    <%= f.radio_button :kind, "invoice", class: "accent-brand-gold",
                           data: { action: "change->order-kind#toggle" } %> Factura
                   </label>
                   <label class="flex cursor-pointer items-center gap-2">
-                    <%= f.radio_button :kind, "remission", class: "accent-[#EDC94C]",
+                    <%= f.radio_button :kind, "remission", class: "accent-brand-gold",
                           data: { action: "change->order-kind#toggle" } %> Remisión
                   </label>
                 </div>
@@ -107,7 +107,7 @@
 
             <div class="pt-2 text-center">
               <%= f.submit (@order.persisted? ? "Guardar cambios" : "Continuar a levantamiento de pedido"),
-                    class: "cursor-pointer rounded-full bg-[#CE6150] px-8 py-3 font-bold text-white transition-colors hover:bg-[#bd5343]" %>
+                    class: "cursor-pointer rounded-full bg-brand-coral px-8 py-3 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
             </div>
           <% end %>
         <% else %>

@@ -3,7 +3,7 @@
   Locals: href, icon, label (String o Array de líneas), soon (bool — "Próximamente").
 %>
 <% soon = local_assigns[:soon] %>
-<% base = "relative flex aspect-square flex-col items-center justify-center gap-5 rounded-3xl bg-[#EDC94C] p-6 text-center shadow-lg" %>
+<% base = "relative flex aspect-square flex-col items-center justify-center gap-5 rounded-3xl bg-brand-gold p-6 text-center shadow-lg" %>
 
 <% inner = capture do %>
   <%= image_tag icon, alt: "", class: "h-20 w-20 brightness-0" %>

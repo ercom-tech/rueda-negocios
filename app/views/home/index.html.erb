@@ -15,7 +15,7 @@
       <%= image_tag "fecego_logo_white.png", alt: "FECEGO", class: "h-14 w-auto" %>
 
       <div class="flex flex-wrap items-center gap-3 text-sm">
-        <span class="rounded-full bg-[#F4EEDB] px-5 py-2.5 text-neutral-800">
+        <span class="rounded-full bg-brand-cream px-5 py-2.5 text-neutral-800">
           Usuario: <span class="font-semibold"><%= current_user.full_name.presence || current_user.username %></span>
         </span>
         <%# El pill de proveedor no aplica al servidor (no captura pedidos). %>

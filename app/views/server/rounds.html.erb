@@ -26,7 +26,7 @@
       <% @rounds.each do |r| %>
         <% current = r["erp_round_id"] == @selected %>
         <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl px-6 py-5 shadow-lg
-                    <%= current ? "bg-[#F4EEDB] text-neutral-900 ring-2 ring-[#F1D24E]" : "bg-white/5 text-white" %>">
+                    <%= current ? "bg-brand-cream text-neutral-900 ring-2 ring-brand-gold" : "bg-white/5 text-white" %>">
           <div>
             <h3 class="text-xl font-bold"><%= r["name"] %></h3>
             <p class="mt-1 text-sm <%= current ? "text-neutral-700" : "text-white/60" %>">
@@ -36,11 +36,11 @@
           </div>
 
           <% if current %>
-            <span class="rounded-full bg-[#F1D24E] px-5 py-2 text-sm font-bold text-neutral-900">Seleccionada</span>
+            <span class="rounded-full bg-brand-gold px-5 py-2 text-sm font-bold text-neutral-900">Seleccionada</span>
           <% else %>
             <%= button_to "Seleccionar", server_select_round_path, method: :patch,
                   params: { erp_round_id: r["erp_round_id"], name: r["name"] },
-                  class: "rounded-full bg-[#CE6150] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#b9553f]" %>
+                  class: "rounded-full bg-brand-coral px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-coral-dark" %>
           <% end %>
         </div>
       <% end %>

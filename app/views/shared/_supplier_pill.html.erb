@@ -6,7 +6,7 @@
 %>
 <% if available_suppliers.size > 1 %>
   <%= form_with url: active_supplier_path, method: :patch, data: { controller: "form-submit" } do %>
-    <div class="flex items-center gap-2 rounded-full bg-[#F4EEDB] px-5 py-2.5 text-neutral-800">
+    <div class="flex items-center gap-2 rounded-full bg-brand-cream px-5 py-2.5 text-neutral-800">
       <span>Proveedor:</span>
       <%= render "shared/custom_select", name: "supplier_id", include_blank: false,
             options: available_suppliers.map { |s| [s.name, s.id] }, selected: current_supplier&.id,
@@ -16,7 +16,7 @@
     </div>
   <% end %>
 <% else %>
-  <span class="rounded-full bg-[#F4EEDB] px-5 py-2.5 text-neutral-800">
+  <span class="rounded-full bg-brand-cream px-5 py-2.5 text-neutral-800">
     Proveedor: <span class="font-semibold"><%= current_supplier&.name || "—" %></span>
   </span>
 <% end %>

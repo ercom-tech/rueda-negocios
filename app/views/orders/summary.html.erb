@@ -1,10 +1,10 @@
 <% content_for :title, "Resumen del pedido · Rueda de Negocios" %>
 
-<div class="relative min-h-screen w-full overflow-hidden bg-[#F4EFE0] text-neutral-900">
+<div class="relative min-h-screen w-full overflow-hidden bg-brand-cream text-neutral-900">
   <div class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.12]"
        style="background-image: url('<%= image_path "tools_pattern_black.svg" %>');"></div>
 
-  <header class="relative z-10 flex items-center justify-between bg-[#EDC94C] px-6 py-4 sm:px-10 lg:px-[7%]">
+  <header class="relative z-10 flex items-center justify-between bg-brand-gold px-6 py-4 sm:px-10 lg:px-[7%]">
     <h1 class="text-2xl font-extrabold sm:text-3xl">Levantamiento de pedido</h1>
     <%= link_to root_path, title: "Volver al menú" do %>
       <%= image_tag "fecego_logo_white.png", alt: "FECEGO", class: "h-9 w-auto invert" %>
@@ -13,7 +13,7 @@
 
   <div class="relative z-10 mx-auto max-w-xl px-6 py-12"
        data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
-    <section class="rounded-3xl bg-[#EDC94C] p-6 sm:p-8">
+    <section class="rounded-3xl bg-brand-gold p-6 sm:p-8">
       <div class="rounded-2xl bg-black py-4 text-center">
         <h2 class="text-2xl font-extrabold text-white">Resumen del pedido</h2>
       </div>
@@ -40,7 +40,7 @@
 
         <div class="pt-2 text-center">
           <%= link_to "Terminar", root_path,
-                class: "inline-block rounded-full bg-[#CE6150] px-8 py-3 font-bold text-white transition-colors hover:bg-[#bd5343]" %>
+                class: "inline-block rounded-full bg-brand-coral px-8 py-3 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
         </div>
       </div>
     </section>
@@ -49,7 +49,7 @@
     <div data-modal-target="dialog" style="display:none"
          class="fixed inset-0 z-50 items-center justify-center p-4">
       <div class="absolute inset-0 bg-black/50" data-action="click->modal#close"></div>
-      <div class="relative w-full max-w-md rounded-3xl bg-[#EDC94C] p-6 sm:p-8">
+      <div class="relative w-full max-w-md rounded-3xl bg-brand-gold p-6 sm:p-8">
         <div class="rounded-2xl bg-black py-4 text-center">
           <h3 class="text-xl font-extrabold text-white">Enviar por correo</h3>
         </div>
@@ -65,9 +65,9 @@
           </label>
           <div class="flex justify-center gap-3 pt-2">
             <button type="button" data-action="modal#close"
-                    class="rounded-full bg-[#CE6150] px-6 py-2.5 font-bold text-white hover:bg-[#bd5343]">Regresar</button>
+                    class="rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white hover:bg-brand-coral-dark">Regresar</button>
             <%= submit_tag "Enviar",
-                  class: "cursor-pointer rounded-full bg-[#CE6150] px-6 py-2.5 font-bold text-white hover:bg-[#bd5343]" %>
+                  class: "cursor-pointer rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white hover:bg-brand-coral-dark" %>
           </div>
         <% end %>
       </div>
