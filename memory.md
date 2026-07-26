@@ -107,9 +107,14 @@ BAJA (por grupos temáticos; 14 hallazgos + login-throttling movido a strengthen
   `.0`, cero notación científica). `#{EMPRESA}` interpolado → placeholder `?`.
   Validado byte a byte contra la BD dev (rueda 3): JSON semánticamente idéntico,
   ~80 KB más chico. **AUDITORÍA CERRADA.**
-- No abordados por decisión: rutas ES/EN (mezcla deliberada), login throttling
-  (→ strengthening con D1–D4 diferidos), y `prefijo`/`id_rueda` en rueda-api
-  (espejan columnas del ERP).
+- [x] **Rutas ES/EN unificadas a inglés:** en `routes.rb`, `servidor`→`server`,
+  `ruedas`→`rounds`, `reportes`→`reports`, `pedidos-capturados`→`captured-orders`.
+  Solo cambió `routes.rb`: los `as:`/helpers ya eran inglés y las vistas usan
+  helpers (nada hardcodeado). Validado en navegador (`/reports`,
+  `/reports/captured-orders`). El texto español de la UI y el username `servidor`
+  del rol server NO son rutas y se conservan.
+- No abordados por decisión: login throttling (→ strengthening con D1–D4
+  diferidos), y `prefijo`/`id_rueda` en rueda-api (espejan columnas del ERP).
 - [x] **A5** errores del encabezado: panel "Faltan datos obligatorios: …" +
   ring rojo en los `custom_select` inválidos (`invalid:` en el partial).
 - [x] **A6** tarjetas no implementadas (menú + reportes) marcadas "Próximamente"
