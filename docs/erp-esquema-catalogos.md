@@ -133,3 +133,23 @@ Descubierto en la 2ª auditoría al evaluar cablear `min_sale_quantity`:
 - **Decisión (usuario):** NO cablear la regla de múltiplos en la rueda; la
   columna local `products.min_sale_quantity` (que el sync nunca pobló) se
   **eliminó**. Si el tema del empaque revive, la fuente es esta tabla.
+
+## Universo de productos por capturista (2ª iteración de sync)
+
+Regla del negocio (usuario, 2026-07-26): la asignación proveedor/marca del
+capturista define su universo **duro** de productos vendibles en la rueda.
+
+- **Fuente de la membresía:** `cnf_rueda_negocios_persona` — las columnas
+  `id_proveedor` e `id_marca` que antes se ignoraban. `consecutivo` permite
+  varias filas por persona (multi-proveedor/marca); `id_marca = 0` significa
+  "sin marca" (se exporta como NULL). Viaja en la llave `people` del export →
+  `business_round_people` local.
+- **Hallazgo clave — relación real producto↔proveedor:** es
+  `com_proveedor_has_producto`, NO los SKUs (`com_producto_has_sku`). Medido
+  con MAKITA (proveedor 13): 2,207 productos vía `has_producto` y **0** vía
+  SKUs; en toda la rueda 3: 10,839 vínculos vs 197 SKUs. El export manda
+  `supplier_ids` por producto desde `has_producto`, y `ProductSupplier` local
+  guarda la unión (con `supplier_sku` NULL cuando el vínculo no trae SKU).
+- **Universo** = productos de TODOS sus proveedores (`ProductSupplier`) ∪ los
+  de sus marcas (`products.brand_id`). Sin membresía → vacío (que el ERP no
+  asigne proveedor/marca al capturista es problema operativo, no del sitio).

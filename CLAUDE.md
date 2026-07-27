@@ -69,8 +69,9 @@ Modelo **una laptop = servidor LAN**:
 ### Flujo de sync
 
 - **Antes del evento (oficina):** la laptop descarga el dataset (usuarios,
-  vendedores, clientes, proveedores, marcas, productos, precios/beneficios,
-  definición de la rueda) desde `rueda-api` → puebla Postgres local.
+  membresías capturista↔proveedor/marca, vendedores, clientes, proveedores,
+  marcas, productos, precios/beneficios, definición de la rueda) desde
+  `rueda-api` → puebla Postgres local.
 - **Durante (offline, LAN):** pedidos con **ID local UUID**, estado
   `pendiente`.
 - **Después / entre días (oficina):** la laptop transmite pedidos a
