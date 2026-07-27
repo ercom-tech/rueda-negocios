@@ -29,8 +29,11 @@
           <div class="inline-block" data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
             <button type="button" data-action="modal#open"
                     class="rounded-full bg-brand-gold px-6 py-2.5 font-bold text-neutral-900 hover:bg-brand-gold-dark">Cancelar</button>
+            <%# Mensaje según estatus: un borrador se descarta; un capturado ya
+                está guardado con folio — se elimina con sus partidas. %>
             <%= render "home/confirm_dialog", title: "Descartar pedido",
-                  message: "Se descartará este pedido en captura y no se guardará. ¿Continuar?",
+                  message: (@order.draft? ? "Se descartará este pedido en captura y no se guardará. ¿Continuar?"
+                                          : "Se eliminará el pedido #{@order.folio} con todas sus partidas. ¿Continuar?"),
                   confirm_label: "Sí, descartar", path: order_path(@order), method: :delete %>
           </div>
           <%= link_to "Finalizar pedido", capture_order_path(@order), data: { turbo_method: :post },
