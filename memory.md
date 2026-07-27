@@ -275,6 +275,15 @@ problema operativo del ERP). Cadena completa:
   al universo (404 ante POST forjado). Validado en navegador con makita1:
   universo 2,134, "martillo" → solo MAKITA, STIHL fuera.
 
+**Guarda del sync-down afinada (2026-07-27, decisión del usuario):** solo
+bloquean los pedidos capturados SIN transmitir; borradores y transmitidos se
+purgan automáticamente antes del replace (`purged_orders` en el resumen) — el
+refresh entre días queda en 2 pasos (transmitir → obtener información).
+"Cerrar rueda" sigue para cambiar de rueda sin re-descargar. Validado en uso
+real por el propio usuario (purgó 6) y con tests (46/157). Trampa recurrente
+confirmada: un rueda-api VIEJO dueño de :4568 sirvió un export sin
+people/supplier_ids → membresías en 0; matar pumas huérfanos antes de probar.
+
 ## Estado actual
 
 Estructura de repos definida; ambos en GitHub (org **ercom-tech**):
