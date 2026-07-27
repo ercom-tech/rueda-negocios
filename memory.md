@@ -175,7 +175,18 @@ Reporte: artifact "Auditoría — rueda-negocios & rueda-api" (segunda-auditoria
   parte de B14). M7 — `public/406-unsupported-browser.html` reescrita en
   español con la identidad de la app (allow_browser la sirve por default).
   Todo validado en navegador (resize a 800px incluido).
-- [ ] Bloque 5 (MEDIA): contrato+docs (M8-M9). Luego BAJA.
+- [x] **Bloque 5 (contrato+docs, M8-M9):** M8 — el 500 genérico de rueda-api
+  ahora incluye `message: "Error interno."` (contrato `{error, message}`
+  uniforme con 400/422; el detalle sigue solo en el log). Test con
+  `app.set :raise_errors, false` (en test Sinatra propaga excepciones y el
+  handler `error do` no corre sin apagarlo). M9 — memory.md: corregida la
+  referencia fantasma a `rueda-api/docs/contract.md` (el contrato vive en
+  `docs/erp-esquema-*.md`) y 10 notas "(superado/hoy …)" en las secciones
+  añejas (deep_coerce, modal de correo, Cancelar→turbo_confirm,
+  draft/submitted, orders#submit, rutas /reportes). Ajuste a M5 pedido por el
+  usuario: "Consecutivo" visible en angosto como "#" (antes oculto); No. de
+  parte/Unidad siguen ocultas bajo lg. **Con esto MEDIA de la 2ª auditoría
+  queda cerrado; siguen los BAJA.**
 
 ## Estado actual
 
@@ -198,7 +209,7 @@ local, migrado y validado.
 
 **Fase B — LOGIN, MENÚ, hub de REPORTES y PEDIDO completo**: autenticación
 (bcrypt) + login; **menú** (`home#index`); **hub de reportes** (`reports#index`,
-`/reportes`); y el **pedido completo** — encabezado (`orders#new`, paso 1),
+`/reports`); y el **pedido completo** — encabezado (`orders#new`, paso 1),
 **detalle** (`orders#show`, paso 2) y **resumen/envío** (`orders#summary`, paso 3).
 Diseños desde `docs/design-reference/{login,menu,reportes,pedidos}`.
 
@@ -222,8 +233,9 @@ Diseños desde `docs/design-reference/{login,menu,reportes,pedidos}`.
   - `_fecego/rueda-negocios/` — app Rails de la laptop; incluye las rake
     tasks de sync (down/up). No hay repo de sync aparte.
   - `_fecego/rueda-api/` — API Sinatra on-prem (plantilla api-v2).
-  - Contrato compartido (JSON de export + alta de pedidos): fuente canónica
-    en `rueda-api/docs/contract.md`, referenciado desde la app.
+  - Contrato compartido (JSON de export + alta de pedidos): documentado en
+    `docs/erp-esquema-catalogos.md` y `docs/erp-esquema-pedidos.md` (este repo).
+    (El `rueda-api/docs/contract.md` planeado nunca se creó — 2ª auditoría M9.)
 - **Ignorado:** `_fecego/offline/local.sqlite` (spike previo, no forma parte
   del proyecto).
 
@@ -322,7 +334,7 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
 
 ### Fase B — hub de reportes (decisiones)
 
-- **`ReportsController#index`** en `/reportes` (layout `auth`). La card
+- **`ReportsController#index`** en `/reportes` (layout `auth`; hoy `/reports`). La card
   "Reportes de venta" del menú enlaza aquí.
 - **Patrón de pantalla interna:** header amarillo full-width (título + logo que
   regresa al menú; logo blanco con `invert` sobre el amarillo) + cuerpo negro
@@ -339,7 +351,8 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
 - **`Order`** (borrador): belongs_to user (capturista) / business_round / client.
   **NO lleva proveedor** — un pedido puede mezclar productos de varios
   proveedores; el proveedor activo es solo contexto de sesión. `kind`
-  (invoice/remission), `status` (draft/submitted), `erp_folio` (nulo hasta sync).
+  (invoice/remission), `status` (draft/submitted; hoy draft/captured/transmitted),
+  `erp_folio` (nulo hasta sync).
 - **Datos fiscales del cliente** (nuevos modelos): `ClientTaxProfile` (RFC +
   razón social + uso CFDI default), `ClientReceiptProfile` (remisión),
   `ClientBranch` (sucursal), `CfdiUse` (catálogo SAT), `Client.email`. Todos con
@@ -375,19 +388,21 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
   observaciones. **Interacciones vía Turbo Streams** (`OrderItemsController`
   create/update/destroy → reemplaza `#order-detail`). Auto-guardado de observaciones.
 - Botones: **Editar** → paso 1; **Cancelar** → menú (turbo_confirm); **Enviar** →
-  `#` (Arco 3). Los `turbo_confirm` usan diálogo nativo (ok para el usuario).
+  `#` (Arco 3). (Superado: hoy Cancelar abre un modal accesible que DESCARTA el
+  borrador —`Orders#destroy`, M15— y el botón final es "Guardar" → `capture`.)
 - **Seed:** 5 productos demo (con precio, IVA 16%, modelo, No. parte, SKU proveedor).
 
 ### Fase B — Pedido, Arco 3 / envío + resumen (decisiones)
 
-- **`Order.submit!`**: exige ≥1 partida → `status: submitted` + asigna
+- **`Order.submit!`** (hoy `capture!` → `status: captured`): exige ≥1 partida + asigna
   **`local_folio`** (`RN-000123`, offline; el `erp_folio` llega en el sync).
   `Order#folio` = local o erp.
-- **`orders#submit`** (POST, botón Enviar del paso 2) → **`orders#summary`** (paso 3).
+- **`orders#submit`** (hoy `orders#capture`, botón "Guardar") → **`orders#summary`** (paso 3).
 - **Paso 3 (`summary`)**: panel "Resumen del pedido" con folio + 3 opciones
   (Generar PDF / Enviar por correo / Enviar por WhatsApp) + Terminar (→ menú).
-- **Enviar por correo = MODAL** (Stimulus `modal`, overlay + cierre backdrop/Esc/
-  Regresar): correo registrado + input para otro.
+- **Enviar por correo = MODAL** (Stimulus `modal`): correo registrado + input para
+  otro. (Superado: hoy correo/WhatsApp son placeholders deshabilitados
+  "Próximamente" —M7 de la 1ª auditoría—; el modal se retiró.)
 - **Generar PDF:** implementado con **prawn** (`Pdf::OrderGenerator`, offline).
   **Replica el formato IMPRESO del ERP** (muestras `PedidoKE*.pdf` del b2b, en
   `portal-v2/tmp/letter_opener`): logo fecego + datos de empresa, "PEDIDO" +
@@ -409,7 +424,7 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
 - **Regla validada (importante para rueda-api / uso real):** un **capturista ve
   solo SUS pedidos** (`current_user.orders`); el **equipo-servidor ve TODOS**
   (`Order.all`) — para transmitirlos al ERP. `ReportsController#captured_orders`
-  (`/reportes/pedidos-capturados`, card del hub) con badge "Mis pedidos" /
+  (`/reportes/pedidos-capturados`, hoy `/reports/captured-orders`, card del hub) con badge "Mis pedidos" /
   "Todos los pedidos".
 - **Seed:** usuarios `servidor` (rol server) y `capturista2`, + un pedido de
   capturista2 para demostrar el scoping. Ambos con `rueda2026`.
@@ -436,9 +451,10 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
   no `nombre_publico`/`descripcion_corta`). **Unidad = `cnf_unidad_medida.
   abreviacion`** (no existe `clave`).
 - **Decimales:** el ERP devuelve NUMERIC como `BigDecimal` y la gema `json` lo
-  serializa en notación científica (`"0.47108e3"`). Se pasa por `deep_coerce`
-  → **string decimal plano** (`"471.08"`) para no perder precisión; rueda-negocios
-  lo castea a `decimal`. NO usar Float para montos.
+  serializa en notación científica (`"0.47108e3"`). Se resolvía con `deep_coerce`
+  → **string decimal plano** (`"471.08"`); rueda-negocios lo castea a `decimal`.
+  NO usar Float para montos. (Superado: hoy el cast va en SQL con
+  `trim_scale(...)::text` y `deep_coerce` no existe — Grupo B de los BAJA.)
 - **`baja = false` en TODO:** los catálogos principales ya filtraban; se agregó
   también en las **7 tablas puente** (`cnf_rueda_negocios_*`,
   `com_proveedor_has_producto`, `com_producto_has_sku`). Sin esto se colaban
@@ -569,7 +585,7 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
 - **`capture` sigue editable hasta transmitir** (decisión del usuario); solo
   `transmitted` bloquea. `Order#editable? = !transmitted?`.
 - **Bloqueo de edición** (backend + UI): `OrderItemsController` before_action
-  `ensure_editable` (403) y guardas en `orders#submit`/`observations`. En
+  `ensure_editable` (403) y guardas en `orders#capture`/`observations`. En
   `orders/show`, si no es editable se ocultan buscador, controles de partida
   (cantidad/descuento/borrar → texto plano) y observaciones (solo lectura);
   acciones = solo "Ver PDF" + "Volver al menú".
