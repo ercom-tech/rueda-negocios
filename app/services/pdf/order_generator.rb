@@ -158,9 +158,16 @@ module Pdf
     end
 
     def amount_in_words(total)
+      # Cuantizar a 2 decimales ANTES de partir entero/centavos: el total del
+      # pedido viene a precisión completa y, sin redondear, 100.999 daría
+      # "CIEN PESOS 100/100" en vez de "CIENTO UN PESOS 00/100".
+      total    = (total || 0).round(2)
       entero   = total.to_i
       centavos = ((total - entero) * 100).round
-      "#{integer_to_words(entero)} pesos #{format('%02d', centavos)}/100 M.N.".upcase
+      # Apócope: "uno" → "un" antes de sustantivo ("ciento un pesos",
+      # "veintiun mil") — cubre también "veintiuno" por terminar en "uno".
+      palabras = integer_to_words(entero).gsub(/uno(?= mil| millones|\z)/, "un")
+      "#{palabras} pesos #{format('%02d', centavos)}/100 M.N.".upcase
     end
 
     def integer_to_words(n)
@@ -170,7 +177,8 @@ module Pdf
       miles    = (n % 1_000_000) / 1_000
       cientos  = n % 1_000
       out = []
-      out << (millones == 1 ? "un millon" : "#{hundreds_to_words(millones)} millones") if millones.positive?
+      # Recursivo en millones: cubre también miles de millones (>10^9).
+      out << (millones == 1 ? "un millon" : "#{integer_to_words(millones)} millones") if millones.positive?
       out << (miles == 1 ? "mil" : "#{hundreds_to_words(miles)} mil") if miles.positive?
       out << hundreds_to_words(cientos) if cientos.positive?
       out.join(" ")

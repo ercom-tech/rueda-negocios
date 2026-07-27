@@ -203,6 +203,12 @@ BAJA 2ª auditoría (por grupos):
     del negocio; el usuario decidió eliminar la columna.
   - B4: rueda-api `validate!` rechaza pedidos sin partidas (422).
   Suites: rueda-negocios 30/110 · rueda-api 18/43.
+- [x] **Grupo B (PDF, importe en letra):** B5 — el total se cuantiza a 2
+  decimales ANTES de partir entero/centavos (100.999 daba "CIEN PESOS 100/100";
+  ahora "CIENTO UN PESOS 00/100"). B6 — `integer_to_words` recursivo en
+  millones (>10^9 ya no truena). Bonus destapado por los tests: apócope
+  "uno"→"un" antes de sustantivo ("ciento UN pesos", "veintiún mil" — antes
+  "CIENTO UNO PESOS"). Tests dedicados (order_generator_test) + smoke render.
 
 ## Estado actual
 
