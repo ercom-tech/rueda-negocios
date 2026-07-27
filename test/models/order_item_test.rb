@@ -33,14 +33,26 @@ class OrderItemTest < ActiveSupport::TestCase
     assert item(product: product(0), discount_percent: 0).valid?
   end
 
-  test "sin producto (max_discount nil) se permite hasta 100%" do
-    assert item(product: nil, discount_percent: 100).valid?
-    assert_not item(product: nil, discount_percent: 101).valid?
+  test "max_discount nil se trata como 0: no aplica descuentos" do
+    oi = item(product: product(nil), discount_percent: 1)
+    assert_not oi.valid?
+    assert item(product: product(nil), discount_percent: 0).valid?
+  end
+
+  test "sin producto tampoco se permite descuento" do
+    assert_not item(product: nil, discount_percent: 1).valid?
   end
 
   test "cantidad no positiva es inválida con mensaje en español" do
     oi = item(quantity: 0, discount_percent: 0)
     assert_not oi.valid?
     assert_includes oi.errors.full_messages, "La cantidad debe ser mayor a 0."
+  end
+
+  test "una partida sin precio (unit_price 0) es inválida" do
+    oi = item(unit_price: 0, discount_percent: 0)
+    assert_not oi.valid?
+    assert_includes oi.errors.full_messages,
+                    "El producto no tiene precio de rueda; no se puede agregar al pedido."
   end
 end

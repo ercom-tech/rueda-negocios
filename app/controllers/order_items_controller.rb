@@ -5,12 +5,21 @@ class OrderItemsController < ApplicationController
   # Agrega un producto como partida (snapshot). Responde con Turbo Stream.
   def create
     product = Product.find(params[:product_id])
-    @order.order_items.create!(
+    item = @order.order_items.build(
       product.to_order_item_attributes.merge(
         position: @order.next_item_position, quantity: 1, discount_percent: 0
       )
     )
-    render turbo_stream: [*detail_streams, clear_search_stream]
+    if item.save
+      render turbo_stream: [*detail_streams, clear_search_stream]
+    else
+      # P.ej. producto sin precio: avisa sin agregar la partida.
+      render turbo_stream: [
+        clear_search_stream,
+        turbo_stream.replace("flash", partial: "shared/flash",
+                                      locals: { alert: item.errors.full_messages.to_sentence })
+      ]
+    end
   end
 
   def update

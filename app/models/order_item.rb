@@ -6,6 +6,7 @@ class OrderItem < ApplicationRecord
 
   validates :tax_rate, numericality: { greater_than_or_equal_to: 0 }
   validate :quantity_positive
+  validate :unit_price_positive
   validate :discount_within_limits
 
   # Mensajes en `:base` (sin default_locale :es, que alteraría formatos de
@@ -15,15 +16,23 @@ class OrderItem < ApplicationRecord
     errors.add(:base, "La cantidad debe ser mayor a 0.") if quantity.blank? || quantity <= 0
   end
 
+  # Un producto sin precio (sync sin renglón de precio → snapshot 0) no debe
+  # venderse: transmitiría una partida en $0 al ERP sin que nadie lo note.
+  def unit_price_positive
+    return if unit_price.present? && unit_price.positive?
+
+    errors.add(:base, "El producto no tiene precio de rueda; no se puede agregar al pedido.")
+  end
+
   # El descuento no puede exceder el máximo del producto (`max_discount`, %
-  # sincronizado del ERP). Si el producto no trae tope (nil) se permite hasta
-  # 100 %; el ERP usa 0 para "sin descuento", así que 0 sí bloquea descuentos.
+  # sincronizado del ERP). Sin dato (nil, o partida sin producto) se trata
+  # como 0: no aplica descuentos (decisión del usuario, 2ª auditoría B1).
   def discount_within_limits
     return if discount_percent.blank?
 
     if discount_percent.negative?
       errors.add(:base, "El descuento no puede ser negativo.")
-    elsif discount_percent > (cap = product&.max_discount || 100)
+    elsif discount_percent > (cap = product&.max_discount || 0)
       errors.add(:base, "El descuento no puede exceder el máximo del producto (#{cap.to_i}%).")
     end
   end

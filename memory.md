@@ -188,6 +188,22 @@ Reporte: artifact "Auditoría — rueda-negocios & rueda-api" (segunda-auditoria
   parte/Unidad siguen ocultas bajo lg. **Con esto MEDIA de la 2ª auditoría
   queda cerrado; siguen los BAJA.**
 
+BAJA 2ª auditoría (por grupos):
+- [x] **Grupo A (integridad de pedidos):**
+  - B1: `max_discount` nil = **0** (sin descuento) — decisión del usuario. Antes
+    nil caía a tope 100%. Partidas sin producto tampoco admiten descuento.
+  - B2: partida sin precio (`unit_price` 0) inválida — al agregar un producto
+    sin precio el flash avisa y no se agrega (`OrderItems#create` pasó de
+    `create!` a manejo con errores). Validado en navegador (producto 426).
+  - B3: `min_sale_quantity` **ELIMINADA** (migración). Se investigó cablearla
+    como "venta en múltiplos de empaque": la fuente ERP es
+    `com_producto_has_empaque` (minimo=true, ~6,520 productos con cantidad
+    6/10/4/12/20…), PERO al validar contra 1.8M de partidas reales del ERP solo
+    ~78-85% son múltiplos exactos (consistente 2022-2026) → NO es regla dura
+    del negocio; el usuario decidió eliminar la columna.
+  - B4: rueda-api `validate!` rechaza pedidos sin partidas (422).
+  Suites: rueda-negocios 30/110 · rueda-api 18/43.
+
 ## Estado actual
 
 Estructura de repos definida; ambos en GitHub (org **ercom-tech**):
