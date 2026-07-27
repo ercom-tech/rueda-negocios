@@ -3,8 +3,10 @@ module Sync
   # `GET /ruedas/:id/export` de rueda-api). Es un **refresh pre-evento**:
   # deja el catálogo local idéntico al export (replace), no un merge.
   #
-  # Guarda: aborta si ya hay pedidos capturados — el sync-down no debe correr
-  # sobre pedidos existentes (evita romper FKs y perder captura).
+  # Guarda: aborta solo si hay pedidos capturados SIN transmitir (ventas que
+  # se perderían). Los borradores (capturas incompletas) y los transmitidos
+  # (ya viven en el ERP) no bloquean: se purgan antes del replace — así el
+  # refresh entre días del evento es transmitir → obtener información.
   #
   # Usuarios: mismo REPLACE que las demás tablas — los capturistas quedan
   # idénticos al export (upsert por `erp_person_id` + limpieza de los que no
@@ -28,10 +30,12 @@ module Sync
       @removed_users = []
       @skipped_skus = 0
       @skipped_people = 0
+      @purged_orders = 0
     end
 
     def run!
       guard!
+      purge_local_orders!
       clear_catalog!
       import_cfdi_uses
       import_brands
@@ -48,7 +52,7 @@ module Sync
     def summary
       { entities: @stats, skipped_users: @skipped_users,
         removed_users: @removed_users, skipped_skus: @skipped_skus,
-        skipped_people: @skipped_people }
+        skipped_people: @skipped_people, purged_orders: @purged_orders }
     end
 
     private
@@ -56,11 +60,19 @@ module Sync
     # --- Guarda y limpieza ------------------------------------------------
 
     def guard!
-      return unless Order.exists?
+      pending = Order.captured.where(erp_folio: nil).count
+      return if pending.zero?
 
       raise GuardError,
-            "Hay #{Order.count} pedido(s) capturado(s). El sync-down es un " \
-            "refresh pre-evento y no debe correr sobre pedidos existentes."
+            "Hay #{pending} pedido(s) capturado(s) sin transmitir. " \
+            "Transmite antes de obtener información."
+    end
+
+    # Borradores y transmitidos no bloquean el refresh, pero sus FKs chocarían
+    # con el replace del catálogo: se purgan (y se reporta cuántos).
+    def purge_local_orders!
+      @purged_orders = Order.count
+      Order.destroy_all if @purged_orders.positive?
     end
 
     # Borra el catálogo (hijos → padres) para repoblarlo idéntico al export.

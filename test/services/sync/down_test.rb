@@ -63,13 +63,30 @@ module Sync
                    result.summary[:entities].slice("products", "clients", "users"))
     end
 
-    test "guarda: aborta si ya hay pedidos capturados" do
+    test "guarda: aborta solo con pedidos capturados sin transmitir" do
+      user   = User.create!(erp_person_id: 1, username: "u", password: "x", role: "capturista")
+      round  = BusinessRound.create!(erp_round_id: 1, name: "R")
+      client = Client.create!(erp_client_key: "C1", name: "C")
+      Order.create!(user: user, business_round: round, client: client,
+                    kind: "remission", status: "captured", local_folio: "RN-000001")
+
+      error = assert_raises(Down::GuardError) { Down.new(export_data).run! }
+      assert_match(/sin transmitir/, error.message)
+    end
+
+    test "borradores y transmitidos NO bloquean: se purgan y el refresh procede" do
       user   = User.create!(erp_person_id: 1, username: "u", password: "x", role: "capturista")
       round  = BusinessRound.create!(erp_round_id: 1, name: "R")
       client = Client.create!(erp_client_key: "C1", name: "C")
       Order.create!(user: user, business_round: round, client: client, kind: "remission")
+      Order.create!(user: user, business_round: round, client: client, kind: "remission",
+                    status: "transmitted", erp_folio: "1A0001", local_folio: "RN-000002")
 
-      assert_raises(Down::GuardError) { Down.new(export_data).run! }
+      result = Down.new(export_data).run!
+
+      assert_equal 2, result.summary[:purged_orders]
+      assert_equal 0, Order.count, "borradores y transmitidos purgados"
+      assert_equal 1, Product.count, "el replace procede con normalidad"
     end
 
     test "preserva el usuario server (no viene en el export) y limpia capturistas stale" do
