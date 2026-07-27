@@ -116,3 +116,20 @@ general). Decisión diferida.
 - Cadena `rueda_vendedor → vta_vendedor → cnf_persona`: OK.
 - `cnf_rueda_negocios_persona`: las personas de contacto tienen ids altos
   (ej. 90092-90094, nombre "PROVEEDOR") ligadas a `com_proveedor`.
+
+## Empaque mínimo de venta (`com_producto_has_empaque`) — investigado, NO es regla dura
+
+Descubierto en la 2ª auditoría al evaluar cablear `min_sale_quantity`:
+
+- La tabla `com_producto_has_empaque` guarda los empaques por producto:
+  `cantidad` (piezas por empaque: 6, 10, 4, 12, 20…), `id_um`, código de
+  barras, peso/volumen, y un boolean **`minimo`** que marca el empaque mínimo
+  de venta. ~6,520 productos lo tienen (≈la mitad del catálogo), casi siempre
+  un solo empaque con `minimo = true`.
+- **Validado contra 1.8M de partidas reales de `vta_pedido_detalle`:** solo
+  **~78–85%** de las cantidades vendidas son múltiplos exactos del empaque
+  mínimo (consistente 2022–2026; ej. producto 82 con empaque 20 vendido en 2s
+  y 5s). El ERP **no lo impone** como regla dura.
+- **Decisión (usuario):** NO cablear la regla de múltiplos en la rueda; la
+  columna local `products.min_sale_quantity` (que el sync nunca pobló) se
+  **eliminó**. Si el tema del empaque revive, la fuente es esta tabla.

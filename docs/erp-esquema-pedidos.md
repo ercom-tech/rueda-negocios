@@ -106,3 +106,12 @@ Desglose **por partida**: `iva_porcentaje` + `iva_monto`, `descto_porcentaje` +
 - **Idempotencia** al reintentar la transmisión: `OrderCreate.find_existing`
   busca por la PK de negocio `(id_empresa, clave_cliente, fecha_pedido,
   hora_pedido)` y devuelve el folio con `idempotent: true` sin reinsertar.
+- **Colisión de la llave de idempotencia** (2ª auditoría): la PK de negocio va
+  a granularidad de **segundo** — dos pedidos distintos del mismo cliente
+  capturados en el mismo segundo harían match. `find_existing` trae además
+  `total` y # de partidas: si el contenido del pedido existente **difiere**
+  (total > $0.01 o distinto # de partidas), la API responde **422 "colisión de
+  idempotencia"** en vez de regalar el folio ajeno; el sync-up lo marca fallido
+  y visible (remedio: recapturar). Restricción confirmada por el usuario:
+  **el ERP de FECEGO NO tolera microsegundos en `hora_pedido`** — por eso la
+  solución es detección, no mayor granularidad.
