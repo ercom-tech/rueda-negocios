@@ -209,6 +209,13 @@ BAJA 2ª auditoría (por grupos):
   millones (>10^9 ya no truena). Bonus destapado por los tests: apócope
   "uno"→"un" antes de sustantivo ("ciento UN pesos", "veintiún mil" — antes
   "CIENTO UNO PESOS"). Tests dedicados (order_generator_test) + smoke render.
+- [x] **Grupo C (concurrencia menor):** B7 — índice único parcial
+  `sync_runs(kind) WHERE status='running'` (máx. un run corriendo por tipo);
+  el controller rescata `RecordNotUnique` → mismo alert amigable. B8 — índice
+  singleton en `settings` (expresión `(true)` única) + `Setting.instance` con
+  rescue→relee. Tests de ambas guardas. Trampa: Minitest 6 ya NO trae
+  `minitest/mock` integrado — el stub del test de carrera se hizo con
+  `define_singleton_method` + `remove_method`. Suite 39/124.
 
 ## Estado actual
 

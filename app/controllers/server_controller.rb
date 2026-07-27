@@ -35,6 +35,10 @@ class ServerController < ApplicationController
     run = SyncRun.create!(kind: "down", started_at: Time.current)
     SyncDownJob.perform_later(run.id)
     redirect_to root_path, notice: "Descarga iniciada. El menú se actualizará al terminar."
+  rescue ActiveRecord::RecordNotUnique
+    # Carrera (dos POST casi simultáneos): el índice único parcial de sync_runs
+    # deja pasar solo un run `running` por tipo.
+    redirect_to root_path, alert: "Ya hay una descarga en curso."
   end
 
   # Transmitir los pedidos capturados al ERP (sync-up).
@@ -46,5 +50,7 @@ class ServerController < ApplicationController
     run = SyncRun.create!(kind: "up", started_at: Time.current)
     SyncUpJob.perform_later(run.id)
     redirect_to root_path, notice: "Transmisión iniciada. El menú se actualizará al terminar."
+  rescue ActiveRecord::RecordNotUnique
+    redirect_to root_path, alert: "Ya hay una transmisión en curso."
   end
 end

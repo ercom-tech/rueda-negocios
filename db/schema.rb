@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_26_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_26_110000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -262,6 +262,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_26_100000) do
     t.integer "selected_round_erp_id"
     t.string "selected_round_name"
     t.datetime "updated_at", null: false
+    t.index "(true)", name: "index_settings_singleton", unique: true
   end
 
   create_table "suppliers", force: :cascade do |t|
@@ -284,6 +285,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_26_100000) do
     t.jsonb "summary", default: {}, null: false
     t.datetime "updated_at", null: false
     t.index ["kind", "created_at"], name: "index_sync_runs_on_kind_and_created_at"
+    t.index ["kind"], name: "index_sync_runs_one_running_per_kind", unique: true, where: "((status)::text = 'running'::text)"
   end
 
   create_table "users", force: :cascade do |t|
