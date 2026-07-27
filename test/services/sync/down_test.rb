@@ -75,14 +75,18 @@ module Sync
       assert User.exists?(username: "makita1"), "el capturista del export debe existir"
     end
 
-    test "un export sin usuarios NO borra a los capturistas existentes" do
-      existente = User.create!(erp_person_id: 90092, username: "makita1", password: "x", role: "capturista")
+    test "un export sin usuarios SÍ limpia a los capturistas (replace pleno) pero preserva al server" do
+      # Decisión del usuario: si el ERP no asignó usuarios a la rueda es
+      # problema operativo, no del sitio — los capturistas quedan idénticos
+      # al export (cero). El server (seedeado) es infraestructura y sobrevive.
+      server     = User.create!(erp_person_id: 0, username: "servidor", password: "x", role: "server")
+      capturista = User.create!(erp_person_id: 90092, username: "makita1", password: "x", role: "capturista")
 
       result = Down.new(export_data.merge("users" => [])).run!
 
-      assert User.exists?(existente.id),
-             "erp_keys vacío no debe disparar el cleanup (where.not(col: []) borraría a todos)"
-      assert_empty result.summary[:removed_users]
+      assert_not User.exists?(capturista.id), "el replace deja los capturistas idénticos al export"
+      assert User.exists?(server.id), "el server seedeado debe sobrevivir siempre"
+      assert_equal ["makita1"], result.summary[:removed_users]
     end
   end
 end

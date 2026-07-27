@@ -6,10 +6,11 @@ module Sync
   # Guarda: aborta si ya hay pedidos capturados — el sync-down no debe correr
   # sobre pedidos existentes (evita romper FKs y perder captura).
   #
-  # Usuarios: excepción a la regla. Los capturistas se mergean por su llave del
-  # ERP (`erp_person_id`) y se limpian los que ya no vienen; pero el `role` es
-  # estado propio de la app, así que NO se pisa y los `server` (seedeados) se
-  # preservan siempre.
+  # Usuarios: mismo REPLACE que las demás tablas — los capturistas quedan
+  # idénticos al export (upsert por `erp_person_id` + limpieza de los que no
+  # vienen, incluso si el export trae cero: eso es problema operativo del ERP).
+  # Única excepción: el usuario `server` (seedeado) sobrevive siempre — es
+  # infraestructura de la app, no dato del ERP.
   #
   # Alcance: las 8 entidades del export. Las tablas de membresía de la rueda
   # (business_round_people, brands_suppliers, business_round_*) quedan para un
@@ -137,16 +138,16 @@ module Sync
       # Upsert por erp_person_id sin tocar `role` (columna ausente en las filas).
       User.upsert_all(rows, unique_by: :erp_person_id, record_timestamps: true) if rows.any?
 
-      # Cleanup: capturistas que ya no vienen del ERP. Nunca borra un `server`
-      # (el seedeado no está en el export y debe sobrevivir). Guarda: si el
-      # export no trae usuarios (`erp_keys` vacío) NO se limpia nada —
-      # `where.not(col: [])` equivale a "todos" y borraría a los capturistas
-      # existentes (pérdida de datos ante un export vacío o malformado).
-      if erp_keys.any?
-        stale = User.capturista.where.not(erp_person_id: erp_keys)
-        @removed_users = stale.pluck(:username)
-        stale.delete_all
-      end
+      # Cleanup: REPLACE pleno, igual que el resto de las tablas — los
+      # capturistas quedan idénticos al export. Si el export viene sin
+      # usuarios, se limpian TODOS (decisión del usuario: asignar usuarios a
+      # la rueda es responsabilidad operativa del ERP, no del sitio). El único
+      # que sobrevive siempre es el `server`: es infraestructura seedeada de
+      # la app (opera el panel), no dato del ERP.
+      stale = erp_keys.any? ? User.capturista.where.not(erp_person_id: erp_keys)
+                            : User.capturista.all
+      @removed_users = stale.pluck(:username)
+      stale.delete_all
       @stats["users"] = rows.size
     end
 

@@ -76,6 +76,8 @@ BAJA (por grupos temáticos; 14 hallazgos + login-throttling movido a strengthen
   - Bug pérdida de datos: `Sync::Down#import_users` borraba a TODOS los
     capturistas si el export venía sin usuarios (`where.not(col: [])` → `AND 1=1`).
     Fix: cleanup solo si `erp_keys.any?` + `.compact`. Test nuevo. (rueda-negocios)
+    **(Superado 2026-07-26: el usuario definió lo contrario — REPLACE pleno; ver
+    la nota de sync-down al final de la sección de la 2ª auditoría.)**
   - Tope de descuento server-side: `OrderItem#discount_within_limits` valida
     contra `product.max_discount` (%; 0 = sin descuento, nil = hasta 100).
     Mensajes en `:base` (evita cambiar default_locale). `OrderItems#update`
@@ -237,6 +239,15 @@ BAJA 2ª auditoría (por grupos):
   compartida). **2ª AUDITORÍA COMPLETAMENTE REMEDIADA** — pendientes solo los
   registros sin acción: B23 (colisión con escritor ERP nativo, baja confianza)
   y B24 (revalidación de precios → strengthening).
+
+**Sync-down / usuarios — regla definitiva (2026-07-26, decisión del usuario):**
+los usuarios se reemplazan IGUAL que las demás tablas (replace pleno). Si el
+export viene sin usuarios, se limpian TODOS los capturistas — que la rueda no
+tenga usuarios asignados es problema operativo del ERP, no del sitio. Esto
+REVIERTE el guard `erp_keys.any?` del Grupo A de los BAJA (1ª auditoría), que
+trataba el export vacío como error a protegerse. Única excepción que se
+mantiene: el usuario `server` (seedeado) sobrevive siempre — es infraestructura
+de la app, no dato del ERP. Test invertido en `down_test`.
 
 ## Estado actual
 
