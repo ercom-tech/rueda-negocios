@@ -2,14 +2,17 @@
 <div id="order-detail" class="overflow-x-auto rounded-3xl border border-black/10 bg-white">
   <table class="w-full text-sm">
     <thead class="bg-black text-white">
+      <%# En tablet angosta se ocultan las columnas secundarias (consecutivo,
+          no. de parte, unidad) para que cantidad/descuento/total queden a la
+          vista sin scroll horizontal. %>
       <tr>
         <th class="px-3 py-3"></th>
-        <th class="px-3 py-3 font-semibold">Consecutivo</th>
+        <th class="hidden px-3 py-3 font-semibold lg:table-cell">Consecutivo</th>
         <th class="px-3 py-3 font-semibold">Código</th>
         <th class="px-3 py-3 text-left font-semibold">Descripción</th>
-        <th class="px-3 py-3 font-semibold">No. de parte</th>
+        <th class="hidden px-3 py-3 font-semibold lg:table-cell">No. de parte</th>
         <th class="px-3 py-3 font-semibold">Cantidad</th>
-        <th class="px-3 py-3 font-semibold">Unidad</th>
+        <th class="hidden px-3 py-3 font-semibold lg:table-cell">Unidad</th>
         <th class="px-3 py-3 font-semibold">Precio unitario</th>
         <th class="px-3 py-3 font-semibold">Descuento</th>
         <th class="px-3 py-3 font-semibold">Total</th>

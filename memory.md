@@ -166,7 +166,16 @@ Reporte: artifact "Auditoría — rueda-negocios & rueda-api" (segunda-auditoria
   De paso `sanitize_sql_like` (cierra B17). Medido: 34.5 ms (seq scan 13,196
   filas) → **0.17 ms** (~200×), conteos idénticos (39/20). Clientes (47 filas):
   el planner elige seq scan correctamente; el índice queda para cuando crezca.
-- [ ] Bloques 4-5 (MEDIA): UX (M5-M7), contrato+docs (M8-M9). Luego BAJA.
+- [x] **Bloque 4 (UX, M5-M7):** M5 — tabla de partidas responsiva: Consecutivo/
+  No. de parte/Unidad ocultas bajo `lg` (`hidden lg:table-cell`); a 800px quedan
+  acciones+Código+Descripción+Cantidad+Precio+Descuento+Total SIN scroll
+  horizontal (medido). M6 — feedback de auto-guardado: `form_submit_controller`
+  con target `status` + `flashStatus` en `turbo:submit-end` (solo con éxito);
+  "Guardado ✓" 2s junto al textarea de observaciones (+ aria-label, adelanta
+  parte de B14). M7 — `public/406-unsupported-browser.html` reescrita en
+  español con la identidad de la app (allow_browser la sirve por default).
+  Todo validado en navegador (resize a 800px incluido).
+- [ ] Bloque 5 (MEDIA): contrato+docs (M8-M9). Luego BAJA.
 
 ## Estado actual
 
