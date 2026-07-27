@@ -44,7 +44,7 @@ class Order < ApplicationRecord
   def capture!
     return false if order_items.empty?
 
-    update!(status: "captured", local_folio: local_folio.presence || generate_local_folio)
+    update!(status: :captured, local_folio: local_folio.presence || generate_local_folio)
   end
 
   # Editable mientras no se haya transmitido al ERP.

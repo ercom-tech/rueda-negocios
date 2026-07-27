@@ -225,6 +225,18 @@ BAJA 2ª auditoría (por grupos):
   descuento con el nombre del producto. B15 — contraste white/50-60 → white/70
   en server/rounds. B16 — placeholder del buscador corto ("Busca por código,
   nombre, modelo o No. de parte"). Validado en navegador.
+- [x] **Grupo E (limpieza):** B18 — `EMPRESA = 1` compartida en
+  `rueda-api/app/constants.rb` (antes triplicada; test_helper también la carga).
+  B19 — locals de order_create a inglés (`vend`→`salesperson_id`,
+  `faltantes`→`missing`, `esperado`→`expected`, `existentes`→`found`).
+  B20 — `layouts/application` se CONSERVA como fallback de convención (si una
+  vista futura olvida `layout "auth"` cae aquí con CSS y csrf, no pelona) +
+  `lang="es"` + comentario. B21 — enum simbólico (`status: :captured` /
+  `:transmitted`). B22 — comentario `Locals:` uniforme en los 3 partials en
+  prosa. Smoke del export contra la BD real (13,196 productos con la constante
+  compartida). **2ª AUDITORÍA COMPLETAMENTE REMEDIADA** — pendientes solo los
+  registros sin acción: B23 (colisión con escritor ERP nativo, baja confianza)
+  y B24 (revalidación de precios → strengthening).
 
 ## Estado actual
 

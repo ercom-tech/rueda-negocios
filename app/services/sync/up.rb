@@ -29,7 +29,7 @@ module Sync
           # captured). Mejor fallido y reintentable.
           raise ApiClient::Error, "respuesta sin clave_pedido" if folio.to_s.strip.empty?
 
-          order.update!(erp_folio: folio, transmitted_at: Time.current, status: "transmitted")
+          order.update!(erp_folio: folio, transmitted_at: Time.current, status: :transmitted)
           results[:transmitted] << { local: order.local_folio, erp: folio }
         else
           msg = parse_error(res)
