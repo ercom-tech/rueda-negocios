@@ -16,6 +16,7 @@ Rails.application.routes.draw do
     patch "rounds",     action: :select_round, as: :select_round  # guardar elección
     post  "sync-down",  action: :sync_down,    as: :sync_down     # obtener información
     post  "sync-up",    action: :sync_up,      as: :sync_up       # transmitir pedidos
+    post  "close-round", action: :close_round, as: :close_round   # cerrar rueda (purga pedidos)
   end
 
   # Reportes de venta (hub de reportes).

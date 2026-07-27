@@ -249,6 +249,15 @@ trataba el export vacío como error a protegerse. Única excepción que se
 mantiene: el usuario `server` (seedeado) sobrevive siempre — es infraestructura
 de la app, no dato del ERP. Test invertido en `down_test`.
 
+**"Cerrar rueda" (2026-07-26):** acción nueva del panel del server para
+encadenar ruedas en la misma laptop. `Sync::CloseRound.run!`: purga TODOS los
+pedidos locales (transmitidos ya viven en el ERP; borradores son capturas
+incompletas), desactiva la rueda y limpia la selección — así el sync-down de
+la siguiente rueda pasa su guarda (`Order.exists?`). Guarda propia: NO cierra
+si hay capturados sin transmitir (ventas que se perderían). UI: card 5 del
+menú server (neutra oscura, destructiva → modal). Ruta `POST /server/close-round`.
+Tests del servicio (3) + guarda validada en navegador.
+
 ## Estado actual
 
 Estructura de repos definida; ambos en GitHub (org **ercom-tech**):

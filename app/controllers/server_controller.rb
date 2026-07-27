@@ -57,4 +57,15 @@ class ServerController < ApplicationController
   rescue ActiveRecord::RecordNotUnique
     redirect_to root_path, alert: "Ya hay una transmisión en curso."
   end
+
+  # Cerrar la rueda activa: purga los pedidos locales (los transmitidos ya
+  # viven en el ERP) para poder cargar otra rueda con el sync-down.
+  def close_round
+    removed = Sync::CloseRound.run!
+    redirect_to root_path,
+                notice: "Rueda cerrada (#{removed} pedido(s) locales eliminados). " \
+                        "Elige la siguiente rueda y obtén su información."
+  rescue Sync::CloseRound::PendingOrdersError => e
+    redirect_to root_path, alert: "#{e.message} Transmite antes de cerrar la rueda."
+  end
 end
