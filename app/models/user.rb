@@ -38,4 +38,20 @@ class User < ApplicationRecord
     by_id = Supplier.where(id: ids).index_by(&:id)
     ids.filter_map { |id| by_id[id] }
   end
+
+  # Universo de productos que el capturista puede vender en la rueda: los de
+  # TODOS sus proveedores asignados ∪ los de sus marcas (regla del usuario,
+  # 2026-07-26). Sin membresía → vacío: asignar capturistas a proveedor/marca
+  # es responsabilidad operativa del ERP.
+  def product_universe(round)
+    return Product.none unless round
+
+    memberships  = business_round_people.where(business_round_id: round.id)
+    supplier_ids = memberships.pluck(:supplier_id).compact.uniq
+    brand_ids    = memberships.pluck(:brand_id).compact.uniq
+    return Product.none if supplier_ids.empty? && brand_ids.empty?
+
+    Product.where(id: ProductSupplier.where(supplier_id: supplier_ids).select(:product_id))
+           .or(Product.where(brand_id: brand_ids))
+  end
 end

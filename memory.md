@@ -258,6 +258,23 @@ si hay capturados sin transmitir (ventas que se perderían). UI: card 5 del
 menú server (neutra oscura, destructiva → modal). Ruta `POST /server/close-round`.
 Tests del servicio (3) + guarda validada en navegador.
 
+**Universo de productos por capturista (2026-07-26, regla del usuario):** un
+capturista puede tener varios proveedores/marcas asignados y ese es su universo
+DURO de productos (todos sus proveedores ∪ sus marcas; sin membresía → vacío,
+problema operativo del ERP). Cadena completa:
+- Export: llave `people` (cnf_rueda_negocios_persona → erp_person/supplier/
+  brand_id, marca 0→nil) y `supplier_ids` por producto desde
+  **com_proveedor_has_producto** — hallazgo clave: la relación real
+  producto↔proveedor NO son los SKUs (com_producto_has_sku: MAKITA tendría 0
+  productos por SKUs vs 2,207 reales). ProductSupplier ahora guarda la unión
+  (supplier_sku nil cuando no hay SKU).
+- Sync-down: `import_people` → business_round_people (omite y reporta
+  membresías sin usuario/proveedor local, `skipped_people`).
+- App: `User#product_universe(round)`; `product_options` busca DENTRO del
+  universo (mensaje si no hay membresía); `OrderItems#create` scopea el find
+  al universo (404 ante POST forjado). Validado en navegador con makita1:
+  universo 2,134, "martillo" → solo MAKITA, STIHL fuera.
+
 ## Estado actual
 
 Estructura de repos definida; ambos en GitHub (org **ercom-tech**):
@@ -722,7 +739,8 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
    alguno debe salir del cliente en vez de ser fijo.
 2. **Fase B (resto)** — pantallas read-only pendientes (productos, clientes,
    rueda activa) y otras del menú (asistencia de clientes, cotización).
-3. **Membresía de rueda en el export/sync** — `business_round_people`
-   (capturista↔proveedor/marca), `brands_suppliers`, `business_round_*`. Hoy el
-   export no las trae y el sync-down solo las vacía. Definir cuando la UI las
-   necesite (p.ej. `suppliers_in` del capturista).
+3. **Membresía de rueda en el export/sync** — `business_round_people` YA se
+   sincroniza (2026-07-26, universo de productos). Siguen pendientes
+   `brands_suppliers` y `business_round_{brands,suppliers,salespeople}` (el
+   export no las trae; el sync-down solo las vacía) — definir si alguna UI las
+   llega a necesitar.

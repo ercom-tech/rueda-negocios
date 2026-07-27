@@ -12,10 +12,11 @@ module Sync
   # Única excepción: el usuario `server` (seedeado) sobrevive siempre — es
   # infraestructura de la app, no dato del ERP.
   #
-  # Alcance: las 8 entidades del export. Las tablas de membresía de la rueda
-  # (business_round_people, brands_suppliers, business_round_*) quedan para un
-  # arco posterior — el export todavía no las incluye; aquí solo se vacían para
-  # que el replace no choque con FKs.
+  # Alcance: las 9 entidades del export, incluida la membresía
+  # capturista↔proveedor/marca (`people` → business_round_people), que define
+  # el universo de productos de cada capturista. Las demás tablas de membresía
+  # (brands_suppliers, business_round_*) siguen sin venir en el export; solo se
+  # vacían para que el replace no choque con FKs.
   class Down
     # Se levanta cuando la guarda impide correr el sync (hay pedidos).
     class GuardError < StandardError; end
@@ -26,6 +27,7 @@ module Sync
       @skipped_users = []
       @removed_users = []
       @skipped_skus = 0
+      @skipped_people = 0
     end
 
     def run!
@@ -39,12 +41,14 @@ module Sync
       import_users
       import_clients
       import_products
+      import_people
       self
     end
 
     def summary
       { entities: @stats, skipped_users: @skipped_users,
-        removed_users: @removed_users, skipped_skus: @skipped_skus }
+        removed_users: @removed_users, skipped_skus: @skipped_skus,
+        skipped_people: @skipped_people }
     end
 
     private
@@ -216,19 +220,49 @@ module Sync
         price_rows << { product_id: pid, public_price: p["public_price"],
                         wholesale_price: p["wholesale_price"], tax_rate: p["tax_rate"] }
 
-        (p["supplier_skus"] || []).each do |sk|
-          sid = supplier_by_erp[sk["erp_supplier_id"]]
-          # SKUs de proveedores fuera de la rueda no tienen proveedor local → se omiten.
+        # Vínculo producto↔proveedor = `supplier_ids` (com_proveedor_has_producto,
+        # la relación real que define el universo por proveedor) ∪ los SKUs
+        # (com_producto_has_sku, que además traen el código del proveedor).
+        sku_by_supplier = (p["supplier_skus"] || []).to_h { |sk| [sk["erp_supplier_id"], sk["supplier_sku"]] }
+        erp_supplier_ids = (Array(p["supplier_ids"]) | sku_by_supplier.keys)
+        erp_supplier_ids.each do |erp_sid|
+          sid = supplier_by_erp[erp_sid]
+          # Proveedores fuera de la rueda no existen localmente → se omiten.
           if sid.nil?
             @skipped_skus += 1
             next
           end
-          ps_rows << { product_id: pid, supplier_id: sid, supplier_sku: sk["supplier_sku"] }
+          ps_rows << { product_id: pid, supplier_id: sid, supplier_sku: sku_by_supplier[erp_sid] }
         end
       end
 
       insert Price, price_rows
       insert ProductSupplier, ps_rows
+    end
+
+    # --- Membresía capturista ↔ proveedor/marca (universo de productos) ----
+
+    def import_people
+      round           = BusinessRound.find_by(erp_round_id: @data["round"]["erp_round_id"])
+      user_by_erp     = User.pluck(:erp_person_id, :id).to_h
+      supplier_by_erp = Supplier.pluck(:erp_supplier_id, :id).to_h
+      brand_by_erp    = Brand.pluck(:erp_brand_id, :id).to_h
+
+      rows = []
+      Array(@data["people"]).each do |m|
+        uid = user_by_erp[m["erp_person_id"]]
+        sid = supplier_by_erp[m["erp_supplier_id"]]
+        # Sin usuario local (capturista omitido por falta de contraseña) o
+        # proveedor fuera de la rueda → la membresía se omite y se reporta.
+        if uid.nil? || sid.nil?
+          @skipped_people += 1
+          next
+        end
+        rows << { business_round_id: round.id, user_id: uid, supplier_id: sid,
+                  brand_id: m["erp_brand_id"] && brand_by_erp[m["erp_brand_id"]],
+                  position: m["position"] || 1 }
+      end
+      insert BusinessRoundPerson, rows
     end
 
     # --- Helper ------------------------------------------------------------

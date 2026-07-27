@@ -81,11 +81,15 @@ class OrdersController < ApplicationController
   end
 
   # Sugerencias del buscador de producto (código FECEGO/proveedor, nombre,
-  # modelo, número de parte).
+  # modelo, número de parte), acotadas al universo del capturista (los
+  # productos de sus proveedores/marcas asignados en la rueda).
   def product_options
     @order = current_user.orders.find(params[:id])
-    @products = params[:q].present? ? Product.search(params[:q]).includes(:price).limit(10) : Product.none
-    render partial: "product_options", locals: { order: @order, products: @products }, layout: false
+    universe = current_user.product_universe(active_round)
+    @products = params[:q].present? ? universe.search(params[:q]).includes(:price).limit(10) : Product.none
+    no_membership = current_user.business_round_people.where(business_round: active_round).none?
+    render partial: "product_options",
+           locals: { order: @order, products: @products, no_membership: no_membership }, layout: false
   end
 
   # Guarda observaciones (auto-save silencioso).

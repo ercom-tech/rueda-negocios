@@ -1,5 +1,11 @@
-<%# Sugerencias del buscador de producto. Locals: order, products. %>
-<% if products.any? %>
+<%# Sugerencias del buscador de producto, acotadas al universo del capturista.
+    Locals: order, products, no_membership (sin proveedores/marcas asignados). %>
+<% if local_assigns[:no_membership] %>
+  <div role="alert" class="rounded-2xl border border-black/10 bg-white px-5 py-3 text-sm text-red-600 shadow-xl">
+    No tienes proveedores o marcas asignados en esta rueda; no puedes agregar
+    productos. Pide al equipo del servidor actualizar la información.
+  </div>
+<% elsif products.any? %>
   <ul class="max-h-80 overflow-auto rounded-2xl border border-black/10 bg-white shadow-xl">
     <% products.each do |product| %>
       <li>

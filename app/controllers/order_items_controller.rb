@@ -3,8 +3,10 @@ class OrderItemsController < ApplicationController
   before_action :ensure_editable
 
   # Agrega un producto como partida (snapshot). Responde con Turbo Stream.
+  # El find va scopeado al universo del capturista (sus proveedores/marcas):
+  # un product_id fuera del universo → 404, aunque el POST venga forjado.
   def create
-    product = Product.find(params[:product_id])
+    product = current_user.product_universe(active_round).find(params[:product_id])
     item = @order.order_items.build(
       product.to_order_item_attributes.merge(
         position: @order.next_item_position, quantity: 1, discount_percent: 0

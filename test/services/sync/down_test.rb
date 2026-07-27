@@ -23,7 +23,10 @@ module Sync
         "products"    => [{ "erp_product_id" => 3, "description" => "Rotomartillo", "part_number" => nil, "model" => nil,
                             "erp_brand_id" => 1, "stock" => "0.0", "unit" => "PZA",
                             "public_price" => "471.08", "wholesale_price" => "407.82", "tax_rate" => "16.0", "max_discount" => "0.0",
-                            "supplier_skus" => [{ "erp_supplier_id" => 10, "supplier_sku" => "SKU1" }] }]
+                            "supplier_ids" => [10, 99],
+                            "supplier_skus" => [{ "erp_supplier_id" => 10, "supplier_sku" => "SKU1" }] }],
+        "people"      => [{ "erp_person_id" => 90092, "position" => 1,
+                            "erp_supplier_id" => 10, "erp_brand_id" => nil }]
       }
     end
 
@@ -37,8 +40,13 @@ module Sync
       assert_equal 1, Client.count
       assert_equal 1, Product.count
       assert_equal 1, Price.count
-      assert_equal 1, ProductSupplier.count
+      assert_equal 1, ProductSupplier.count # supplier_ids 99 no es de la rueda → omitido
       assert_equal true, BusinessRound.find_by(erp_round_id: 3).active?
+
+      membership = BusinessRoundPerson.sole
+      assert_equal 90092, membership.user.erp_person_id
+      assert_equal 10, membership.supplier.erp_supplier_id
+      assert_nil membership.brand_id
 
       user = User.find_by(erp_person_id: 90092)
       assert_equal "makita1", user.username
@@ -87,6 +95,8 @@ module Sync
       assert_not User.exists?(capturista.id), "el replace deja los capturistas idénticos al export"
       assert User.exists?(server.id), "el server seedeado debe sobrevivir siempre"
       assert_equal ["makita1"], result.summary[:removed_users]
+      assert_equal 1, result.summary[:skipped_people],
+                   "la membresía de un usuario inexistente se omite y se reporta"
     end
   end
 end
