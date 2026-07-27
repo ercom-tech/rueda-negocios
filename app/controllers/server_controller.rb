@@ -10,8 +10,12 @@ class ServerController < ApplicationController
     @selected = Setting.instance.selected_round_erp_id
     @rounds   = Sync::ApiClient.new.list_rounds
   rescue Sync::ApiClient::Error => e
+    # El detalle técnico (URL interna, "Connection refused") va al log; al
+    # operador se le da una guía accionable.
+    Rails.logger.warn("rounds: #{e.message}")
     @rounds = []
-    flash.now[:alert] = "No se pudo obtener la lista de ruedas: #{e.message}"
+    flash.now[:alert] = "No se pudo obtener la lista de ruedas. " \
+                        "Verifica que el servidor rueda-api esté disponible e inténtalo de nuevo."
   end
 
   # Guardar la rueda seleccionada.

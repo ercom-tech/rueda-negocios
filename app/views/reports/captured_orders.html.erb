@@ -54,5 +54,22 @@
         </tbody>
       </table>
     </div>
+
+    <% if @pagy.pages > 1 %>
+      <nav class="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-white/80"
+           aria-label="Paginación de pedidos">
+        <span>Página <%= @pagy.page %> de <%= @pagy.pages %> · <%= @pagy.count %> pedidos</span>
+        <div class="flex gap-2">
+          <% if @pagy.prev %>
+            <%= link_to "← Anterior", captured_orders_report_path(page: @pagy.prev),
+                  class: "rounded-full bg-white/10 px-4 py-2 font-semibold text-white transition-colors hover:bg-white/20" %>
+          <% end %>
+          <% if @pagy.next %>
+            <%= link_to "Siguiente →", captured_orders_report_path(page: @pagy.next),
+                  class: "rounded-full bg-brand-gold px-4 py-2 font-semibold text-neutral-900 transition-colors hover:bg-brand-gold-dark" %>
+          <% end %>
+        </div>
+      </nav>
+    <% end %>
   </div>
 </div>

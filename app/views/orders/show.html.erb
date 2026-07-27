@@ -33,10 +33,10 @@
                   message: "Se descartará este pedido en captura y no se guardará. ¿Continuar?",
                   confirm_label: "Sí, descartar", path: order_path(@order), method: :delete %>
           </div>
-          <%= link_to "Guardar", capture_order_path(@order), data: { turbo_method: :post },
+          <%= link_to "Finalizar pedido", capture_order_path(@order), data: { turbo_method: :post },
                 class: "rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white hover:bg-brand-coral-dark" %>
         <% else %>
-          <%= link_to "Ver PDF", pdf_order_path(@order),
+          <%= link_to "Descargar PDF", pdf_order_path(@order),
                 class: "rounded-full bg-black px-6 py-2.5 font-bold text-white hover:bg-neutral-800" %>
           <%= link_to "Volver al menú", root_path,
                 class: "rounded-full bg-brand-gold px-6 py-2.5 font-bold text-neutral-900 hover:bg-brand-gold-dark" %>
@@ -88,7 +88,7 @@
         <div class="flex items-center gap-3 rounded-full bg-black px-5 py-3 text-white">
           <span aria-hidden="true">🔍</span>
           <input type="text" autocomplete="off"
-                 placeholder="Busca por código FECEGO, código del proveedor, nombre, modelo o número de parte"
+                 placeholder="Busca por código, nombre, modelo o No. de parte"
                  role="combobox" aria-autocomplete="list" aria-expanded="false"
                  aria-controls="product-search-results" aria-label="Buscar producto"
                  data-autocomplete-target="input"

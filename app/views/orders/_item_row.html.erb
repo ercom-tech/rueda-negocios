@@ -22,6 +22,7 @@
             data: { controller: "form-submit" } do |f| %>
         <%= f.number_field :quantity, min: 1, step: "any",
               value: number_with_precision(item.quantity, strip_insignificant_zeros: true),
+              "aria-label": "Cantidad — #{item.description}",
               data: { action: "change->form-submit#submit" },
               class: "h-11 w-16 rounded-lg border border-neutral-300 px-2 text-center outline-none focus:border-brand-gold" %>
       <% end %>
@@ -40,6 +41,7 @@
         <div class="flex items-center justify-center gap-1">
           <%= f.number_field :discount_percent, min: 0, max: 100, step: "any",
                 value: number_with_precision(item.discount_percent, strip_insignificant_zeros: true),
+                "aria-label": "Descuento (%) — #{item.description}",
                 data: { action: "change->form-submit#submit" },
                 class: "h-11 w-16 rounded-lg border border-neutral-300 px-2 text-center outline-none focus:border-brand-gold" %>
           <span>%</span>

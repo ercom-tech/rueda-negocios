@@ -105,7 +105,7 @@ class OrdersController < ApplicationController
     if @order.capture!
       redirect_to summary_order_path(@order)
     else
-      redirect_to @order, alert: "Agrega al menos un producto antes de guardar."
+      redirect_to @order, alert: "Agrega al menos un producto antes de finalizar."
     end
   end
 

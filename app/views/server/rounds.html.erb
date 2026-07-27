@@ -12,13 +12,13 @@
     </header>
 
     <h1 class="mt-10 text-4xl font-extrabold text-white sm:text-5xl">Elige la rueda a trabajar</h1>
-    <p class="mt-2 text-white/60">
+    <p class="mt-2 text-white/70">
       La rueda seleccionada es la que se descarga al obtener la información del servidor.
     </p>
 
     <div class="mt-8 flex flex-col gap-4 pb-10">
       <% if @rounds.blank? %>
-        <p class="rounded-2xl bg-white/5 px-6 py-8 text-center text-white/50">
+        <p class="rounded-2xl bg-white/5 px-6 py-8 text-center text-white/70">
           No hay ruedas disponibles (o no se pudo contactar al servidor).
         </p>
       <% end %>
@@ -29,7 +29,7 @@
                     <%= current ? "bg-brand-cream text-neutral-900 ring-2 ring-brand-gold" : "bg-white/5 text-white" %>">
           <div>
             <h3 class="text-xl font-bold"><%= r["name"] %></h3>
-            <p class="mt-1 text-sm <%= current ? "text-neutral-700" : "text-white/60" %>">
+            <p class="mt-1 text-sm <%= current ? "text-neutral-700" : "text-white/70" %>">
               <%= r["location"] %> · <%= r["year"] %>
               <% if r["starts_on"] %>· <%= r["starts_on"] %><% if r["ends_on"] %> a <%= r["ends_on"] %><% end %><% end %>
             </p>

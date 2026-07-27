@@ -216,6 +216,15 @@ BAJA 2ª auditoría (por grupos):
   rescue→relee. Tests de ambas guardas. Trampa: Minitest 6 ya NO trae
   `minitest/mock` integrado — el stub del test de carrera se hizo con
   `define_singleton_method` + `remove_method`. Suite 39/124.
+- [x] **Grupo D (UX menor):** B9 — paginación con pagy (25/página) en el
+  reporte de pedidos + nav propia (solo aparece con >1 página). B10 — el panel
+  del server da guía accionable en vez de e.message crudo (detalle al log).
+  B11 — "Ver PDF"/"Generar PDF" unificados a "Descargar PDF" (es lo que hacen).
+  B12 — login "Enviar"→"Iniciar sesión". B13 — "Guardar"→"Finalizar pedido" en
+  el detalle (+ flash "antes de finalizar"). B14 — aria-labels en cantidad/
+  descuento con el nombre del producto. B15 — contraste white/50-60 → white/70
+  en server/rounds. B16 — placeholder del buscador corto ("Busca por código,
+  nombre, modelo o No. de parte"). Validado en navegador.
 
 ## Estado actual
 
