@@ -11,7 +11,7 @@ class ReportsController < ApplicationController
   # evento grande la lista completa se vuelve pesada para la tablet.
   def captured_orders
     scope = current_user.can_see_all_orders? ? Order.all : current_user.orders
-    @pagy, @orders = pagy(scope.includes(:client, :user, :order_items).order(created_at: :desc),
+    @pagy, @orders = pagy(scope.includes(:user, :order_items, client: :salesperson).order(created_at: :desc),
                           limit: 25)
     @all_scope = current_user.can_see_all_orders?
   end
