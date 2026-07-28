@@ -67,5 +67,7 @@ class ServerController < ApplicationController
                         "Elige la siguiente rueda y obtén su información."
   rescue Sync::CloseRound::PendingOrdersError => e
     redirect_to root_path, alert: "#{e.message} Transmite antes de cerrar la rueda."
+  rescue Sync::CloseRound::SyncInProgressError => e
+    redirect_to root_path, alert: "#{e.message} Espera a que termine para cerrar la rueda."
   end
 end

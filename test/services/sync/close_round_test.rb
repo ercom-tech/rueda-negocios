@@ -39,6 +39,27 @@ module Sync
       assert_nil setting.selected_round_name
     end
 
+    test "cierra: borra el historial de corridas de sync (el panel arranca limpio)" do
+      SyncRun.create!(kind: "down", started_at: 1.hour.ago)
+             .finish!(status: "completed")
+      SyncRun.create!(kind: "up", started_at: 30.minutes.ago)
+             .finish!(status: "completed")
+
+      CloseRound.run!
+
+      assert_equal 0, SyncRun.count
+      assert_nil SyncRun.latest("down")
+      assert_nil SyncRun.latest("up")
+    end
+
+    test "no cierra si hay una corrida de sync en curso" do
+      SyncRun.create!(kind: "up", started_at: Time.current)
+
+      assert_raises(CloseRound::SyncInProgressError) { CloseRound.run! }
+      assert_equal 1, SyncRun.count, "no debe borrar el run del job vivo"
+      assert @round.reload.active?
+    end
+
     test "tras cerrar, el sync-down de la siguiente rueda pasa su guarda" do
       order(status: "transmitted", erp_folio: "1A0002")
       CloseRound.run!

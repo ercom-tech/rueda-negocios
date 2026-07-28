@@ -257,6 +257,11 @@ la siguiente rueda pasa su guarda (`Order.exists?`). Guarda propia: NO cierra
 si hay capturados sin transmitir (ventas que se perderían). UI: card 5 del
 menú server (neutra oscura, destructiva → modal). Ruta `POST /server/close-round`.
 Tests del servicio (3) + guarda validada en navegador.
+Ajuste 2026-07-28 (pedido del usuario): también **borra el historial de
+`SyncRun`** — el panel mostraba la última descarga/transmisión de la rueda ya
+cerrada; ese historial pertenece a la rueda, el panel debe arrancar limpio.
+Segunda guarda: `SyncInProgressError` si hay un run `running` (borrarle su
+SyncRun al job vivo lo rompería). +2 tests.
 
 **Universo de productos por capturista (2026-07-26, regla del usuario):** un
 capturista puede tener varios proveedores/marcas asignados y ese es su universo
