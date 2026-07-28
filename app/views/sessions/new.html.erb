@@ -5,10 +5,12 @@
   <div class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.18]"
        style="background-image: url('<%= image_path "tools_pattern_white.svg" %>');"></div>
 
-  <%# Fila: contenido (define el alto) + tarjeta (iguala ese alto) %>
-  <div class="relative z-10 lg:flex lg:items-stretch">
-    <%# ── Contenido izquierdo: bloque alineado arriba (espacio arriba = espacio izq) ── %>
-    <div class="max-w-xl px-8 pt-8 pb-14 sm:px-12 sm:pt-12 lg:pl-[5%] lg:pt-[5%]">
+  <%# Bloque completo (contenido + tarjeta) centrado horizontal y
+      verticalmente en el viewport %>
+  <div class="relative z-10 flex min-h-screen items-center px-6 py-10 sm:px-10 lg:px-[5%]">
+    <div class="w-full lg:flex lg:items-stretch">
+    <%# ── Contenido izquierdo ── %>
+    <div class="max-w-xl">
       <%= image_tag "fecego_logo_white.png", alt: "FECEGO", class: "h-20 w-auto" %>
 
       <h1 class="mt-10 text-4xl font-extrabold uppercase leading-[1.05] tracking-tight text-brand-cream sm:text-5xl">
@@ -40,10 +42,11 @@
       </div>
     </div>
 
-    <%# ── Tarjeta del evento: iguala el alto del bloque izquierdo; margen der = izq ── %>
-    <div class="hidden lg:flex lg:flex-1 lg:justify-end lg:pr-[5%] lg:pt-[5%] lg:pb-14">
+    <%# ── Tarjeta del evento: iguala el alto del bloque izquierdo ── %>
+    <div class="hidden lg:flex lg:flex-1 lg:justify-end">
       <%= image_tag "event_card_oaxaca.svg", alt: "Rueda de Negocios · Oaxaca 2026",
             class: "h-full w-auto max-w-full rounded-3xl object-contain drop-shadow-2xl" %>
+    </div>
     </div>
   </div>
 </div>
