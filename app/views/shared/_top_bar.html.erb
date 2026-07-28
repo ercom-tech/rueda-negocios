@@ -14,10 +14,16 @@
       <%= render "shared/supplier_pill" %>
     <% end %>
 
-    <%# Cerrar sesión es reversible (no pierde captura) → acción directa sin
-        modal. El modal de confirmación se reserva para lo destructivo/pesado
-        (descartar pedido, quitar producto, sync). Mismo patrón para todos. %>
-    <%= button_to "Cerrar sesión", logout_path, method: :delete,
-          class: "rounded-full bg-neutral-400 px-5 py-2.5 font-semibold text-neutral-900 transition-colors hover:bg-neutral-300" %>
+    <%# Cerrar sesión con confirmación (decisión del usuario 2026-07-27; antes
+        era acción directa): evita salidas accidentales en tablet. %>
+    <div data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
+      <button type="button" data-action="modal#open"
+              class="rounded-full bg-neutral-400 px-5 py-2.5 font-semibold text-neutral-900 transition-colors hover:bg-neutral-300">
+        Cerrar sesión
+      </button>
+      <%= render "home/confirm_dialog", title: "Cerrar sesión",
+            message: "¿Seguro que quieres cerrar la sesión?",
+            confirm_label: "Sí, salir", path: logout_path, method: :delete %>
+    </div>
   </div>
 </header>
