@@ -19,6 +19,9 @@ Postgres 16 · bcrypt · Solid Queue (jobs) · dotenv-rails · prawn (PDF).
 
 ## Correr en desarrollo
 
+> Para instalar en la laptop-servidor (Ubuntu): ver
+> [docs/instalacion-laptop.md](docs/instalacion-laptop.md).
+
 ```sh
 bundle install
 cp .env.example .env        # ajusta credenciales de Postgres si hace falta
