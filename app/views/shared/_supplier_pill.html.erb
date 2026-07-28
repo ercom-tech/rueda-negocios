@@ -12,7 +12,7 @@
             options: available_suppliers.map { |s| [s.name, s.id] }, selected: current_supplier&.id,
             input_data: { action: "change->form-submit#submit" },
             button_class: "flex items-center gap-1 font-semibold text-neutral-800",
-            panel_class: "absolute left-0 top-full z-30 mt-1 min-w-52 overflow-auto rounded-2xl border border-black/10 bg-white shadow-xl" %>
+            panel_class: "absolute left-0 top-full z-30 mt-1 min-w-52 overflow-auto rounded-2xl border border-black/10 bg-brand-cream shadow-xl" %>
     </div>
   <% end %>
 <% else %>

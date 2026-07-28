@@ -1,16 +1,16 @@
 <%# Sugerencias del buscador de producto, acotadas al universo del capturista.
     Locals: order, products, no_membership (sin proveedores/marcas asignados). %>
 <% if local_assigns[:no_membership] %>
-  <div role="alert" class="rounded-2xl border border-black/10 bg-white px-5 py-3 text-sm text-red-600 shadow-xl">
+  <div role="alert" class="rounded-2xl border border-black/10 bg-brand-cream px-5 py-3 text-sm text-red-600 shadow-xl">
     No tienes proveedores o marcas asignados en esta rueda; no puedes agregar
     productos. Pide al equipo del servidor actualizar la información.
   </div>
 <% elsif products.any? %>
-  <ul class="max-h-80 overflow-auto rounded-2xl border border-black/10 bg-white shadow-xl">
+  <ul class="max-h-80 overflow-auto rounded-2xl border border-black/10 bg-brand-cream shadow-xl">
     <% products.each do |product| %>
       <li>
         <%= button_to order_order_items_path(order, product_id: product.id),
-              class: "flex w-full items-center justify-between gap-4 px-5 py-3 text-left hover:bg-neutral-100" do %>
+              class: "flex w-full items-center justify-between gap-4 px-5 py-3 text-left hover:bg-black/5" do %>
           <span>
             <span class="font-semibold text-neutral-900"><%= product.description %></span>
             <span class="block text-xs text-neutral-600">
@@ -23,7 +23,7 @@
     <% end %>
   </ul>
 <% else %>
-  <div class="rounded-2xl border border-black/10 bg-white px-5 py-3 text-sm text-neutral-600 shadow-xl">
+  <div class="rounded-2xl border border-black/10 bg-brand-cream px-5 py-3 text-sm text-neutral-600 shadow-xl">
     Sin resultados.
   </div>
 <% end %>

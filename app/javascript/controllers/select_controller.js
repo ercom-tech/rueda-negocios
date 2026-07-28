@@ -105,7 +105,7 @@ export default class extends Controller {
 
   highlight(items) {
     items.forEach((li, i) => {
-      li.querySelector("button").style.backgroundColor = i === this.index ? "rgb(229 229 229)" : ""
+      li.querySelector("button").style.backgroundColor = i === this.index ? "rgba(0, 0, 0, 0.08)" : ""
     })
     const current = items[this.index]?.querySelector("button")
     if (current) this.focusHost.setAttribute("aria-activedescendant", current.id)

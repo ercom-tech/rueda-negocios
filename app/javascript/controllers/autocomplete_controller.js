@@ -80,7 +80,7 @@ export default class extends Controller {
     // Estilo inline (no clase Tailwind) porque se aplica dinámicamente y el
     // JIT no lo generaría al no aparecer en ninguna plantilla.
     this.items.forEach((el, i) => {
-      el.style.backgroundColor = i === this.index ? "rgb(229 229 229)" : ""
+      el.style.backgroundColor = i === this.index ? "rgba(0, 0, 0, 0.08)" : ""
     })
     const current = this.items[this.index]
     if (current) this.inputTarget.setAttribute("aria-activedescendant", current.id)
@@ -103,7 +103,7 @@ export default class extends Controller {
 
   showStatus(text, role, colorClass) {
     this.resultsTarget.innerHTML =
-      `<div role="${role}" class="rounded-2xl border border-black/10 bg-white px-5 py-3 text-sm ${colorClass} shadow-xl">${text}</div>`
+      `<div role="${role}" class="rounded-2xl border border-black/10 bg-brand-cream px-5 py-3 text-sm ${colorClass} shadow-xl">${text}</div>`
     this.index = -1
     this.inputTarget.removeAttribute("aria-activedescendant")
     this.setExpanded(true)

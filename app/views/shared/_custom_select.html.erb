@@ -38,9 +38,9 @@
   <%= hidden_field_tag name, selected, data: hidden_data %>
 
   <div data-select-target="panel" hidden
-       class="<%= local_assigns[:panel_class] || "absolute inset-x-0 top-full z-30 mt-1 max-h-72 overflow-auto rounded-2xl border border-black/10 bg-white shadow-xl" %>">
+       class="<%= local_assigns[:panel_class] || "absolute inset-x-0 top-full z-30 mt-1 max-h-72 overflow-auto rounded-2xl border border-black/10 bg-brand-cream shadow-xl" %>">
     <% if filterable %>
-      <div class="sticky top-0 border-b border-black/5 bg-white p-2">
+      <div class="sticky top-0 border-b border-black/5 bg-brand-cream p-2">
         <input type="text" data-select-target="filter"
                data-action="input->select#filter keydown->select#navigate"
                placeholder="Filtrar…" aria-label="Filtrar opciones" aria-controls="<%= sel_id %>-list"
@@ -54,7 +54,7 @@
           <button type="button" role="option" id="<%= sel_id %>-opt-blank"
                   aria-selected="<%= selected.to_s == "" %>"
                   data-action="select#choose" data-value="" data-label="<%= placeholder %>"
-                  class="block w-full px-4 py-2.5 text-left text-sm text-neutral-500 hover:bg-neutral-100">
+                  class="block w-full px-4 py-2.5 text-left text-sm text-neutral-500 hover:bg-black/5">
             <%= placeholder %>
           </button>
         </li>
@@ -64,7 +64,7 @@
           <button type="button" role="option" id="<%= sel_id %>-opt-<%= i %>"
                   aria-selected="<%= value.to_s == selected.to_s %>"
                   data-action="select#choose" data-value="<%= value %>" data-label="<%= label %>"
-                  class="block w-full px-4 py-2.5 text-left text-sm hover:bg-neutral-100">
+                  class="block w-full px-4 py-2.5 text-left text-sm hover:bg-black/5">
             <%= label %>
           </button>
         </li>

@@ -1,6 +1,7 @@
 <% content_for :title, "Levantamiento de pedido · Rueda de Negocios" %>
 
 <div class="relative min-h-screen w-full overflow-hidden bg-black">
+  <%# Patrón de herramientas a todo lo ancho (mismo shell que el home) %>
   <div class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.18]"
        style="background-image: url('<%= image_path "tools_pattern_white.svg" %>');"></div>
 
@@ -9,127 +10,137 @@
     <h1 class="mt-8 text-3xl font-extrabold text-white sm:text-4xl">Levantamiento de pedido</h1>
   </div>
 
-  <div class="relative z-10 w-full space-y-6 px-6 py-8 lg:px-[7%]">
-    <%# ── Barra: # Pedido + acciones ── %>
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <span class="rounded-full bg-brand-cream px-5 py-2.5 text-sm font-semibold text-neutral-800">
-          # Pedido <%= @order.erp_folio.presence || @order.local_folio.presence || "(borrador)" %>
-        </span>
-        <span class="rounded-full px-4 py-2.5 text-sm font-semibold <%= @order.status_color %>">
-          <%= @order.status_label %>
-        </span>
-      </div>
-      <div class="flex items-center gap-3">
-        <% if can_edit_order?(@order) %>
-          <%= link_to "Editar", edit_order_path(@order),
-                class: "rounded-full bg-brand-gold px-6 py-2.5 font-bold text-neutral-900 hover:bg-brand-gold-dark" %>
-          <div class="inline-block" data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
-            <button type="button" data-action="modal#open"
-                    class="rounded-full bg-brand-gold px-6 py-2.5 font-bold text-neutral-900 hover:bg-brand-gold-dark">Cancelar</button>
-            <%# Mensaje según estatus: un borrador se descarta; un capturado ya
-                está guardado con folio — se elimina con sus partidas. %>
-            <%= render "home/confirm_dialog", title: "Descartar pedido",
-                  message: (@order.draft? ? "Se descartará este pedido en captura y no se guardará. ¿Continuar?"
-                                          : "Se eliminará el pedido #{@order.folio} con todas sus partidas. ¿Continuar?"),
-                  confirm_label: "Sí, descartar", path: order_path(@order), method: :delete %>
-          </div>
-          <%# button_to (form real) y no link con turbo_method: el intercept
-              del link fallaba en silencio (no emitía el POST). %>
-          <%= button_to "Finalizar pedido", capture_order_path(@order),
-                form_class: "inline-block",
-                class: "cursor-pointer rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
-        <% else %>
-          <%= link_to "Descargar PDF", pdf_order_path(@order),
-                class: "rounded-full bg-neutral-700 px-6 py-2.5 font-bold text-white hover:bg-neutral-600" %>
-          <%= link_to "Volver al menú", root_path,
-                class: "rounded-full bg-brand-gold px-6 py-2.5 font-bold text-neutral-900 hover:bg-brand-gold-dark" %>
-        <% end %>
-      </div>
-    </div>
-
-    <%# ── Resumen del encabezado (solo lectura) — 4 columnas × 2 filas ── %>
-    <div class="grid grid-cols-2 gap-x-6 gap-y-4 rounded-2xl bg-black p-5 text-sm text-white ring-1 ring-white/15 sm:grid-cols-4">
-      <%# Fila 1 %>
-      <div>
-        <span class="block text-xs text-white/50">Clave del cliente</span>
-        <span class="font-semibold"><%= @order.client.erp_client_key %></span>
-      </div>
-      <div>
-        <span class="block text-xs text-white/50">Nombre comercial</span>
-        <span class="font-semibold"><%= @order.client.commercial_name.presence || "—" %></span>
-      </div>
-      <div>
-        <span class="block text-xs text-white/50">Nombre / razón social</span>
-        <span class="font-semibold"><%= (@order.invoice? ? @order.client_tax_profile&.business_name : @order.client.name).presence || "—" %></span>
-      </div>
-      <div>
-        <span class="block text-xs text-white/50">Vendedor</span>
-        <span class="font-semibold"><%= @order.client.salesperson&.name || "—" %></span>
-      </div>
-
-      <%# Fila 2 %>
-      <div>
-        <span class="block text-xs text-white/50">Tipo</span>
-        <span class="font-semibold"><%= @order.invoice? ? "Factura" : "Remisión" %></span>
-      </div>
-      <div>
-        <span class="block text-xs text-white/50">Uso de CFDI</span>
-        <span class="font-semibold"><%= @order.invoice? ? (@order.cfdi_use&.code || "—") : "—" %></span>
-      </div>
-      <div class="hidden sm:block"></div>
-      <div>
-        <span class="block text-xs text-white/50">Dirección de entrega</span>
-        <span class="font-semibold"><%= @order.client_branch&.name || "—" %></span>
-      </div>
-    </div>
-
-    <%# ── Buscador de producto (autocompletado) — solo si el dueño puede editar ── %>
-    <% if can_edit_order?(@order) %>
-      <div class="relative" data-controller="autocomplete"
-           data-autocomplete-url-value="<%= product_options_order_path(@order) %>"
-           data-action="click@window->autocomplete#hide turbo:submit-end->autocomplete#reset">
-        <div class="flex items-center gap-3 rounded-full bg-black px-5 py-3 text-white ring-1 ring-white/15">
-          <svg class="h-5 w-5 shrink-0 text-white/60" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
-          <input type="text" autocomplete="off"
-                 placeholder="Busca por código, nombre, modelo o No. de parte"
-                 role="combobox" aria-autocomplete="list" aria-expanded="false"
-                 aria-controls="product-search-results" aria-label="Buscar producto"
-                 data-autocomplete-target="input"
-                 data-action="input->autocomplete#search keydown->autocomplete#navigate"
-                 class="w-full bg-transparent outline-none placeholder:text-white/60" />
-        </div>
-        <div id="product-search-results" role="listbox" aria-label="Resultados de producto"
-             data-autocomplete-target="results"
-             class="absolute inset-x-0 top-full z-20 mt-1"></div>
-      </div>
-    <% end %>
-
-    <%# ── Tabla de partidas (Turbo) ── %>
-    <%= render "items_table", order: @order %>
-
-    <%# ── Observaciones (izquierda) + Totales (derecha) ── %>
-    <div class="flex flex-col gap-6 lg:flex-row lg:items-stretch">
-      <% if can_edit_order?(@order) %>
-        <%= form_with url: observations_order_path(@order), method: :patch,
-              data: { controller: "form-submit", action: "turbo:submit-end->form-submit#flashStatus" },
-              class: "flex flex-1 flex-col" do %>
-          <%= text_area_tag :observations, @order.observations,
-                placeholder: "Observaciones", "aria-label": "Observaciones del pedido",
-                data: { action: "change->form-submit#submit" },
-                class: "h-full min-h-32 w-full rounded-2xl border border-black/10 bg-brand-cream p-4 text-neutral-900 outline-none placeholder:text-neutral-500 focus:border-brand-gold" %>
-          <span data-form-submit-target="status" role="status"
-                class="mt-1 self-end text-sm font-semibold text-brand-gold opacity-0 transition-opacity duration-300">
-            Guardado ✓
+  <%# ── Card dorada única (misma gramática que los pasos 1 y 3): barra negra
+      de título, contenido adentro y botones al pie ── %>
+  <div class="relative z-10 w-full px-6 py-8 lg:px-[7%]">
+    <section class="rounded-3xl bg-brand-gold p-2">
+      <%# Barra de título: folio + estatus a la izquierda, acciones a la derecha %>
+      <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-black px-6 py-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <h2 class="text-xl font-extrabold text-white sm:text-2xl">
+            # Pedido <%= @order.erp_folio.presence || @order.local_folio.presence || "(borrador)" %>
+          </h2>
+          <span class="rounded-full px-4 py-1.5 text-sm font-semibold <%= @order.status_color %>">
+            <%= @order.status_label %>
           </span>
-        <% end %>
-      <% else %>
-        <div class="min-h-32 flex-1 whitespace-pre-line rounded-2xl border border-black/10 bg-brand-cream p-4 text-neutral-700">
-          <%= @order.observations.presence || "Sin observaciones." %>
         </div>
-      <% end %>
+        <div class="flex flex-wrap items-center gap-3">
+          <% if can_edit_order?(@order) %>
+            <%= link_to "Editar", edit_order_path(@order),
+                  class: "rounded-full bg-neutral-700 px-6 py-2.5 font-bold text-white transition-colors hover:bg-neutral-600" %>
+            <div class="inline-block" data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
+              <button type="button" data-action="modal#open"
+                      class="rounded-full bg-neutral-700 px-6 py-2.5 font-bold text-white transition-colors hover:bg-neutral-600">Cancelar</button>
+              <%# Mensaje según estatus: un borrador se descarta; un capturado ya
+                  está guardado con folio — se elimina con sus partidas. %>
+              <%= render "home/confirm_dialog", title: "Descartar pedido",
+                    message: (@order.draft? ? "Se descartará este pedido en captura y no se guardará. ¿Continuar?"
+                                            : "Se eliminará el pedido #{@order.folio} con todas sus partidas. ¿Continuar?"),
+                    confirm_label: "Sí, descartar", path: order_path(@order), method: :delete %>
+            </div>
+            <%# button_to (form real) y no link con turbo_method: el intercept
+                del link fallaba en silencio (no emitía el POST). %>
+            <%= button_to "Finalizar pedido", capture_order_path(@order),
+                  form_class: "inline-block",
+                  class: "cursor-pointer rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
+          <% else %>
+            <%= link_to "Descargar PDF", pdf_order_path(@order),
+                  class: "rounded-full bg-brand-gold px-6 py-2.5 font-bold text-neutral-900 transition-colors hover:bg-brand-gold-dark" %>
+            <%= link_to "Volver al menú", root_path,
+                  class: "rounded-full bg-neutral-700 px-6 py-2.5 font-bold text-white transition-colors hover:bg-neutral-600" %>
+          <% end %>
+        </div>
+      </div>
 
-      <%= render "totals", order: @order %>
-    </div>
+      <div class="mt-2 space-y-2">
+        <%# ── Resumen del encabezado (solo lectura) — 4 columnas × 2 filas ── %>
+        <div class="grid grid-cols-2 gap-x-6 gap-y-4 rounded-2xl bg-black p-5 text-sm text-white sm:grid-cols-4">
+          <%# Fila 1 %>
+          <div>
+            <span class="block text-xs text-white/50">Clave del cliente</span>
+            <span class="font-semibold"><%= @order.client.erp_client_key %></span>
+          </div>
+          <div>
+            <span class="block text-xs text-white/50">Nombre comercial</span>
+            <span class="font-semibold"><%= @order.client.commercial_name.presence || "—" %></span>
+          </div>
+          <div>
+            <span class="block text-xs text-white/50">Nombre / razón social</span>
+            <span class="font-semibold"><%= (@order.invoice? ? @order.client_tax_profile&.business_name : @order.client.name).presence || "—" %></span>
+          </div>
+          <div>
+            <span class="block text-xs text-white/50">Vendedor</span>
+            <span class="font-semibold"><%= @order.client.salesperson&.name || "—" %></span>
+          </div>
+
+          <%# Fila 2 %>
+          <div>
+            <span class="block text-xs text-white/50">Tipo</span>
+            <span class="font-semibold"><%= @order.invoice? ? "Factura" : "Remisión" %></span>
+          </div>
+          <div>
+            <span class="block text-xs text-white/50">Uso de CFDI</span>
+            <span class="font-semibold"><%= @order.invoice? ? (@order.cfdi_use&.code || "—") : "—" %></span>
+          </div>
+          <div class="hidden sm:block"></div>
+          <div>
+            <span class="block text-xs text-white/50">Dirección de entrega</span>
+            <span class="font-semibold"><%= @order.client_branch&.name || "—" %></span>
+          </div>
+        </div>
+
+        <%# ── Buscador de producto (autocompletado) — solo si el dueño puede editar ── %>
+        <% if can_edit_order?(@order) %>
+          <div class="relative" data-controller="autocomplete"
+               data-autocomplete-url-value="<%= product_options_order_path(@order) %>"
+               data-action="click@window->autocomplete#hide turbo:submit-end->autocomplete#reset">
+            <div class="flex items-center gap-3 rounded-full bg-black px-5 py-3 text-white">
+              <svg class="h-5 w-5 shrink-0 text-white/60" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+              <input type="text" autocomplete="off"
+                     placeholder="Busca por código, nombre, modelo o No. de parte"
+                     role="combobox" aria-autocomplete="list" aria-expanded="false"
+                     aria-controls="product-search-results" aria-label="Buscar producto"
+                     data-autocomplete-target="input"
+                     data-action="input->autocomplete#search keydown->autocomplete#navigate"
+                     class="w-full bg-transparent outline-none placeholder:text-white/60" />
+            </div>
+            <div id="product-search-results" role="listbox" aria-label="Resultados de producto"
+                 data-autocomplete-target="results"
+                 class="absolute inset-x-0 top-full z-20 mt-1"></div>
+          </div>
+        <% end %>
+
+        <%# ── Tabla de partidas (Turbo) ── %>
+        <%= render "items_table", order: @order %>
+
+        <%# ── Observaciones (izquierda) + Totales (derecha) ── %>
+        <div class="flex flex-col gap-2 lg:flex-row lg:items-stretch">
+          <% if can_edit_order?(@order) %>
+            <%# El "Guardado ✓" va como overlay DENTRO del textarea (absolute):
+                si viviera debajo, el textarea quedaría más corto que la card de
+                totales y las alturas no empatarían. %>
+            <%= form_with url: observations_order_path(@order), method: :patch,
+                  data: { controller: "form-submit", action: "turbo:submit-end->form-submit#flashStatus" },
+                  class: "relative flex flex-1 flex-col" do %>
+              <%= text_area_tag :observations, @order.observations,
+                    placeholder: "Observaciones", "aria-label": "Observaciones del pedido",
+                    data: { action: "change->form-submit#submit" },
+                    class: "h-full min-h-32 w-full rounded-2xl border border-black/10 bg-brand-cream p-4 text-neutral-900 outline-none placeholder:text-neutral-500 focus:border-brand-gold-dark" %>
+              <span data-form-submit-target="status" role="status"
+                    class="pointer-events-none absolute bottom-3 right-4 text-sm font-semibold text-neutral-900 opacity-0 transition-opacity duration-300">
+                Guardado ✓
+              </span>
+            <% end %>
+          <% else %>
+            <div class="min-h-32 flex-1 whitespace-pre-line rounded-2xl border border-black/10 bg-brand-cream p-4 text-neutral-700">
+              <%= @order.observations.presence || "Sin observaciones." %>
+            </div>
+          <% end %>
+
+          <%= render "totals", order: @order %>
+        </div>
+      </div>
+
+    </section>
   </div>
 </div>
