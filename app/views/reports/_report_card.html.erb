@@ -1,6 +1,7 @@
 <%#
   Tarjeta cuadrada del hub de reportes.
-  Locals: href, icon, label (String o Array de líneas), soon (bool — "Próximamente").
+  Locals: href, icon_path (path `d` de un Heroicon outline 24×24 — mismo pack
+  que los menús), label (String o Array de líneas), soon (bool — "Próximamente").
 %>
 <% soon = local_assigns[:soon] %>
 <%# En "Próximamente" el fondo se atenúa con alpha (bg .../60), que —a diferencia
@@ -12,7 +13,10 @@
   <%# El contenido se atenúa cuando es "Próximamente"; el badge NO (queda a
       plena opacidad, en amarillo sólido, para resaltar sobre la card apagada). %>
   <div class="flex flex-col items-center gap-5 <%= "opacity-60" if soon %>">
-    <%= image_tag icon, alt: "", class: "h-20 w-20 brightness-0" %>
+    <svg class="h-20 w-20 text-neutral-900" fill="none" viewBox="0 0 24 24"
+         stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="<%= icon_path %>" />
+    </svg>
     <span class="text-xl font-bold leading-tight text-neutral-900"><%= safe_join(Array(label), tag.br) %></span>
   </div>
   <% if soon %>
