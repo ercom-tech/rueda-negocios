@@ -1,7 +1,9 @@
 <%#
   Tarjeta de opción del menú.
-  Locals: href, accent (:coral | :yellow), icon, title (String o Array de
-  líneas — respeta el corte del diseño), desc, soon (bool — "Próximamente").
+  Locals: href, accent (:coral | :yellow), icon_path (path `d` de un Heroicon
+  outline 24×24 — mismo pack que el menú del servidor; toma el color de la
+  card vía currentColor), title (String o Array de líneas — respeta el corte
+  del diseño), desc, soon (bool — "Próximamente").
 %>
 <% coral = accent == :coral %>
 <% bg          = coral ? "bg-brand-coral"      : "bg-brand-gold" %>
@@ -17,7 +19,10 @@
   <%# El contenido se atenúa cuando es "Próximamente"; el badge NO (queda a
       plena opacidad, en amarillo sólido, para resaltar sobre la card apagada). %>
   <div class="flex flex-1 items-center gap-6 <%= "opacity-60" if soon %>">
-    <%= image_tag icon, alt: "", class: "h-14 w-14 shrink-0" %>
+    <svg class="h-14 w-14 shrink-0 <%= title_color %>" fill="none" viewBox="0 0 24 24"
+         stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="<%= icon_path %>" />
+    </svg>
     <div class="flex w-44 shrink-0 justify-center">
       <h3 class="text-right text-2xl font-extrabold leading-tight <%= title_color %>"><%= safe_join(Array(title), tag.br) %></h3>
     </div>
