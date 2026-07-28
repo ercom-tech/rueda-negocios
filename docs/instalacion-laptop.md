@@ -175,3 +175,18 @@ la LAN; `config.hosts` de development ya acepta IPs 192.168.x.x y 10.x.x.x.
   disponible) y sáltate el paso 4.
 - Para actualizar la laptop después: `git pull` en ambos repos +
   `bundle install` + `bin/rails db:migrate` + `bin/rails tailwindcss:build`.
+
+## Equipos cliente (tablets/laptops de capturistas)
+
+El sitio corre en HTTP plano (TLS llega hasta la fase de *strengthening*).
+**Chrome sube automáticamente a HTTPS** ("Usar siempre conexiones seguras") y
+muestra "site is unreachable" aunque el server esté bien (síntoma: `curl`
+responde 200 pero Chrome no abre). En cada equipo cliente con Chrome:
+
+1. `chrome://settings/security` → desactivar **"Usar siempre conexiones
+   seguras"**.
+2. Si insiste: `chrome://net-internals/#hsts` → *Delete domain security
+   policies* con la IP de la laptop.
+3. Teclear la URL con `http://` explícito: `http://<IP-laptop>:3000`.
+
+Safari y Firefox abren HTTP de LAN sin fricción — son alternativa directa.
