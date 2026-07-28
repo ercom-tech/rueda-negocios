@@ -42,8 +42,21 @@
             <span>Vendedor: <span class="font-semibold"><%= @client.salesperson&.name || "—" %></span></span>
           </div>
 
+          <%# Sin datos fiscales no hay Factura; sin remisiones no hay
+              Remisión: la opción no disponible ni se muestra (el radio solo
+              aparece cuando el cliente tiene ambas). %>
+          <% has_invoice   = @client.tax_profiles.any? %>
+          <% has_remission = @client.receipt_profiles.any? %>
+          <% both_kinds    = has_invoice && has_remission %>
+
+          <% if !has_invoice && !has_remission %>
+            <p class="rounded-2xl bg-brand-coral px-5 py-4 text-sm font-semibold text-white">
+              El cliente no tiene datos fiscales ni remisiones en el ERP; no es
+              posible capturarle un pedido.
+            </p>
+          <% else %>
           <%= form_with model: @order,
-                data: { controller: "order-kind" }, class: "space-y-5" do |f| %>
+                data: (both_kinds ? { controller: "order-kind" } : {}), class: "space-y-5" do |f| %>
             <%= f.hidden_field :client_id, value: @client.id %>
 
             <%# Resumen de campos faltantes tras un submit inválido %>
@@ -59,41 +72,52 @@
             <%# Fila: Tipo (Factura/Remisión) + Uso de CFDI %>
             <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
-                <span class="mb-1 block text-sm font-semibold">Tipo de pedido</span>
+                <span class="mb-1 block text-sm font-semibold text-neutral-900">Tipo de pedido</span>
                 <div class="flex items-center gap-6 rounded-full bg-black px-6 py-3 text-white">
-                  <label class="flex cursor-pointer items-center gap-2">
-                    <%= f.radio_button :kind, "invoice", class: "accent-brand-gold",
-                          data: { action: "change->order-kind#toggle" } %> Factura
-                  </label>
-                  <label class="flex cursor-pointer items-center gap-2">
-                    <%= f.radio_button :kind, "remission", class: "accent-brand-gold",
-                          data: { action: "change->order-kind#toggle" } %> Remisión
-                  </label>
+                  <% if both_kinds %>
+                    <label class="flex cursor-pointer items-center gap-2">
+                      <%= f.radio_button :kind, "invoice", class: "accent-brand-gold",
+                            data: { action: "change->order-kind#toggle" } %> Factura
+                    </label>
+                    <label class="flex cursor-pointer items-center gap-2">
+                      <%= f.radio_button :kind, "remission", class: "accent-brand-gold",
+                            data: { action: "change->order-kind#toggle" } %> Remisión
+                    </label>
+                  <% else %>
+                    <%= f.hidden_field :kind, value: (has_invoice ? "invoice" : "remission") %>
+                    <span class="font-semibold"><%= has_invoice ? "Factura" : "Remisión" %></span>
+                  <% end %>
                 </div>
               </div>
 
-              <div data-order-kind-target="invoice">
+              <% if has_invoice %>
+              <div <%= %(data-order-kind-target="invoice").html_safe if both_kinds %>>
                 <span class="mb-1 block text-sm font-semibold text-neutral-900">Uso de CFDI</span>
                 <%= render "shared/custom_select", name: "order[cfdi_use_id]", filterable: true,
                       invalid: @order.errors[:cfdi_use_id].any?,
                       options: @cfdi_uses.map { |c| [c.label, c.id] }, selected: @order.cfdi_use_id %>
               </div>
+              <% end %>
             </div>
 
             <%# Línea completa: Nombre o razón social (Factura) / Remisión %>
-            <div data-order-kind-target="invoice">
+            <% if has_invoice %>
+            <div <%= %(data-order-kind-target="invoice").html_safe if both_kinds %>>
               <span class="mb-1 block text-sm font-semibold text-neutral-900">Nombre o razón social (RFC)</span>
               <%= render "shared/custom_select", name: "order[client_tax_profile_id]",
                     invalid: @order.errors[:client_tax_profile_id].any?,
                     options: @client.tax_profiles.map { |t| [t.label, t.id] }, selected: @order.client_tax_profile_id %>
             </div>
+            <% end %>
 
-            <div data-order-kind-target="remission">
+            <% if has_remission %>
+            <div <%= %(data-order-kind-target="remission").html_safe if both_kinds %>>
               <span class="mb-1 block text-sm font-semibold text-neutral-900">Remisión</span>
               <%= render "shared/custom_select", name: "order[client_receipt_profile_id]",
                     invalid: @order.errors[:client_receipt_profile_id].any?,
                     options: @client.receipt_profiles.map { |r| [r.label, r.id] }, selected: @order.client_receipt_profile_id %>
             </div>
+            <% end %>
 
             <%# Línea completa: Dirección de entrega %>
             <div>
@@ -107,6 +131,7 @@
               <%= f.submit (@order.persisted? ? "Guardar cambios" : "Continuar a levantamiento de pedido"),
                     class: "cursor-pointer rounded-full bg-brand-coral px-8 py-3 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
             </div>
+          <% end %>
           <% end %>
         <% else %>
           <p class="rounded-2xl bg-black/5 px-5 py-4 text-sm text-neutral-700">

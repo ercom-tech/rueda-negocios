@@ -166,7 +166,10 @@ class OrdersController < ApplicationController
   end
 
   def apply_header_defaults
-    @order.kind ||= "invoice"
+    # El tipo default depende de lo que el cliente tenga en el ERP: sin datos
+    # fiscales no hay Factura; sin remisiones no hay Remisión (la vista oculta
+    # la opción no disponible).
+    @order.kind ||= @client.tax_profiles.any? ? "invoice" : "remission"
     # El ERP no marca un perfil fiscal/remisión "principal": si el cliente tiene
     # varios, NO preseleccionamos ninguno (evita elegir el RFC equivocado en
     # silencio); el capturista lo escoge. Con uno solo, sí lo preseleccionamos.
