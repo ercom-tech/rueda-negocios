@@ -57,8 +57,8 @@ class Order < ApplicationRecord
   # Clases Tailwind del badge de estatus (mismas en reporte y detalle).
   STATUS_COLORS = {
     "draft"       => "bg-neutral-200 text-neutral-700",
-    "captured"    => "bg-amber-100 text-amber-800",
-    "transmitted" => "bg-emerald-100 text-emerald-800"
+    "captured"    => "bg-brand-gold text-neutral-900",
+    "transmitted" => "bg-brand-coral text-white"
   }.freeze
 
   def status_label
