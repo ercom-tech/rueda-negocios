@@ -21,4 +21,27 @@ class SyncRunTest < ActiveSupport::TestCase
 
     assert SyncRun.create!(kind: "up", started_at: Time.current).persisted?
   end
+
+  test "recover_orphaned! cierra como failed los runs que quedaron running" do
+    orphan = SyncRun.create!(kind: "up", started_at: Time.current)
+
+    SyncRun.recover_orphaned!
+
+    orphan.reload
+    assert orphan.failed?
+    assert orphan.finished_at.present?
+    assert_match(/reinició/, orphan.message)
+    # El run cerrado ya no bloquea la siguiente transmisión (guard del panel).
+    assert_not SyncRun.latest("up").running?
+  end
+
+  test "recover_orphaned! no toca los runs ya cerrados" do
+    done = SyncRun.create!(kind: "down", started_at: Time.current)
+    done.finish!(status: "completed", message: "ok")
+
+    SyncRun.recover_orphaned!
+
+    assert done.reload.completed?
+    assert_equal "ok", done.message
+  end
 end

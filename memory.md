@@ -328,6 +328,17 @@ Iterado en vivo con el usuario tras migrar todo al shell oscuro:
   ejecuciones × com_proveedor_has_producto, 58k filas cuya PK empieza por
   id_proveedor) llevó el export de segundos a ~28s; con CTE + hash join:
   **0.3s**. "Obtener información" ya no se siente colgado.
+- **Runs de sync huérfanos (2026-07-28):** un `SyncRun` nace `running` y solo
+  el job lo cierra; si el proceso muere a media corrida (apagón, cierre de
+  `bin/dev` — con el adapter de jobs en proceso el job no sobrevive), el
+  renglón queda `running` para siempre: el panel gira "en progreso" eterno y
+  el guard bloquea nuevas corridas (le pasó al usuario en la laptop, ni el
+  reinicio lo curaba). Fix: `SyncRun.recover_orphaned!` invocado desde
+  `config/initializers/sync_run_recovery.rb` dentro de
+  `Rails.application.server { }` — ese hook corre SOLO al bootear el servidor
+  web (no en consola/runner/rake/tests, donde un `running` puede ser legítimo
+  porque el server sigue vivo). Validado: server efímero en :3001 barrió al
+  huérfano sembrado; el runner que lo sembró no lo tocó.
 
 ## Estado actual
 
