@@ -113,7 +113,7 @@ class OrdersController < ApplicationController
     end
   end
 
-  # Paso 3: resumen con opciones (PDF / correo / WhatsApp).
+  # Paso 3: resumen con opciones (PDF / correo).
   def summary
     @order = accessible_orders.find(params[:id])
   end
@@ -133,11 +133,6 @@ class OrdersController < ApplicationController
                 notice: "Correo programado para #{email} (se enviará al sincronizar)."
   end
 
-  # (Stub) envío por WhatsApp.
-  def send_whatsapp
-    @order = current_user.orders.find(params[:id])
-    redirect_to summary_order_path(@order), alert: "Envío por WhatsApp: próximamente."
-  end
 
   private
 

@@ -25,15 +25,13 @@
           <%= image_tag "icon_pdf.svg", alt: "", class: "h-8 w-8" %> Descargar PDF
         <% end %>
 
-        <%# Correo y WhatsApp aún no implementados: se muestran deshabilitados
-            para no confirmar un envío que no ocurre. %>
-        <% [["Enviar por correo", "icon_mail.svg"], ["Enviar por WhatsApp", "icon_whatsapp.svg"]].each do |label, icon| %>
-          <div class="flex w-full cursor-not-allowed items-center gap-4 rounded-2xl bg-neutral-400 px-6 py-5 text-lg font-semibold text-white opacity-60"
-               aria-disabled="true" title="Próximamente">
-            <%= image_tag icon, alt: "", class: "h-8 w-8" %> <%= label %>
-            <span class="ml-auto rounded-full bg-black/25 px-3 py-1 text-xs font-semibold">Próximamente</span>
-          </div>
-        <% end %>
+        <%# Correo aún no implementado: deshabilitado para no confirmar un
+            envío que no ocurre (se enviará al sincronizar). %>
+        <div class="flex w-full cursor-not-allowed items-center gap-4 rounded-2xl bg-neutral-400 px-6 py-5 text-lg font-semibold text-white opacity-60"
+             aria-disabled="true" title="Próximamente">
+          <%= image_tag "icon_mail.svg", alt: "", class: "h-8 w-8" %> Enviar por correo
+          <span class="ml-auto rounded-full bg-black/25 px-3 py-1 text-xs font-semibold">Próximamente</span>
+        </div>
 
         <div class="flex items-center justify-center gap-3 pt-2">
           <%# El pedido capturado sigue siendo editable hasta transmitirse: dejar
