@@ -1,0 +1,23 @@
+<%# Barra superior del shell oscuro (home y reportes): logo (→ menú) + pills
+    de contexto + cerrar sesión. El pill de proveedor no aplica al servidor
+    (no captura pedidos). %>
+<header class="flex flex-wrap items-center justify-between gap-4">
+  <%= link_to root_path, title: "Volver al menú" do %>
+    <%= image_tag "fecego_logo_white.png", alt: "FECEGO", class: "h-14 w-auto" %>
+  <% end %>
+
+  <div class="flex flex-wrap items-center gap-3 text-sm">
+    <span class="rounded-full bg-brand-cream px-5 py-2.5 text-neutral-800">
+      Usuario: <span class="font-semibold"><%= current_user.full_name.presence || current_user.username %></span>
+    </span>
+    <% unless current_user.can_see_all_orders? %>
+      <%= render "shared/supplier_pill" %>
+    <% end %>
+
+    <%# Cerrar sesión es reversible (no pierde captura) → acción directa sin
+        modal. El modal de confirmación se reserva para lo destructivo/pesado
+        (descartar pedido, quitar producto, sync). Mismo patrón para todos. %>
+    <%= button_to "Cerrar sesión", logout_path, method: :delete,
+          class: "rounded-full bg-neutral-400 px-5 py-2.5 font-semibold text-neutral-900 transition-colors hover:bg-neutral-300" %>
+  </div>
+</header>
