@@ -284,7 +284,53 @@ real por el propio usuario (purgó 6) y con tests (46/157). Trampa recurrente
 confirmada: un rueda-api VIEJO dueño de :4568 sirvió un export sin
 people/supplier_ids → membresías en 0; matar pumas huérfanos antes de probar.
 
+## Sistema visual unificado (2026-07-27/28)
+
+Iterado en vivo con el usuario tras migrar todo al shell oscuro:
+
+- **Shell único**: fondo negro + patrón blanco 0.18 + `shared/_top_bar` (logo
+  → menú, pill Usuario, pill Proveedor solo capturista, Cerrar sesión CON
+  modal — decisión que revirtió el "logout directo" del Grupo C) en TODAS las
+  pantallas: home, hub de reportes, pedidos capturados y los 3 pasos del
+  pedido. Título de cada pantalla en el cuerpo. Margen lateral **5%**.
+- **Roles por color**: dorado = navegación/acciones (cards de menú, botones,
+  badge Capturado); crema = TODA superficie de contenido, fija o flotante
+  (tablas, forms, observaciones, totales, dropdowns/combos, avisos); negro =
+  controles de captura (buscadores, selects, thead) y barras de título; coral
+  = acción primaria/culminación (Finalizar, Total, badge Transmitido); verde
+  emerald = SOLO feedback global (flash, ✓ Listo del sync). **BLANCO = solo
+  campos de entrada** (inputs) — señal de "esto se escribe".
+- **Paso 2 enmarcado** como los pasos 1/3: una card dorada de marco delgado
+  (p-2, separaciones internas del mismo grueso), barra negra con folio+badge
+  a la izquierda y botones a la derecha; observaciones y totales de la misma
+  altura ("Guardado ✓" es overlay dentro del textarea). La card del paso 1
+  se quedó DORADA (el usuario revirtió el crema ahí).
+- **Iconografía 100% Heroicons outline** (currentColor, trazo 1.5): cards de
+  ambos menús, hub de reportes, lupas de buscadores, trash de partidas. Cero
+  emojis y cero assets de íconos sueltos.
+- **Encabezado del pedido**: el tipo (Factura/Remisión) solo ofrece lo que el
+  cliente tiene en el ERP (sin fiscales no hay Factura; sin remisiones no hay
+  Remisión; con uno solo, tipo fijo sin radio; sin nada → aviso y no captura).
+  WhatsApp eliminado por completo del resumen (vista+ruta+acción+asset).
+- **Reporte de pedidos capturados**: Fecha · Hora (local, separadas) ·
+  Cliente (clave — nombre) · Vendedor (id — nombre) · Clave local (enlace al
+  pedido) · Renglones · Total · Estatus; el servidor ve además Capturista al
+  inicio.
+
+## Reglas de código aprendidas (2026-07-27/28)
+
+- **NUNCA `link_to` con `data: { turbo_method: … }`**: Turbo interceptaba el
+  clic (preventDefault) pero el form efímero no se sometía — el POST jamás
+  salía, sin error en consola. Usar **`button_to`** para toda acción no-GET
+  (era el único link así; ya migrado).
+- **Agregados contra tablas del ERP: en CTE con GROUP BY, no subqueries
+  correlacionadas.** La subquery por producto de `supplier_ids` (13k
+  ejecuciones × com_proveedor_has_producto, 58k filas cuya PK empieza por
+  id_proveedor) llevó el export de segundos a ~28s; con CTE + hash join:
+  **0.3s**. "Obtener información" ya no se siente colgado.
+
 ## Estado actual
+
 
 Estructura de repos definida; ambos en GitHub (org **ercom-tech**):
 `ercom-tech/rueda-negocios` y `ercom-tech/rueda-api`, rama `master`.

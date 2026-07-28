@@ -153,3 +153,12 @@ capturista define su universo **duro** de productos vendibles en la rueda.
 - **Universo** = productos de TODOS sus proveedores (`ProductSupplier`) ∪ los
   de sus marcas (`products.brand_id`). Sin membresía → vacío (que el ERP no
   asigne proveedor/marca al capturista es problema operativo, no del sitio).
+
+## Nota de índices (perf del export)
+
+`com_proveedor_has_producto` (~58k filas) solo tiene el índice de su PK, que
+**empieza por `id_proveedor`** — buscar por `id_producto` no usa índice. Por
+eso los agregados por producto del export (supplier_ids/SKUs) se calculan en
+CTEs con `GROUP BY` (un scan + hash join) y no con subqueries correlacionadas
+(13k ejecuciones ≈ 28s). Aplica a cualquier query futura que recorra productos
+consultando esta tabla.
