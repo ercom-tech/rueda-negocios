@@ -46,35 +46,40 @@
     <% end %>
   <% end %>
 
-  <%# ── 2. Obtener información / sync-down (amarilla) — arrow-down-tray ── %>
-  <div class="rounded-[1.75rem] bg-brand-gold px-7 py-5 shadow-lg <%= "opacity-60" if locked %>"
-       data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
-    <button type="button" data-action="modal#open" <%= "disabled" if locked %>
-            class="<%= grid %> w-full transition-transform enabled:hover:scale-[1.015]">
-      <svg class="h-14 w-14 text-neutral-900" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-      </svg>
-      <h3 class="<%= title %> text-neutral-900"><%= safe_join(["Obtener", "información"], tag.br) %></h3>
-      <p class="<%= desc %> text-neutral-800/75">Descarga los datos de la rueda desde el servidor.</p>
-    </button>
-    <%= render "server/sync_status", kind: "down", run: sync_down %>
+  <%# ── 2. Obtener información / sync-down (amarilla) — arrow-down-tray.
+       El hover escala la CARD VISIBLE completa (botón + estado), como en las
+       cards-link; el diálogo del modal queda FUERA del nodo que se
+       transforma (un transform en el ancestro rompe su position: fixed). ── %>
+  <div data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
+    <div class="rounded-[1.75rem] bg-brand-gold px-7 py-5 shadow-lg <%= locked ? "opacity-60" : "transition-transform hover:scale-[1.015]" %>">
+      <button type="button" data-action="modal#open" <%= "disabled" if locked %>
+              class="<%= grid %> w-full">
+        <svg class="h-14 w-14 text-neutral-900" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+        </svg>
+        <h3 class="<%= title %> text-neutral-900"><%= safe_join(["Obtener", "información"], tag.br) %></h3>
+        <p class="<%= desc %> text-neutral-800/75">Descarga los datos de la rueda desde el servidor.</p>
+      </button>
+      <%= render "server/sync_status", kind: "down", run: sync_down %>
+    </div>
     <%= render "home/confirm_dialog", title: "Obtener información",
           message: "Se descargarán los datos de la rueda seleccionada y se reemplazará la información local. ¿Continuar?",
           confirm_label: "Sí, obtener", path: server_sync_down_path %>
   </div>
 
   <%# ── 3. Transmitir pedidos / sync-up (amarilla) — arrow-up-tray ── %>
-  <div class="rounded-[1.75rem] bg-brand-gold px-7 py-5 shadow-lg <%= "opacity-60" if locked %>"
-       data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
-    <button type="button" data-action="modal#open" <%= "disabled" if locked %>
-            class="<%= grid %> w-full transition-transform enabled:hover:scale-[1.015]">
-      <svg class="h-14 w-14 text-neutral-900" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
-      </svg>
-      <h3 class="<%= title %> text-neutral-900"><%= safe_join(["Transmitir", "pedidos"], tag.br) %></h3>
-      <p class="<%= desc %> text-neutral-800/75">Envía los pedidos capturados al ERP.</p>
-    </button>
-    <%= render "server/sync_status", kind: "up", run: sync_up %>
+  <div data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
+    <div class="rounded-[1.75rem] bg-brand-gold px-7 py-5 shadow-lg <%= locked ? "opacity-60" : "transition-transform hover:scale-[1.015]" %>">
+      <button type="button" data-action="modal#open" <%= "disabled" if locked %>
+              class="<%= grid %> w-full">
+        <svg class="h-14 w-14 text-neutral-900" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+        </svg>
+        <h3 class="<%= title %> text-neutral-900"><%= safe_join(["Transmitir", "pedidos"], tag.br) %></h3>
+        <p class="<%= desc %> text-neutral-800/75">Envía los pedidos capturados al ERP.</p>
+      </button>
+      <%= render "server/sync_status", kind: "up", run: sync_up %>
+    </div>
     <%= render "home/confirm_dialog", title: "Transmitir pedidos",
           message: "Se enviarán al ERP los pedidos capturados que aún no se han transmitido. ¿Continuar?",
           confirm_label: "Sí, transmitir", path: server_sync_up_path %>
@@ -104,16 +109,17 @@
   <% end %>
 
   <%# ── 5. Cerrar rueda (neutra oscura, destructiva → modal) — archive-box ── %>
-  <div class="rounded-[1.75rem] bg-neutral-700 px-7 py-5 shadow-lg <%= "opacity-60" if locked %>"
-       data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
-    <button type="button" data-action="modal#open" <%= "disabled" if locked %>
-            class="<%= grid %> w-full transition-transform enabled:hover:scale-[1.015]">
-      <svg class="h-14 w-14 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0-3-3m3 3 3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
-      </svg>
-      <h3 class="<%= title %> whitespace-nowrap text-white">Cerrar rueda</h3>
-      <p class="<%= desc %> text-white/80">Elimina los pedidos locales para poder cargar otra rueda.</p>
-    </button>
+  <div data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
+    <div class="rounded-[1.75rem] bg-neutral-700 px-7 py-5 shadow-lg <%= locked ? "opacity-60" : "transition-transform hover:scale-[1.015]" %>">
+      <button type="button" data-action="modal#open" <%= "disabled" if locked %>
+              class="<%= grid %> w-full">
+        <svg class="h-14 w-14 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0-3-3m3 3 3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
+        </svg>
+        <h3 class="<%= title %> whitespace-nowrap text-white">Cerrar rueda</h3>
+        <p class="<%= desc %> text-white/80">Elimina los pedidos locales para poder cargar otra rueda.</p>
+      </button>
+    </div>
     <%= render "home/confirm_dialog", title: "Cerrar rueda",
           message: "Se eliminarán TODOS los pedidos locales (los transmitidos ya están en el ERP) y se limpiará la rueda seleccionada. Solo procede si ya transmitiste todo. ¿Continuar?",
           confirm_label: "Sí, cerrar rueda", path: server_close_round_path %>

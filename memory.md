@@ -353,6 +353,15 @@ Iterado en vivo con el usuario tras migrar todo al shell oscuro:
 - **Iconografía 100% Heroicons outline** (currentColor, trazo 1.5): cards de
   ambos menús, hub de reportes, lupas de buscadores, trash de partidas. Cero
   emojis y cero assets de íconos sueltos.
+- **Hover homologado: escala la CARD completa** (2026-07-28, pedido del
+  usuario): `hover:scale-[1.015]` va en la card visible, nunca en el botón
+  interno. En las cards con modal (Obtener/Transmitir/Cerrar rueda) eso
+  obligó a reestructurar: el contenedor `data-controller="modal"` quedó como
+  wrapper neutro, la card visible (botón + estado) es un div interno que se
+  transforma, y el diálogo vive FUERA de ese div — un `transform` en el
+  ancestro rompe el `position: fixed` del overlay (por eso el scale estaba en
+  el botón). Cards bloqueadas no escalan (opacity-60 en su lugar). Pills y
+  botones chicos siguen con hover de color, no de escala.
 - **Deshabilitado homologado al 60%** (2026-07-28, pedido del usuario): TODO
   elemento deshabilitado/próximamente se ve al 60%. Con badge "Próximamente":
   fondo con alpha (`bg-*/60`) + contenido `opacity-60` + badge dorado a plena
