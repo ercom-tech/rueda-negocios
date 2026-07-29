@@ -100,6 +100,33 @@ module Sync
       assert User.exists?(username: "makita1"), "el capturista del export debe existir"
     end
 
+    test "membresía solo-marca (proveedor 0 → nil en el export) se importa" do
+      people = [
+        { "erp_person_id" => 90092, "position" => 1, "erp_supplier_id" => 10, "erp_brand_id" => nil },
+        { "erp_person_id" => 90092, "position" => 2, "erp_supplier_id" => nil, "erp_brand_id" => 1 }
+      ]
+
+      Down.new(export_data.merge("people" => people)).run!
+
+      memberships = BusinessRoundPerson.order(:position).to_a
+      assert_equal 2, memberships.size
+      brand_only = memberships.last
+      assert_nil brand_only.supplier_id
+      assert_equal 1, brand_only.brand.erp_brand_id
+    end
+
+    test "membresía con referencia rota o sin proveedor ni marca se omite y se reporta" do
+      people = [
+        { "erp_person_id" => 90092, "position" => 1, "erp_supplier_id" => nil, "erp_brand_id" => 999 },
+        { "erp_person_id" => 90092, "position" => 2, "erp_supplier_id" => nil, "erp_brand_id" => nil }
+      ]
+
+      result = Down.new(export_data.merge("people" => people)).run!
+
+      assert_equal 0, BusinessRoundPerson.count
+      assert_equal 2, result.summary[:skipped_people]
+    end
+
     test "un export sin usuarios SÍ limpia a los capturistas (replace pleno) pero preserva al server" do
       # Decisión del usuario: si el ERP no asignó usuarios a la rueda es
       # problema operativo, no del sitio — los capturistas quedan idénticos

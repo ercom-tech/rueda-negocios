@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_29_040208) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_29_041308) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -60,7 +60,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_29_040208) do
     t.bigint "business_round_id", null: false
     t.datetime "created_at", null: false
     t.integer "position", default: 1, null: false
-    t.bigint "supplier_id", null: false
+    t.bigint "supplier_id"
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.index ["brand_id"], name: "index_business_round_people_on_brand_id"

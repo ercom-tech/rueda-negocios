@@ -263,16 +263,21 @@ module Sync
       rows = []
       Array(@data["people"]).each do |m|
         uid = user_by_erp[m["erp_person_id"]]
-        sid = supplier_by_erp[m["erp_supplier_id"]]
-        # Sin usuario local (capturista omitido por falta de contraseña) o
-        # proveedor fuera de la rueda → la membresía se omite y se reporta.
-        if uid.nil? || sid.nil?
+        # Proveedor y marca son opcionales por separado (el ERP manda solo
+        # uno u otro en renglones "solo proveedor"/"solo marca"), pero una
+        # referencia que viene y no resuelve localmente es una membresía rota.
+        sup_ref, brand_ref = m["erp_supplier_id"], m["erp_brand_id"]
+        sid = sup_ref && supplier_by_erp[sup_ref]
+        bid = brand_ref && brand_by_erp[brand_ref]
+        broken_ref = (sup_ref && sid.nil?) || (brand_ref && bid.nil?)
+        # Sin usuario local (capturista omitido por falta de contraseña), sin
+        # proveedor NI marca, o con referencia rota → se omite y se reporta.
+        if uid.nil? || broken_ref || (sup_ref.nil? && brand_ref.nil?)
           @skipped_people += 1
           next
         end
         rows << { business_round_id: round.id, user_id: uid, supplier_id: sid,
-                  brand_id: m["erp_brand_id"] && brand_by_erp[m["erp_brand_id"]],
-                  position: m["position"] || 1 }
+                  brand_id: bid, position: m["position"] || 1 }
       end
       insert BusinessRoundPerson, rows
     end

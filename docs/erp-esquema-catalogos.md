@@ -95,7 +95,7 @@ arranca `(id_empresa, id_rueda, …)`. Joins e integridad verificados con datos
 | `cnf_rueda_negocios_marca` | `(…, id_marca)` | Marcas participantes. `id_marca` → `com_marca`. |
 | `cnf_rueda_negocios_vendedor` | `(…, id_vendedor)` | Vendedores asignados. `id_vendedor` → `vta_vendedor` → `cnf_persona`. |
 | `cnf_rueda_negocios_cliente` | `(…, id_vendedor, clave_cliente)` | Clientes registrados **con flujo de aprobación** ventas/crédito: `aprobado_ventas`, `aprobado_credito`, `id_usuario_aprueba_*`, `motivo_rechazo_credito`, crédito autorizado (`limite_credito_autorizado`, `saldo_facturas_autorizado`, `disponible_autorizado`, `por_facturar_autorizado`). `clave_cliente` → `vta_cliente`. |
-| `cnf_rueda_negocios_persona` | `(…, id_persona, consecutivo)` | Personas de contacto/expositores por proveedor-marca. `id_persona` → `cnf_persona`, con `id_proveedor` e `id_marca` (marca puede venir `0`). |
+| `cnf_rueda_negocios_persona` | `(…, id_persona, consecutivo)` | Personas de contacto/expositores por proveedor-marca. `id_persona` → `cnf_persona`, con `id_proveedor` e `id_marca` — ambos usan `0` como "ninguno": un renglón "solo proveedor" trae `id_marca = 0` y uno "solo marca" trae `id_proveedor = 0`. El export hace `NULLIF(…, 0)` a los dos y la membresía local acepta proveedor nulo (validando que venga al menos uno). |
 
 ## Precios especiales por rueda — hueco pendiente
 

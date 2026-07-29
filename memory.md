@@ -330,6 +330,25 @@ problema operativo del ERP). Cadena completa:
   universo (mensaje si no hay membresía); `OrderItems#create` scopea el find
   al universo (404 ante POST forjado). Validado en navegador con makita1:
   universo 2,134, "martillo" → solo MAKITA, STIHL fuera.
+- **Membresías múltiples y solo-marca (2026-07-28):** el ERP no tenía ningún
+  caso real de >1 proveedor / >1 marca (solo 3 makitas con 1 proveedor c/u);
+  se insertaron en el ERP de testing 2 renglones para makita1 (90092):
+  consecutivo 2 → STIHL (157) y consecutivo 3 → **solo marca** HITOOLS
+  (id_proveedor=0, id_marca=22). Eso destapó un hueco: `id_proveedor = 0`
+  es la convención ERP de "solo marca" (espejo de id_marca 0), el export NO
+  le hacía NULLIF y el import omitía toda membresía sin proveedor → las
+  asignaciones solo-marca SE PERDÍAN. Fix: export `NULLIF(id_proveedor, 0)`;
+  migración `supplier_id` nullable en business_round_people + `belongs_to
+  optional` + validación "proveedor o marca, al menos uno"; import_people
+  acepta solo-marca y omite solo referencias rotas o renglones vacíos (+2
+  tests). Validado E2E en navegador con makita1: universo = MAKITA ∪ STIHL ∪
+  HITOOLS = **8,716** (2,134 + 4,068 + 2,515 exacto contra query directa),
+  pill de Proveedor se volvió selector (2 proveedores), búsquedas reales en
+  paso 2: "martillo"→MAKITA, "1124-640"→STIHL, "CHECK"→HITOOLS,
+  "31820" (BTICINO, fuera) → "Sin resultados". makita2 sigue acotado a
+  2,134. Los renglones de prueba QUEDAN en el ERP de testing (borrarlos:
+  `DELETE FROM fecego.cnf_rueda_negocios_persona WHERE id_empresa=1 AND
+  id_rueda=3 AND id_persona=90092 AND consecutivo IN (2,3);`).
 
 **Guarda del sync-down afinada (2026-07-27, decisión del usuario):** solo
 bloquean los pedidos capturados SIN transmitir; borradores y transmitidos se
