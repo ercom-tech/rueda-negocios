@@ -110,15 +110,19 @@ module Pdf
         ["IVA",       number_to_currency(@order.tax_total)],
         ["Total",     number_to_currency(@order.total)]
       ]
+      # Flush a la derecha contra el borde de la tabla de partidas: la columna
+      # de montos sin padding derecho, para que los números terminen exactamente
+      # en bounds.right (el mismo borde derecho de la tabla).
       pdf.bounding_box([pdf.bounds.right - 230, y], width: 230) do
-        pdf.table(rows, cell_style: { borders: [], padding: [1, 6, 1, 6], size: 10 }) do
+        pdf.table(rows, column_widths: [130, 100],
+                        cell_style: { borders: [], padding: [1, 0, 1, 6], size: 10 }) do
           column(0).font_style = :bold
           column(1).align      = :right
           column(1).font_style = :bold
           row(-1).borders          = [:top]
           row(-1).border_top_width = 0.5
           row(-1).size             = 12
-          row(-1).padding          = [4, 6, 1, 6]
+          row(-1).padding          = [4, 0, 1, 6]
         end
       end
     end
@@ -133,8 +137,8 @@ module Pdf
       else
         lines << "<b>REMISIÓN:</b>  #{@order.client_receipt_profile&.name}"
       end
-      lines << "<b>Dirección:</b>  #{@order.client_branch&.address}" if @order.client_branch&.address.present?
       lines << "<b>Sucursal:</b>  #{@order.client_branch&.name}"
+      lines << "<b>Dirección:</b>  #{@order.client_branch&.address}" if @order.client_branch&.address.present?
       lines << "<b>Uso CFDI:</b>  #{@order.cfdi_use.code} #{@order.cfdi_use.description}" if @order.invoice? && @order.cfdi_use
       lines.join("\n")
     end
@@ -145,10 +149,10 @@ module Pdf
       [
         "<b>#{@order.business_round.name}</b>",
         "Capturado: #{@order.created_at.strftime('%d/%m/%Y %H:%M')} — #{capturista}",
-        "Renglones: #{@order.order_items.size}",
         ("Transmitido: #{@order.transmitted_at.strftime('%d/%m/%Y %H:%M')}" if @order.transmitted? && @order.transmitted_at),
         ("Vendedor: #{[vendor.erp_salesperson_id, vendor.name].compact.join(' ')}" if vendor),
-        "Estatus: #{@order.status_label.upcase}"
+        "Estatus: #{@order.status_label.upcase}",
+        "Renglones: #{@order.order_items.size}"
       ].compact.join("\n")
     end
 

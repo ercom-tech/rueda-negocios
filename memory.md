@@ -349,7 +349,12 @@ problema operativo del ERP). Cadena completa:
   (colonia lleva id_empresa en el join; municipio/estado no, como en la
   ubicación de la rueda). El campo llega por la misma llave `address` del
   export → sin cambios en el import. Requiere sync-down para refrescar
-  direcciones ya sincronizadas. el ERP
+  direcciones ya sincronizadas.
+  Segunda ronda: Sucursal ARRIBA de Dirección; Renglones al final del bloque
+  derecho (bajo Estatus); totales flush al borde derecho de la tabla de
+  partidas — ojo Prawn: la tabla toma su ancho natural, no el del
+  bounding_box; hay que fijar column_widths que sumen el ancho del box y
+  quitar el padding derecho de la columna de montos. el ERP
   guarda `id_producto` como entero pero SIEMPRE lo muestra a 6 dígitos
   (17768 → "017768"). `Product#erp_code` (`format("%06d")`) es la única
   definición del formato; lo usan el autocompletado y el snapshot de partidas
