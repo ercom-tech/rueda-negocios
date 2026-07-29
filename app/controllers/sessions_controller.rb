@@ -18,16 +18,19 @@ class SessionsController < ApplicationController
   end
 
   def create
-    user = User.find_by(username: params[:username].to_s.strip)
+    username = params[:username].to_s.strip
+    user     = User.find_by(username: username)
 
     if user&.active? && user.authenticate(params[:password].to_s)
       # Sin rueda cargada un capturista no tiene nada que operar: se bloquea
       # en la puerta. El rol server sí entra siempre — es quien la carga.
       if !user.can_see_all_orders? && BusinessRound.active.none?
+        log_attempt(user, username, success: false)
         flash.now[:alert] = SessionsController.no_round_message
         return render :new, status: :unprocessable_entity
       end
 
+      log_attempt(user, username, success: true)
       reset_session # evita session fixation
       # Sesión única: el token nuevo invalida cualquier sesión anterior del
       # mismo usuario en otro equipo (el último login gana).
@@ -36,6 +39,7 @@ class SessionsController < ApplicationController
       session[:session_token] = user.session_token
       redirect_to root_path, notice: "Hola, #{user.full_name.presence || user.username}."
     else
+      log_attempt(user, username, success: false)
       flash.now[:alert] = "Usuario o contraseña incorrectos."
       render :new, status: :unprocessable_entity
     end
@@ -44,5 +48,15 @@ class SessionsController < ApplicationController
   def destroy
     reset_session
     redirect_to login_path, notice: "Sesión cerrada."
+  end
+
+  private
+
+  # Auditoría: un renglón por intento de login, exitoso o no. `success: false`
+  # cubre credenciales malas, usuario inactivo/inexistente y capturista sin
+  # rueda — "no se abrió sesión".
+  def log_attempt(user, username, success:)
+    LoginEvent.create!(user: user, username: username, success: success,
+                       ip: request.remote_ip, user_agent: request.user_agent)
   end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_29_051025) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_29_143637) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -160,6 +160,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_29_051025) do
     t.index ["erp_client_key"], name: "index_clients_on_erp_client_key_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["name"], name: "index_clients_on_name_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["salesperson_id"], name: "index_clients_on_salesperson_id"
+  end
+
+  create_table "login_events", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "ip"
+    t.boolean "success", null: false
+    t.datetime "updated_at", null: false
+    t.text "user_agent"
+    t.bigint "user_id"
+    t.string "username", null: false
+    t.index ["created_at"], name: "index_login_events_on_created_at"
+    t.index ["user_id"], name: "index_login_events_on_user_id"
   end
 
   create_table "order_items", force: :cascade do |t|
@@ -327,6 +339,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_29_051025) do
   add_foreign_key "client_tax_profiles", "cfdi_uses", column: "default_cfdi_use_id"
   add_foreign_key "client_tax_profiles", "clients"
   add_foreign_key "clients", "salespeople"
+  add_foreign_key "login_events", "users", on_delete: :nullify
   add_foreign_key "order_items", "orders"
   add_foreign_key "order_items", "products"
   add_foreign_key "orders", "business_rounds"

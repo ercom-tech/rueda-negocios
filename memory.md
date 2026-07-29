@@ -294,6 +294,15 @@ cerrado, tablet sin pila) y bloquearía usuarios para siempre sin TTL/
 heartbeat. El logout de una sesión desplazada no toca el token (solo el login
 lo regenera), así no tumba a la sesión nueva. Tests (3,
 single_session_test, con open_session para simular dos equipos).
+Ajuste 2026-07-29 (pedido del usuario): **auditoría de logins** — tabla
+`login_events` (un renglón por intento: user FK `on_delete: :nullify` +
+username tecleado, success, ip, user_agent, created_at). `success: false`
+cubre credenciales malas, usuario inexistente/inactivo Y capturista
+bloqueado sin rueda ("no se abrió sesión"). Sobrevive al replace del
+sync-down (FK anula, evento queda con el username). Los fallidos son la
+materia prima del throttling diferido a strengthening. Sin UI todavía —
+consultable por consola; candidato a reporte del panel server. Tests (5,
+login_events_test).
 Ajuste 2026-07-28: **seleccionar rueda pide confirmación con modal** (mismo
 patrón modal + `home/confirm_dialog`, que ahora acepta el local opcional
 `params` para el PATCH con erp_round_id/name) — avisa que para cambiarla
