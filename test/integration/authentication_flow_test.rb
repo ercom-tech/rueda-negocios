@@ -3,6 +3,9 @@ require "test_helper"
 class AuthenticationFlowTest < ActionDispatch::IntegrationTest
   setup do
     @user = User.create!(erp_person_id: 1, username: "tester", password: "secret123", active: true)
+    # El capturista solo puede entrar con una rueda cargada (guard de sesión);
+    # aquí se prueba la mecánica de autenticación, así que se le da una.
+    BusinessRound.create!(erp_round_id: 1, name: "Rueda Test", active: true)
   end
 
   test "root sin sesión redirige a login" do

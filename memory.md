@@ -270,6 +270,19 @@ back no se la brincan) + card "Elegir rueda" deshabilitada en el menú
 "Seleccionada" de la pantalla de ruedas quedó muerto y se eliminó (solo se
 alcanza sin selección). Equivocarse de rueda no estorba: "Cerrar rueda" con 0
 pedidos es gratis. Tests de integración (4) con webmock.
+Ajuste 2026-07-28 (regla del usuario, cierre del embudo): **sin rueda no se
+opera nada**. (a) Capturistas ni siquiera entran: login bloqueado sin
+`active_round` (422 con "No hay rueda en curso en esta laptop…") y guard de
+sesión `require_round_for_capturista` en ApplicationController que expulsa
+(reset_session → login) a los que tenían sesión viva cuando se cerró la rueda
+— SessionsController lo salta para que login/logout funcionen siempre. El rol
+server entra siempre (es quien carga la rueda). (b) Panel server sin
+selección: SOLO vive "Elegir rueda" — Transmitir/Reportes/Cerrar quedan
+deshabilitadas (mismo patrón disabled) + guards por URL directo en `sync_up`
+("no hay pedidos que transmitir"), `close_round` ("No hay rueda que cerrar")
+y `ReportsController#require_round` (criterio: selección o rueda activa).
+Con esto el flujo es un embudo estricto: elegir → obtener → operar → cerrar
+→ elegir. Tests de integración (6, no_round_access_test).
 
 **Universo de productos por capturista (2026-07-26, regla del usuario):** un
 capturista puede tener varios proveedores/marcas asignados y ese es su universo

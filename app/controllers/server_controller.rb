@@ -54,6 +54,9 @@ class ServerController < ApplicationController
 
   # Transmitir los pedidos capturados al ERP (sync-up).
   def sync_up
+    unless round_in_progress?
+      return redirect_to root_path, alert: "No hay rueda en curso; no hay pedidos que transmitir."
+    end
     if SyncRun.latest("up")&.running?
       return redirect_to root_path, alert: "Ya hay una transmisión en curso."
     end
@@ -68,6 +71,10 @@ class ServerController < ApplicationController
   # Cerrar la rueda activa: purga los pedidos locales (los transmitidos ya
   # viven en el ERP) para poder cargar otra rueda con el sync-down.
   def close_round
+    unless round_in_progress?
+      return redirect_to root_path, alert: "No hay rueda que cerrar."
+    end
+
     removed = Sync::CloseRound.run!
     redirect_to root_path,
                 notice: "Rueda cerrada (#{removed} pedido(s) locales eliminados). " \

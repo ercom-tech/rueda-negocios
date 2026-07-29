@@ -6,6 +6,7 @@ class ApplicationController < ActionController::Base
   stale_when_importmap_changes
 
   before_action :require_login
+  before_action :require_round_for_capturista
 
   helper_method :current_user, :logged_in?, :active_round, :available_suppliers,
                 :current_supplier, :can_edit_order?
@@ -55,6 +56,17 @@ class ApplicationController < ActionController::Base
     return if logged_in?
 
     redirect_to login_path, alert: "Inicia sesión para continuar."
+  end
+
+  # Sin rueda cargada un capturista no tiene nada que operar. El login ya lo
+  # bloquea en la puerta; este guard expulsa además a los que tenían sesión
+  # viva cuando el server cerró la rueda (o el sync-down reemplazó usuarios).
+  def require_round_for_capturista
+    return unless logged_in?
+    return if current_user.can_see_all_orders? || active_round.present?
+
+    reset_session
+    redirect_to login_path, alert: SessionsController.no_round_message
   end
 
   # Restringe una acción al rol server (operador del sync).
