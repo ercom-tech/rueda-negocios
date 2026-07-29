@@ -334,6 +334,13 @@ Iterado en vivo con el usuario tras migrar todo al shell oscuro:
 - **Iconografía 100% Heroicons outline** (currentColor, trazo 1.5): cards de
   ambos menús, hub de reportes, lupas de buscadores, trash de partidas. Cero
   emojis y cero assets de íconos sueltos.
+- **Deshabilitado homologado al 60%** (2026-07-28, pedido del usuario): TODO
+  elemento deshabilitado/próximamente se ve al 60%. Con badge "Próximamente":
+  fondo con alpha (`bg-*/60`) + contenido `opacity-60` + badge dorado a plena
+  opacidad (menu_card, report_card, correo del resumen). Sin badge (cards del
+  panel server bloqueadas por estado): `opacity-60` en el contenedor completo.
+  Quedó CERO `opacity-50`/`disabled:opacity-*` en vistas; el atributo
+  `disabled` de los botones se conserva (comportamiento, no estética).
 - **Encabezado del pedido**: el tipo (Factura/Remisión) solo ofrece lo que el
   cliente tiene en el ERP (sin fiscales no hay Factura; sin remisiones no hay
   Remisión; con uno solo, tipo fijo sin radio; sin nada → aviso y no captura).
