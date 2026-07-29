@@ -29,8 +29,11 @@
             <%= link_to "Editar", edit_order_path(@order),
                   class: "rounded-full bg-neutral-700 px-6 py-2.5 font-bold text-white transition-colors hover:bg-neutral-600" %>
             <div class="inline-block" data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
+              <%# "Descartar", no "Cancelar": mismo verbo que el modal que abre
+                  (título, "Sí, descartar" y flash "Pedido descartado") — y el
+                  modal tiene su propio "Cancelar" que significa lo contrario. %>
               <button type="button" data-action="modal#open"
-                      class="rounded-full bg-neutral-700 px-6 py-2.5 font-bold text-white transition-colors hover:bg-neutral-600">Cancelar</button>
+                      class="rounded-full bg-neutral-700 px-6 py-2.5 font-bold text-white transition-colors hover:bg-neutral-600">Descartar</button>
               <%# Mensaje según estatus: un borrador se descarta; un capturado ya
                   está guardado con folio — se elimina con sus partidas. %>
               <%= render "home/confirm_dialog", title: "Descartar pedido",
