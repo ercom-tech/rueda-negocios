@@ -339,7 +339,17 @@ problema operativo del ERP). Cadena completa:
   universo (mensaje si no hay membresía); `OrderItems#create` scopea el find
   al universo (404 ante POST forjado). Validado en navegador con makita1:
   universo 2,134, "martillo" → solo MAKITA, STIHL fuera.
-- **Código FECEGO a 6 dígitos (2026-07-28, regla del usuario):** el ERP
+- **PDF del pedido — ajustes de formato (2026-07-29, pedido del usuario):**
+  (a) nombre de la rueda en negritas arriba de "Capturado:"; (b) "Capturado:"
+  incluye al capturista (full_name/username) y "Renglones" pasó a su propia
+  línea; (c) Observaciones debajo del importe en letra (bounding_box en
+  flujo, izquierda de los totales); (d) **dirección completa** de la sucursal
+  — el export ahora arma calle + no. ext (+ INT.), COL., CP, municipio y
+  estado resolviendo los consec_* contra cnf_colonia/cnf_municipio/cnf_estado
+  (colonia lleva id_empresa en el join; municipio/estado no, como en la
+  ubicación de la rueda). El campo llega por la misma llave `address` del
+  export → sin cambios en el import. Requiere sync-down para refrescar
+  direcciones ya sincronizadas. el ERP
   guarda `id_producto` como entero pero SIEMPRE lo muestra a 6 dígitos
   (17768 → "017768"). `Product#erp_code` (`format("%06d")`) es la única
   definición del formato; lo usan el autocompletado y el snapshot de partidas

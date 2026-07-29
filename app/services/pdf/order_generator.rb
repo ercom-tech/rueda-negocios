@@ -94,8 +94,14 @@ module Pdf
 
     def render_footer(pdf)
       y = pdf.cursor
-      # Importe en letra (izquierda)
-      pdf.text_box amount_in_words(@order.total), at: [0, y + 4], width: 330, size: 9, style: :bold
+      # Importe en letra + observaciones (izquierda, en flujo)
+      pdf.bounding_box([0, y + 4], width: 440) do
+        pdf.text amount_in_words(@order.total), size: 9, style: :bold
+        if @order.observations.present?
+          pdf.move_down 6
+          pdf.text "<b>Observaciones:</b>  #{@order.observations}", size: 9, inline_format: true
+        end
+      end
 
       # Totales (derecha)
       rows = [
@@ -134,9 +140,12 @@ module Pdf
     end
 
     def right_info
-      vendor = @order.client.salesperson
+      vendor     = @order.client.salesperson
+      capturista = @order.user.full_name.presence || @order.user.username
       [
-        "Capturado: #{@order.created_at.strftime('%d/%m/%Y %H:%M')}    Renglones: #{@order.order_items.size}",
+        "<b>#{@order.business_round.name}</b>",
+        "Capturado: #{@order.created_at.strftime('%d/%m/%Y %H:%M')} — #{capturista}",
+        "Renglones: #{@order.order_items.size}",
         ("Transmitido: #{@order.transmitted_at.strftime('%d/%m/%Y %H:%M')}" if @order.transmitted? && @order.transmitted_at),
         ("Vendedor: #{[vendor.erp_salesperson_id, vendor.name].compact.join(' ')}" if vendor),
         "Estatus: #{@order.status_label.upcase}"
