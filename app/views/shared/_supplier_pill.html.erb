@@ -12,7 +12,10 @@
             options: available_suppliers.map { |s| [s.name, s.id] }, selected: current_supplier&.id,
             input_data: { action: "change->form-submit#submit" },
             button_class: "flex items-center gap-1 font-semibold text-neutral-800",
-            panel_class: "absolute left-0 top-full z-30 mt-1 min-w-52 overflow-auto rounded-2xl border border-black/10 bg-brand-cream shadow-xl" %>
+            panel_class: "absolute right-0 top-full z-30 mt-1 w-max max-w-[80vw] whitespace-nowrap max-h-72 overflow-auto rounded-2xl border border-black/10 bg-brand-cream shadow-xl" %>
+            <%# w-max: el panel absoluto dimensiona contra el pill (angosto) y
+                doblaba los nombres largos; right-0 lo hace crecer hacia
+                adentro de la pantalla, no hacia afuera del viewport. %>
     </div>
   <% end %>
 <% else %>
