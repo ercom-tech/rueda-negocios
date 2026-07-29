@@ -23,6 +23,25 @@ class RoundSelectionGuardTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "la selección pide confirmación: modal con el PATCH y sus params adentro" do
+    stub_request(:get, %r{/ruedas$}).to_return(
+      status: 200, headers: { "Content-Type" => "application/json" },
+      body: [{ erp_round_id: 7, name: "Rueda Nueva", year: 2026 }].to_json
+    )
+
+    get server_rounds_path
+    assert_response :success
+    assert_select "div[data-controller=modal]" do
+      assert_select "button[data-action='modal#open']", text: "Seleccionar"
+      assert_select "div[data-modal-target=dialog]" do
+        assert_select "form[action=?]", server_select_round_path do
+          assert_select "input[name=erp_round_id][value='7']"
+          assert_select "input[name=name][value='Rueda Nueva']"
+        end
+      end
+    end
+  end
+
   test "con rueda en curso, la lista de ruedas redirige al menú con alert" do
     select_round!
 

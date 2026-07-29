@@ -283,6 +283,10 @@ deshabilitadas (mismo patrón disabled) + guards por URL directo en `sync_up`
 y `ReportsController#require_round` (criterio: selección o rueda activa).
 Con esto el flujo es un embudo estricto: elegir → obtener → operar → cerrar
 → elegir. Tests de integración (6, no_round_access_test).
+Ajuste 2026-07-28: **seleccionar rueda pide confirmación con modal** (mismo
+patrón modal + `home/confirm_dialog`, que ahora acepta el local opcional
+`params` para el PATCH con erp_round_id/name) — avisa que para cambiarla
+después habrá que cerrarla.
 
 **Universo de productos por capturista (2026-07-26, regla del usuario):** un
 capturista puede tener varios proveedores/marcas asignados y ese es su universo

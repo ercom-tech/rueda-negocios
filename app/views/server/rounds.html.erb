@@ -24,9 +24,11 @@
       <% end %>
 
       <%# Esta pantalla solo se alcanza SIN rueda en curso (guarda del
-          controller): no hay estado "Seleccionada" que pintar. %>
+          controller): no hay estado "Seleccionada" que pintar. La selección
+          se confirma con modal — desde aquí solo se sale cerrando la rueda. %>
       <% @rounds.each do |r| %>
-        <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white/5 px-6 py-5 text-white shadow-lg">
+        <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white/5 px-6 py-5 text-white shadow-lg"
+             data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
           <div>
             <h3 class="text-xl font-bold"><%= r["name"] %></h3>
             <p class="mt-1 text-sm text-white/70">
@@ -35,9 +37,14 @@
             </p>
           </div>
 
-          <%= button_to "Seleccionar", server_select_round_path, method: :patch,
-                params: { erp_round_id: r["erp_round_id"], name: r["name"] },
-                class: "rounded-full bg-brand-coral px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-coral-dark" %>
+          <button type="button" data-action="modal#open"
+                  class="rounded-full bg-brand-coral px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-coral-dark">
+            Seleccionar
+          </button>
+          <%= render "home/confirm_dialog", title: "Elegir rueda",
+                message: "Se seleccionará la rueda \"#{r["name"]}\" para trabajar en esta laptop. Para cambiarla después tendrás que cerrarla. ¿Continuar?",
+                confirm_label: "Sí, seleccionar", path: server_select_round_path,
+                method: :patch, params: { erp_round_id: r["erp_round_id"], name: r["name"] } %>
         </div>
       <% end %>
     </div>

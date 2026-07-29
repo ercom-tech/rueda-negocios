@@ -1,7 +1,8 @@
 <%#
   Diálogo de confirmación. Va DENTRO de un contenedor con
   data-controller="modal"; el botón que lo abre usa data-action="modal#open".
-  Locals: title, message, confirm_label, path, method (default :post).
+  Locals: title, message, confirm_label, path, method (default :post),
+  params (Hash opcional — viaja en el form del botón de confirmación).
 %>
 <% dialog_id = "dlg-#{SecureRandom.hex(4)}" %>
 <div data-modal-target="dialog" style="display:none"
@@ -20,6 +21,7 @@
         Cancelar
       </button>
       <%= button_to confirm_label, path, method: (local_assigns[:method] || :post),
+            params: (local_assigns[:params] || {}),
             class: "rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
     </div>
   </div>
