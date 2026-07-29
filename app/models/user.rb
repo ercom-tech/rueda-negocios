@@ -43,6 +43,17 @@ class User < ApplicationRecord
     ids.filter_map { |id| by_id[id] }
   end
 
+  # Marcas del capturista en una rueda (cnf_rueda_negocios_persona), en orden
+  # de `position` — espejo de suppliers_in para las membresías de marca.
+  def brands_in(round)
+    return [] unless round
+
+    ids = business_round_people.where(business_round_id: round.id)
+                               .order(:position).pluck(:brand_id).uniq
+    by_id = Brand.where(id: ids).index_by(&:id)
+    ids.filter_map { |id| by_id[id] }
+  end
+
   # Universo de productos que el capturista puede vender en la rueda: los de
   # TODOS sus proveedores asignados ∪ los de sus marcas (regla del usuario,
   # 2026-07-26). Sin membresía → vacío: asignar capturistas a proveedor/marca

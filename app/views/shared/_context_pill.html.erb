@@ -1,15 +1,17 @@
 <%#
-  Pill de "Proveedor" en la barra superior.
-  - 0 proveedores → "—"
-  - 1 proveedor   → etiqueta estática
-  - varios        → selector (cambia el proveedor activo de la sesión)
+  Pill de contexto de la barra superior (Proveedor / Marca).
+  Locals: label ("Proveedor"), items (array de modelos con name/id),
+          current (el activo o nil), url (PATCH del cambio), param (name del hidden).
+  - 0 items  → no se muestra nada
+  - 1 item   → etiqueta estática
+  - varios   → selector (cambia el activo de la sesión)
 %>
-<% if available_suppliers.size > 1 %>
-  <%= form_with url: active_supplier_path, method: :patch, data: { controller: "form-submit" } do %>
+<% if items.size > 1 %>
+  <%= form_with url: url, method: :patch, data: { controller: "form-submit" } do %>
     <div class="flex items-center gap-2 rounded-full bg-brand-cream px-5 py-2.5 text-neutral-800">
-      <span>Proveedor:</span>
-      <%= render "shared/custom_select", name: "supplier_id", include_blank: false,
-            options: available_suppliers.map { |s| [s.name, s.id] }, selected: current_supplier&.id,
+      <span><%= label %>:</span>
+      <%= render "shared/custom_select", name: param, include_blank: false,
+            options: items.map { |i| [i.name, i.id] }, selected: current&.id,
             input_data: { action: "change->form-submit#submit" },
             button_class: "flex items-center gap-1 font-semibold text-neutral-800",
             panel_class: "absolute right-0 top-full z-30 mt-1 w-max max-w-[80vw] whitespace-nowrap max-h-72 overflow-auto rounded-2xl border border-black/10 bg-brand-cream shadow-xl" %>
@@ -18,8 +20,8 @@
                 adentro de la pantalla, no hacia afuera del viewport. %>
     </div>
   <% end %>
-<% else %>
+<% elsif items.any? %>
   <span class="rounded-full bg-brand-cream px-5 py-2.5 text-neutral-800">
-    Proveedor: <span class="font-semibold"><%= current_supplier&.name || "—" %></span>
+    <%= label %>: <span class="font-semibold"><%= current&.name %></span>
   </span>
 <% end %>

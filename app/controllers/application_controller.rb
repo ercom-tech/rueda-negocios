@@ -10,7 +10,7 @@ class ApplicationController < ActionController::Base
   before_action :require_round_for_capturista
 
   helper_method :current_user, :logged_in?, :active_round, :available_suppliers,
-                :current_supplier, :can_edit_order?
+                :current_supplier, :available_brands, :current_brand, :can_edit_order?
 
   private
 
@@ -51,6 +51,22 @@ class ApplicationController < ActionController::Base
 
     @current_supplier = available_suppliers.find { |s| s.id == session[:supplier_id] } ||
                         available_suppliers.first
+  end
+
+  # Marcas del capturista en la rueda activa — espejo de proveedores.
+  def available_brands
+    return @available_brands if defined?(@available_brands)
+
+    @available_brands = logged_in? ? current_user.brands_in(active_round) : []
+  end
+
+  # Marca "activa" de la sesión (mismo carácter que current_supplier: solo
+  # contexto/etiqueta, no restringe la captura).
+  def current_brand
+    return @current_brand if defined?(@current_brand)
+
+    @current_brand = available_brands.find { |b| b.id == session[:brand_id] } ||
+                     available_brands.first
   end
 
   def require_login

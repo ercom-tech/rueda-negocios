@@ -405,6 +405,16 @@ Iterado en vivo con el usuario tras migrar todo al shell oscuro:
   ancestro rompe el `position: fixed` del overlay (por eso el scale estaba en
   el botón). Cards bloqueadas no escalan (opacity-60 en su lugar). Pills y
   botones chicos siguen con hover de color, no de escala.
+- **Pills de contexto Proveedor/Marca en el top bar** (2026-07-28, pedido del
+  usuario): partial genérico `shared/_context_pill` (0 membresías → oculto;
+  1 → estático; varias → selector que cambia el activo de sesión). Marca es
+  espejo completo de Proveedor: `User#brands_in`, `available_brands`/
+  `current_brand`, `PATCH /active-brand` (ActiveBrandsController valida
+  pertenencia). Sin proveedores ya NO sale "Proveedor: —". Ambos son solo
+  contexto/etiqueta — no restringen la captura. `_supplier_pill` eliminado.
+  Ojo panel del combo: `w-max + right-0 + whitespace-nowrap` (el absoluto
+  dimensiona contra el pill angosto y doblaba los nombres). Tests (4,
+  context_pills_test).
 - **Deshabilitado homologado al 60%** (2026-07-28, pedido del usuario): TODO
   elemento deshabilitado/próximamente se ve al 60%. Con badge "Próximamente":
   fondo con alpha (`bg-*/60`) + contenido `opacity-60` + badge dorado a plena

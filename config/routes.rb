@@ -7,8 +7,9 @@ Rails.application.routes.draw do
   post   "login",  to: "sessions#create"
   delete "logout", to: "sessions#destroy"
 
-  # Proveedor activo en la sesión (cuando el capturista representa a varios).
+  # Proveedor/marca activos en la sesión (cuando el capturista representa varios).
   patch "active-supplier", to: "active_suppliers#update", as: :active_supplier
+  patch "active-brand",    to: "active_brands#update",    as: :active_brand
 
   # Panel del servidor (operación del sync). Solo rol server.
   scope "server", as: :server, controller: :server do
