@@ -13,8 +13,15 @@
               class: "flex w-full items-center justify-between gap-4 px-5 py-3 text-left hover:bg-black/5" do %>
           <span>
             <span class="font-semibold text-neutral-900"><%= product.description %></span>
+            <%# Solo los datos que existen: modelo/N.P vacíos no dejan rótulos
+                huérfanos ("Modelo ·"). %>
             <span class="block text-xs text-neutral-600">
-              Código <%= product.erp_product_id %> · Modelo <%= product.model %> · <%= number_to_currency(product.price&.public_price) %>
+              <%= safe_join([
+                    "Código #{product.erp_product_id}",
+                    product.model.presence && "Modelo #{product.model}",
+                    product.part_number.presence && "N/P #{product.part_number}",
+                    number_to_currency(product.price&.public_price)
+                  ].compact, " · ") %>
             </span>
           </span>
           <span class="shrink-0 rounded-full bg-black px-3 py-1 text-xs font-semibold text-white">Agregar</span>
