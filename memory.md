@@ -330,6 +330,16 @@ problema operativo del ERP). Cadena completa:
   universo (mensaje si no hay membresía); `OrderItems#create` scopea el find
   al universo (404 ante POST forjado). Validado en navegador con makita1:
   universo 2,134, "martillo" → solo MAKITA, STIHL fuera.
+- **Código FECEGO a 6 dígitos (2026-07-28, regla del usuario):** el ERP
+  guarda `id_producto` como entero pero SIEMPRE lo muestra a 6 dígitos
+  (17768 → "017768"). `Product#erp_code` (`format("%06d")`) es la única
+  definición del formato; lo usan el autocompletado y el snapshot de partidas
+  (`order_items.code`), que arrastra el formato a tabla/resumen/PDF gratis.
+  La búsqueda normaliza consultas de puro dígito quitando ceros a la
+  izquierda SOLO en la rama del código (LPAD ILIKE se saltaría los índices
+  trigram); las demás ramas reciben la cadena intacta (un N/P puede empezar
+  con 0). Guarda anti "000000"→match-todo. Partidas previas al cambio
+  quedarían sin pad (snapshot), pero había 0 pedidos. Tests (5).
 - **Membresías múltiples y solo-marca (2026-07-28):** el ERP no tenía ningún
   caso real de >1 proveedor / >1 marca (solo 3 makitas con 1 proveedor c/u);
   se insertaron en el ERP de testing 2 renglones para makita1 (90092):
