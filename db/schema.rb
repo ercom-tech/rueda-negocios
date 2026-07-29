@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_26_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_29_040208) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -299,6 +299,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_26_110000) do
     t.string "prefix"
     t.string "rfc"
     t.string "role", default: "capturista", null: false
+    t.string "session_token"
     t.datetime "updated_at", null: false
     t.string "username", null: false
     t.index ["erp_person_id"], name: "index_users_on_erp_person_id", unique: true

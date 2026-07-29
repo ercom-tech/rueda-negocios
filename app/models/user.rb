@@ -7,6 +7,10 @@ class User < ApplicationRecord
   # digest); nunca fijamos contraseña desde la app. `authenticate` sigue
   # disponible.
   has_secure_password validations: false
+  # Sesión única por usuario ("el último login gana"): cada login regenera el
+  # token e invalida las cookies de sesiones anteriores (ver Sessions#create y
+  # el guard require_current_session).
+  has_secure_token :session_token
 
   has_many :business_round_people, dependent: :destroy
   has_many :suppliers, through: :business_round_people

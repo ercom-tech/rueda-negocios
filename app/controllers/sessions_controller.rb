@@ -2,9 +2,10 @@ class SessionsController < ApplicationController
   layout "auth"
 
   skip_before_action :require_login, only: %i[new create]
-  # El guard de rueda no aplica aquí: login/logout deben funcionar siempre
-  # (y el logout de un capturista tras cerrarse la rueda no debe chocar).
+  # Los guards de sesión no aplican aquí: login/logout deben funcionar
+  # siempre (y el logout de una sesión ya desplazada no debe chocar).
   skip_before_action :require_round_for_capturista
+  skip_before_action :require_current_session
 
   # Compartido con el guard de sesión (require_round_for_capturista).
   def self.no_round_message
@@ -28,7 +29,11 @@ class SessionsController < ApplicationController
       end
 
       reset_session # evita session fixation
-      session[:user_id] = user.id
+      # Sesión única: el token nuevo invalida cualquier sesión anterior del
+      # mismo usuario en otro equipo (el último login gana).
+      user.regenerate_session_token
+      session[:user_id]       = user.id
+      session[:session_token] = user.session_token
       redirect_to root_path, notice: "Hola, #{user.full_name.presence || user.username}."
     else
       flash.now[:alert] = "Usuario o contraseña incorrectos."

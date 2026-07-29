@@ -283,6 +283,17 @@ deshabilitadas (mismo patrón disabled) + guards por URL directo en `sync_up`
 y `ReportsController#require_round` (criterio: selección o rueda activa).
 Con esto el flujo es un embudo estricto: elegir → obtener → operar → cerrar
 → elegir. Tests de integración (6, no_round_access_test).
+Ajuste 2026-07-28 (regla del usuario): **sesión única por usuario, "el
+último login gana"** — `has_secure_token :session_token` en User; cada login
+regenera el token y lo guarda en la cookie; el guard `require_current_session`
+(ApplicationController, entre require_login y el guard de rueda; Sessions lo
+salta) cierra con "Tu usuario inició sesión en otro equipo" toda sesión cuyo
+token ya no coincida. Se eligió este sabor sobre "bloquear el segundo login"
+porque con cookies el servidor no sabe cuándo murió una sesión (navegador
+cerrado, tablet sin pila) y bloquearía usuarios para siempre sin TTL/
+heartbeat. El logout de una sesión desplazada no toca el token (solo el login
+lo regenera), así no tumba a la sesión nueva. Tests (3,
+single_session_test, con open_session para simular dos equipos).
 Ajuste 2026-07-28: **seleccionar rueda pide confirmación con modal** (mismo
 patrón modal + `home/confirm_dialog`, que ahora acepta el local opcional
 `params` para el PATCH con erp_round_id/name) — avisa que para cambiarla

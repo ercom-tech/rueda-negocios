@@ -6,6 +6,7 @@ class ApplicationController < ActionController::Base
   stale_when_importmap_changes
 
   before_action :require_login
+  before_action :require_current_session
   before_action :require_round_for_capturista
 
   helper_method :current_user, :logged_in?, :active_round, :available_suppliers,
@@ -56,6 +57,19 @@ class ApplicationController < ActionController::Base
     return if logged_in?
 
     redirect_to login_path, alert: "Inicia sesión para continuar."
+  end
+
+  # Sesión única por usuario: si el token de la cookie ya no coincide con el
+  # del usuario (alguien inició sesión con ese login en otro equipo), esta
+  # sesión quedó desplazada y se cierra. "El último login gana" — no hay
+  # candados fantasma: cerrar el navegador sin logout no bloquea a nadie.
+  def require_current_session
+    return unless logged_in?
+    return if session[:session_token] == current_user.session_token
+
+    reset_session
+    redirect_to login_path, alert: "Tu usuario inició sesión en otro equipo. " \
+                                   "Vuelve a entrar si quieres usar este."
   end
 
   # Sin rueda cargada un capturista no tiene nada que operar. El login ya lo
