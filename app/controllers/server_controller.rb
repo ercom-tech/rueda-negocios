@@ -5,10 +5,15 @@ class ServerController < ApplicationController
 
   before_action :require_server
 
-  # Elegir la rueda a trabajar: lista las disponibles en el ERP.
+  # Elegir la rueda a trabajar: lista las disponibles en el ERP. Bloqueado
+  # mientras haya una rueda en curso: el cambio de rueda pasa SIEMPRE por
+  # "Cerrar rueda" (y sus guardas: capturados sin transmitir, sync corriendo).
+  # Se protege también el PATCH, no solo la card del menú, para que un URL
+  # directo o el back del navegador no se brinquen la regla.
   def rounds
-    @selected = Setting.instance.selected_round_erp_id
-    @rounds   = Sync::ApiClient.new.list_rounds
+    return redirect_to root_path, alert: round_in_progress_alert if round_in_progress?
+
+    @rounds = Sync::ApiClient.new.list_rounds
   rescue Sync::ApiClient::Error => e
     # El detalle técnico (URL interna, "Connection refused") va al log; al
     # operador se le da una guía accionable.
@@ -20,6 +25,8 @@ class ServerController < ApplicationController
 
   # Guardar la rueda seleccionada.
   def select_round
+    return redirect_to root_path, alert: round_in_progress_alert if round_in_progress?
+
     Setting.instance.update!(
       selected_round_erp_id: params[:erp_round_id].presence,
       selected_round_name:   params[:name].presence
@@ -69,5 +76,17 @@ class ServerController < ApplicationController
     redirect_to root_path, alert: "#{e.message} Transmite antes de cerrar la rueda."
   rescue Sync::CloseRound::SyncInProgressError => e
     redirect_to root_path, alert: "#{e.message} Espera a que termine para cerrar la rueda."
+  end
+
+  private
+
+  def round_in_progress?
+    Setting.instance.selected_round_erp_id.present?
+  end
+
+  def round_in_progress_alert
+    setting = Setting.instance
+    name    = setting.selected_round_name.presence || "##{setting.selected_round_erp_id}"
+    "Ya hay una rueda en curso (#{name}). Ciérrala antes de elegir otra."
   end
 end

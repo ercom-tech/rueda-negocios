@@ -23,25 +23,21 @@
         </p>
       <% end %>
 
+      <%# Esta pantalla solo se alcanza SIN rueda en curso (guarda del
+          controller): no hay estado "Seleccionada" que pintar. %>
       <% @rounds.each do |r| %>
-        <% current = r["erp_round_id"] == @selected %>
-        <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl px-6 py-5 shadow-lg
-                    <%= current ? "bg-brand-cream text-neutral-900 ring-2 ring-brand-gold" : "bg-white/5 text-white" %>">
+        <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white/5 px-6 py-5 text-white shadow-lg">
           <div>
             <h3 class="text-xl font-bold"><%= r["name"] %></h3>
-            <p class="mt-1 text-sm <%= current ? "text-neutral-700" : "text-white/70" %>">
+            <p class="mt-1 text-sm text-white/70">
               <%= r["location"] %> · <%= r["year"] %>
               <% if r["starts_on"] %>· <%= r["starts_on"] %><% if r["ends_on"] %> a <%= r["ends_on"] %><% end %><% end %>
             </p>
           </div>
 
-          <% if current %>
-            <span class="rounded-full bg-brand-gold px-5 py-2 text-sm font-bold text-neutral-900">Seleccionada</span>
-          <% else %>
-            <%= button_to "Seleccionar", server_select_round_path, method: :patch,
-                  params: { erp_round_id: r["erp_round_id"], name: r["name"] },
-                  class: "rounded-full bg-brand-coral px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-coral-dark" %>
-          <% end %>
+          <%= button_to "Seleccionar", server_select_round_path, method: :patch,
+                params: { erp_round_id: r["erp_round_id"], name: r["name"] },
+                class: "rounded-full bg-brand-coral px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-coral-dark" %>
         </div>
       <% end %>
     </div>

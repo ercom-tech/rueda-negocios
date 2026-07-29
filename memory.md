@@ -262,6 +262,14 @@ Ajuste 2026-07-28 (pedido del usuario): también **borra el historial de
 cerrada; ese historial pertenece a la rueda, el panel debe arrancar limpio.
 Segunda guarda: `SyncInProgressError` si hay un run `running` (borrarle su
 SyncRun al job vivo lo rompería). +2 tests.
+Ajuste 2026-07-28 (regla del usuario): **no se puede elegir otra rueda con una
+en curso** — el cambio de rueda pasa SIEMPRE por "Cerrar rueda" (y sus
+guardas). Guard en el controller sobre `rounds` Y `select_round` (URL directo/
+back no se la brincan) + card "Elegir rueda" deshabilitada en el menú
+(opacity-60, sin link, hint "Ciérrala para elegir otra"). El estado
+"Seleccionada" de la pantalla de ruedas quedó muerto y se eliminó (solo se
+alcanza sin selección). Equivocarse de rueda no estorba: "Cerrar rueda" con 0
+pedidos es gratis. Tests de integración (4) con webmock.
 
 **Universo de productos por capturista (2026-07-26, regla del usuario):** un
 capturista puede tener varios proveedores/marcas asignados y ese es su universo
