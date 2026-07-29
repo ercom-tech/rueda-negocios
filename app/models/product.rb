@@ -22,21 +22,19 @@ class Product < ApplicationRecord
   # LEFT JOIN): un OR que cruza el join impide usar índices por tabla; así cada
   # rama entra por su índice trigram (BitmapOr en products, GIN en supplier_sku).
   #
-  # El código FECEGO se muestra a 6 dígitos, así que "017768" debe encontrar
-  # al entero 17768: a una consulta de puro dígito se le quitan los ceros a la
-  # izquierda SOLO para la rama del código (normalizar aquí conserva el plan
-  # con índices; un LPAD(...) ILIKE los brincaría). Las demás ramas reciben la
-  # cadena original — un número de parte sí puede empezar con 0 legítimo.
+  # La rama del código compara contra el código PADDED a 6 dígitos (como lo
+  # muestra el ERP y lo teclea la gente): "000081" solo puede coincidir con el
+  # código exacto 000081 (6 dentro de 6 = igualdad), "17768" sigue hallando a
+  # 017768 y "0177" a los 0177xx. Normalizar quitando ceros ("000081"→"81")
+  # resultó engañoso: "81" está contenido en 003381, 004817, etc. El índice
+  # trigram de expresión sobre el LPAD mantiene la rama indexada.
   scope :search, ->(query) {
-    raw  = query.to_s.strip
-    code = raw.match?(/\A\d+\z/) ? raw.sub(/\A0+/, "") : raw
-    code = raw if code.empty? # "000000" no debe degenerar en match-todo
-    like      = "%#{sanitize_sql_like(raw)}%"
-    code_like = "%#{sanitize_sql_like(code)}%"
-    where(<<~SQL, q: like, qcode: code_like)
+    like = "%#{sanitize_sql_like(query.to_s.strip)}%"
+    where(<<~SQL, q: like)
       products.id IN (
         SELECT id FROM products
-         WHERE CAST(erp_product_id AS TEXT) ILIKE :qcode OR description ILIKE :q
+         WHERE LPAD(CAST(erp_product_id AS TEXT), 6, '0') ILIKE :q
+            OR description ILIKE :q
             OR model ILIKE :q OR part_number ILIKE :q
         UNION
         SELECT product_id FROM product_suppliers WHERE supplier_sku ILIKE :q

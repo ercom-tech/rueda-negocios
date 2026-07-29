@@ -16,7 +16,18 @@ class ProductTest < ActiveSupport::TestCase
     assert_includes Product.search("0177"), @product
   end
 
-  test "los ceros a la izquierda solo se normalizan para el código (N/P intacto)" do
+  test "un código padded completo es exacto: no arrastra coincidencias engañosas" do
+    objetivo = Product.create!(erp_product_id: 81, description: "PRODUCTO 81")
+    ruido    = [Product.create!(erp_product_id: 3381, description: "RUIDO A"),
+                Product.create!(erp_product_id: 4817, description: "RUIDO B"),
+                Product.create!(erp_product_id: 8681, description: "RUIDO C")]
+
+    resultado = Product.search("000081")
+    assert_includes resultado, objetivo
+    ruido.each { |r| assert_not_includes resultado, r }
+  end
+
+  test "el N/P con cero inicial se sigue encontrando tal cual" do
     assert_includes Product.search("0ABC"), @product
   end
 

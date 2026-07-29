@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_29_041308) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_29_051025) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -241,6 +241,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_29_041308) do
     t.string "unit"
     t.datetime "updated_at", null: false
     t.index "((erp_product_id)::text) gin_trgm_ops", name: "index_products_on_erp_product_id_text_trgm", using: :gin
+    t.index "lpad((erp_product_id)::text, 6, '0'::text) gin_trgm_ops", name: "index_products_on_padded_code_trgm", using: :gin
     t.index ["brand_id"], name: "index_products_on_brand_id"
     t.index ["description"], name: "index_products_on_description_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["erp_product_id"], name: "index_products_on_erp_product_id", unique: true

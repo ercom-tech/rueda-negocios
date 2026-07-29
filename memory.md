@@ -335,11 +335,14 @@ problema operativo del ERP). Cadena completa:
   (17768 → "017768"). `Product#erp_code` (`format("%06d")`) es la única
   definición del formato; lo usan el autocompletado y el snapshot de partidas
   (`order_items.code`), que arrastra el formato a tabla/resumen/PDF gratis.
-  La búsqueda normaliza consultas de puro dígito quitando ceros a la
-  izquierda SOLO en la rama del código (LPAD ILIKE se saltaría los índices
-  trigram); las demás ramas reciben la cadena intacta (un N/P puede empezar
-  con 0). Guarda anti "000000"→match-todo. Partidas previas al cambio
-  quedarían sin pad (snapshot), pero había 0 pedidos. Tests (5).
+  La rama del código busca contra el PADDED — `LPAD(erp_product_id::text,
+  6, '0') ILIKE %q%` con índice trigram de EXPRESIÓN (bitmap scan, 0.012ms).
+  El primer intento (quitar ceros a la izquierda y buscar contains sobre el
+  entero) fue engañoso y el usuario lo cazó: "000081"→"81" traía 003381,
+  004817, 008681… Con el padded, un código de 6 completo es exacto por
+  construcción (6 dentro de 6 = igualdad), "17768" sigue hallando 017768 y
+  "0177" a los 0177xx. Partidas previas al cambio quedarían sin pad
+  (snapshot), pero había 0 pedidos. Tests (6).
 - **Membresías múltiples y solo-marca (2026-07-28):** el ERP no tenía ningún
   caso real de >1 proveedor / >1 marca (solo 3 makitas con 1 proveedor c/u);
   se insertaron en el ERP de testing 2 renglones para makita1 (90092):
