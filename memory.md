@@ -287,6 +287,21 @@ Ajuste 2026-07-28: **seleccionar rueda pide confirmación con modal** (mismo
 patrón modal + `home/confirm_dialog`, que ahora acepta el local opcional
 `params` para el PATCH con erp_round_id/name) — avisa que para cambiarla
 después habrá que cerrarla.
+Ajuste 2026-07-28 (pregunta del usuario): **una corrida de sync viva bloquea
+lanzar CUALQUIER otra** (no solo del mismo tipo): `SyncRun.running.exists?`
+en sync_down y sync_up — cierra la ventana de "descarga a media transmisión"
+que podía pisar al job en vuelo. El mismo tipo ya estaba doblemente blindado
+(guard + índice único parcial: un running por tipo, la carrera exacta la
+para Postgres con RecordNotUnique). El menú refleja el bloqueo en vivo:
+el broadcast de SyncRun ahora reemplaza el MENÚ COMPLETO (`#server-menu`,
+partial home/server_menu con locals recalculados) en vez de solo la línea de
+estado, para que Obtener/Transmitir/Cerrar se deshabiliten/rehabiliten sin
+recargar. Validado en navegador: guard cruzado (flash con la descarga
+corriendo), botones disabled durante la corrida, nodo del menú reemplazado
+al terminar (marcador DOM desapareció) y — punto delicado — los `button_to`
+del menú re-inyectado por broadcast SÍ pasan CSRF (Turbo manda el token del
+meta tag en el header; el render del canal no tiene sesión). Tests de
+integración (4, sync_concurrency_test).
 
 **Universo de productos por capturista (2026-07-26, regla del usuario):** un
 capturista puede tener varios proveedores/marcas asignados y ese es su universo

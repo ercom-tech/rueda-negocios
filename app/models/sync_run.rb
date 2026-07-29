@@ -8,10 +8,15 @@ class SyncRun < ApplicationRecord
 
   scope :recent_first, -> { order(created_at: :desc) }
 
-  # Refresca el panel del servidor en vivo cuando el job cierra el run.
+  # Refresca el panel del servidor en vivo cuando el job cierra el run. Se
+  # reemplaza el menú COMPLETO (no solo la línea de estado): los botones
+  # bloqueados por "corrida en curso" deben rehabilitarse sin recargar.
   after_update_commit do
-    broadcast_replace_to "sync_status", target: "sync-#{kind}-status",
-                         partial: "server/sync_status", locals: { run: self }
+    broadcast_replace_to "sync_status", target: "server-menu",
+                         partial: "home/server_menu",
+                         locals: { setting:   Setting.instance,
+                                   sync_down: SyncRun.latest("down"),
+                                   sync_up:   SyncRun.latest("up") }
   end
 
   # Último run de un tipo (down/up).
