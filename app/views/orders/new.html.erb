@@ -58,8 +58,12 @@
               posible capturarle un pedido.
             </p>
           <% else %>
+          <%# cfdi-default: al cambiar de razón social, el combo de Uso de CFDI
+              brinca al default que ese perfil trae del ERP. %>
+          <% cfdi_defaults = @client.tax_profiles.each_with_object({}) { |t, h| h[t.id] = t.default_cfdi_use&.id if t.default_cfdi_use } %>
           <%= form_with model: @order,
-                data: (both_kinds ? { controller: "order-kind" } : {}), class: "space-y-5" do |f| %>
+                data: { controller: [("order-kind" if both_kinds), "cfdi-default"].compact.join(" "),
+                        cfdi_default_map_value: cfdi_defaults.to_json }, class: "space-y-5" do |f| %>
             <%= f.hidden_field :client_id, value: @client.id %>
 
             <%# Resumen de campos faltantes tras un submit inválido %>
@@ -94,7 +98,8 @@
               </div>
 
               <% if has_invoice %>
-              <div <%= %(data-order-kind-target="invoice").html_safe if both_kinds %>>
+              <div data-cfdi-default-target="cfdi"
+                   <%= %(data-order-kind-target="invoice").html_safe if both_kinds %>>
                 <span class="mb-1 block text-sm font-semibold text-neutral-900">Uso de CFDI</span>
                 <%= render "shared/custom_select", name: "order[cfdi_use_id]", filterable: true,
                       invalid: @order.errors[:cfdi_use_id].any?,
@@ -109,6 +114,7 @@
               <span class="mb-1 block text-sm font-semibold text-neutral-900">Nombre o razón social (RFC)</span>
               <%= render "shared/custom_select", name: "order[client_tax_profile_id]",
                     invalid: @order.errors[:client_tax_profile_id].any?,
+                    input_data: { action: "change->cfdi-default#apply" },
                     options: @client.tax_profiles.map { |t| [t.label, t.id] }, selected: @order.client_tax_profile_id %>
             </div>
             <% end %>
