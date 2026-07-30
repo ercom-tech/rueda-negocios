@@ -1,4 +1,9 @@
 class Order < ApplicationRecord
+  # Las observaciones viajan al ERP, que maneja texto en mayúsculas: se
+  # normalizan aquí (fuente de verdad); el `uppercase` del textarea es solo
+  # presentación mientras se teclea.
+  normalizes :observations, with: ->(text) { text.upcase }
+
   # Pedido levantado por el capturista. No lleva proveedor: puede mezclar
   # productos de distintos proveedores.
 

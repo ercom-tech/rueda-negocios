@@ -62,4 +62,11 @@ class OrderTest < ActiveSupport::TestCase
     order.status = "transmitted"
     assert_equal "Transmitido", order.status_label
   end
+  test "las observaciones se normalizan a mayúsculas (van al ERP)" do
+    order = build_order
+    order.observations = "Entregar en bodega trasera, cañón #2"
+    order.save!
+
+    assert_equal "ENTREGAR EN BODEGA TRASERA, CAÑÓN #2", order.reload.observations
+  end
 end
