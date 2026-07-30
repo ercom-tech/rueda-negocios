@@ -368,6 +368,10 @@ problema operativo del ERP). Cadena completa:
   de pruebas: element.focus() NO dispara el evento focus si la ventana no
   tiene foco del SO — los guards de remember/submitIfChanged se prueban
   despachando FocusEvent a mano. Requiere sync-down para poblar empaques.
+  Refinamiento (cazado por el usuario): el `min` del input debe SER el
+  empaque (con min=1, la ↓ desde 10 caía a 1 y desalineaba: 11, 21…) y la
+  flecha va al siguiente múltiplo EN SU DIRECCIÓN (15↑→20, 15↓→10), nunca
+  bajo el empaque.
 - **dividir_facturas en el encabezado (2026-07-29/30, pedido del usuario):**
   `vta_pedido.dividir_facturas` (NUMERIC(18,6), default 0) = importe máximo
   por factura al facturar el pedido (valores reales: 2k/5k/10k/25k…; 0 = no
@@ -484,6 +488,24 @@ Iterado en vivo con el usuario tras migrar todo al shell oscuro:
   cliente tiene en el ERP (sin fiscales no hay Factura; sin remisiones no hay
   Remisión; con uno solo, tipo fijo sin radio; sin nada → aviso y no captura).
   WhatsApp eliminado por completo del resumen (vista+ruta+acción+asset).
+- **Paso 2 — detalles de contenido (2026-07-30)**: la columna Total de la
+  tabla de partidas incluye descuento e IVA (item.total, como el PDF; antes
+  era cantidad×precio y no cuadraba con el Total del pie). La card del
+  encabezado usa los MISMOS labels que los combos del paso 1 (RFC — razón
+  social, código — descripción del CFDI, sucursal — dirección completa). El
+  buscador de producto va en GRIS neutral-400 (el gris del manual de
+  identidad: pill "# Pedido" de la referencia paso2.png) con texto/lupa
+  oscuros, y recibe el foco al entrar (autofocus vía Stimulus). El hub de
+  reportes ganó "← Volver al menú" (título arriba de las cards a la izq.,
+  botón a la der.).
+- **Observaciones del pedido SIEMPRE en mayúsculas (2026-07-30)**:
+  `normalizes` en Order (fuente de verdad — viaja al ERP) + clase
+  `uppercase` en el textarea (presentación); placeholder exento. Lo ya
+  guardado conserva su caja hasta editarse.
+- **Cambiar razón social actualiza el Uso de CFDI (2026-07-30)**: controller
+  `cfdi-default` con mapa perfil→uso default del ERP; el change del combo de
+  razón social clickea la opción del combo de CFDI (reutiliza la lógica del
+  select). Sin default configurado, no toca la selección.
 - **Reporte de pedidos capturados**: Fecha · Hora (local, separadas) ·
   Cliente (clave — nombre) · Vendedor (id — nombre) · Clave local (enlace al
   pedido) · Renglones · Total · Estatus; el servidor ve además Capturista al
@@ -502,6 +524,16 @@ Iterado en vivo con el usuario tras migrar todo al shell oscuro:
   contexto → el contenido tapaba el modal de cerrar sesión. Fix: el wrapper
   del header va `z-20`. Las pantallas de un solo wrapper (home/reportes/
   ruedas) no sufren esto. (2026-07-29)
+- **El atributo HTML `autofocus` no es confiable tras visitas Turbo** —
+  darlo explícito en `connect()` del controller Stimulus (opt-in con un
+  value). Y en validación con CDP: `element.focus()` NO dispara el evento
+  focus si la ventana no tiene foco del SO — despachar FocusEvent a mano.
+- **Campo numérico vaciado = "": normalizar a 0 antes de validar** si la
+  columna es NOT NULL (borrar el descuento + tab tronaba con
+  PG::NotNullViolation; la validación dejaba pasar el blank).
+- **El runner paralelo de minitest a veces se cuelga en at_exit** (sleep
+  eterno tras terminar los tests; 3 ocurrencias). Correr con
+  `PARALLEL_WORKERS=1` lo evita (~3s la suite completa).
 - **Inputs numéricos con `step="any"`: Chrome NO aplica las flechas ↑/↓ al
   valor** — la tecla cae al scroll de la página (en la tabla de partidas "te
   subía a la primera fila"). Fix doble en form-submit: `stepWithArrows`

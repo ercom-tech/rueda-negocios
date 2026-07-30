@@ -142,6 +142,17 @@ Descubierto en la 2ª auditoría al evaluar cablear `min_sale_quantity`:
   ERP mismo no la impone (~78–85% de ventas reales son múltiplos) — aquí es
   más estricta que el ERP, a propósito.
 
+## Catálogo de montos de división de facturas (`vta_pedido_monto_divide`)
+
+Catálogo global (no ligado a `id_rueda`): PK `(id_empresa, consecutivo)`,
+`monto NUMERIC(18,6)` y `observaciones`. 7 renglones reales: 0 (no dividir),
+2,000, 5,000, 10,000, 15,000, 25,000 y 50,000 — coinciden con la distribución
+de `vta_pedido.dividir_facturas`. Se exporta como `divide_amounts`
+(consecutivo + monto con `trim_scale`) y alimenta la tabla local
+`divide_amounts`: las opciones del combo "Dividir facturas cada ($)" del
+paso 1. El pedido guarda el MONTO elegido, no una FK (igual que
+`vta_pedido`).
+
 ## Universo de productos por capturista (2ª iteración de sync)
 
 Regla del negocio (usuario, 2026-07-26): la asignación proveedor/marca del
