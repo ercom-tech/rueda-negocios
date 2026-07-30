@@ -468,6 +468,13 @@ Iterado en vivo con el usuario tras migrar todo al shell oscuro:
   contexto → el contenido tapaba el modal de cerrar sesión. Fix: el wrapper
   del header va `z-20`. Las pantallas de un solo wrapper (home/reportes/
   ruedas) no sufren esto. (2026-07-29)
+- **Inputs numéricos con `step="any"`: Chrome NO aplica las flechas ↑/↓ al
+  valor** — la tecla cae al scroll de la página (en la tabla de partidas "te
+  subía a la primera fila"). Fix doble en form-submit: `stepWithArrows`
+  (keydown ±1 acotado a min/max + preventDefault, conservando step=any para
+  decimales) y envío en `blur` solo-si-cambió (`remember`/`submitIfChanged`)
+  en vez de `change` — un submit por flecha reemplazaría la tabla por Turbo
+  y mataría el foco. (2026-07-29)
 - **Agregados contra tablas del ERP: en CTE con GROUP BY, no subqueries
   correlacionadas.** La subquery por producto de `supplier_ids` (13k
   ejecuciones × com_proveedor_has_producto, 58k filas cuya PK empieza por

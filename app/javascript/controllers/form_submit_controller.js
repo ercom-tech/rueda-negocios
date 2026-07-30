@@ -14,6 +14,38 @@ export default class extends Controller {
     this.element.requestSubmit()
   }
 
+  // Variante para inputs numéricos con flechitas (cantidad/descuento): cada
+  // flecha dispara `change`, y enviar ahí reemplaza la tabla por Turbo y mata
+  // el foco (el cursor "brincaba"). Se recuerda el valor al ENTRAR al campo y
+  // se envía SOLO al salir, si cambió. Uso:
+  //   data-action="focus->form-submit#remember blur->form-submit#submitIfChanged"
+  remember(event) {
+    event.target.dataset.initialValue = event.target.value
+  }
+
+  submitIfChanged(event) {
+    if (event.target.value === event.target.dataset.initialValue) return
+
+    this.element.requestSubmit()
+  }
+
+  // Flechas ↑/↓ en esos mismos inputs: con step="any" (necesario para
+  // decimales) Chrome NO aplica la flecha al valor y la tecla cae al scroll
+  // de la página ("se sube a la primera fila"). Se implementa el paso de ±1
+  // a mano, acotado a min/max, y se consume la tecla.
+  stepWithArrows(event) {
+    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return
+
+    event.preventDefault()
+    const input = event.target
+    let next = (parseFloat(input.value) || 0) + (event.key === "ArrowUp" ? 1 : -1)
+    const min = parseFloat(input.min)
+    const max = parseFloat(input.max)
+    if (!Number.isNaN(min)) next = Math.max(min, next)
+    if (!Number.isNaN(max)) next = Math.min(max, next)
+    input.value = next
+  }
+
   flashStatus(event) {
     if (!this.hasStatusTarget || event.detail?.success === false) return
 

@@ -27,7 +27,7 @@
         <%= f.number_field :quantity, min: 1, step: "any",
               value: number_with_precision(item.quantity, strip_insignificant_zeros: true),
               "aria-label": "Cantidad — #{item.description}",
-              data: { action: "change->form-submit#submit" },
+              data: { action: "focus->form-submit#remember keydown->form-submit#stepWithArrows blur->form-submit#submitIfChanged" },
               class: "h-11 w-16 rounded-lg border border-neutral-300 bg-white px-2 text-center outline-none focus:border-brand-gold" %>
       <% end %>
     <% else %>
@@ -46,7 +46,7 @@
           <%= f.number_field :discount_percent, min: 0, max: 100, step: "any",
                 value: number_with_precision(item.discount_percent, strip_insignificant_zeros: true),
                 "aria-label": "Descuento (%) — #{item.description}",
-                data: { action: "change->form-submit#submit" },
+                data: { action: "focus->form-submit#remember keydown->form-submit#stepWithArrows blur->form-submit#submitIfChanged" },
                 class: "h-11 w-16 rounded-lg border border-neutral-300 bg-white px-2 text-center outline-none focus:border-brand-gold" %>
           <span>%</span>
         </div>
