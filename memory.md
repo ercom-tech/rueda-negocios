@@ -910,6 +910,21 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
   capturista makita1/prefijo 1A) → folio `1A0016`, cabecera+detalle correctos,
   IVA por partida, totales cuadran; idempotencia confirmada; pedido de prueba
   limpiado del ERP.
+- **Bug "no se reflejan en el ERP" (2026-07-30):** comparando nuestros pedidos
+  transmitidos (1A0016–1A0020) contra pedidos CAPTUR normales del ERP, columna
+  por columna y midiendo invariantes sobre 1.2M de pedidos históricos, nos
+  faltaban: **`renglones`** (SIEMPRE = # partidas; nosotros dejábamos 0 — la
+  causa más probable), **`id_sucursal_crea=1`**, **`hora_crea` sin
+  microsegundos** (los únicos 5 pedidos del histórico con micros eran los
+  nuestros; `Sequel::CURRENT_TIME` los incluye → `localtime(0)`) y
+  **`observaciones=' '`** cuando viene vacía (moda del ERP). `hora_transmision`
+  SÍ lleva micros en el propio ERP — se queda. NO era problema:
+  `flujo_recorrido=f` (lo prende un proceso posterior del ERP; pedidos ajenos
+  recién capturados también lo traen en `f`) y los campos operativos del
+  detalle en 0 vs NULL (el histórico trae ambos). Corregido en
+  `OrderCreate.insert_header/insert_details` + UPDATE de remediación a los 5
+  pedidos ya transmitidos. Método: **la fila del ERP es la especificación** —
+  ante dudas, medir la invariante en el histórico con COUNT.
 
 ### Fase D — Panel del servidor (UI de sync) (decisiones)
 

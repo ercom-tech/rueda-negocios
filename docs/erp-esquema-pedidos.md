@@ -70,6 +70,15 @@ Desglose **por partida**: `iva_porcentaje` + `iva_monto`, `descto_porcentaje` +
 ## Valores del alta (definidos)
 
 - `estatus_actual` = **`CAPTUR`**.
+- `renglones` = **# de partidas** del pedido. Invariante dura: en 1.2M de
+  pedidos históricos SIEMPRE es el conteo del detalle — dejarlo en 0 hace que
+  el ERP no refleje bien el pedido (bug encontrado 2026-07-30).
+- `id_sucursal_crea` = **1** (matriz), como todo pedido capturado en oficina.
+- **Horas sin microsegundos:** `hora_crea` (cabecera y detalle) va a segundo
+  (`localtime(0)`); el ERP no tolera micros en horas de captura. Excepción:
+  `hora_transmision` SÍ trae micros en el propio ERP y se deja igual.
+- `observaciones` sin texto = **`' '`** (un espacio, la moda del ERP; `''`
+  casi no existe en el histórico).
 - `id_vendedor` = **el vendedor del cliente** (`vta_cliente.id_vendedor`), no el
   capturista.
 - `bodega` = **no se usa**.
@@ -90,7 +99,8 @@ Desglose **por partida**: `iva_porcentaje` + `iva_monto`, `descto_porcentaje` +
 | `cfdi_use.code` | `"c_UsoCFDI"` |
 | `client_branch` (sucursal) | `sucursal` |
 | `client.salesperson.erp_salesperson_id` | `id_vendedor` |
-| `observations` | `observaciones` |
+| `observations` | `observaciones` (vacía → `' '`) |
+| `order_items.count` | `renglones` |
 | `dividir_facturas` (NUMERIC(18,6); importe máximo por factura al facturar, 0 = no dividir — se captura en el paso 1, solo Factura) | `dividir_facturas` |
 | totales | `subtotal`/`descto_monto`/`iva_monto`/`total` |
 | item: `code`/`quantity`/`unit_price`/`discount_%`/`tax_%` (+ montos) | `id_producto`/`cantidad`/`precio`/`descto_porcentaje`/`iva_porcentaje` (+ `descto_monto`/`iva_monto`/`subtotal`/`total`) |
