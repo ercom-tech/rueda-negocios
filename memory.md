@@ -366,6 +366,15 @@ problema operativo del ERP). Cadena completa:
   E2E contra el ERP de testing (pedido 1A0017 → 5000; borrado después).
   Trampa repetida: el primer intento insertó 0 porque el rackup de :4568
   servía código de ayer.
+  Iteración UI (2026-07-30, pedido del usuario): el campo va DEBAJO de
+  Dirección de entrega, a MEDIA columna (como Tipo/Uso CFDI), formato pill
+  negra, sin hint, y es un COMBO alimentado por el catálogo del ERP
+  `vta_pedido_monto_divide` (7 montos: 0/2k/5k/10k/15k/25k/50k) → export
+  `divide_amounts` → tabla local `divide_amounts` (DivideAmount, label
+  "No dividir"/"$2,000"). El pedido guarda el MONTO elegido, no FK (igual
+  que vta_pedido). Sin catálogo sincronizado el combo no se muestra
+  (queda 0). Emparejar selected: valor plano normalizado
+  (DivideAmount#option_value / Order#dividir_facturas_option).
 - **Código FECEGO a 6 dígitos (2026-07-28, regla del usuario):** el ERP
   guarda `id_producto` como entero pero SIEMPRE lo muestra a 6 dígitos
   (17768 → "017768"). `Product#erp_code` (`format("%06d")`) es la única

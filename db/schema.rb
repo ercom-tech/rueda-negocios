@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_30_051337) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_30_053658) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -160,6 +160,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_30_051337) do
     t.index ["erp_client_key"], name: "index_clients_on_erp_client_key_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["name"], name: "index_clients_on_name_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["salesperson_id"], name: "index_clients_on_salesperson_id"
+  end
+
+  create_table "divide_amounts", force: :cascade do |t|
+    t.decimal "amount", precision: 18, scale: 6, null: false
+    t.datetime "created_at", null: false
+    t.integer "erp_consecutive", null: false
+    t.datetime "updated_at", null: false
+    t.index ["erp_consecutive"], name: "index_divide_amounts_on_erp_consecutive", unique: true
   end
 
   create_table "login_events", force: :cascade do |t|

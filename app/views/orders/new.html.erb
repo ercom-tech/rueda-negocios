@@ -113,18 +113,6 @@
             </div>
             <% end %>
 
-            <%# Solo Factura: importe máximo por factura (vta_pedido.dividir_facturas) %>
-            <% if has_invoice %>
-            <div <%= %(data-order-kind-target="invoice").html_safe if both_kinds %>>
-              <span class="mb-1 block text-sm font-semibold text-neutral-900">Dividir facturas cada ($)</span>
-              <%= f.number_field :dividir_facturas, min: 0, step: "any",
-                    value: number_with_precision(@order.dividir_facturas || 0, strip_insignificant_zeros: true),
-                    "aria-label": "Dividir facturas cada (importe)",
-                    class: "h-12 w-full rounded-full border border-neutral-300 bg-white px-5 text-neutral-900 outline-none focus:border-brand-gold sm:w-64" %>
-              <span class="mt-1 block text-xs text-neutral-600">Monto máximo por factura al facturar el pedido; 0 = no dividir.</span>
-            </div>
-            <% end %>
-
             <% if has_remission %>
             <div <%= %(data-order-kind-target="remission").html_safe if both_kinds %>>
               <span class="mb-1 block text-sm font-semibold text-neutral-900">Remisión</span>
@@ -141,6 +129,22 @@
                     invalid: @order.errors[:client_branch_id].any?,
                     options: @client.branches.map { |b| [b.label, b.id] }, selected: @order.client_branch_id %>
             </div>
+
+            <%# Solo Factura: monto de división de facturas — combo del
+                catálogo vta_pedido_monto_divide (media columna, como Tipo /
+                Uso de CFDI). El pedido guarda el MONTO elegido, no una FK.
+                Sin catálogo sincronizado, el campo no se muestra (queda 0). %>
+            <% if has_invoice && (divide_amounts = DivideAmount.ordered).any? %>
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2"
+                 <%= %(data-order-kind-target="invoice").html_safe if both_kinds %>>
+              <div>
+                <span class="mb-1 block text-sm font-semibold text-neutral-900">Dividir facturas cada ($)</span>
+                <%= render "shared/custom_select", name: "order[dividir_facturas]", include_blank: false,
+                      options: divide_amounts.map { |d| [d.label, d.option_value] },
+                      selected: @order.dividir_facturas_option %>
+              </div>
+            </div>
+            <% end %>
 
             <div class="pt-2 text-center">
               <%= f.submit (@order.persisted? ? "Guardar cambios" : "Continuar a levantamiento de pedido"),

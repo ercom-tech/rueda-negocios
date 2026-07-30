@@ -38,6 +38,7 @@ module Sync
       purge_local_orders!
       clear_catalog!
       import_cfdi_uses
+      import_divide_amounts
       import_brands
       import_suppliers
       import_salespeople
@@ -87,7 +88,7 @@ module Sync
 
       [Price, ProductSupplier, Product,
        ClientTaxProfile, ClientReceiptProfile, ClientBranch, Client,
-       Salesperson, Supplier, Brand, CfdiUse, BusinessRound].each(&:delete_all)
+       Salesperson, Supplier, Brand, CfdiUse, DivideAmount, BusinessRound].each(&:delete_all)
     end
 
     def exec_delete(table)
@@ -99,6 +100,15 @@ module Sync
     def import_cfdi_uses
       rows = @data["cfdi_uses"].map { |c| { code: c["code"], description: c["description"] } }
       insert CfdiUse, rows
+    end
+
+    # Montos de división de facturas (combo del paso 1). Array() por
+    # compatibilidad con exports viejos sin la llave.
+    def import_divide_amounts
+      rows = Array(@data["divide_amounts"]).map do |d|
+        { erp_consecutive: d["consecutive"], amount: d["amount"] }
+      end
+      insert DivideAmount, rows
     end
 
     def import_brands

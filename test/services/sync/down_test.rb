@@ -26,7 +26,9 @@ module Sync
                             "supplier_ids" => [10, 99],
                             "supplier_skus" => [{ "erp_supplier_id" => 10, "supplier_sku" => "SKU1" }] }],
         "people"      => [{ "erp_person_id" => 90092, "position" => 1,
-                            "erp_supplier_id" => 10, "erp_brand_id" => nil }]
+                            "erp_supplier_id" => 10, "erp_brand_id" => nil }],
+        "divide_amounts" => [{ "consecutive" => 1, "amount" => "0" },
+                             { "consecutive" => 2, "amount" => "2000" }]
       }
     end
 
@@ -34,6 +36,8 @@ module Sync
       result = Down.new(export_data).run!
 
       assert_equal 1, CfdiUse.count
+      assert_equal 2, DivideAmount.count
+      assert_equal ["No dividir", "$2,000"], DivideAmount.ordered.map(&:label)
       assert_equal 1, Brand.count
       assert_equal 1, Supplier.count
       assert_equal 1, Salesperson.count

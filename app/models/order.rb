@@ -9,6 +9,13 @@ class Order < ApplicationRecord
   # se guarda siempre (0) para transmitir el encabezado completo.
   validates :dividir_facturas, numericality: { greater_than_or_equal_to: 0 }
 
+  # Valor plano para el combo del paso 1 ("0", "2000") — mismo formato que
+  # DivideAmount#option_value para que `selected` empareje.
+  def dividir_facturas_option
+    ActiveSupport::NumberHelper.number_to_rounded(dividir_facturas || 0,
+                                                  strip_insignificant_zeros: true, delimiter: "")
+  end
+
   # Pedido levantado por el capturista. No lleva proveedor: puede mezclar
   # productos de distintos proveedores.
 
