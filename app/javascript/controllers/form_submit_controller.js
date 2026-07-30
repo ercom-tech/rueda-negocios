@@ -38,9 +38,20 @@ export default class extends Controller {
 
     event.preventDefault()
     const input = event.target
-    // El paso lo define data-step-size (empaque mínimo de venta) si existe.
-    const step = parseFloat(input.dataset.stepSize) || 1
-    let next = (parseFloat(input.value) || 0) + (event.key === "ArrowUp" ? step : -step)
+    const dir = event.key === "ArrowUp" ? 1 : -1
+    const pack = parseFloat(input.dataset.stepSize)
+    const current = parseFloat(input.value) || 0
+    let next
+    if (pack) {
+      // Producto con empaque: la flecha va al SIGUIENTE múltiplo en su
+      // dirección (10→20→30; un 15 tecleado va a 20 con ↑ y a 10 con ↓),
+      // sin bajar del empaque (10↓ se queda en 10, no cae a 1).
+      next = dir > 0 ? Math.floor(current / pack) * pack + pack
+                     : Math.ceil(current / pack) * pack - pack
+      if (next < pack) next = pack
+    } else {
+      next = current + dir
+    }
     const min = parseFloat(input.min)
     const max = parseFloat(input.max)
     if (!Number.isNaN(min)) next = Math.max(min, next)

@@ -27,13 +27,17 @@
     <% if can_edit_order?(order) %>
       <%= form_with model: item, url: order_order_item_path(order, item), method: :patch,
             id: dom_id(item, :quantity_form), data: { controller: "form-submit" } do |f| %>
-        <%# data-step-size: las flechas ↑/↓ avanzan por empaque mínimo de
-            venta cuando el producto vende por múltiplos. %>
-        <%= f.number_field :quantity, min: 1, step: "any", id: dom_id(item, :quantity),
+        <%# Con empaque mínimo: el min del input ES el empaque (si no, la
+            flecha ↓ desde el empaque se sujetaba a 1 y desalineaba: 10→1→11)
+            y data-step-size hace que las flechas avancen alineadas a la
+            rejilla de múltiplos. Sin empaque: min 1 y paso de 1. %>
+        <% empaque = item.product&.min_sale_quantity %>
+        <%= f.number_field :quantity, step: "any", id: dom_id(item, :quantity),
+              min: number_with_precision(empaque || 1, strip_insignificant_zeros: true),
               value: number_with_precision(item.quantity, strip_insignificant_zeros: true),
-              "data-step-size": number_with_precision(item.product&.min_sale_quantity || 1, strip_insignificant_zeros: true),
               "aria-label": "Cantidad — #{item.description}",
-              data: { action: "focus->form-submit#remember keydown->form-submit#stepWithArrows blur->form-submit#submitIfChanged" },
+              data: { action: "focus->form-submit#remember keydown->form-submit#stepWithArrows blur->form-submit#submitIfChanged",
+                      step_size: (number_with_precision(empaque, strip_insignificant_zeros: true) if empaque) }.compact,
               class: "h-11 w-16 rounded-lg border border-neutral-300 bg-white px-2 text-center outline-none focus:border-brand-gold" %>
       <% end %>
     <% else %>
