@@ -355,6 +355,19 @@ problema operativo del ERP). Cadena completa:
   partidas — ojo Prawn: la tabla toma su ancho natural, no el del
   bounding_box; hay que fijar column_widths que sumen el ancho del box y
   quitar el padding derecho de la columna de montos.
+- **Empaque mínimo de venta — REVIVIDO como regla dura (2026-07-30, pedido
+  del usuario):** revierte la decisión de la 2ª auditoría ("no cablear").
+  Fuente `com_producto_has_empaque` (MIN(cantidad) con minimo=true, CTE en el
+  export → `min_sale_quantity`, ~957 productos en la rueda 3; NULL = sin
+  regla). La cantidad debe ser múltiplo exacto
+  (OrderItem#quantity_in_package_multiples, mensaje "se vende en múltiplos de
+  X"); la partida nueva arranca en el empaque y las flechas ↑/↓ avanzan por
+  empaque (data-step-size). La regla es MÁS estricta que el propio ERP
+  (~78–85% de ventas reales son múltiplos) — a propósito. Validado E2E en
+  navegador (alta→20, flecha→40, 25→422 y repinta 20). Detalle del entorno
+  de pruebas: element.focus() NO dispara el evento focus si la ventana no
+  tiene foco del SO — los guards de remember/submitIfChanged se prueban
+  despachando FocusEvent a mano. Requiere sync-down para poblar empaques.
 - **dividir_facturas en el encabezado (2026-07-29/30, pedido del usuario):**
   `vta_pedido.dividir_facturas` (NUMERIC(18,6), default 0) = importe máximo
   por factura al facturar el pedido (valores reales: 2k/5k/10k/25k…; 0 = no
