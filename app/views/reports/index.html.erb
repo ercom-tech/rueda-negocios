@@ -9,9 +9,15 @@
     <%# ── Barra superior compartida (misma que el home) ── %>
     <%= render "shared/top_bar" %>
 
-    <%# ── Cuerpo: título + tarjetas de reporte centradas ── %>
+    <%# ── Título + regreso al menú (mismo patrón que Pedidos capturados) ── %>
+    <div class="mt-8 flex flex-wrap items-center justify-between gap-4">
+      <h1 class="text-3xl font-extrabold text-white sm:text-4xl">Reportes de venta</h1>
+      <%= link_to "← Volver al menú", root_path,
+            class: "rounded-full bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/20" %>
+    </div>
+
+    <%# ── Cuerpo: tarjetas de reporte centradas ── %>
     <div class="flex flex-1 flex-col items-center justify-center py-10">
-      <h1 class="mb-10 text-4xl font-extrabold text-white sm:text-5xl">Reportes de venta</h1>
       <div class="w-full max-w-5xl">
       <div class="grid grid-cols-2 gap-6 sm:gap-8 lg:grid-cols-4">
         <%# Heroicons outline (mismo pack que los menús): clipboard-document-list ·
