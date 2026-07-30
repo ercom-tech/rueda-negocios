@@ -38,7 +38,9 @@ export default class extends Controller {
 
     event.preventDefault()
     const input = event.target
-    let next = (parseFloat(input.value) || 0) + (event.key === "ArrowUp" ? 1 : -1)
+    // El paso lo define data-step-size (empaque mínimo de venta) si existe.
+    const step = parseFloat(input.dataset.stepSize) || 1
+    let next = (parseFloat(input.value) || 0) + (event.key === "ArrowUp" ? step : -step)
     const min = parseFloat(input.min)
     const max = parseFloat(input.max)
     if (!Number.isNaN(min)) next = Math.max(min, next)

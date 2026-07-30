@@ -54,6 +54,31 @@ class OrderItemTest < ActiveSupport::TestCase
     assert_not item(product: nil, discount_percent: 1).valid?
   end
 
+  test "producto con empaque mínimo: solo se vende en múltiplos" do
+    p = product(0)
+    p.update!(min_sale_quantity: 6)
+
+    assert item(product: p, quantity: 6).valid?
+    assert item(product: p, quantity: 18).valid?
+
+    oi = item(product: p, quantity: 7)
+    assert_not oi.valid?
+    assert_includes oi.errors.full_messages,
+                    "El producto se vende en múltiplos de 6 (empaque mínimo de venta)."
+  end
+
+  test "sin empaque mínimo (nil) no hay regla de múltiplos" do
+    assert item(product: product(0), quantity: 7).valid?
+  end
+
+  test "empaque mínimo decimal también valida múltiplos exactos" do
+    p = product(0)
+    p.update!(min_sale_quantity: 2.5)
+
+    assert item(product: p, quantity: 7.5).valid?
+    assert_not item(product: p, quantity: 6).valid?
+  end
+
   test "cantidad no positiva es inválida con mensaje en español" do
     oi = item(quantity: 0, discount_percent: 0)
     assert_not oi.valid?

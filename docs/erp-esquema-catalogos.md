@@ -133,6 +133,14 @@ Descubierto en la 2ª auditoría al evaluar cablear `min_sale_quantity`:
 - **Decisión (usuario):** NO cablear la regla de múltiplos en la rueda; la
   columna local `products.min_sale_quantity` (que el sync nunca pobló) se
   **eliminó**. Si el tema del empaque revive, la fuente es esta tabla.
+- **Revivió (2026-07-30, regla del usuario):** ahora SÍ es regla dura en la
+  rueda. Export: CTE `emp` (MIN(cantidad) con minimo=true, ~957 productos en
+  la rueda 3) → `min_sale_quantity` por producto → columna local en products
+  (NULL = sin regla). La app valida que la cantidad sea múltiplo exacto
+  (OrderItem#quantity_in_package_multiples), la partida nueva arranca en el
+  empaque y las flechas ↑/↓ avanzan por empaque (data-step-size). Ojo: el
+  ERP mismo no la impone (~78–85% de ventas reales son múltiplos) — aquí es
+  más estricta que el ERP, a propósito.
 
 ## Universo de productos por capturista (2ª iteración de sync)
 

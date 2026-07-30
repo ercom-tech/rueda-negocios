@@ -11,6 +11,7 @@ class OrderItem < ApplicationRecord
 
   validates :tax_rate, numericality: { greater_than_or_equal_to: 0 }
   validate :quantity_positive
+  validate :quantity_in_package_multiples
   validate :unit_price_positive
   validate :discount_within_limits
 
@@ -19,6 +20,18 @@ class OrderItem < ApplicationRecord
   # español, para el flash de OrderItems#update.
   def quantity_positive
     errors.add(:base, "La cantidad debe ser mayor a 0.") if quantity.blank? || quantity <= 0
+  end
+
+  # Empaque mínimo de venta (com_producto_has_empaque): el producto solo se
+  # vende en múltiplos de min_sale_quantity. Sin dato (nil) no hay regla.
+  def quantity_in_package_multiples
+    min = product&.min_sale_quantity
+    return if min.blank? || min <= 0 || quantity.blank? || quantity <= 0
+    return if (quantity % min).zero?
+
+    errors.add(:base, "El producto se vende en múltiplos de " \
+                      "#{ActiveSupport::NumberHelper.number_to_rounded(min, strip_insignificant_zeros: true)} " \
+                      "(empaque mínimo de venta).")
   end
 
   # Un producto sin precio (sync sin renglón de precio → snapshot 0) no debe

@@ -7,9 +7,12 @@ class OrderItemsController < ApplicationController
   # un product_id fuera del universo → 404, aunque el POST venga forjado.
   def create
     product = current_user.product_universe(active_round).find(params[:product_id])
+    # La cantidad inicial arranca en el empaque mínimo de venta (si el
+    # producto vende por múltiplos); 1 en caso contrario.
     item = @order.order_items.build(
       product.to_order_item_attributes.merge(
-        position: @order.next_item_position, quantity: 1, discount_percent: 0
+        position: @order.next_item_position, discount_percent: 0,
+        quantity: product.min_sale_quantity.presence || 1
       )
     )
     if item.save

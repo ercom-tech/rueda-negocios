@@ -23,6 +23,7 @@ module Sync
         "products"    => [{ "erp_product_id" => 3, "description" => "Rotomartillo", "part_number" => nil, "model" => nil,
                             "erp_brand_id" => 1, "stock" => "0.0", "unit" => "PZA",
                             "public_price" => "471.08", "wholesale_price" => "407.82", "tax_rate" => "16.0", "max_discount" => "0.0",
+                            "min_sale_quantity" => "6",
                             "supplier_ids" => [10, 99],
                             "supplier_skus" => [{ "erp_supplier_id" => 10, "supplier_sku" => "SKU1" }] }],
         "people"      => [{ "erp_person_id" => 90092, "position" => 1,
@@ -43,6 +44,7 @@ module Sync
       assert_equal 1, Salesperson.count
       assert_equal 1, Client.count
       assert_equal 1, Product.count
+      assert_equal 6, Product.sole.min_sale_quantity, "el empaque mínimo debe sincronizarse"
       assert_equal 1, Price.count
       assert_equal 1, ProductSupplier.count # supplier_ids 99 no es de la rueda → omitido
       assert_equal true, BusinessRound.find_by(erp_round_id: 3).active?

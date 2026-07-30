@@ -227,7 +227,8 @@ module Sync
         { erp_product_id: p["erp_product_id"], description: p["description"],
           part_number: p["part_number"], model: p["model"],
           brand_id: brand_by_erp[p["erp_brand_id"]], stock: p["stock"],
-          unit: p["unit"], max_discount: p["max_discount"] }
+          unit: p["unit"], max_discount: p["max_discount"],
+          min_sale_quantity: p["min_sale_quantity"] }
       end
       insert Product, rows
 
