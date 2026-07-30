@@ -461,6 +461,13 @@ Iterado en vivo con el usuario tras migrar todo al shell oscuro:
   clic (preventDefault) pero el form efímero no se sometía — el POST jamás
   salía, sin error en consola. Usar **`button_to`** para toda acción no-GET
   (era el único link así; ya migrado).
+- **Modales dentro de wrappers hermanos con el mismo z-index se tapan.** Los
+  pasos del pedido parten la página en dos `relative z-10` hermanos (header
+  con top_bar/modal + contenido); entre hermanos con el mismo z gana el
+  posterior en el DOM, y el `z-50` del diálogo solo cuenta DENTRO de su
+  contexto → el contenido tapaba el modal de cerrar sesión. Fix: el wrapper
+  del header va `z-20`. Las pantallas de un solo wrapper (home/reportes/
+  ruedas) no sufren esto. (2026-07-29)
 - **Agregados contra tablas del ERP: en CTE con GROUP BY, no subqueries
   correlacionadas.** La subquery por producto de `supplier_ids` (13k
   ejecuciones × com_proveedor_has_producto, 58k filas cuya PK empieza por
