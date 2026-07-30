@@ -103,6 +103,7 @@
         <% if can_edit_order?(@order) %>
           <div class="relative" data-controller="autocomplete"
                data-autocomplete-url-value="<%= product_options_order_path(@order) %>"
+               data-autocomplete-autofocus-value="true"
                data-action="click@window->autocomplete#hide turbo:submit-end->autocomplete#reset">
             <%# Gris del manual de identidad (pill "# Pedido" de la referencia
                 paso2) — el mismo neutral-400 de los pills grises del sitio. %>

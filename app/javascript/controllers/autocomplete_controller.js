@@ -7,6 +7,7 @@ import { Controller } from "@hotwired/stimulus"
 //   data-autocomplete-target="input"   en el <input>
 //   data-autocomplete-target="results" en el contenedor del dropdown
 //   data-autocomplete-url-value="/orders/client_options"
+//   data-autocomplete-autofocus-value="true" (opcional: enfoca el input al cargar)
 //   data-action="input->autocomplete#search keydown->autocomplete#navigate"
 //
 // Accesibilidad: el input es role="combobox" con aria-expanded/aria-activedescendant;
@@ -14,10 +15,13 @@ import { Controller } from "@hotwired/stimulus"
 // un aviso de error (role=alert), en vez de fallar en silencio.
 export default class extends Controller {
   static targets = ["input", "results"]
-  static values = { url: String }
+  static values = { url: String, autofocus: Boolean }
 
   connect() {
     this.index = -1
+    // El atributo HTML autofocus no es confiable tras visitas Turbo; el foco
+    // se da aquí, explícito, cuando la pantalla lo pide (paso 2).
+    if (this.autofocusValue) this.inputTarget.focus()
   }
 
   search() {
