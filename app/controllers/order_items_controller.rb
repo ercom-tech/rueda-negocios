@@ -61,10 +61,14 @@ class OrderItemsController < ApplicationController
     params.require(:order_item).permit(:quantity, :discount_percent)
   end
 
+  # Morph (no replace): actualiza la tabla en sitio emparejando nodos por id,
+  # así el input al que el usuario acaba de brincar (Tab/clic) NO se destruye
+  # y conserva el foco — con replace, el foco moría y las flechas siguientes
+  # scrolleaban la página al primer renglón.
   def detail_streams
     [
-      turbo_stream.replace("order-detail", partial: "orders/items_table", locals: { order: @order }),
-      turbo_stream.replace("order-totals", partial: "orders/totals", locals: { order: @order })
+      turbo_stream.replace("order-detail", method: :morph, partial: "orders/items_table", locals: { order: @order }),
+      turbo_stream.replace("order-totals", method: :morph, partial: "orders/totals", locals: { order: @order })
     ]
   end
 

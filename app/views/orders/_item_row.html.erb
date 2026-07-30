@@ -1,5 +1,8 @@
-<%# Fila de partida. Locals: order, item. %>
-<tr class="border-t border-black/10 text-center">
+<%# Fila de partida. Locals: order, item.
+    Ids únicos por fila (tr, forms e inputs): el update repinta con morph, y
+    idiomorph solo conserva el foco si empareja los nodos por id — con ids
+    duplicados entre filas el foco moría y las flechas scrolleaban al inicio. %>
+<tr id="<%= dom_id(item) %>" class="border-t border-black/10 text-center">
   <td class="px-2 py-2">
     <% if can_edit_order?(order) %>
       <div data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
@@ -23,8 +26,8 @@
   <td class="px-3 py-2">
     <% if can_edit_order?(order) %>
       <%= form_with model: item, url: order_order_item_path(order, item), method: :patch,
-            data: { controller: "form-submit" } do |f| %>
-        <%= f.number_field :quantity, min: 1, step: "any",
+            id: dom_id(item, :quantity_form), data: { controller: "form-submit" } do |f| %>
+        <%= f.number_field :quantity, min: 1, step: "any", id: dom_id(item, :quantity),
               value: number_with_precision(item.quantity, strip_insignificant_zeros: true),
               "aria-label": "Cantidad — #{item.description}",
               data: { action: "focus->form-submit#remember keydown->form-submit#stepWithArrows blur->form-submit#submitIfChanged" },
@@ -41,9 +44,9 @@
   <td class="px-3 py-2">
     <% if can_edit_order?(order) %>
       <%= form_with model: item, url: order_order_item_path(order, item), method: :patch,
-            data: { controller: "form-submit" } do |f| %>
+            id: dom_id(item, :discount_form), data: { controller: "form-submit" } do |f| %>
         <div class="flex items-center justify-center gap-1">
-          <%= f.number_field :discount_percent, min: 0, max: 100, step: "any",
+          <%= f.number_field :discount_percent, min: 0, max: 100, step: "any", id: dom_id(item, :discount),
                 value: number_with_precision(item.discount_percent, strip_insignificant_zeros: true),
                 "aria-label": "Descuento (%) — #{item.description}",
                 data: { action: "focus->form-submit#remember keydown->form-submit#stepWithArrows blur->form-submit#submitIfChanged" },

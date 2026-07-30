@@ -475,6 +475,16 @@ Iterado en vivo con el usuario tras migrar todo al shell oscuro:
   decimales) y envío en `blur` solo-si-cambió (`remember`/`submitIfChanged`)
   en vez de `change` — un submit por flecha reemplazaría la tabla por Turbo
   y mataría el foco. (2026-07-29)
+  Segunda parte (mismo día): al SALIR del campo seguía brincando — el stream
+  del update reemplazaba la tabla completa y destruía el input al que el
+  usuario acababa de brincar (Tab/clic) → foco a body → la siguiente flecha
+  scrolleaba al inicio. Fix: `turbo_stream.replace(..., method: :morph)`
+  (turbo-rails 2.0.23) en tabla y totales — idiomorph actualiza en sitio y
+  conserva el foco, PERO solo si empareja nodos por id ÚNICO: hubo que dar
+  ids por fila a tr/forms/inputs (dom_id(item, :quantity) etc.; form_with
+  model repetía `edit_order_item_X` dos veces por fila y
+  `order_item_quantity` en todas). Validado: editar cantidad → brincar a
+  descuento de la misma fila → stream aplica y el foco sigue ahí.
 - **Agregados contra tablas del ERP: en CTE con GROUP BY, no subqueries
   correlacionadas.** La subquery por producto de `supplier_ids` (13k
   ejecuciones × com_proveedor_has_producto, 58k filas cuya PK empieza por
