@@ -28,6 +28,17 @@ class OrderItemTest < ActiveSupport::TestCase
     assert item(product: product(5), discount_percent: 5).valid?
   end
 
+  test "borrar el descuento (campo vacío) significa 0 y se guarda sin tronar" do
+    oi = item(product: product(5), discount_percent: 5)
+    oi.save!
+
+    # Lo que manda el form al vaciar el campo y dar tab: "" → antes reventaba
+    # con PG::NotNullViolation; debe normalizarse a 0.
+    assert oi.update(discount_percent: "")
+    assert_equal 0, oi.reload.discount_percent
+    assert_equal 0, oi.discount_amount
+  end
+
   test "max_discount 0 bloquea cualquier descuento" do
     assert_not item(product: product(0), discount_percent: 1).valid?
     assert item(product: product(0), discount_percent: 0).valid?

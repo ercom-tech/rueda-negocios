@@ -4,6 +4,11 @@ class OrderItem < ApplicationRecord
   belongs_to :order
   belongs_to :product, optional: true
 
+  # Borrar el campo de descuento significa "sin descuento": normalizar a 0
+  # antes de validar — la columna es NOT NULL (borrar + tab tronaba con
+  # PG::NotNullViolation) y los cálculos dividen sobre el valor.
+  before_validation { self.discount_percent = 0 if discount_percent.blank? }
+
   validates :tax_rate, numericality: { greater_than_or_equal_to: 0 }
   validate :quantity_positive
   validate :unit_price_positive
