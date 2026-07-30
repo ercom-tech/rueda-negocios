@@ -113,6 +113,18 @@
             </div>
             <% end %>
 
+            <%# Solo Factura: importe máximo por factura (vta_pedido.dividir_facturas) %>
+            <% if has_invoice %>
+            <div <%= %(data-order-kind-target="invoice").html_safe if both_kinds %>>
+              <span class="mb-1 block text-sm font-semibold text-neutral-900">Dividir facturas cada ($)</span>
+              <%= f.number_field :dividir_facturas, min: 0, step: "any",
+                    value: number_with_precision(@order.dividir_facturas || 0, strip_insignificant_zeros: true),
+                    "aria-label": "Dividir facturas cada (importe)",
+                    class: "h-12 w-full rounded-full border border-neutral-300 bg-white px-5 text-neutral-900 outline-none focus:border-brand-gold sm:w-64" %>
+              <span class="mt-1 block text-xs text-neutral-600">Monto máximo por factura al facturar el pedido; 0 = no dividir.</span>
+            </div>
+            <% end %>
+
             <% if has_remission %>
             <div <%= %(data-order-kind-target="remission").html_safe if both_kinds %>>
               <span class="mb-1 block text-sm font-semibold text-neutral-900">Remisión</span>

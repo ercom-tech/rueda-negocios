@@ -354,7 +354,19 @@ problema operativo del ERP). Cadena completa:
   derecho (bajo Estatus); totales flush al borde derecho de la tabla de
   partidas — ojo Prawn: la tabla toma su ancho natural, no el del
   bounding_box; hay que fijar column_widths que sumen el ancho del box y
-  quitar el padding derecho de la columna de montos. el ERP
+  quitar el padding derecho de la columna de montos.
+- **dividir_facturas en el encabezado (2026-07-29/30, pedido del usuario):**
+  `vta_pedido.dividir_facturas` (NUMERIC(18,6), default 0) = importe máximo
+  por factura al facturar el pedido (valores reales: 2k/5k/10k/25k…; 0 = no
+  dividir). El usuario primero lo llamó "monto_divide" — no existía; el
+  nombre real se confirmó consultando el esquema. Cadena completa: columna
+  espejo en orders + campo en paso 1 (SOLO visible con tipo Factura, target
+  de order-kind) + card del paso 2 ("cada $X" / "No dividir") + payload del
+  sync-up + INSERT en rueda-api (`p["dividir_facturas"] || 0`). Validado
+  E2E contra el ERP de testing (pedido 1A0017 → 5000; borrado después).
+  Trampa repetida: el primer intento insertó 0 porque el rackup de :4568
+  servía código de ayer.
+- **Código FECEGO a 6 dígitos (2026-07-28, regla del usuario):** el ERP
   guarda `id_producto` como entero pero SIEMPRE lo muestra a 6 dígitos
   (17768 → "017768"). `Product#erp_code` (`format("%06d")`) es la única
   definición del formato; lo usan el autocompletado y el snapshot de partidas

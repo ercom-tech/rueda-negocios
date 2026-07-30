@@ -87,7 +87,12 @@
             <span class="block text-xs text-white/50">Uso de CFDI</span>
             <span class="font-semibold"><%= @order.invoice? ? (@order.cfdi_use&.code || "—") : "—" %></span>
           </div>
-          <div class="hidden sm:block"></div>
+          <div>
+            <span class="block text-xs text-white/50">Dividir facturas</span>
+            <span class="font-semibold">
+              <%= @order.invoice? ? (@order.dividir_facturas.positive? ? "cada #{number_to_currency(@order.dividir_facturas)}" : "No dividir") : "—" %>
+            </span>
+          </div>
           <div>
             <span class="block text-xs text-white/50">Dirección de entrega</span>
             <span class="font-semibold"><%= @order.client_branch&.name || "—" %></span>

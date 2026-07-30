@@ -69,6 +69,7 @@ module Sync
         sucursal:      order.client_branch&.erp_branch_id,
         id_vendedor:   order.client.salesperson&.erp_salesperson_id,
         observaciones: order.observations,
+        dividir_facturas: order.dividir_facturas,
         subtotal:      order.subtotal,
         descto_monto:  order.discount_total,
         iva_monto:     order.tax_total,

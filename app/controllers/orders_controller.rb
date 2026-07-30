@@ -186,7 +186,7 @@ class OrdersController < ApplicationController
   def order_params
     params.require(:order).permit(
       :client_id, :kind, :client_tax_profile_id, :cfdi_use_id,
-      :client_receipt_profile_id, :client_branch_id
+      :client_receipt_profile_id, :client_branch_id, :dividir_facturas
     )
   end
 end

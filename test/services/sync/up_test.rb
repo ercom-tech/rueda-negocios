@@ -13,7 +13,8 @@ module Sync
       @product = Product.create!(erp_product_id: 3, description: "Rotomartillo")
 
       @order = Order.new(user: @user, business_round: @round, client: @client,
-                         kind: "remission", status: "captured", local_folio: "RN-000001")
+                         kind: "remission", status: "captured", local_folio: "RN-000001",
+                         dividir_facturas: 5000)
       @order.order_items.build(product: @product, quantity: 2, unit_price: 100,
                                discount_percent: 0, tax_rate: 16, code: "3", description: "Rotomartillo", unit: "PZA")
       @order.save!
@@ -51,6 +52,7 @@ module Sync
         body["clave_cliente"] == "ABAISM" &&
           body["capturista_erp_person_id"] == 90092 &&
           body["id_vendedor"] == 168 &&
+          body["dividir_facturas"].to_d == 5000 &&
           body["items"].first["id_producto"] == 3 &&
           body["items"].first["cantidad"].to_d == 2
       end.to_return(status: 201, body: { clave_pedido: "1A0007" }.to_json)

@@ -91,6 +91,7 @@ Desglose **por partida**: `iva_porcentaje` + `iva_monto`, `descto_porcentaje` +
 | `client_branch` (sucursal) | `sucursal` |
 | `client.salesperson.erp_salesperson_id` | `id_vendedor` |
 | `observations` | `observaciones` |
+| `dividir_facturas` (NUMERIC(18,6); importe máximo por factura al facturar, 0 = no dividir — se captura en el paso 1, solo Factura) | `dividir_facturas` |
 | totales | `subtotal`/`descto_monto`/`iva_monto`/`total` |
 | item: `code`/`quantity`/`unit_price`/`discount_%`/`tax_%` (+ montos) | `id_producto`/`cantidad`/`precio`/`descto_porcentaje`/`iva_porcentaje` (+ `descto_monto`/`iva_monto`/`subtotal`/`total`) |
 

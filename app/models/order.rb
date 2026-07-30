@@ -4,6 +4,11 @@ class Order < ApplicationRecord
   # presentación mientras se teclea.
   normalizes :observations, with: ->(text) { text.upcase }
 
+  # Importe máximo por factura al facturar el pedido (vta_pedido.
+  # dividir_facturas); 0 = no dividir. Solo tiene sentido en facturas, pero
+  # se guarda siempre (0) para transmitir el encabezado completo.
+  validates :dividir_facturas, numericality: { greater_than_or_equal_to: 0 }
+
   # Pedido levantado por el capturista. No lleva proveedor: puede mezclar
   # productos de distintos proveedores.
 
