@@ -16,7 +16,7 @@ module Pdf
     COMPANY_PHONE   = "232 324 9060".freeze
     LOGO_PATH       = Rails.root.join("app/assets/images/fecego_logo_dark.png").freeze
 
-    ITEM_COLUMN_WIDTHS = [55, 210, 46, 58, 62, 70, 48, 70, 44, 57].freeze # suma 720 (landscape)
+    ITEM_COLUMN_WIDTHS = [55, 197, 46, 58, 75, 70, 48, 70, 44, 57].freeze # suma 720 (landscape)
 
     def initialize(order)
       @order = order
@@ -66,14 +66,14 @@ module Pdf
     end
 
     def render_items_table(pdf)
-      header = ["Código", "Descripción", "Unidad", "Cantidad", "Precio",
+      header = ["Código", "Descripción", "Unidad", "Cantidad", "Precio unitario",
                 "Monto", "%Dto.", "Subtotal", "%IVA", "Total"]
 
       rows = @order.order_items.map do |i|
         [
           i.code, i.description, i.unit,
-          amount(i.quantity), amount(i.unit_price), amount(i.line_total),
-          pct(i.discount_percent), amount(i.taxable), pct(i.tax_rate), amount(i.total)
+          amount(i.quantity), money(i.unit_price), money(i.line_total),
+          pct(i.discount_percent), money(i.taxable), pct(i.tax_rate), money(i.total)
         ]
       end
       rows = [["—"] + [""] * 9] if rows.empty?
@@ -164,6 +164,11 @@ module Pdf
 
     def amount(value)
       number_with_precision(value || 0, precision: 2, delimiter: ",")
+    end
+
+    # Importes monetarios de la tabla, con $ como los totales.
+    def money(value)
+      number_to_currency(value || 0)
     end
 
     def pct(value)
