@@ -71,7 +71,9 @@
           </div>
           <div>
             <span class="block text-xs text-white/50">Nombre / razón social</span>
-            <span class="font-semibold"><%= (@order.invoice? ? @order.client_tax_profile&.business_name : @order.client.name).presence || "—" %></span>
+            <%# En factura, con RFC incluido (label = "RFC — razón social",
+                como el combo del paso 1). %>
+            <span class="font-semibold"><%= (@order.invoice? ? @order.client_tax_profile&.label : @order.client.name).presence || "—" %></span>
           </div>
           <div>
             <span class="block text-xs text-white/50">Vendedor</span>
