@@ -987,6 +987,33 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
     `SOLID_QUEUE_IN_PUMA`); `async` en dev.
   - Guarda `require_server` + `ServerController` (rounds, select_round,
     sync_down, sync_up). Evita disparar un sync si ya hay uno `running`.
+- **No se transmite con pedidos en borrador (2026-08-10):** `Sync::Up.guard!`
+  (método de clase, `GuardError`) levanta si hay `Order.draft`. **Por qué:** el
+  sync-up solo toma `captured`, así que transmitir con borradores vivos deja al
+  operador creyendo que ya todo llegó al ERP — y cerrar la rueda los purga:
+  venta en proceso perdida en silencio. Tres puntos de llamada: el
+  **controlador** (antes de crear el `SyncRun`, para que una condición previa
+  no quede registrada como corrida fallida), `run!` (cubre `rake sync:up`, que
+  aborta legible) y el **job** (solo por carrera: un borrador creado entre el
+  pre-chequeo y el arranque).
+  - **Criterio de UI decidido por el usuario:** sigue el patrón de "Cerrar
+    rueda" — la card NO se bloquea, el modal de confirmación aparece normal y
+    el motivo se avisa en el **toast al confirmar**. (Se propuso bloquear la
+    card como hace "Elegir rueda" con rueda en curso; el usuario prefirió el
+    aviso.) Nota: hoy el menú mezcla ambos criterios — las condiciones de sync
+    (corrida viva) se muestran bloqueando la card, y las de datos (pedidos
+    pendientes) solo avisan al confirmar.
+  - **Riesgo operativo anotado:** un borrador abandonado (capturista que se
+    fue, tablet muerta) deja al servidor sin poder transmitir. El escape hoy
+    es parcial: el reporte "Pedidos capturados" muestra `Order.all` para el
+    rol servidor, así que el operador ve cuáles están en borrador y de quién
+    son, pero **no puede descartarlos él mismo**. Si estorba en el evento
+    real, la solución sería permitirle descartar un borrador ajeno desde ese
+    reporte.
+  - **Pendiente de homologación** (detectado al revisar, NO hecho): "Obtener
+    información" con pedidos capturados sin transmitir no tiene pre-chequeo en
+    el controlador — crea el `SyncRun`, el job revienta con `Down::GuardError`
+    y queda una **corrida fallida** por una condición previa.
 - **Validado end-to-end en el navegador** (rueda-negocios en :3001 con
   `RUEDA_API_URL`, rueda-api en :4568): login server → elegir Oaxaca → obtener
   información (job → "✓ Listo · 13,196 productos…" vía Turbo Stream) → transmitir

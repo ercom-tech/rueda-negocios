@@ -115,5 +115,43 @@ module Sync
       assert @order.captured?, "sin folio no puede darse por transmitido"
       assert_nil @order.erp_folio
     end
+
+    # --- Guarda: no transmitir con pedidos en borrador ----------------------
+    # El sync-up solo toma `captured`: transmitir con borradores vivos deja al
+    # operador creyendo que todo llegó al ERP, y cerrar la rueda los purga.
+
+    def draft!
+      Order.create!(user: @user, business_round: @round, client: @client, kind: "remission")
+    end
+
+    test "con pedidos en borrador NO transmite nada y levanta GuardError" do
+      draft!
+      req = stub_request(:post, "#{API}/pedidos")
+
+      error = assert_raises(Up::GuardError) { Up.new(API).run! }
+
+      assert_match(/1 pedido\(s\) en borrador/, error.message)
+      assert_not_requested req
+      assert @order.reload.captured?, "el pedido capturado sigue intacto"
+    end
+
+    test "guard! cuenta todos los borradores y no se fija en los capturados" do
+      2.times { draft! }
+
+      error = assert_raises(Up::GuardError) { Up.guard! }
+      assert_match(/2 pedido\(s\) en borrador/, error.message)
+    end
+
+    test "sin borradores la guarda deja pasar" do
+      assert_nothing_raised { Up.guard! }
+    end
+
+    test "un borrador ya descartado deja de bloquear" do
+      borrador = draft!
+      assert_raises(Up::GuardError) { Up.guard! }
+
+      borrador.destroy
+      assert_nothing_raised { Up.guard! }
+    end
   end
 end

@@ -40,7 +40,11 @@ namespace :sync do
     pending = Order.captured.where(erp_folio: nil).count
     puts "[sync:up] pedidos por transmitir: #{pending}"
 
-    r = Sync::Up.new(base).run!
+    r = begin
+      Sync::Up.new(base).run!
+    rescue Sync::Up::GuardError => e
+      abort "[sync:up] abortado: #{e.message} Deben finalizarse o descartarse antes de transmitir."
+    end
 
     r[:transmitted].each { |t| puts "  ✓ #{t[:local]} → folio ERP #{t[:erp]}" }
     r[:failed].each      { |f| puts "  ✗ #{f[:local]} (HTTP #{f[:status]}): #{f[:error]}" }

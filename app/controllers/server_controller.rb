@@ -63,10 +63,16 @@ class ServerController < ApplicationController
     if SyncRun.running.exists?
       return redirect_to root_path, alert: "Hay una corrida de sync en curso. Espera a que termine."
     end
+    # Mismo patrón que "Cerrar rueda": la card se ve normal, el modal aparece
+    # y la condición no cumplida se avisa al confirmar. Va ANTES de crear el
+    # SyncRun para no dejar una corrida fallida por una condición previa.
+    Sync::Up.guard!
 
     run = SyncRun.create!(kind: "up", started_at: Time.current)
     SyncUpJob.perform_later(run.id)
     redirect_to root_path, notice: "Transmisión iniciada. El menú se actualizará al terminar."
+  rescue Sync::Up::GuardError => e
+    redirect_to root_path, alert: "#{e.message} Deben finalizarse o descartarse antes de transmitir."
   rescue ActiveRecord::RecordNotUnique
     redirect_to root_path, alert: "Ya hay una transmisión en curso."
   end

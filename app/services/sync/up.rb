@@ -10,6 +10,24 @@ module Sync
   # endpoint del ERP no duplica un pedido ya insertado (PK de negocio). Un
   # reintento tras una caída retoma justo lo que faltó.
   class Up
+    # Se levanta cuando la guarda impide transmitir (hay pedidos en borrador).
+    class GuardError < StandardError; end
+
+    # Un borrador es un pedido todavía en captura: el sync-up NO lo toma (solo
+    # toma `captured`), así que transmitir con borradores vivos deja al
+    # operador creyendo que ya todo está en el ERP — y el paso siguiente,
+    # cerrar la rueda, los purga. Es una venta en proceso que se pierde en
+    # silencio. Método de clase para que el controlador pueda preguntarlo
+    # ANTES de crear el SyncRun (una condición previa no debe quedar
+    # registrada como una corrida fallida); `run!` lo repite para cubrir
+    # `rake sync:up`.
+    def self.guard!
+      drafts = Order.draft.count
+      return if drafts.zero?
+
+      raise GuardError, "Hay #{drafts} pedido(s) en borrador."
+    end
+
     def initialize(api_base = ENV["RUEDA_API_URL"])
       raise Sync::ApiClient::Error, "RUEDA_API_URL no configurada" if api_base.to_s.strip.empty?
 
@@ -18,6 +36,7 @@ module Sync
     end
 
     def run!
+      self.class.guard!
       results = { transmitted: [], failed: [] }
 
       pending.find_each do |order|

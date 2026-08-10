@@ -10,7 +10,10 @@ class SyncUpJob < ApplicationJob
     status = result[:failed].any? ? :failed : :completed
 
     run.finish!(status: status, summary: result)
-  rescue Sync::ApiClient::Error => e
+  # GuardError aquí solo cae por una carrera (un borrador creado entre el
+  # pre-chequeo del controlador y el arranque del job): se reporta legible en
+  # el panel en vez de reventar. El camino normal lo ataja el controlador.
+  rescue Sync::Up::GuardError, Sync::ApiClient::Error => e
     run&.finish!(status: :failed, message: e.message)
   rescue StandardError => e
     run&.finish!(status: :failed, message: "#{e.class}: #{e.message}")
