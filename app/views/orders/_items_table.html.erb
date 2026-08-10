@@ -1,12 +1,5 @@
 <%# Tabla de partidas. Locals: order. Id "order-detail" para el Turbo replace. %>
 <div id="order-detail" class="overflow-x-auto rounded-3xl border border-black/10 bg-brand-cream text-neutral-900">
-  <%# Contador contra el tope de partidas: visible siempre (no solo al
-      acercarse), para que el capturista no llegue al límite a ciegas. %>
-  <div class="flex items-center justify-end px-5 py-3 text-sm font-semibold">
-    <span class="<%= "text-brand-coral-dark" if order.items_limit_reached? %>">
-      Partidas <%= order.items_count_for_limit %> / <%= Order::MAX_ITEMS %>
-    </span>
-  </div>
   <table class="w-full text-sm">
     <thead class="bg-black text-white">
       <%# En tablet angosta se ocultan las columnas secundarias (no. de parte,

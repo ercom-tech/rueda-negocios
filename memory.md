@@ -788,9 +788,13 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
     rebota con el aviso aunque el buscador esté deshabilitado). No hubo que
     tocar `OrderItemsController#create`: su rama `else` ya muestra
     `errors.full_messages` en el flash.
-  - UI: contador `Partidas 12 / 45` siempre visible (coral al tope) dentro de
-    `#order-detail`, y buscador deshabilitado al **60%** con placeholder
-    "Alcanzaste el máximo de 45 partidas". El buscador se extrajo a
+  - UI: contador `Partidas 12 / 45` siempre visible **dentro del buscador**, al
+    extremo derecho del pill (decisión del usuario; primero se probó como
+    encabezado de la tabla y arriba del buscador), y buscador deshabilitado con
+    placeholder "Alcanzaste el máximo de 45 partidas". El **60%** de
+    deshabilitado va sobre el control (lupa + campo) y NO sobre el pill
+    completo: el contador es información, no control, y debe quedar legible
+    justo cuando se alcanza el tope. El buscador se extrajo a
     `orders/_product_search` con id propio y se repinta con **morph** en
     `detail_streams` — con `replace` se reconectaría el controlador Stimulus,
     que al conectar enfoca el buscador, y le robaría el foco a la tabla en cada

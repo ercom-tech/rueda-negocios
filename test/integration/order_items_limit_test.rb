@@ -52,11 +52,13 @@ class OrderItemsLimitTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "el contador de partidas se muestra en la tabla" do
+  # El contador vive DENTRO del buscador (extremo derecho del pill), que es el
+  # partial que ya se repinta con morph en cada alta/baja de partida.
+  test "el contador de partidas se muestra dentro del buscador" do
     fill_order_to(3)
 
     get order_path(@order)
-    assert_match(/Partidas\s*3\s*\/\s*#{Order::MAX_ITEMS}/, response.body)
+    assert_select "#product-search span", text: /Partidas\s*3\s*\/\s*#{Order::MAX_ITEMS}/
   end
 
   test "al tope el buscador queda deshabilitado con el aviso" do
