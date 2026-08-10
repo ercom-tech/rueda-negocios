@@ -43,16 +43,22 @@ class ServerController < ApplicationController
     # descarga a media transmisión (o viceversa) pisaría los datos del job
     # en vuelo. Mismo criterio que la guarda de "Cerrar rueda".
     if SyncRun.running.exists?
-      return redirect_to root_path, alert: "Hay una corrida de sync en curso. Espera a que termine."
+      return redirect_to root_path, alert: "Se está obteniendo información o transmitiendo pedidos. Espera a que termine."
     end
+    # Mismo patrón que "Cerrar rueda" y "Transmitir pedidos": la condición no
+    # cumplida se avisa al confirmar. Va ANTES de crear el SyncRun para no
+    # dejar una corrida fallida por algo que nunca llegó a intentarse.
+    Sync::Down.guard!
 
     run = SyncRun.create!(kind: "down", started_at: Time.current)
     SyncDownJob.perform_later(run.id)
-    redirect_to root_path, notice: "Descarga iniciada. El menú se actualizará al terminar."
+    redirect_to root_path, notice: "Obteniendo la información. El menú se actualizará al terminar."
+  rescue Sync::Down::GuardError => e
+    redirect_to root_path, alert: e.message
   rescue ActiveRecord::RecordNotUnique
     # Carrera (dos POST casi simultáneos): el índice único parcial de sync_runs
     # deja pasar solo un run `running` por tipo.
-    redirect_to root_path, alert: "Ya hay una descarga en curso."
+    redirect_to root_path, alert: "Ya se está obteniendo la información."
   end
 
   # Transmitir los pedidos capturados al ERP (sync-up).
@@ -61,7 +67,7 @@ class ServerController < ApplicationController
       return redirect_to root_path, alert: "No hay rueda en curso; no hay pedidos que transmitir."
     end
     if SyncRun.running.exists?
-      return redirect_to root_path, alert: "Hay una corrida de sync en curso. Espera a que termine."
+      return redirect_to root_path, alert: "Se está obteniendo información o transmitiendo pedidos. Espera a que termine."
     end
     # Mismo patrón que "Cerrar rueda": la card se ve normal, el modal aparece
     # y la condición no cumplida se avisa al confirmar. Va ANTES de crear el
@@ -72,9 +78,9 @@ class ServerController < ApplicationController
     SyncUpJob.perform_later(run.id)
     redirect_to root_path, notice: "Transmisión iniciada. El menú se actualizará al terminar."
   rescue Sync::Up::GuardError => e
-    redirect_to root_path, alert: "#{e.message} Deben finalizarse o descartarse antes de transmitir."
+    redirect_to root_path, alert: e.message
   rescue ActiveRecord::RecordNotUnique
-    redirect_to root_path, alert: "Ya hay una transmisión en curso."
+    redirect_to root_path, alert: "Ya se están transmitiendo los pedidos."
   end
 
   # Cerrar la rueda activa: purga los pedidos locales (los transmitidos ya
@@ -86,12 +92,10 @@ class ServerController < ApplicationController
 
     removed = Sync::CloseRound.run!
     redirect_to root_path,
-                notice: "Rueda cerrada (#{removed} pedido(s) locales eliminados). " \
+                notice: "Rueda cerrada. Se eliminaron #{helpers.pluralize(removed, 'pedido')} de esta laptop. " \
                         "Elige la siguiente rueda y obtén su información."
-  rescue Sync::CloseRound::PendingOrdersError => e
-    redirect_to root_path, alert: "#{e.message} Transmite antes de cerrar la rueda."
-  rescue Sync::CloseRound::SyncInProgressError => e
-    redirect_to root_path, alert: "#{e.message} Espera a que termine para cerrar la rueda."
+  rescue Sync::CloseRound::PendingOrdersError, Sync::CloseRound::SyncInProgressError => e
+    redirect_to root_path, alert: e.message
   end
 
   private

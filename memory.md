@@ -987,11 +987,49 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
     `SOLID_QUEUE_IN_PUMA`); `async` en dev.
   - Guarda `require_server` + `ServerController` (rounds, select_round,
     sync_down, sync_up). Evita disparar un sync si ya hay uno `running`.
-- **No se transmite con pedidos en borrador (2026-08-10):** `Sync::Up.guard!`
-  (método de clase, `GuardError`) levanta si hay `Order.draft`. **Por qué:** el
-  sync-up solo toma `captured`, así que transmitir con borradores vivos deja al
-  operador creyendo que ya todo llegó al ERP — y cerrar la rueda los purga:
-  venta en proceso perdida en silencio. Tres puntos de llamada: el
+- **Con pedidos que solo viven en la laptop no se sincroniza ni se cierra la
+  rueda (2026-08-10).** Regla única en `Sync::Guards`, con dos guardas:
+  - `no_draft_orders!` (sync-**up**): solo los borradores estorban.
+  - `no_local_orders!(error, accion)` (sync-**down** y **cerrar rueda**): las
+    dos operaciones borran TODOS los pedidos locales, así que bloquean por
+    borradores **y** por finalizados sin transmitir. `accion` completa la
+    frase ("al obtener la información" / "al cerrar la rueda") — es lo único
+    que cambia entre ambas. Los transmitidos nunca bloquean: ya viven en el
+    ERP.
+  - **sync-up:** solo toma `captured`, así que el borrador no se transmitiría
+    y el operador creería que ya todo llegó al ERP.
+  - **sync-down:** su replace hace `Order.destroy_all` — el borrador se
+    **borraba en silencio**. Antes NO bloqueaba (decisión original: el
+    sync-down es de oficina, antes del evento, con nadie capturando); se
+    cambió porque el modelo de operación es laptop-servidor **en el evento**,
+    en la misma LAN, y entre días de una rueda el escenario "descargar
+    mientras alguien captura" pasó de imposible a plausible. Hubo que
+    reescribir el test que fijaba lo contrario.
+  - En `Down.guard!` los borradores se revisan **antes** que los capturados
+    sin transmitir: son el prerrequisito del prerrequisito (con borradores
+    vivos tampoco se puede transmitir, así que avisar primero de los
+    pendientes mandaría al operador a un botón que también lo rechazaría).
+  - El mensaje completo vive en la guarda (los controladores solo hacen
+    `alert: e.message`); antes el controlador le concatenaba la acción.
+  - **El sync-down avisa de ambos casos de una vez** ("Hay 2 pedidos en
+    borrador y 3 sin transmitir; se perderían al obtener la información. Pide
+    que terminen o descarten los borradores, transmite los demás, y vuelve a
+    intentar"). El orden de solución está forzado, pero en un evento el
+    operador necesita ver el camino completo desde el primer intento para
+    organizar a su gente, no descubrirlo de mensaje en mensaje.
+- **Lenguaje de los mensajes al usuario (regla del usuario, 2026-08-10): sin
+  vocabulario técnico.** Quien los lee está en el evento resolviendo un
+  problema, no depurando el sistema. Barrido en los avisos del panel:
+  "corrida de sync en curso" → "Se está obteniendo información o transmitiendo
+  pedidos"; "el replace purga los pedidos locales" → "se perderían al obtener
+  la información"; "Descarga iniciada" → "Obteniendo la información";
+  "N pedido(s) locales eliminados" → "Se eliminaron N pedidos de esta laptop".
+  Los mensajes **concuerdan en número** (`Guards.pedidos/lo/perderia/
+  transmitelo`): un "se perderían 1 pedido" delata descuido justo cuando el
+  operador necesita confiar en lo que lee. Los detalles técnicos de fallas de
+  API (p.ej. "respuesta sin clave_pedido") se conservan: son diagnóstico, no
+  instrucción, y van al panel/log.
+- **Detalle de la guarda del sync-up:** tres puntos de llamada: el
   **controlador** (antes de crear el `SyncRun`, para que una condición previa
   no quede registrada como corrida fallida), `run!` (cubre `rake sync:up`, que
   aborta legible) y el **job** (solo por carrera: un borrador creado entre el
@@ -1003,17 +1041,23 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
     aviso.) Nota: hoy el menú mezcla ambos criterios — las condiciones de sync
     (corrida viva) se muestran bloqueando la card, y las de datos (pedidos
     pendientes) solo avisan al confirmar.
-  - **Riesgo operativo anotado:** un borrador abandonado (capturista que se
-    fue, tablet muerta) deja al servidor sin poder transmitir. El escape hoy
-    es parcial: el reporte "Pedidos capturados" muestra `Order.all` para el
-    rol servidor, así que el operador ve cuáles están en borrador y de quién
-    son, pero **no puede descartarlos él mismo**. Si estorba en el evento
-    real, la solución sería permitirle descartar un borrador ajeno desde ese
-    reporte.
-  - **Pendiente de homologación** (detectado al revisar, NO hecho): "Obtener
-    información" con pedidos capturados sin transmitir no tiene pre-chequeo en
-    el controlador — crea el `SyncRun`, el job revienta con `Down::GuardError`
-    y queda una **corrida fallida** por una condición previa.
+  - **Riesgo operativo — ver "Próximos pasos":** con las tres operaciones
+    bloqueadas, un borrador abandonado (capturista que se fue, tablet muerta)
+    deja la laptop **atorada**: no se transmite, no se obtiene información y
+    tampoco se cierra la rueda. El escape hoy es parcial: el reporte "Pedidos
+    capturados" muestra `Order.all` para el rol servidor, así que el operador
+    ve cuáles están en borrador y de quién son, pero **no puede descartarlos
+    él mismo**. El usuario lo dio por dentro del alcance, a resolver después.
+  - **Homologado el mismo día:** "Obtener información" tenía el mismo hueco —
+    con pedidos capturados sin transmitir creaba el `SyncRun`, el job reventaba
+    con `Down::GuardError` y quedaba una **corrida fallida** (y sucia la card
+    de "última descarga") por una condición previa que nunca se intentó.
+    `Sync::Down#guard!` (privado de instancia, sin estado del objeto) pasó a
+    ser `Sync::Down.guard!` de clase y `ServerController#sync_down` lo llama
+    antes de crear el run, con `rescue` → toast. El job conserva su rescue como
+    red para la carrera. **Los tres botones del panel quedan con el mismo
+    trato:** condición no cumplida se avisa al confirmar, sin registrar
+    corridas que no ocurrieron.
 - **Validado end-to-end en el navegador** (rueda-negocios en :3001 con
   `RUEDA_API_URL`, rueda-api en :4568): login server → elegir Oaxaca → obtener
   información (job → "✓ Listo · 13,196 productos…" vía Turbo Stream) → transmitir
@@ -1105,6 +1149,14 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
 
 ## Próximos pasos
 
+0. **El rol servidor debe poder descartar pedidos ajenos** desde el reporte
+   "Pedidos capturados" (donde ya los ve todos, con dueño y estatus).
+   **Urgente por dependencia:** desde 2026-08-10 las tres operaciones del panel
+   (obtener información, transmitir, cerrar rueda) se bloquean si hay pedidos
+   en borrador, así que un borrador abandonado —capturista que se fue, tablet
+   muerta— deja la laptop sin salida. El usuario lo confirmó dentro del
+   alcance, pospuesto. Alcance: botón + modal de confirmación en el reporte,
+   ruta y guarda de rol.
 1. **Confirmar con FECEGO** los defaults de config de la cabecera del pedido
    (ya escritos en `OrderCreate::HEADER_DEFAULTS` con la moda del ERP) y si
    alguno debe salir del cliente en vez de ser fijo.

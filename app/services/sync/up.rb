@@ -13,19 +13,14 @@ module Sync
     # Se levanta cuando la guarda impide transmitir (hay pedidos en borrador).
     class GuardError < StandardError; end
 
-    # Un borrador es un pedido todavía en captura: el sync-up NO lo toma (solo
-    # toma `captured`), así que transmitir con borradores vivos deja al
-    # operador creyendo que ya todo está en el ERP — y el paso siguiente,
-    # cerrar la rueda, los purga. Es una venta en proceso que se pierde en
-    # silencio. Método de clase para que el controlador pueda preguntarlo
-    # ANTES de crear el SyncRun (una condición previa no debe quedar
-    # registrada como una corrida fallida); `run!` lo repite para cubrir
-    # `rake sync:up`.
+    # Transmitir con borradores vivos deja al operador creyendo que ya todo
+    # llegó al ERP (el sync-up solo toma `captured`) — y el paso siguiente,
+    # cerrar la rueda, los purga. Método de clase para que el controlador
+    # pueda preguntarlo ANTES de crear el SyncRun (una condición previa no
+    # debe quedar registrada como una corrida fallida); `run!` lo repite para
+    # cubrir `rake sync:up`. Regla compartida con el sync-down (Sync::Guards).
     def self.guard!
-      drafts = Order.draft.count
-      return if drafts.zero?
-
-      raise GuardError, "Hay #{drafts} pedido(s) en borrador."
+      Guards.no_draft_orders!(GuardError)
     end
 
     def initialize(api_base = ENV["RUEDA_API_URL"])

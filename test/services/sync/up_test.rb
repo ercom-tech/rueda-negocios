@@ -130,7 +130,7 @@ module Sync
 
       error = assert_raises(Up::GuardError) { Up.new(API).run! }
 
-      assert_match(/1 pedido\(s\) en borrador/, error.message)
+      assert_match(/Hay 1 pedido en borrador y no se transmitiría\./, error.message)
       assert_not_requested req
       assert @order.reload.captured?, "el pedido capturado sigue intacto"
     end
@@ -139,7 +139,7 @@ module Sync
       2.times { draft! }
 
       error = assert_raises(Up::GuardError) { Up.guard! }
-      assert_match(/2 pedido\(s\) en borrador/, error.message)
+      assert_match(/Hay 2 pedidos en borrador y no se transmitirían\./, error.message)
     end
 
     test "sin borradores la guarda deja pasar" do

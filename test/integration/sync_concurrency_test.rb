@@ -17,7 +17,7 @@ class SyncConcurrencyTest < ActionDispatch::IntegrationTest
 
     post server_sync_down_path
     assert_redirected_to root_path
-    assert_match(/corrida de sync en curso/, flash[:alert])
+    assert_match(/obteniendo información o transmitiendo pedidos/, flash[:alert])
     assert_equal 0, SyncRun.down.count, "no debe crear el run de descarga"
   end
 
@@ -26,7 +26,7 @@ class SyncConcurrencyTest < ActionDispatch::IntegrationTest
 
     post server_sync_up_path
     assert_redirected_to root_path
-    assert_match(/corrida de sync en curso/, flash[:alert])
+    assert_match(/obteniendo información o transmitiendo pedidos/, flash[:alert])
     assert_equal 0, SyncRun.up.count, "no debe crear el run de transmisión"
   end
 

@@ -23,6 +23,16 @@ module Sync
     # Se levanta cuando la guarda impide correr el sync (hay pedidos).
     class GuardError < StandardError; end
 
+    # El replace borra todos los pedidos locales: los borradores (en captura) y
+    # los finalizados sin transmitir (ventas reales que aún no llegan al ERP)
+    # se perderían. Método de clase (no usa estado del objeto) para que el
+    # controlador pueda preguntarlo ANTES de crear el SyncRun — una condición
+    # previa no debe quedar registrada como una corrida fallida; `run!` lo
+    # repite para cubrir `rake sync:down` y el job.
+    def self.guard!
+      Guards.no_local_orders!(GuardError, "al obtener la información")
+    end
+
     def initialize(data)
       @data = data
       @stats = {}
@@ -34,7 +44,7 @@ module Sync
     end
 
     def run!
-      guard!
+      self.class.guard!
       purge_local_orders!
       clear_catalog!
       import_cfdi_uses
@@ -57,17 +67,6 @@ module Sync
     end
 
     private
-
-    # --- Guarda y limpieza ------------------------------------------------
-
-    def guard!
-      pending = Order.captured.where(erp_folio: nil).count
-      return if pending.zero?
-
-      raise GuardError,
-            "Hay #{pending} pedido(s) capturado(s) sin transmitir. " \
-            "Transmite antes de obtener información."
-    end
 
     # Borradores y transmitidos no bloquean el refresh, pero sus FKs chocarían
     # con el replace del catálogo: se purgan (y se reporta cuántos).

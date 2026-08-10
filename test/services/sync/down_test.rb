@@ -80,18 +80,31 @@ module Sync
       assert_match(/sin transmitir/, error.message)
     end
 
-    test "borradores y transmitidos NO bloquean: se purgan y el refresh procede" do
+    # Cambio de criterio (2026-08-10): un borrador SÍ bloquea. El replace lo
+    # purga, así que descargar con borradores vivos borraba en silencio un
+    # pedido en captura. Misma regla que el sync-up (Sync::Guards).
+    test "guarda: un borrador bloquea el refresh (el replace lo borraría)" do
       user   = User.create!(erp_person_id: 1, username: "u", password: "x", role: "capturista")
       round  = BusinessRound.create!(erp_round_id: 1, name: "R")
       client = Client.create!(erp_client_key: "C1", name: "C")
       Order.create!(user: user, business_round: round, client: client, kind: "remission")
+
+      error = assert_raises(Down::GuardError) { Down.new(export_data).run! }
+      assert_match(/en borrador/, error.message)
+      assert_equal 1, Order.count, "no debe purgar nada si abortó"
+    end
+
+    test "los transmitidos NO bloquean: se purgan y el refresh procede" do
+      user   = User.create!(erp_person_id: 1, username: "u", password: "x", role: "capturista")
+      round  = BusinessRound.create!(erp_round_id: 1, name: "R")
+      client = Client.create!(erp_client_key: "C1", name: "C")
       Order.create!(user: user, business_round: round, client: client, kind: "remission",
                     status: "transmitted", erp_folio: "1A0001", local_folio: "RN-000002")
 
       result = Down.new(export_data).run!
 
-      assert_equal 2, result.summary[:purged_orders]
-      assert_equal 0, Order.count, "borradores y transmitidos purgados"
+      assert_equal 1, result.summary[:purged_orders]
+      assert_equal 0, Order.count, "los transmitidos (ya en el ERP) se purgan"
       assert_equal 1, Product.count, "el replace procede con normalidad"
     end
 

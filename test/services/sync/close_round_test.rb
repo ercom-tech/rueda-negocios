@@ -20,18 +20,38 @@ module Sync
       order(status: "captured")
 
       error = assert_raises(CloseRound::PendingOrdersError) { CloseRound.run! }
-      assert_match(/1 pedido/, error.message)
+      assert_match(/Hay 1 pedido sin transmitir y se perdería al cerrar la rueda\./, error.message)
       assert_equal 1, Order.count, "no debe borrar nada"
       assert @round.reload.active?
     end
 
-    test "cierra: purga borradores y transmitidos, desactiva la rueda y limpia la selección" do
+    # Cambio de criterio (2026-08-10): un borrador también bloquea. Cerrar
+    # borra TODOS los pedidos locales, así que una captura en curso se perdía
+    # en silencio. Misma guarda que "obtener información" (Guards).
+    test "no cierra si hay pedidos en borrador" do
       order(status: "draft")
+
+      error = assert_raises(CloseRound::PendingOrdersError) { CloseRound.run! }
+      assert_match(/Hay 1 pedido en borrador y se perdería al cerrar la rueda\./, error.message)
+      assert_equal 1, Order.count, "no debe borrar nada"
+      assert @round.reload.active?
+    end
+
+    test "el aviso enseña los dos casos de una vez" do
+      order(status: "draft")
+      order(status: "captured")
+
+      error = assert_raises(CloseRound::PendingOrdersError) { CloseRound.run! }
+      assert_match(/Hay 1 pedido en borrador y 1 sin transmitir/, error.message)
+      assert_match(/terminen o descarten los borradores, transmite los demás/, error.message)
+    end
+
+    test "cierra: purga los transmitidos, desactiva la rueda y limpia la selección" do
       order(status: "transmitted", erp_folio: "1A0001")
 
       removed = CloseRound.run!
 
-      assert_equal 2, removed
+      assert_equal 1, removed
       assert_equal 0, Order.count
       assert_not @round.reload.active?, "la rueda debe quedar inactiva"
       setting = Setting.instance
@@ -64,7 +84,7 @@ module Sync
       order(status: "transmitted", erp_folio: "1A0002")
       CloseRound.run!
 
-      assert_nothing_raised { Sync::Down.new({}).send(:guard!) }
+      assert_nothing_raised { Sync::Down.guard! }
     end
   end
 end

@@ -43,7 +43,7 @@ namespace :sync do
     r = begin
       Sync::Up.new(base).run!
     rescue Sync::Up::GuardError => e
-      abort "[sync:up] abortado: #{e.message} Deben finalizarse o descartarse antes de transmitir."
+      abort "[sync:up] abortado: #{e.message}"
     end
 
     r[:transmitted].each { |t| puts "  ✓ #{t[:local]} → folio ERP #{t[:erp]}" }

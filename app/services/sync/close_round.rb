@@ -6,21 +6,24 @@ module Sync
   # limpia la selección — así el sync-down de la siguiente rueda pasa su
   # guarda (`Order.exists?`).
   #
-  # Guardas propias: NO cierra si hay pedidos capturados sin transmitir
-  # (ventas reales que aún no llegan al ERP y se perderían) ni si hay una
-  # corrida de sync en curso (borrarle su SyncRun al job vivo lo rompería).
+  # Guardas propias: NO cierra si hay pedidos que solo viven en la laptop —
+  # borradores (capturas en curso) o finalizados sin transmitir (ventas reales
+  # que aún no llegan al ERP) — ni si hay una corrida de sync en curso
+  # (borrarle su SyncRun al job vivo lo rompería). La guarda de los pedidos es
+  # la MISMA que la de obtener información (`Guards.no_local_orders!`): las dos
+  # operaciones borran todo lo local, así que la regla y su redacción son una
+  # sola.
   class CloseRound
+    # Cubre borradores y finalizados sin transmitir: ambos se perderían.
     class PendingOrdersError < StandardError; end
     class SyncInProgressError < StandardError; end
 
     def self.run!
-      pending = Order.captured.where(erp_folio: nil).count
-      if pending.positive?
-        raise PendingOrdersError,
-              "Hay #{pending} pedido(s) capturado(s) sin transmitir."
-      end
+      Guards.no_local_orders!(PendingOrdersError, "al cerrar la rueda")
       if SyncRun.running.exists?
-        raise SyncInProgressError, "Hay una corrida de sync en curso."
+        raise SyncInProgressError,
+              "Se está obteniendo información o transmitiendo pedidos. " \
+              "Espera a que termine para cerrar la rueda."
       end
 
       removed = Order.count
