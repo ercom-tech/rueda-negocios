@@ -772,6 +772,14 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
   `#` (Arco 3). (Superado: hoy Cancelar abre un modal accesible que DESCARTA el
   borrador —`Orders#destroy`, M15— y el botón final es "Guardar" → `capture`.)
 - **Seed:** 5 productos demo (con precio, IVA 16%, modelo, No. parte, SKU proveedor).
+- **Consecutivo sin huecos (2026-08-10):** borrar una partida intermedia dejaba
+  hoyos en la columna Consecutivo. `Order#renumber_items!` reacomoda a 1..N y
+  se llama desde `OrderItems#destroy`. Usa `update_column`: no es un cambio de
+  negocio sino de orden, y una partida con algún problema previo no debe
+  bloquear la renumeración del resto. Alcance real medido antes de tocar nada:
+  `position` **solo se muestra** en esa columna — el PDF no la lleva y el
+  payload del sync-up ya numera `1..N` con `with_index(1)`, así que el ERP
+  nunca vio huecos.
 - **Tope de 45 partidas por pedido (2026-08-10):** regla de **negocio** de la
   rueda, NO del ERP — medido: el histórico del ERP llega a 287 renglones y
   tiene 3,177 pedidos con más de 45. El usuario confirmó que la regla opera

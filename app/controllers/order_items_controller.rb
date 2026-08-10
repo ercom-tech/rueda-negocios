@@ -44,6 +44,8 @@ class OrderItemsController < ApplicationController
 
   def destroy
     @order.order_items.find(params[:id]).destroy
+    # Quitar una partida intermedia dejaba huecos en el consecutivo.
+    @order.renumber_items!
     render turbo_stream: detail_streams
   end
 

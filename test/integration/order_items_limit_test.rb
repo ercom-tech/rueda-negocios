@@ -74,4 +74,16 @@ class OrderItemsLimitTest < ActionDispatch::IntegrationTest
     assert_match(/Busca por código, nombre, modelo/, response.body)
     assert_no_match(/Alcanzaste el máximo/, response.body)
   end
+
+  # Borrar una partida intermedia dejaba huecos en la columna Consecutivo.
+  test "borrar una partida intermedia renumera el consecutivo" do
+    fill_order_to(4)
+    intermedia = @order.order_items.find_by(position: 2)
+
+    delete order_order_item_path(@order, intermedia),
+           headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    assert_response :success
+    assert_equal [1, 2, 3], @order.order_items.reload.map(&:position)
+  end
 end

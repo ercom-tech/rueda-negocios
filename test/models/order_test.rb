@@ -69,4 +69,42 @@ class OrderTest < ActiveSupport::TestCase
 
     assert_equal "ENTREGAR EN BODEGA TRASERA, CAÑÓN #2", order.reload.observations
   end
+
+  # --- Consecutivo de partidas -------------------------------------------
+
+  def order_with_items(count)
+    order = build_order
+    order.save!
+    count.times { |i| order.order_items.create!(position: i + 1, quantity: 1, unit_price: 100, tax_rate: 16, discount_percent: 0) }
+    order
+  end
+
+  test "renumber_items! cierra el hueco al borrar una partida intermedia" do
+    order = order_with_items(4)
+    order.order_items.find_by(position: 2).destroy
+
+    assert_equal [1, 3, 4], order.order_items.reload.map(&:position), "el hueco existe antes de renumerar"
+
+    order.renumber_items!
+
+    assert_equal [1, 2, 3], order.order_items.reload.map(&:position)
+  end
+
+  test "tras renumerar, la siguiente partida sigue el consecutivo sin saltos" do
+    order = order_with_items(4)
+    order.order_items.find_by(position: 2).destroy
+    order.renumber_items!
+
+    assert_equal 4, order.next_item_position
+  end
+
+  test "renumerar respeta el orden actual y es idempotente" do
+    order = order_with_items(3)
+    codigos = order.order_items.reload.map(&:id)
+
+    order.renumber_items!
+
+    assert_equal codigos, order.order_items.reload.map(&:id), "no debe reordenar las partidas"
+    assert_equal [1, 2, 3], order.order_items.map(&:position)
+  end
 end

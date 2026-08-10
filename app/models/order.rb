@@ -62,6 +62,18 @@ class Order < ApplicationRecord
     (order_items.maximum(:position) || 0) + 1
   end
 
+  # Reacomoda el consecutivo a 1..N tras borrar una partida: sin esto, quitar
+  # una intermedia dejaba huecos en la columna Consecutivo. `update_column`
+  # a propósito — no es un cambio de negocio sino de orden, y una partida con
+  # algún problema previo no debe bloquear la renumeración del resto.
+  def renumber_items!
+    transaction do
+      order_items.reload.each_with_index do |item, i|
+        item.update_column(:position, i + 1) unless item.position == i + 1
+      end
+    end
+  end
+
   # Partidas que cuentan contra MAX_ITEMS. Punto ÚNICO de la regla (lo usan la
   # validación de OrderItem y el contador de la vista): cuando lleguen los
   # regalos por promoción, aquí se decide si se excluyen del conteo.
