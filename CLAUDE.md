@@ -20,10 +20,19 @@ Todo cambio sigue el ciclo **P**roponer → **A**probar → **I**mplementar →
 2. **Aprobar** — esperar autorización explícita del usuario en ese turno.
 3. **Implementar** — aplicar el cambio ya aprobado.
 4. **Validar** — verificar que funciona (tests, ejecución, revisión).
-5. **Documentar** — registrar la decisión/aprendizaje en `memory.md`.
+5. **Documentar** — registrar la decisión/aprendizaje en `memory.md`; lo que
+   quede pospuesto, en `backlog.md`.
 
 Regla dura: **no uses Edit/Write sin aprobación previa del usuario en el
 turno.** Bash de inspección (git, ls, grep, psql) y Read son libres.
+
+**Publicar es un paso aparte:** `git commit` y `git push` requieren aprobación
+explícita en el turno. Un "dale" autoriza implementar, no publicar.
+
+## Convenciones (se cargan con este archivo)
+
+@docs/convenciones-visuales.md
+@docs/convenciones-codigo.md
 
 ## Naturaleza del proyecto
 
@@ -105,4 +114,26 @@ Postgres 16; bcrypt.
 
 ## Puntos abiertos / riesgos
 
-Ver `memory.md`.
+Ver `backlog.md`.
+
+## Dónde va cada cosa
+
+Solo este archivo y sus imports se cargan solos; lo demás se consulta cuando
+hace falta.
+
+| Archivo | Contenido |
+|---|---|
+| `CLAUDE.md` (este) | Contrato: forma de trabajo, arquitectura, stack |
+| `docs/convenciones-visuales.md` | Normas de UI y de los textos al usuario |
+| `docs/convenciones-codigo.md` | Normas y trampas del stack |
+| `memory.md` | Bitácora: decisiones y su porqué |
+| `backlog.md` | Lo que falta implementar |
+| `docs/erp-esquema-catalogos.md`, `docs/erp-esquema-pedidos.md` | Esquema del ERP |
+| `docs/instalacion-laptop.md` | Instalación en la laptop-servidor |
+| `docs/auditorias-2026-07.md` | Historial de las 2 auditorías (cerradas) |
+
+Criterio: si es **norma que rige cada cambio**, va a las convenciones (que sí
+se cargan); si es **el porqué de una decisión**, a `memory.md`; si es **algo
+por hacer**, al backlog. Al cerrarse un renglón del backlog, el aprendizaje
+pasa a `memory.md` y el renglón **se borra** — el backlog es lo que falta, no
+un histórico.

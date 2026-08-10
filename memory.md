@@ -1,598 +1,32 @@
 # memory — rueda-negocios
 
-Bitácora de decisiones y contexto del proyecto. Se actualiza conforme
-avanzamos (paso **Documentar** del flujo PAIVD).
+**Bitácora de decisiones y su porqué.** Se consulta cuando hace falta entender
+por qué algo está como está, o recuperar el contexto de un cambio viejo. Se
+escribe en el paso **Documentar** del flujo PAIVD.
 
-## Auditoría 2026-07-25 — remediación (por severidad, de + a -)
+## Dónde va cada cosa
 
-Auditoría en 5 ejes (usabilidad, doc↔código, convenciones, calidad/patrones,
-seguridad). Reporte: artifact "Auditoría — rueda-negocios & rueda-api".
-Estado de los hallazgos ALTA:
+| Archivo | Contenido | ¿Se carga solo? |
+|---|---|---|
+| `CLAUDE.md` | Contrato del proyecto: forma de trabajo, arquitectura, stack | Sí |
+| `docs/convenciones-visuales.md` | Normas de UI y de los textos al usuario | Sí (import) |
+| `docs/convenciones-codigo.md` | Normas y trampas del stack | Sí (import) |
+| **`memory.md`** | **Bitácora: decisiones y su porqué** | **No — se consulta** |
+| `backlog.md` | Lo que falta implementar | No — se consulta |
+| `docs/erp-esquema-*.md` | Esquema del ERP (catálogos y pedidos) | No — se consulta |
+| `docs/auditorias-2026-07.md` | Historial de las 2 auditorías (cerradas) | No — archivo |
 
-- [x] **A1** `rake sync:up` usaba `Order.submitted` (scope inexistente) →
-  `Order.captured` en `lib/tasks/sync.rake:40`.
-- [x] **A2** contraseña del server sin default en producción: `db/seeds.rb`
-  exige `SEED_SERVER_PASSWORD` en prod; default `rueda2026` solo dev/test.
-- [x] **A3** N+1: `Sync::Up#pending` precarga `order_items: :product`;
-  `ReportsController#captured_orders` precarga `:order_items`.
-- [~] **A4** cobertura de tests:
-  - [x] **A4a** rueda-negocios (Minitest + webmock): `order_test` (totales/estado),
-    `sync/down_test` (guarda, replace, preserva server, cleanup), `sync/up_test`
-    (transmite, idempotencia, payload, fallo). 12 tests, suite en verde (17 total).
-  - [x] **A4b** rueda-api: harness Minitest con `Sequel.mock` (sin conectar al
-    ERP) + `order_create_test` (folio prefijo+consecutivo, idempotencia, prefijo
-    faltante, capturista ausente, N partidas). 6 tests en verde.
-    Trampas resueltas: `DB.sqls` de Sequel.mock **se drena al leerse** (capturar
-    una vez); mock fresco por test (`remove_const`/`const_set`) para no arrastrar
-    estado de transacción tras un rollback.
+Regla práctica: si es **norma que debe regir cada cambio**, va a las
+convenciones (que sí se cargan). Si es **el porqué de una decisión**, va aquí.
+Si es **algo por hacer**, va al backlog.
 
-**ALTA: todos resueltos (A1–A6).**
+## Índice de la bitácora
 
-MEDIA (por bloques temáticos; ver artifact de auditoría):
-- [x] **Bloque 3 (quick wins):** M2 (anclar `config.hosts`), M8 (ruta/acción
-  `submit`→`capture`), M10 (`Order::STATUS_COLORS` centralizado), M17 (rubocop en
-  rueda-api, corre limpio), M18 (docs: idempotencia resuelta, `Order.captured`).
-- [x] **Bloque 5 (correctitud ERP):** M1 (no autoseleccionar el fiscal cuando
-  el cliente tiene varios — el ERP no marca principal; `apply_header_defaults`);
-  M3 (rueda-api `OrderCreate#validate!`: existencia de cliente/vendedor/productos
-  + coherencia de montos, SIN recomputar precios de rueda); M4 (idempotencia por
-  la PK única de `vta_pedido` con `rescue Sequel::UniqueConstraintViolation`);
-  M5 (`next_folio` deriva el corte de `length(prefijo)`). Tests rueda-api: 11 en
-  verde.
-- [x] **Bloque 6 (robustez sync):** M6 — timeouts HTTP configurables
-  (`RUEDA_API_OPEN_TIMEOUT`/`READ_TIMEOUT`) en `ApiClient`/`Sync::Up`; un error
-  de red por pedido marca fallido y continúa (no aborta la transmisión).
-- [x] **Bloque 4 (tokens de color):** M9 — paleta de marca en `@theme`
-  (`app/assets/tailwind/application.css`): `brand-gold`/`brand-gold-dark`/
-  `brand-coral`/`brand-coral-dark`/`brand-cream`. ~64 usos de hex migrados en 16
-  vistas; unificados los 3 pares divergentes (#f1d24e→gold, #f4efe0→cream,
-  #b9553f→coral-dark). Fuente única de verdad.
-- [x] **Bloque 7a (UX):** M7 (correo/WhatsApp en `summary` atenuados con badge
-  "Próximamente", sin modal ni acción — se enviarán al sincronizar); M14 (`flash`
-  con `id` estable + locals `notice/alert`; al fallar `OrderItems#update` repinta
-  con el valor válido anterior y avisa por Turbo Stream, no revierte en silencio);
-  M15 (acción `Orders#destroy` "Descartar pedido" con modal de confirmación en
-  `show`, solo si `editable?`). Validado en navegador.
-- [x] **Bloque 7b-i (a11y modal/flash):** M11 (`_confirm_dialog` con
-  `role="dialog"`/`aria-modal`/`aria-labelledby`/`aria-describedby` e ids únicos;
-  `modal_controller` mueve el foco al primer control, atrapa Tab dentro
-  —focus-trap enganchado internamente, sin tocar las 5 vistas— y al cerrar
-  restaura el foco previo); M16 (`flash_controller` nuevo: auto-dismiss 5s/8s +
-  botón ✕; el mensaje lleva `pointer-events-auto`). Validado en navegador
-  (Tab cicla, Esc cierra y restaura foco, ✕ cierra).
-- [x] **Bloque 7b-ii (a11y select/autocomplete):** M12 (`custom_select` navega
-  con teclado también cuando NO es filtrable —el botón recibe `keydown->navigate`
-  y ↑/↓ abre el panel—; ARIA completo: botón `aria-haspopup/aria-expanded`, `ul`
-  `role="listbox"`, opciones `role="option"`/`aria-selected`, `aria-activedescendant`
-  en el elemento con foco); M13 (`autocomplete` muestra "Buscando…" (role=status)
-  y, ante fallo de red, aviso `role=alert` en vez de reventar en silencio; input
-  `role="combobox"` con `aria-expanded`/`aria-activedescendant`; resultados
-  `role="listbox"`/`option`). Validado en navegador (teclado en select no
-  filtrable, activedescendant, y error de red simulado interceptando fetch).
-  **Con esto MEDIA queda cerrado; siguen los BAJA.**
-
-BAJA (por grupos temáticos; 14 hallazgos + login-throttling movido a strengthening):
-- [x] **Grupo A (correctitud/robustez):**
-  - Bug pérdida de datos: `Sync::Down#import_users` borraba a TODOS los
-    capturistas si el export venía sin usuarios (`where.not(col: [])` → `AND 1=1`).
-    Fix: cleanup solo si `erp_keys.any?` + `.compact`. Test nuevo. (rueda-negocios)
-    **(Superado 2026-07-26: el usuario definió lo contrario — REPLACE pleno; ver
-    la nota de sync-down al final de la sección de la 2ª auditoría.)**
-  - Tope de descuento server-side: `OrderItem#discount_within_limits` valida
-    contra `product.max_discount` (%; 0 = sin descuento, nil = hasta 100).
-    Mensajes en `:base` (evita cambiar default_locale). `OrderItems#update`
-    muestra el error real en el flash. Tests de modelo. (rueda-negocios)
-  - rueda-api: `POST /pedidos` con JSON inválido → 400 (antes 500); `/health`
-    no filtra `e.message` al cliente. Tests rack-test (test/application_test.rb,
-    carga `app/application.rb` con LOGGER stub, sin config/application.rb).
-  Todo validado (suite + navegador para el flash de descuento).
-- [x] **Grupo C (UX/inclusividad):**
-  - Touch targets ≥44px en `_item_row`: botón 🗑 (`h-11 w-11`) y campos
-    cantidad/descuento (`h-11`). Medido en navegador (44×44 / 64×44).
-  - Confirmaciones: el `turbo-confirm` nativo ya no existía (migró al modal en
-    M15). Criterio unificado: el modal se reserva para lo destructivo/pesado;
-    cerrar sesión es reversible → `button_to` directo en los 3 lugares (se quitó
-    el modal de logout del rol server en `home/index`).
-  - Saludo neutro: "Bienvenido, …" → "Hola, …" (`sessions_controller`).
-- [x] **Grupo D (convenciones/limpieza/docs):**
-  - Borrado `hello_controller.js` (scaffolding sin usar; sin referencias).
-  - Docs Postgres: README rueda-negocios "16/17" → "16" (consenso con CLAUDE.md
-    y docs; el ERP corre 16, aunque el dev local del usuario es 17.10 Postgres.app).
-  - README rueda-api: sección "## Tests" con `bundle exec rake test`.
-  - `orders_controller`: variable local `nuevo` → `new_client`. NO se tocaron
-    `prefijo`/`id_rueda` en rueda-api: son columnas reales del ERP
-    (`cnf_persona.prefijo`, `r.id_rueda`); renombrarlas rompería la
-    correspondencia variable↔columna en el SQL (el hallazgo los clasificó mal).
-- [x] **Grupo B (rueda-api export):** `deep_coerce` (recorría ~13k productos en
-  memoria para BigDecimal→string) eliminado; los 5 NUMERIC de `products` se
-  castean con `trim_scale(...)::text` en SQL (precios idénticos, enteros sin
-  `.0`, cero notación científica). `#{EMPRESA}` interpolado → placeholder `?`.
-  Validado byte a byte contra la BD dev (rueda 3): JSON semánticamente idéntico,
-  ~80 KB más chico. **AUDITORÍA CERRADA.**
-- [x] **Rutas ES/EN unificadas a inglés:** en `routes.rb`, `servidor`→`server`,
-  `ruedas`→`rounds`, `reportes`→`reports`, `pedidos-capturados`→`captured-orders`.
-  Solo cambió `routes.rb`: los `as:`/helpers ya eran inglés y las vistas usan
-  helpers (nada hardcodeado). Validado en navegador (`/reports`,
-  `/reports/captured-orders`). El texto español de la UI y el username `servidor`
-  del rol server NO son rutas y se conservan.
-- No abordados por decisión: login throttling (→ strengthening con D1–D4
-  diferidos), y `prefijo`/`id_rueda` en rueda-api (espejan columnas del ERP).
-- [x] **A5** errores del encabezado: panel "Faltan datos obligatorios: …" +
-  ring rojo en los `custom_select` inválidos (`invalid:` en el partial).
-- [x] **A6** tarjetas no implementadas (menú + reportes) marcadas "Próximamente"
-  (atenuadas, no clickeables) vía `soon:` en `_menu_card`/`_report_card`.
-  - **Ajuste posterior (a pedido del usuario):** en el home (`_menu_card`) el
-    badge "Próximamente" pasó de arriba-derecha a **abajo-derecha**; en ambos
-    hubs el badge es **amarillo sólido** (`bg-brand-gold` + ring/sombra) en vez
-    de gris translúcido. Clave de diseño: para que el badge resalte a plena
-    opacidad, el estado "soon" atenúa el **contenido** con `opacity-60` y el
-    **fondo** con alpha (`bg-brand-*/60`) — el alpha en el color NO afecta a los
-    hijos, `opacity` sí. Validado en navegador (capturista + reportes).
-
-Media/baja/diferidos: ver el artifact de auditoría.
-
-## Auditoría 2026-07-26 (2ª pasada, post-remediación) — remediación
-
-Reporte: artifact "Auditoría — rueda-negocios & rueda-api" (segunda-auditoria).
-2 ALTA · 9 MEDIA · 24 BAJA · 0 vulnerabilidades de seguridad nuevas.
-
-- [x] **Bloque 1 (ALTA):**
-  - **A1 camino de regreso al pedido:** filas del reporte enlazan a `order_path`;
-    "Volver al pedido" en el resumen. Lectura (`show`/`summary`/`pdf`) usa
-    `accessible_orders` (server → todos, capturista → suyos); la escritura sigue
-    solo del dueño. Vistas usan `can_edit_order?(order)` (helper en
-    ApplicationController: `editable? && dueño`) en vez de `order.editable?` —
-    el server abre cualquier pedido en solo lectura. Validado en navegador con
-    ambos roles.
-  - **A2 colisión de idempotencia:** FECEGO NO tolera microsegundos en
-    `hora_pedido` (confirmado por el usuario) → la solución es detección:
-    `find_existing` ahora trae folio + total + # partidas; si hay match por
-    (cliente, fecha, hora) pero el contenido difiere (total > $0.01 o # partidas)
-    → `Error` 422 "colisión de idempotencia" en vez de responder idempotente.
-    El sync-up lo marca fallido y visible (remedio: recapturar el pedido). El
-    reintento legítimo (mismo contenido) sigue idempotente. Tests: 16 en verde.
-- [x] **Bloque 2 (robustez sync, M1-M3):** M1 — `JSON::ParserError` y
-  `ApiClient::Error` en el rescue por pedido de `Sync::Up#run!` (un 200 no-JSON
-  marca fallido ese pedido y el lote sigue); M2 — guard `folio.to_s.strip.empty?`
-  → un 2xx sin `clave_pedido` es fallido reintentable, nunca transmitido-sin-folio
-  (pending solo re-selecciona captured, quedaría atascado); M3 — `ApiClient#get`
-  envuelve `JSON::ParserError` en `ApiClient::Error` (el panel muestra flash,
-  no 500). Tests: 4 nuevos (aislamiento de lote incluido); suite 28/106.
-- [x] **Bloque 3 (M4, índices trigram):** migración `pg_trgm` + 8 índices GIN
-  `gin_trgm_ops` (products: description/model/part_number/`CAST(erp_product_id
-  AS TEXT)` como índice de expresión —el opclass va INLINE en el string, la
-  opción `opclass:` solo aplica a columnas—; product_suppliers.supplier_sku;
-  clients: name/commercial_name/erp_client_key). `Product.search` reestructurado:
-  el SKU salió del OR-con-LEFT-JOIN (que impedía índices por tabla) a una rama
-  `UNION` dentro de `id IN (…)` — cada rama entra por su índice (BitmapOr).
-  De paso `sanitize_sql_like` (cierra B17). Medido: 34.5 ms (seq scan 13,196
-  filas) → **0.17 ms** (~200×), conteos idénticos (39/20). Clientes (47 filas):
-  el planner elige seq scan correctamente; el índice queda para cuando crezca.
-- [x] **Bloque 4 (UX, M5-M7):** M5 — tabla de partidas responsiva: Consecutivo/
-  No. de parte/Unidad ocultas bajo `lg` (`hidden lg:table-cell`); a 800px quedan
-  acciones+Código+Descripción+Cantidad+Precio+Descuento+Total SIN scroll
-  horizontal (medido). M6 — feedback de auto-guardado: `form_submit_controller`
-  con target `status` + `flashStatus` en `turbo:submit-end` (solo con éxito);
-  "Guardado ✓" 2s junto al textarea de observaciones (+ aria-label, adelanta
-  parte de B14). M7 — `public/406-unsupported-browser.html` reescrita en
-  español con la identidad de la app (allow_browser la sirve por default).
-  Todo validado en navegador (resize a 800px incluido).
-- [x] **Bloque 5 (contrato+docs, M8-M9):** M8 — el 500 genérico de rueda-api
-  ahora incluye `message: "Error interno."` (contrato `{error, message}`
-  uniforme con 400/422; el detalle sigue solo en el log). Test con
-  `app.set :raise_errors, false` (en test Sinatra propaga excepciones y el
-  handler `error do` no corre sin apagarlo). M9 — memory.md: corregida la
-  referencia fantasma a `rueda-api/docs/contract.md` (el contrato vive en
-  `docs/erp-esquema-*.md`) y 10 notas "(superado/hoy …)" en las secciones
-  añejas (deep_coerce, modal de correo, Cancelar→turbo_confirm,
-  draft/submitted, orders#submit, rutas /reportes). Ajuste a M5 pedido por el
-  usuario: "Consecutivo" visible en angosto como "#" (antes oculto); No. de
-  parte/Unidad siguen ocultas bajo lg. **Con esto MEDIA de la 2ª auditoría
-  queda cerrado; siguen los BAJA.**
-
-BAJA 2ª auditoría (por grupos):
-- [x] **Grupo A (integridad de pedidos):**
-  - B1: `max_discount` nil = **0** (sin descuento) — decisión del usuario. Antes
-    nil caía a tope 100%. Partidas sin producto tampoco admiten descuento.
-  - B2: partida sin precio (`unit_price` 0) inválida — al agregar un producto
-    sin precio el flash avisa y no se agrega (`OrderItems#create` pasó de
-    `create!` a manejo con errores). Validado en navegador (producto 426).
-  - B3: `min_sale_quantity` **ELIMINADA** (migración). Se investigó cablearla
-    como "venta en múltiplos de empaque": la fuente ERP es
-    `com_producto_has_empaque` (minimo=true, ~6,520 productos con cantidad
-    6/10/4/12/20…), PERO al validar contra 1.8M de partidas reales del ERP solo
-    ~78-85% son múltiplos exactos (consistente 2022-2026) → NO es regla dura
-    del negocio; el usuario decidió eliminar la columna.
-  - B4: rueda-api `validate!` rechaza pedidos sin partidas (422).
-  Suites: rueda-negocios 30/110 · rueda-api 18/43.
-- [x] **Grupo B (PDF, importe en letra):** B5 — el total se cuantiza a 2
-  decimales ANTES de partir entero/centavos (100.999 daba "CIEN PESOS 100/100";
-  ahora "CIENTO UN PESOS 00/100"). B6 — `integer_to_words` recursivo en
-  millones (>10^9 ya no truena). Bonus destapado por los tests: apócope
-  "uno"→"un" antes de sustantivo ("ciento UN pesos", "veintiún mil" — antes
-  "CIENTO UNO PESOS"). Tests dedicados (order_generator_test) + smoke render.
-- [x] **Grupo C (concurrencia menor):** B7 — índice único parcial
-  `sync_runs(kind) WHERE status='running'` (máx. un run corriendo por tipo);
-  el controller rescata `RecordNotUnique` → mismo alert amigable. B8 — índice
-  singleton en `settings` (expresión `(true)` única) + `Setting.instance` con
-  rescue→relee. Tests de ambas guardas. Trampa: Minitest 6 ya NO trae
-  `minitest/mock` integrado — el stub del test de carrera se hizo con
-  `define_singleton_method` + `remove_method`. Suite 39/124.
-- [x] **Grupo D (UX menor):** B9 — paginación con pagy (25/página) en el
-  reporte de pedidos + nav propia (solo aparece con >1 página). B10 — el panel
-  del server da guía accionable en vez de e.message crudo (detalle al log).
-  B11 — "Ver PDF"/"Generar PDF" unificados a "Descargar PDF" (es lo que hacen).
-  B12 — login "Enviar"→"Iniciar sesión". B13 — "Guardar"→"Finalizar pedido" en
-  el detalle (+ flash "antes de finalizar"). B14 — aria-labels en cantidad/
-  descuento con el nombre del producto. B15 — contraste white/50-60 → white/70
-  en server/rounds. B16 — placeholder del buscador corto ("Busca por código,
-  nombre, modelo o No. de parte"). Validado en navegador.
-- [x] **Grupo E (limpieza):** B18 — `EMPRESA = 1` compartida en
-  `rueda-api/app/constants.rb` (antes triplicada; test_helper también la carga).
-  B19 — locals de order_create a inglés (`vend`→`salesperson_id`,
-  `faltantes`→`missing`, `esperado`→`expected`, `existentes`→`found`).
-  B20 — `layouts/application` se CONSERVA como fallback de convención (si una
-  vista futura olvida `layout "auth"` cae aquí con CSS y csrf, no pelona) +
-  `lang="es"` + comentario. B21 — enum simbólico (`status: :captured` /
-  `:transmitted`). B22 — comentario `Locals:` uniforme en los 3 partials en
-  prosa. Smoke del export contra la BD real (13,196 productos con la constante
-  compartida). **2ª AUDITORÍA COMPLETAMENTE REMEDIADA** — pendientes solo los
-  registros sin acción: B23 (colisión con escritor ERP nativo, baja confianza)
-  y B24 (revalidación de precios → strengthening).
-
-**Sync-down / usuarios — regla definitiva (2026-07-26, decisión del usuario):**
-los usuarios se reemplazan IGUAL que las demás tablas (replace pleno). Si el
-export viene sin usuarios, se limpian TODOS los capturistas — que la rueda no
-tenga usuarios asignados es problema operativo del ERP, no del sitio. Esto
-REVIERTE el guard `erp_keys.any?` del Grupo A de los BAJA (1ª auditoría), que
-trataba el export vacío como error a protegerse. Única excepción que se
-mantiene: el usuario `server` (seedeado) sobrevive siempre — es infraestructura
-de la app, no dato del ERP. Test invertido en `down_test`.
-
-**"Cerrar rueda" (2026-07-26):** acción nueva del panel del server para
-encadenar ruedas en la misma laptop. `Sync::CloseRound.run!`: purga TODOS los
-pedidos locales (transmitidos ya viven en el ERP; borradores son capturas
-incompletas), desactiva la rueda y limpia la selección — así el sync-down de
-la siguiente rueda pasa su guarda (`Order.exists?`). Guarda propia: NO cierra
-si hay capturados sin transmitir (ventas que se perderían). UI: card 5 del
-menú server (neutra oscura, destructiva → modal). Ruta `POST /server/close-round`.
-Tests del servicio (3) + guarda validada en navegador.
-Ajuste 2026-07-28 (pedido del usuario): también **borra el historial de
-`SyncRun`** — el panel mostraba la última descarga/transmisión de la rueda ya
-cerrada; ese historial pertenece a la rueda, el panel debe arrancar limpio.
-Segunda guarda: `SyncInProgressError` si hay un run `running` (borrarle su
-SyncRun al job vivo lo rompería). +2 tests.
-Ajuste 2026-07-28 (regla del usuario): **no se puede elegir otra rueda con una
-en curso** — el cambio de rueda pasa SIEMPRE por "Cerrar rueda" (y sus
-guardas). Guard en el controller sobre `rounds` Y `select_round` (URL directo/
-back no se la brincan) + card "Elegir rueda" deshabilitada en el menú
-(opacity-60, sin link, hint "Ciérrala para elegir otra"). El estado
-"Seleccionada" de la pantalla de ruedas quedó muerto y se eliminó (solo se
-alcanza sin selección). Equivocarse de rueda no estorba: "Cerrar rueda" con 0
-pedidos es gratis. Tests de integración (4) con webmock.
-Ajuste 2026-07-28 (regla del usuario, cierre del embudo): **sin rueda no se
-opera nada**. (a) Capturistas ni siquiera entran: login bloqueado sin
-`active_round` (422 con "No hay rueda en curso en esta laptop…") y guard de
-sesión `require_round_for_capturista` en ApplicationController que expulsa
-(reset_session → login) a los que tenían sesión viva cuando se cerró la rueda
-— SessionsController lo salta para que login/logout funcionen siempre. El rol
-server entra siempre (es quien carga la rueda). (b) Panel server sin
-selección: SOLO vive "Elegir rueda" — Transmitir/Reportes/Cerrar quedan
-deshabilitadas (mismo patrón disabled) + guards por URL directo en `sync_up`
-("no hay pedidos que transmitir"), `close_round` ("No hay rueda que cerrar")
-y `ReportsController#require_round` (criterio: selección o rueda activa).
-Con esto el flujo es un embudo estricto: elegir → obtener → operar → cerrar
-→ elegir. Tests de integración (6, no_round_access_test).
-Ajuste 2026-07-28 (regla del usuario): **sesión única por usuario, "el
-último login gana"** — `has_secure_token :session_token` en User; cada login
-regenera el token y lo guarda en la cookie; el guard `require_current_session`
-(ApplicationController, entre require_login y el guard de rueda; Sessions lo
-salta) cierra con "Tu usuario inició sesión en otro equipo" toda sesión cuyo
-token ya no coincida. Se eligió este sabor sobre "bloquear el segundo login"
-porque con cookies el servidor no sabe cuándo murió una sesión (navegador
-cerrado, tablet sin pila) y bloquearía usuarios para siempre sin TTL/
-heartbeat. El logout de una sesión desplazada no toca el token (solo el login
-lo regenera), así no tumba a la sesión nueva. Tests (3,
-single_session_test, con open_session para simular dos equipos).
-Ajuste 2026-07-29 (pedido del usuario): **auditoría de logins** — tabla
-`login_events` (un renglón por intento: user FK `on_delete: :nullify` +
-username tecleado, success, ip, user_agent, created_at). `success: false`
-cubre credenciales malas, usuario inexistente/inactivo Y capturista
-bloqueado sin rueda ("no se abrió sesión"). Sobrevive al replace del
-sync-down (FK anula, evento queda con el username). Los fallidos son la
-materia prima del throttling diferido a strengthening. Sin UI todavía —
-consultable por consola; candidato a reporte del panel server. Tests (5,
-login_events_test).
-Ajuste 2026-07-28: **seleccionar rueda pide confirmación con modal** (mismo
-patrón modal + `home/confirm_dialog`, que ahora acepta el local opcional
-`params` para el PATCH con erp_round_id/name) — avisa que para cambiarla
-después habrá que cerrarla.
-Ajuste 2026-07-28 (pregunta del usuario): **una corrida de sync viva bloquea
-lanzar CUALQUIER otra** (no solo del mismo tipo): `SyncRun.running.exists?`
-en sync_down y sync_up — cierra la ventana de "descarga a media transmisión"
-que podía pisar al job en vuelo. El mismo tipo ya estaba doblemente blindado
-(guard + índice único parcial: un running por tipo, la carrera exacta la
-para Postgres con RecordNotUnique). El menú refleja el bloqueo en vivo:
-el broadcast de SyncRun ahora reemplaza el MENÚ COMPLETO (`#server-menu`,
-partial home/server_menu con locals recalculados) en vez de solo la línea de
-estado, para que Obtener/Transmitir/Cerrar se deshabiliten/rehabiliten sin
-recargar. Validado en navegador: guard cruzado (flash con la descarga
-corriendo), botones disabled durante la corrida, nodo del menú reemplazado
-al terminar (marcador DOM desapareció) y — punto delicado — los `button_to`
-del menú re-inyectado por broadcast SÍ pasan CSRF (Turbo manda el token del
-meta tag en el header; el render del canal no tiene sesión). Tests de
-integración (4, sync_concurrency_test).
-
-**Universo de productos por capturista (2026-07-26, regla del usuario):** un
-capturista puede tener varios proveedores/marcas asignados y ese es su universo
-DURO de productos (todos sus proveedores ∪ sus marcas; sin membresía → vacío,
-problema operativo del ERP). Cadena completa:
-- Export: llave `people` (cnf_rueda_negocios_persona → erp_person/supplier/
-  brand_id, marca 0→nil) y `supplier_ids` por producto desde
-  **com_proveedor_has_producto** — hallazgo clave: la relación real
-  producto↔proveedor NO son los SKUs (com_producto_has_sku: MAKITA tendría 0
-  productos por SKUs vs 2,207 reales). ProductSupplier ahora guarda la unión
-  (supplier_sku nil cuando no hay SKU).
-- Sync-down: `import_people` → business_round_people (omite y reporta
-  membresías sin usuario/proveedor local, `skipped_people`).
-- App: `User#product_universe(round)`; `product_options` busca DENTRO del
-  universo (mensaje si no hay membresía); `OrderItems#create` scopea el find
-  al universo (404 ante POST forjado). Validado en navegador con makita1:
-  universo 2,134, "martillo" → solo MAKITA, STIHL fuera.
-- **PDF del pedido — ajustes de formato (2026-07-29, pedido del usuario):**
-  (a) nombre de la rueda en negritas arriba de "Capturado:"; (b) "Capturado:"
-  incluye al capturista (full_name/username) y "Renglones" pasó a su propia
-  línea; (c) Observaciones debajo del importe en letra (bounding_box en
-  flujo, izquierda de los totales); (d) **dirección completa** de la sucursal
-  — el export ahora arma calle + no. ext (+ INT.), COL., CP, municipio y
-  estado resolviendo los consec_* contra cnf_colonia/cnf_municipio/cnf_estado
-  (colonia lleva id_empresa en el join; municipio/estado no, como en la
-  ubicación de la rueda). El campo llega por la misma llave `address` del
-  export → sin cambios en el import. Requiere sync-down para refrescar
-  direcciones ya sincronizadas.
-  Segunda ronda: Sucursal ARRIBA de Dirección; Renglones al final del bloque
-  derecho (bajo Estatus); totales flush al borde derecho de la tabla de
-  partidas — ojo Prawn: la tabla toma su ancho natural, no el del
-  bounding_box; hay que fijar column_widths que sumen el ancho del box y
-  quitar el padding derecho de la columna de montos.
-- **Empaque mínimo de venta — REVIVIDO como regla dura (2026-07-30, pedido
-  del usuario):** revierte la decisión de la 2ª auditoría ("no cablear").
-  Fuente `com_producto_has_empaque` (MIN(cantidad) con minimo=true, CTE en el
-  export → `min_sale_quantity`, ~957 productos en la rueda 3; NULL = sin
-  regla). La cantidad debe ser múltiplo exacto
-  (OrderItem#quantity_in_package_multiples, mensaje "se vende en múltiplos de
-  X"); la partida nueva arranca en el empaque y las flechas ↑/↓ avanzan por
-  empaque (data-step-size). La regla es MÁS estricta que el propio ERP
-  (~78–85% de ventas reales son múltiplos) — a propósito. Validado E2E en
-  navegador (alta→20, flecha→40, 25→422 y repinta 20). Detalle del entorno
-  de pruebas: element.focus() NO dispara el evento focus si la ventana no
-  tiene foco del SO — los guards de remember/submitIfChanged se prueban
-  despachando FocusEvent a mano. Requiere sync-down para poblar empaques.
-  Refinamiento (cazado por el usuario): el `min` del input debe SER el
-  empaque (con min=1, la ↓ desde 10 caía a 1 y desalineaba: 11, 21…) y la
-  flecha va al siguiente múltiplo EN SU DIRECCIÓN (15↑→20, 15↓→10), nunca
-  bajo el empaque.
-- **dividir_facturas en el encabezado (2026-07-29/30, pedido del usuario):**
-  `vta_pedido.dividir_facturas` (NUMERIC(18,6), default 0) = importe máximo
-  por factura al facturar el pedido (valores reales: 2k/5k/10k/25k…; 0 = no
-  dividir). El usuario primero lo llamó "monto_divide" — no existía; el
-  nombre real se confirmó consultando el esquema. Cadena completa: columna
-  espejo en orders + campo en paso 1 (SOLO visible con tipo Factura, target
-  de order-kind) + card del paso 2 ("cada $X" / "No dividir") + payload del
-  sync-up + INSERT en rueda-api (`p["dividir_facturas"] || 0`). Validado
-  E2E contra el ERP de testing (pedido 1A0017 → 5000; borrado después).
-  Trampa repetida: el primer intento insertó 0 porque el rackup de :4568
-  servía código de ayer.
-  Iteración UI (2026-07-30, pedido del usuario): el campo va DEBAJO de
-  Dirección de entrega, a MEDIA columna (como Tipo/Uso CFDI), formato pill
-  negra, sin hint, y es un COMBO alimentado por el catálogo del ERP
-  `vta_pedido_monto_divide` (7 montos: 0/2k/5k/10k/15k/25k/50k) → export
-  `divide_amounts` → tabla local `divide_amounts` (DivideAmount, label
-  "No dividir"/"$2,000"). El pedido guarda el MONTO elegido, no FK (igual
-  que vta_pedido). Sin catálogo sincronizado el combo no se muestra
-  (queda 0). Emparejar selected: valor plano normalizado
-  (DivideAmount#option_value / Order#dividir_facturas_option).
-- **Código FECEGO a 6 dígitos (2026-07-28, regla del usuario):** el ERP
-  guarda `id_producto` como entero pero SIEMPRE lo muestra a 6 dígitos
-  (17768 → "017768"). `Product#erp_code` (`format("%06d")`) es la única
-  definición del formato; lo usan el autocompletado y el snapshot de partidas
-  (`order_items.code`), que arrastra el formato a tabla/resumen/PDF gratis.
-  La rama del código busca contra el PADDED — `LPAD(erp_product_id::text,
-  6, '0') ILIKE %q%` con índice trigram de EXPRESIÓN (bitmap scan, 0.012ms).
-  El primer intento (quitar ceros a la izquierda y buscar contains sobre el
-  entero) fue engañoso y el usuario lo cazó: "000081"→"81" traía 003381,
-  004817, 008681… Con el padded, un código de 6 completo es exacto por
-  construcción (6 dentro de 6 = igualdad), "17768" sigue hallando 017768 y
-  "0177" a los 0177xx. Partidas previas al cambio quedarían sin pad
-  (snapshot), pero había 0 pedidos. Tests (6).
-- **Membresías múltiples y solo-marca (2026-07-28):** el ERP no tenía ningún
-  caso real de >1 proveedor / >1 marca (solo 3 makitas con 1 proveedor c/u);
-  se insertaron en el ERP de testing 2 renglones para makita1 (90092):
-  consecutivo 2 → STIHL (157) y consecutivo 3 → **solo marca** HITOOLS
-  (id_proveedor=0, id_marca=22). Eso destapó un hueco: `id_proveedor = 0`
-  es la convención ERP de "solo marca" (espejo de id_marca 0), el export NO
-  le hacía NULLIF y el import omitía toda membresía sin proveedor → las
-  asignaciones solo-marca SE PERDÍAN. Fix: export `NULLIF(id_proveedor, 0)`;
-  migración `supplier_id` nullable en business_round_people + `belongs_to
-  optional` + validación "proveedor o marca, al menos uno"; import_people
-  acepta solo-marca y omite solo referencias rotas o renglones vacíos (+2
-  tests). Validado E2E en navegador con makita1: universo = MAKITA ∪ STIHL ∪
-  HITOOLS = **8,716** (2,134 + 4,068 + 2,515 exacto contra query directa),
-  pill de Proveedor se volvió selector (2 proveedores), búsquedas reales en
-  paso 2: "martillo"→MAKITA, "1124-640"→STIHL, "CHECK"→HITOOLS,
-  "31820" (BTICINO, fuera) → "Sin resultados". makita2 sigue acotado a
-  2,134. Los renglones de prueba QUEDAN en el ERP de testing (borrarlos:
-  `DELETE FROM fecego.cnf_rueda_negocios_persona WHERE id_empresa=1 AND
-  id_rueda=3 AND id_persona=90092 AND consecutivo IN (2,3);`).
-
-**Guarda del sync-down afinada (2026-07-27, decisión del usuario):** solo
-bloquean los pedidos capturados SIN transmitir; borradores y transmitidos se
-purgan automáticamente antes del replace (`purged_orders` en el resumen) — el
-refresh entre días queda en 2 pasos (transmitir → obtener información).
-"Cerrar rueda" sigue para cambiar de rueda sin re-descargar. Validado en uso
-real por el propio usuario (purgó 6) y con tests (46/157). Trampa recurrente
-confirmada: un rueda-api VIEJO dueño de :4568 sirvió un export sin
-people/supplier_ids → membresías en 0; matar pumas huérfanos antes de probar.
-
-## Sistema visual unificado (2026-07-27/28)
-
-Iterado en vivo con el usuario tras migrar todo al shell oscuro:
-
-- **Shell único**: fondo negro + patrón blanco 0.18 + `shared/_top_bar` (logo
-  → menú, pill Usuario, pill Proveedor solo capturista, Cerrar sesión CON
-  modal — decisión que revirtió el "logout directo" del Grupo C) en TODAS las
-  pantallas: home, hub de reportes, pedidos capturados y los 3 pasos del
-  pedido. Título de cada pantalla en el cuerpo. Margen lateral **5%**.
-- **Roles por color**: dorado = navegación/acciones (cards de menú, botones,
-  badge Capturado); crema = TODA superficie de contenido, fija o flotante
-  (tablas, forms, observaciones, totales, dropdowns/combos, avisos); negro =
-  controles de captura (buscadores, selects, thead) y barras de título; coral
-  = acción primaria/culminación (Finalizar, Total, badge Transmitido); verde
-  emerald = SOLO feedback global (flash, ✓ Listo del sync). **BLANCO = solo
-  campos de entrada** (inputs) — señal de "esto se escribe".
-- **Paso 2 enmarcado** como los pasos 1/3: una card dorada de marco delgado
-  (p-2, separaciones internas del mismo grueso), barra negra con folio+badge
-  a la izquierda y botones a la derecha; observaciones y totales de la misma
-  altura ("Guardado ✓" es overlay dentro del textarea). La card del paso 1
-  se quedó DORADA (el usuario revirtió el crema ahí).
-- **Iconografía 100% Heroicons outline** (currentColor, trazo 1.5): cards de
-  ambos menús, hub de reportes, lupas de buscadores, trash de partidas. Cero
-  emojis y cero assets de íconos sueltos.
-- **Hover homologado: escala la CARD completa** (2026-07-28, pedido del
-  usuario): `hover:scale-[1.015]` va en la card visible, nunca en el botón
-  interno. En las cards con modal (Obtener/Transmitir/Cerrar rueda) eso
-  obligó a reestructurar: el contenedor `data-controller="modal"` quedó como
-  wrapper neutro, la card visible (botón + estado) es un div interno que se
-  transforma, y el diálogo vive FUERA de ese div — un `transform` en el
-  ancestro rompe el `position: fixed` del overlay (por eso el scale estaba en
-  el botón). Cards bloqueadas no escalan (opacity-60 en su lugar). Pills y
-  botones chicos siguen con hover de color, no de escala.
-- **Pills de contexto Proveedor/Marca en el top bar** (2026-07-28, pedido del
-  usuario): partial genérico `shared/_context_pill` (0 membresías → oculto;
-  1 → estático; varias → selector que cambia el activo de sesión). Marca es
-  espejo completo de Proveedor: `User#brands_in`, `available_brands`/
-  `current_brand`, `PATCH /active-brand` (ActiveBrandsController valida
-  pertenencia). Sin proveedores ya NO sale "Proveedor: —". Ambos son solo
-  contexto/etiqueta — no restringen la captura. `_supplier_pill` eliminado.
-  Ojo panel del combo: `w-max + right-0 + whitespace-nowrap` (el absoluto
-  dimensiona contra el pill angosto y doblaba los nombres). Tests (4,
-  context_pills_test).
-- **Deshabilitado homologado al 60%** (2026-07-28, pedido del usuario): TODO
-  elemento deshabilitado/próximamente se ve al 60%. Con badge "Próximamente":
-  fondo con alpha (`bg-*/60`) + contenido `opacity-60` + badge dorado a plena
-  opacidad (menu_card, report_card, correo del resumen). Sin badge (cards del
-  panel server bloqueadas por estado): `opacity-60` en el contenedor completo.
-  Quedó CERO `opacity-50`/`disabled:opacity-*` en vistas; el atributo
-  `disabled` de los botones se conserva (comportamiento, no estética).
-- **Encabezado del pedido**: el tipo (Factura/Remisión) solo ofrece lo que el
-  cliente tiene en el ERP (sin fiscales no hay Factura; sin remisiones no hay
-  Remisión; con uno solo, tipo fijo sin radio; sin nada → aviso y no captura).
-  WhatsApp eliminado por completo del resumen (vista+ruta+acción+asset).
-- **Paso 2 — detalles de contenido (2026-07-30)**: la columna Total de la
-  tabla de partidas incluye descuento e IVA (item.total, como el PDF; antes
-  era cantidad×precio y no cuadraba con el Total del pie). La card del
-  encabezado usa los MISMOS labels que los combos del paso 1 (RFC — razón
-  social, código — descripción del CFDI, sucursal — dirección completa). El
-  buscador de producto va en GRIS neutral-400 (el gris del manual de
-  identidad: pill "# Pedido" de la referencia paso2.png) con texto/lupa
-  oscuros, y recibe el foco al entrar (autofocus vía Stimulus). El hub de
-  reportes ganó "← Volver al menú" (título arriba de las cards a la izq.,
-  botón a la der.).
-- **Observaciones del pedido SIEMPRE en mayúsculas (2026-07-30)**:
-  `normalizes` en Order (fuente de verdad — viaja al ERP) + clase
-  `uppercase` en el textarea (presentación); placeholder exento. Lo ya
-  guardado conserva su caja hasta editarse.
-- **Cambiar razón social actualiza el Uso de CFDI (2026-07-30)**: controller
-  `cfdi-default` con mapa perfil→uso default del ERP; el change del combo de
-  razón social clickea la opción del combo de CFDI (reutiliza la lógica del
-  select). Sin default configurado, no toca la selección.
-- **Reporte de pedidos capturados**: Fecha · Hora (local, separadas) ·
-  Cliente (clave — nombre) · Vendedor (id — nombre) · Clave local (enlace al
-  pedido) · Renglones · Total · Estatus; el servidor ve además Capturista al
-  inicio.
-
-## Reglas de código aprendidas (2026-07-27/28)
-
-- **NUNCA `link_to` con `data: { turbo_method: … }`**: Turbo interceptaba el
-  clic (preventDefault) pero el form efímero no se sometía — el POST jamás
-  salía, sin error en consola. Usar **`button_to`** para toda acción no-GET
-  (era el único link así; ya migrado).
-- **Modales dentro de wrappers hermanos con el mismo z-index se tapan.** Los
-  pasos del pedido parten la página en dos `relative z-10` hermanos (header
-  con top_bar/modal + contenido); entre hermanos con el mismo z gana el
-  posterior en el DOM, y el `z-50` del diálogo solo cuenta DENTRO de su
-  contexto → el contenido tapaba el modal de cerrar sesión. Fix: el wrapper
-  del header va `z-20`. Las pantallas de un solo wrapper (home/reportes/
-  ruedas) no sufren esto. (2026-07-29)
-- **El atributo HTML `autofocus` no es confiable tras visitas Turbo** —
-  darlo explícito en `connect()` del controller Stimulus (opt-in con un
-  value). Y en validación con CDP: `element.focus()` NO dispara el evento
-  focus si la ventana no tiene foco del SO — despachar FocusEvent a mano.
-- **Campo numérico vaciado = "": normalizar a 0 antes de validar** si la
-  columna es NOT NULL (borrar el descuento + tab tronaba con
-  PG::NotNullViolation; la validación dejaba pasar el blank).
-- **El runner paralelo de minitest a veces se cuelga en at_exit** (sleep
-  eterno tras terminar los tests; 3 ocurrencias). Correr con
-  `PARALLEL_WORKERS=1` lo evita (~3s la suite completa).
-- **Inputs numéricos con `step="any"`: Chrome NO aplica las flechas ↑/↓ al
-  valor** — la tecla cae al scroll de la página (en la tabla de partidas "te
-  subía a la primera fila"). Fix doble en form-submit: `stepWithArrows`
-  (keydown ±1 acotado a min/max + preventDefault, conservando step=any para
-  decimales) y envío en `blur` solo-si-cambió (`remember`/`submitIfChanged`)
-  en vez de `change` — un submit por flecha reemplazaría la tabla por Turbo
-  y mataría el foco. (2026-07-29)
-  Segunda parte (mismo día): al SALIR del campo seguía brincando — el stream
-  del update reemplazaba la tabla completa y destruía el input al que el
-  usuario acababa de brincar (Tab/clic) → foco a body → la siguiente flecha
-  scrolleaba al inicio. Fix: `turbo_stream.replace(..., method: :morph)`
-  (turbo-rails 2.0.23) en tabla y totales — idiomorph actualiza en sitio y
-  conserva el foco, PERO solo si empareja nodos por id ÚNICO: hubo que dar
-  ids por fila a tr/forms/inputs (dom_id(item, :quantity) etc.; form_with
-  model repetía `edit_order_item_X` dos veces por fila y
-  `order_item_quantity` en todas). Validado: editar cantidad → brincar a
-  descuento de la misma fila → stream aplica y el foco sigue ahí.
-- **Agregados contra tablas del ERP: en CTE con GROUP BY, no subqueries
-  correlacionadas.** La subquery por producto de `supplier_ids` (13k
-  ejecuciones × com_proveedor_has_producto, 58k filas cuya PK empieza por
-  id_proveedor) llevó el export de segundos a ~28s; con CTE + hash join:
-  **0.3s**. "Obtener información" ya no se siente colgado.
-- **Runs de sync huérfanos (2026-07-28):** un `SyncRun` nace `running` y solo
-  el job lo cierra; si el proceso muere a media corrida (apagón, cierre de
-  `bin/dev` — con el adapter de jobs en proceso el job no sobrevive), el
-  renglón queda `running` para siempre: el panel gira "en progreso" eterno y
-  el guard bloquea nuevas corridas (le pasó al usuario en la laptop, ni el
-  reinicio lo curaba). Fix: `SyncRun.recover_orphaned!` invocado desde
-  `config/initializers/sync_run_recovery.rb` dentro de
-  `Rails.application.server { }` — ese hook corre SOLO al bootear el servidor
-  web (no en consola/runner/rake/tests, donde un `running` puede ser legítimo
-  porque el server sigue vivo). Validado: server efímero en :3001 barrió al
-  huérfano sembrado; el runner que lo sembró no lo tocó.
-
-## Estado actual
-
-
-Estructura de repos definida; ambos en GitHub (org **ercom-tech**):
-`ercom-tech/rueda-negocios` y `ercom-tech/rueda-api`, rama `master`.
-**Descubrimiento del esquema del ERP COMPLETADO** (contra BD dev `fecego` @1702):
-catálogos/sync-down → `docs/erp-esquema-catalogos.md`; **pedidos/sync-up (alta)**
-→ `docs/erp-esquema-pedidos.md`.
-
-**Fase A COMPLETADA** (app `rueda-negocios`): `rails new` + modelos del dataset
-local, migrado y validado.
-
-**Fase C/D — sync completo VALIDADO end-to-end contra el ERP dev:**
-- **sync-down:** export en rueda-api (`GET /ruedas/:id/export`) + `rake sync:down`
-  (replace del catálogo, deja la BD local idéntica al export).
-- **sync-up:** alta de pedidos en rueda-api (`POST /pedidos`, folio + idempotencia)
-  + `rake sync:up` (transmite pedidos, guarda `erp_folio`/`transmitted_at`).
-- **Pendiente con FECEGO:** confirmar los defaults de config de la cabecera
-  (ya escritos con la moda del ERP en `OrderCreate::HEADER_DEFAULTS`).
-
-**Fase B — LOGIN, MENÚ, hub de REPORTES y PEDIDO completo**: autenticación
-(bcrypt) + login; **menú** (`home#index`); **hub de reportes** (`reports#index`,
-`/reports`); y el **pedido completo** — encabezado (`orders#new`, paso 1),
-**detalle** (`orders#show`, paso 2) y **resumen/envío** (`orders#summary`, paso 3).
-Diseños desde `docs/design-reference/{login,menu,reportes,pedidos}`.
+- Decisiones generales del proyecto (abajo)
+- Descubrimiento del esquema de catálogos (ERP)
+- Fase A — scaffolding · Fase B — login, menú, reportes, pedido (arcos 1–3)
+- Fase C — `rueda-api` export / sync-down
+- Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
 
 ## Decisiones tomadas
 
@@ -845,6 +279,53 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
 - **Seed:** usuarios `servidor` (rol server) y `capturista2`, + un pedido de
   capturista2 para demostrar el scoping. Ambos con `rueda2026`.
 
+### Sistema visual y detalles de pantalla (decisiones)
+
+Las **normas** que salieron de aquí viven en `docs/convenciones-visuales.md`
+(shell, roles por color, iconografía, hover, deshabilitado al 60%, pills,
+textos al usuario) — se cargan solas. Aquí queda el porqué y lo específico de
+cada pantalla.
+
+- **Origen (2026-07-27/28):** el sistema visual se iteró **en vivo con el
+  usuario** tras migrar todo al shell oscuro; varias reglas nacieron de que él
+  detectara inconsistencias entre pantallas ("no hay consistencia entre
+  transparencia y deshabilitado", "en unas cards crece solo el contenido") y
+  pidiera homologar en todo el proyecto. Por eso las convenciones se escriben
+  como norma global, no como el arreglo de una pantalla.
+- **Paso 2 enmarcado** como los pasos 1 y 3: card dorada de marco delgado
+  (`p-2`, separaciones internas del mismo grueso), barra negra con folio +
+  badge a la izquierda y botones a la derecha; observaciones y totales de la
+  misma altura ("Guardado ✓" es overlay dentro del textarea). La card del paso
+  1 se quedó **dorada** — el usuario revirtió el crema ahí.
+- **Pills Proveedor/Marca:** Marca es espejo completo de Proveedor
+  (`User#brands_in`, `available_brands`/`current_brand`, `PATCH /active-brand`
+  con `ActiveBrandsController` validando pertenencia). Sin proveedores ya no
+  sale "Proveedor: —". `_supplier_pill` se eliminó al generalizar. Tests en
+  `context_pills_test` (4).
+- **Encabezado del pedido:** el tipo (Factura/Remisión) solo ofrece lo que el
+  cliente tiene en el ERP — sin perfiles fiscales no hay Factura; sin
+  remisiones no hay Remisión; con uno solo, tipo fijo sin radio; sin ninguno,
+  aviso y no se captura. WhatsApp se eliminó por completo del resumen (vista,
+  ruta, acción y asset).
+- **Paso 2 — contenido (2026-07-30):** la columna Total de la tabla incluye
+  descuento e IVA (`item.total`, como el PDF; antes era cantidad × precio y no
+  cuadraba con el Total del pie). La card del encabezado usa los **mismos
+  labels** que los combos del paso 1 (RFC — razón social, código —
+  descripción del CFDI, sucursal — dirección completa). El buscador de
+  producto recibe el foco al entrar. El hub de reportes ganó "← Volver al
+  menú" (título arriba de las cards a la izquierda, botón a la derecha).
+- **Observaciones siempre en mayúsculas (2026-07-30):** `normalizes` en `Order`
+  es la fuente de verdad (el texto viaja al ERP, que maneja mayúsculas) y la
+  clase `uppercase` del textarea es solo presentación; el placeholder va
+  exento. Lo ya guardado conserva su caja hasta que se edite.
+- **Cambiar razón social actualiza el Uso de CFDI (2026-07-30):** controller
+  `cfdi-default` con el mapa perfil → uso default del ERP; el `change` del
+  combo de razón social clickea la opción del combo de CFDI (reutiliza la
+  lógica del select). Sin default configurado, no toca la selección.
+- **Reporte de pedidos capturados:** Fecha · Hora (local, separadas) · Cliente
+  (clave — nombre) · Vendedor (id — nombre) · Clave local (enlace al pedido) ·
+  Renglones · Total · Estatus. El servidor ve además Capturista al inicio.
+
 ### Fase C — `rueda-api` export / sync-down (decisiones)
 
 - **Endpoint único:** `GET /ruedas/:id/export` → arma TODO el dataset de la
@@ -987,6 +468,16 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
     `SOLID_QUEUE_IN_PUMA`); `async` en dev.
   - Guarda `require_server` + `ServerController` (rounds, select_round,
     sync_down, sync_up). Evita disparar un sync si ya hay uno `running`.
+- **Corridas huérfanas (2026-07-28):** un `SyncRun` nace `running` y solo el job
+  lo cierra; si el proceso muere a media corrida (apagón, cierre de `bin/dev` —
+  con el adapter de jobs en proceso el job no sobrevive), el renglón queda
+  `running` para siempre: el panel gira "en progreso" eterno y la guarda bloquea
+  nuevas corridas. Le pasó al usuario en la laptop y ni el reinicio lo curaba.
+  Fix: `SyncRun.recover_orphaned!` desde
+  `config/initializers/sync_run_recovery.rb`, dentro de
+  `Rails.application.server { }`. Validado con un server efímero que barrió al
+  huérfano sembrado, y el runner que lo sembró no lo tocó. (La norma
+  generalizada quedó en `docs/convenciones-codigo.md`.)
 - **Con pedidos que solo viven en la laptop no se sincroniza ni se cierra la
   rueda (2026-08-10).** Regla única en `Sync::Guards`, con dos guardas:
   - `no_draft_orders!` (sync-**up**): solo los borradores estorban.
@@ -1099,71 +590,3 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
 - Validado en navegador: captura muestra "Guardar"/"Capturado" editable;
   transmitido queda de solo lectura.
 
-## Riesgos / puntos abiertos
-
-- **Empaquetado / deployment del "servidor" (PENDIENTE definir)** — cómo instalar
-  la app en el equipo del evento y servirla en la LAN. Análisis:
-  - **El proyecto ya tiene** `Dockerfile` (producción), `bin/docker-entrypoint`,
-    `.dockerignore` y `config/deploy.yml` (Kamal). Falta un `docker-compose.yml`
-    (app + Postgres) para el modo "todo en un equipo".
-  - **Windows:** Docker Desktop (requiere WSL2, con fricción) o VM Linux como
-    plan B. Ruby/Postgres nativo en Windows: frágil, **desaconsejado**.
-  - **Linux (preferido; encaja con la infra Linux de FECEGO):**
-    - **Docker Compose** + `restart: unless-stopped` → reproducible, portable,
-      auto-arranque al boot. **Recomendado.**
-    - **Nativo + systemd** (Ruby por rbenv/asdf + Postgres del sistema, Puma con
-      `SOLID_QUEUE_IN_PUMA`) → más ligero pero menos portable entre distros.
-  - **A resolver al empacar:** `RAILS_ENV=production` (SECRET_KEY_BASE/master key,
-    assets precompilados, `config.hosts` para la IP de la LAN); persistencia
-    (volumen Postgres + `pg_dump` a USB); **offline** (pre-descargar las imágenes
-    Docker en la oficina); primer arranque (`db:prepare` + seed del server +
-    `sync:down`).
-  - **Decisión pendiente:** plataforma (Windows/Linux) y método (Docker Compose
-    vs nativo/systemd). Parte de la fase de deployment/strengthening.
-
-
-- **Entrada de pedidos al ERP (sync-up)** — DESCUBIERTO → `docs/erp-esquema-pedidos.md`.
-  El ERP inserta en `fecego.vta_pedido` (cabecera, PK `id_empresa/clave_cliente/
-  fecha_pedido/hora_pedido`) + `vta_pedido_detalle`. Ya existe el patrón de
-  **pedidos de ruta transmitidos** (`transmitido`, `clave_pedido_ruta`) — la rueda
-  encaja ahí. **Folio `clave_pedido` se asigna EN LA TRANSMISIÓN** (prefijo del
-  `cnf_persona` del capturista + consecutivo = último con ese prefijo +1) → `erp_folio`.
-  `estatus=CAPTUR`; `id_vendedor` = el del cliente; `bodega` sin uso;
-  `clave_pedido_ruta` NO es nuestro (lo llena la planeación de ruta de FECEGO).
-  IVA por partida confirmado. Idempotencia del reintento **RESUELTA**
-  (`OrderCreate.find_existing` por la PK de negocio). **Pendiente:** solo los
-  campos de config (`c_FormaPago`/`c_MetodoPago`/`condicion_pago`/`tipo_precio`/
-  `id_negociaciontipo`/`id_enviotipo`), a confirmar con FECEGO.
-- **Punto único de falla:** la laptop-servidor. Definir backups (pg_dump a
-  USB/otro equipo) y quizá laptop de respaldo.
-- **Origen de precios/beneficios de la rueda:** RESUELTO el hallazgo — el ERP
-  **no** tiene precios ligados a `id_rueda`. Los precios viven en el catálogo
-  general `com_producto_has_precio` (niveles mayoreo/público/intermedio/crédito
-  + `factor_descto1..5`). El "precio especial por rueda" es concepto a definir
-  en la app (modelo propio con FK `id_rueda`+`id_producto`, o reúso del
-  catálogo). Decisión diferida.
-- **LAN del evento:** IP fija + hostname (mDNS `laptop.local`), router
-  dedicado. Por definir.
-- **Seguridad/limpieza:** la laptop lleva datos de clientes y precios →
-  cifrado de disco + limpieza post-evento. (Parte del strengthening.)
-
-## Próximos pasos
-
-0. **El rol servidor debe poder descartar pedidos ajenos** desde el reporte
-   "Pedidos capturados" (donde ya los ve todos, con dueño y estatus).
-   **Urgente por dependencia:** desde 2026-08-10 las tres operaciones del panel
-   (obtener información, transmitir, cerrar rueda) se bloquean si hay pedidos
-   en borrador, así que un borrador abandonado —capturista que se fue, tablet
-   muerta— deja la laptop sin salida. El usuario lo confirmó dentro del
-   alcance, pospuesto. Alcance: botón + modal de confirmación en el reporte,
-   ruta y guarda de rol.
-1. **Confirmar con FECEGO** los defaults de config de la cabecera del pedido
-   (ya escritos en `OrderCreate::HEADER_DEFAULTS` con la moda del ERP) y si
-   alguno debe salir del cliente en vez de ser fijo.
-2. **Fase B (resto)** — pantallas read-only pendientes (productos, clientes,
-   rueda activa) y otras del menú (asistencia de clientes, cotización).
-3. **Membresía de rueda en el export/sync** — `business_round_people` YA se
-   sincroniza (2026-07-26, universo de productos). Siguen pendientes
-   `brands_suppliers` y `business_round_{brands,suppliers,salespeople}` (el
-   export no las trae; el sync-down solo las vacía) — definir si alguna UI las
-   llega a necesitar.
