@@ -1,4 +1,9 @@
 class Order < ApplicationRecord
+  # Tope de partidas por pedido: regla de negocio de la rueda (el ERP NO la
+  # impone — su histórico llega a 287 renglones). Puede subir cuando entren
+  # los regalos por promoción.
+  MAX_ITEMS = 45
+
   # Las observaciones viajan al ERP, que maneja texto en mayúsculas: se
   # normalizan aquí (fuente de verdad); el `uppercase` del textarea es solo
   # presentación mientras se teclea.
@@ -55,6 +60,17 @@ class Order < ApplicationRecord
 
   def next_item_position
     (order_items.maximum(:position) || 0) + 1
+  end
+
+  # Partidas que cuentan contra MAX_ITEMS. Punto ÚNICO de la regla (lo usan la
+  # validación de OrderItem y el contador de la vista): cuando lleguen los
+  # regalos por promoción, aquí se decide si se excluyen del conteo.
+  def items_count_for_limit
+    order_items.count
+  end
+
+  def items_limit_reached?
+    items_count_for_limit >= MAX_ITEMS
   end
 
   # Finaliza la captura: asigna folio local y marca el pedido como capturado.

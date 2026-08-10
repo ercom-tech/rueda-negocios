@@ -772,6 +772,29 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
   `#` (Arco 3). (Superado: hoy Cancelar abre un modal accesible que DESCARTA el
   borrador —`Orders#destroy`, M15— y el botón final es "Guardar" → `capture`.)
 - **Seed:** 5 productos demo (con precio, IVA 16%, modelo, No. parte, SKU proveedor).
+- **Tope de 45 partidas por pedido (2026-08-10):** regla de **negocio** de la
+  rueda, NO del ERP — medido: el histórico del ERP llega a 287 renglones y
+  tiene 3,177 pedidos con más de 45. El usuario confirmó que la regla opera
+  hoy y que **puede subir cuando entren los regalos por promoción**; y que
+  aplica solo a partidas (renglones), nunca a cantidades. Implementación:
+  - `Order::MAX_ITEMS = 45` + `Order#items_count_for_limit` /
+    `#items_limit_reached?` — **punto único** de la regla. Cuando lleguen los
+    regalos, ahí se decide si se excluyen del conteo o si solo sube la
+    constante, sin perseguirla por modelo/controlador/vista.
+  - Validación en `OrderItem` **`on: :create`**: un pedido que ya rebase el
+    tope (si la regla bajara) sigue siendo editable — se pueden corregir
+    cantidades y quitar renglones — en vez de quedar atorado. Va en el modelo
+    y no solo en el controlador: cubre POST forjado (validado en navegador:
+    rebota con el aviso aunque el buscador esté deshabilitado). No hubo que
+    tocar `OrderItemsController#create`: su rama `else` ya muestra
+    `errors.full_messages` en el flash.
+  - UI: contador `Partidas 12 / 45` siempre visible (coral al tope) dentro de
+    `#order-detail`, y buscador deshabilitado al **60%** con placeholder
+    "Alcanzaste el máximo de 45 partidas". El buscador se extrajo a
+    `orders/_product_search` con id propio y se repinta con **morph** en
+    `detail_streams` — con `replace` se reconectaría el controlador Stimulus,
+    que al conectar enfoca el buscador, y le robaría el foco a la tabla en cada
+    edición de cantidad/descuento (validado: el foco se queda en el input).
 
 ### Fase B — Pedido, Arco 3 / envío + resumen (decisiones)
 

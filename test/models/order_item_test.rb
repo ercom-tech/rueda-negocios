@@ -91,4 +91,38 @@ class OrderItemTest < ActiveSupport::TestCase
     assert_includes oi.errors.full_messages,
                     "El producto no tiene precio de rueda; no se puede agregar al pedido."
   end
+
+  # --- Tope de partidas (Order::MAX_ITEMS) --------------------------------
+
+  def fill_order_to(count)
+    count.times { |i| @order.order_items.create!(position: i + 1, quantity: 1, unit_price: 100, tax_rate: 16, discount_percent: 0) }
+  end
+
+  test "la partida en el tope (MAX_ITEMS) se agrega y la siguiente no" do
+    fill_order_to(Order::MAX_ITEMS - 1)
+
+    assert item(discount_percent: 0, position: Order::MAX_ITEMS).save, "la partida #{Order::MAX_ITEMS} debe caber"
+
+    excedente = item(discount_percent: 0, position: Order::MAX_ITEMS + 1)
+    assert_not excedente.valid?
+    assert_includes excedente.errors.full_messages,
+                    "Un pedido no puede tener más de #{Order::MAX_ITEMS} partidas."
+  end
+
+  test "un pedido en el tope sigue siendo editable (la regla es solo al agregar)" do
+    fill_order_to(Order::MAX_ITEMS)
+    ultima = @order.order_items.last
+
+    assert ultima.update(quantity: 5), "editar cantidad no debe chocar con el tope"
+    assert ultima.destroy, "quitar una partida tampoco"
+  end
+
+  test "quitar una partida vuelve a abrir espacio" do
+    fill_order_to(Order::MAX_ITEMS)
+    assert @order.items_limit_reached?
+
+    @order.order_items.last.destroy
+    assert_not @order.reload.items_limit_reached?
+    assert item(discount_percent: 0, position: Order::MAX_ITEMS).save
+  end
 end
