@@ -1,4 +1,6 @@
 class OrderItemsController < ApplicationController
+  # Todo aquí es escritura, así que la pausa aplica a las tres acciones.
+  before_action :pause_writes_during_sync
   before_action :set_order
   before_action :ensure_editable
 

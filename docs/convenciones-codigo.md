@@ -113,6 +113,11 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
   controlador y en el rake—: si se validan dentro del job, una condición que
   nunca llegó a intentarse queda registrada como corrida *fallida*. El job
   conserva la misma guarda como red para las carreras.
+- **Mientras hay un `SyncRun` vivo, la captura se pausa**
+  (`pause_writes_during_sync`). Solo las escrituras: leer, el reporte y el PDF
+  siguen disponibles. Una acción nueva que escriba tiene que sumarse a esa
+  lista, o reabre el hueco — el sync-down vacía el catálogo dentro de su
+  transacción y un INSERT concurrente revienta con violación de llave foránea.
 - **Toda ruta que sincroniza abre su `SyncRun`, incluidas las tareas rake.** El
   lock y las guardas del panel se apoyan en `SyncRun.running.exists?`: una
   corrida que no se registra es invisible, y entonces "Cerrar rueda" se

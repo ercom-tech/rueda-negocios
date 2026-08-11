@@ -1,6 +1,10 @@
 class OrdersController < ApplicationController
   layout "auth"
 
+  # Solo las acciones que ESCRIBEN: abrir un pedido, el resumen y el PDF siguen
+  # disponibles mientras corre un sync.
+  before_action :pause_writes_during_sync, only: %i[create update destroy capture observations]
+
   # Paso 1 — encabezado. `client_key` carga al cliente (clave exacta o, si no,
   # el primer match por nombre).
   def new

@@ -49,6 +49,22 @@
       <% if run.finished_at %>· <%= run.finished_at.localtime.strftime("%d/%m %H:%M") %><% end %>
     </span>
 
+    <%# Pedidos que alguien editó mientras se transmitían: el ERP se quedó con
+        la versión anterior. La captura se pausa durante el sync, así que esto
+        solo aparece si algo se coló en la ventana — pero cuando aparece hay
+        que revisarlo contra el ERP, y en silencio no se enteraría nadie. %>
+    <% if run.kind == "up" && (conflicts = run.summary["conflicts"].to_a).any? %>
+      <div class="mt-3 rounded-2xl bg-brand-cream px-4 py-3 text-left text-sm leading-snug text-neutral-900">
+        <p class="font-semibold">Revisa <%= conflicts.size == 1 ? "este pedido" : "estos pedidos" %> contra el ERP</p>
+        <p class="mt-1">
+          Se <%= conflicts.size == 1 ? "editó" : "editaron" %> mientras se
+          <%= conflicts.size == 1 ? "transmitía" : "transmitían" %>, así que el ERP
+          <%= conflicts.size == 1 ? "guardó" : "guardó" %> la versión anterior:
+          <span class="font-semibold"><%= conflicts.map { |c| "#{c['local']} → #{c['erp']}" }.join(" · ") %></span>
+        </p>
+      </div>
+    <% end %>
+
     <%# Capturistas que se quedaron sin universo de productos: el dato ya se
         calculaba (`skipped_people`) y no se mostraba en ningún lado, así que
         el defecto llegaba vivo al evento.

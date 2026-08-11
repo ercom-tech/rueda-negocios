@@ -32,9 +32,15 @@ module Sync
 
     def run!
       self.class.guard!
-      results = { transmitted: [], failed: [] }
+      results = { transmitted: [], failed: [], conflicts: [] }
 
       pending.find_each do |order|
+        # Huella para detectar una edición en pleno vuelo. La captura se pausa
+        # mientras corre un sync (`pause_writes_during_sync`), así que solo
+        # queda la ventana entre esa comprobación y el commit de la edición.
+        # Si se cuela, el ERP se queda con la versión vieja y la pantalla con
+        # la nueva: sin esto, nadie se enteraba.
+        stamp = order.updated_at
         res = post(build_payload(order))
         if res.is_a?(Net::HTTPSuccess)
           folio = JSON.parse(res.body)["clave_pedido"]
@@ -43,8 +49,15 @@ module Sync
           # captured). Mejor fallido y reintentable.
           raise ApiClient::Error, "respuesta sin clave_pedido" if folio.to_s.strip.empty?
 
+          edited_in_flight = Order.where(id: order.id).pick(:updated_at) != stamp
           order.update!(erp_folio: folio, transmitted_at: Time.current, status: :transmitted)
           results[:transmitted] << { local: order.local_folio, erp: folio }
+
+          if edited_in_flight
+            Rails.logger.warn("[sync:up] #{order.local_folio} se editó durante la transmisión; " \
+                              "el ERP quedó con la versión anterior (folio #{folio})")
+            results[:conflicts] << { local: order.local_folio, erp: folio }
+          end
         else
           msg = parse_error(res)
           # El motivo vive en el resumen de la corrida, que "Cerrar rueda"

@@ -149,6 +149,36 @@ module Sync
       assert_nil @order.erp_folio
     end
 
+    # --- Edición en pleno vuelo ---------------------------------------------
+    # La captura se pausa mientras corre un sync, así que solo queda la ventana
+    # entre esa comprobación y el commit de la edición. Si algo se cuela, el ERP
+    # se queda con la versión vieja y la pantalla con la nueva: se detecta y se
+    # reporta, porque en silencio no se enteraría nadie.
+
+    test "un pedido editado durante su transmisión se reporta como conflicto" do
+      # Simula la edición en el instante entre armar el payload y guardar el
+      # folio: el POST ya salió con la versión anterior.
+      stub_request(:post, "#{API}/pedidos").to_return do
+        @order.order_items.first.update_columns(quantity: 99, updated_at: Time.current)
+        @order.update_columns(updated_at: Time.current)
+        { status: 201, body: { clave_pedido: "1A0007" }.to_json }
+      end
+
+      result = Up.new(API).run!
+
+      assert_equal 1, result[:transmitted].size, "el pedido SÍ entró al ERP"
+      assert_equal 1, result[:conflicts].size
+      assert_equal "RN-000001", result[:conflicts].first[:local]
+      assert_equal "1A0007", result[:conflicts].first[:erp]
+    end
+
+    test "una transmisión sin ediciones no reporta conflictos" do
+      stub_request(:post, "#{API}/pedidos")
+        .to_return(status: 201, body: { clave_pedido: "1A0007" }.to_json)
+
+      assert_empty Up.new(API).run![:conflicts]
+    end
+
     # --- Remisión: a nombre de quién va -------------------------------------
     # El ERP resuelve el destinatario y la cuenta de cobranza de una remisión
     # contra el consecutivo de su perfil. El capturista lo elige en el paso 1 y

@@ -82,6 +82,18 @@ class SyncPanelDetailTest < ActionDispatch::IntegrationTest
     assert_no_match(%r{<html>502}, response.body)
   end
 
+  test "el panel avisa de los pedidos que se editaron durante su transmisión" do
+    SyncRun.create!(kind: "up", started_at: 1.minute.ago, finished_at: Time.current,
+                    status: "completed",
+                    summary: { transmitted: [ { local: "RN-000001", erp: "1A0007" } ],
+                               conflicts: [ { local: "RN-000001", erp: "1A0007" } ] })
+
+    get root_path
+
+    assert_match(/Revisa este pedido contra el ERP/, response.body)
+    assert_match(/RN-000001 → 1A0007/, response.body)
+  end
+
   # --- Sync-down: lo que la corrida hizo y no se veía ------------------------
 
   test "el panel avisa de los capturistas que quedaron sin proveedor ni marca" do

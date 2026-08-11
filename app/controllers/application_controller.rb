@@ -127,6 +127,35 @@ class ApplicationController < ActionController::Base
     redirect_to login_path, alert: SessionsController.no_round_message
   end
 
+  # Mientras corre un sync, la captura se pausa. Cubre dos fallas distintas con
+  # el mismo mecanismo:
+  #
+  # - **Obtener información** vacía el catálogo dentro de su transacción. Un
+  #   INSERT concurrente con FK a un cliente o un producto se queda esperando
+  #   el lock y luego revienta con violación de llave foránea: el capturista
+  #   veía la pantalla de error del sistema y no sabía si su pedido existía.
+  # - **Transmitir pedidos** arma el payload, hace el POST y hasta después
+  #   marca `transmitted`. Un pedido `captured` sigue siendo editable por su
+  #   dueño, así que un cambio en esa ventana dejaba al ERP con la versión
+  #   vieja y a la pantalla con la nueva, sin aviso en ningún lado.
+  #
+  # Solo bloquea ESCRITURAS: leer un pedido, el reporte y el PDF siguen
+  # disponibles. Los syncs duran segundos y se operan desde la oficina, así que
+  # el costo para el capturista es un aviso, no una pausa que se note.
+  SYNC_PAUSE_MESSAGE = "Se está actualizando la información. " \
+                       "Espera un momento y vuelve a intentar.".freeze
+
+  def pause_writes_during_sync
+    return unless SyncRun.running.exists?
+
+    if request.format.turbo_stream?
+      render turbo_stream: turbo_stream.replace("flash", partial: "shared/flash",
+                                                         locals: { alert: SYNC_PAUSE_MESSAGE })
+    else
+      redirect_back fallback_location: root_path, alert: SYNC_PAUSE_MESSAGE
+    end
+  end
+
   # Restringe una acción al rol server (operador del sync).
   def require_server
     return if current_user&.can_see_all_orders?
