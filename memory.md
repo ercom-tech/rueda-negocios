@@ -95,6 +95,36 @@ está **retirado**. S01 "SIN EFECTOS LEGALES" es el vigente. La lección se
 repite: antes de copiar la moda del histórico, revisar si el catálogo sigue
 aceptando ese valor — la moda incluye décadas de datos con reglas viejas.
 
+### Los tres huecos de la transmisión (cerrados)
+
+Las tres MEDIA de fidelidad con el ERP, todas en `rueda-api`:
+
+1. **Coherencia interna de la partida.** Se comprobaba el encabezado contra la
+   suma de las partidas, pero no cada partida contra su propia cantidad y
+   precio: con `cantidad: 1000` y `total: 116` el encabezado cuadra con la suma
+   y almacén surte mil piezas contra un pedido de $116. `validate_item_amounts!`
+   recalcula los cuatro importes con el orden de operaciones de `OrderItem`.
+   **Verificado que no rechaza de más:** un pedido real de 45 partidas con
+   cantidades, precios y descuentos deliberadamente feos da delta **0.0 exacto**
+   en los 180 importes. El riesgo de una validación así es el falso rechazo en
+   medio del evento, y esa medición es la que lo descarta.
+2. **`total` a 2 decimales.** El ERP redondea `total` y **solo** `total`
+   (`subtotal`, `descto_monto` e `iva_monto` conservan más decimales en 1.16M
+   de cabeceras). Se redondea **al escribir**, no en la app: si se redondeara
+   antes, el encabezado dejaría de cuadrar con la suma de sus partidas —hasta
+   0.22 con 45 renglones— y la propia validación del punto 1 lo rechazaría.
+   Además así el PDF, el reporte y la pantalla no cambian.
+3. **Ocho columnas en NULL.** `BLANK_DEFAULTS`. La auditoría las llamó "las
+   ocho columnas sin DEFAULT que no ponemos": son **53** las que no tienen
+   default. El criterio correcto no es la ausencia de default sino **cuáles el
+   ERP nunca deja en NULL**, y medido así son exactamente esas ocho (0 nulos en
+   414,529 pedidos); las otras 45 sí admiten NULL y se dejan como están.
+
+Lo que enseñan juntas: **medir la invariante, no la forma de la tabla.** Dos de
+los tres criterios que traía el reporte estaban enunciados sobre el recorte
+equivocado, y en ambos casos los números correctos se parecían lo bastante a
+los del reporte como para no notarlo sin volver a consultar.
+
 ## 3ª auditoría (2026-08-10) — remediación
 
 Artifact: https://claude.ai/code/artifact/d6dda895-e2d2-4bfb-ab8f-9811a7cd15f2

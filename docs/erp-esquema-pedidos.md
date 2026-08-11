@@ -101,6 +101,24 @@ Desglose **por partida**: `iva_porcentaje` + `iva_monto`, `descto_porcentaje` +
 - En una **factura**, `consec_remision` va en 0 (243,318 de 243,334).
 - `dividir_facturas` es **campo de factura**: en remisión va en 0 por decisión
   nuestra, no del ERP (él sí acepta remisiones con monto: 3,079 de 110,577).
+- **`total` se redondea a 2 decimales; los demás importes NO.** El ERP redondea
+  `total` en cabecera y detalle (7 de 1,245,383 y 10 de 8,694,854 escapan),
+  pero deja `subtotal`, `descto_monto` e `iva_monto` con más decimales (1.16M
+  de cabeceras los tienen). El redondeo se aplica **al escribir**, no en la
+  app: así el encabezado sigue cuadrando con sus partidas al centavo.
+- **Ocho columnas van como cadena vacía, no NULL:** `clave_pedido_ruta`,
+  `clave_cotizacion`, `coordenadas`, `latitud`, `longitud`, `factura`,
+  `remision_nombre`, `remision_correo`. Son las que el ERP nunca deja nulas (0
+  de 414,529 pedidos de 2025+). Importa porque `NULL = ''` **no es verdadero**:
+  un reporte del ERP que filtre `WHERE factura = ''` —la mitad de sus pedidos
+  la tiene vacía— no encontraría ninguno de los de la rueda. Las demás
+  columnas sin default sí admiten NULL en el ERP y se dejan así.
+- **Los importes de cada partida deben derivar de su cantidad y su precio.**
+  `rueda-api` lo verifica renglón por renglón, no solo el encabezado contra la
+  suma: con `cantidad: 1000` y `total: 116` el encabezado cuadra con la suma y
+  almacén surtiría mil piezas contra un pedido de $116. El orden de
+  operaciones es el de `OrderItem`: descuento e IVA sobre el importe de la
+  partida, no sobre el precio unitario.
 - `transmitido` = true + `id_usuario_transmision`/`fecha`/`hora` al transmitir.
 - `id_empresa` = 1; `baja` = false; auditoría (`id_usuario_crea`, `fecha/hora_crea`).
 
