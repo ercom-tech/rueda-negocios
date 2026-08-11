@@ -2,29 +2,57 @@ require "net/http"
 require "json"
 
 namespace :sync do
+  # Registra la corrida igual que los jobs del panel. Sin esto, un sync desde la
+  # terminal era INVISIBLE para el panel: `SyncRun.running.exists?` daba falso,
+  # así que "Cerrar rueda" quedaba habilitado y su `destroy_all` podía correr
+  # encima del `find_each` del rake — el pedido entra al ERP y el `update!` del
+  # folio escribe sobre una fila ya borrada, sin excepción (Rails no falla
+  # cuando el UPDATE afecta 0 filas). El folio se perdía en silencio.
+  #
+  # Valida la condición previa y abre la corrida. La guarda va ANTES de crear
+  # el SyncRun, igual que en el panel: una condición que nunca llegó a
+  # intentarse no debe quedar registrada como corrida fallida (los servicios la
+  # repiten adentro como red para las carreras).
+  #
+  # Lambda y no `def`: dentro de un .rake, `def` define el método en Object.
+  start_run = lambda do |kind, service|
+    begin
+      service.guard!
+    rescue Sync::Down::GuardError, Sync::Up::GuardError => e
+      abort "[sync:#{kind}] abortado: #{e.message}"
+    end
+
+    run = SyncRun.start(kind)
+    next run if run
+
+    abort "[sync:#{kind}] ya hay una corrida en curso (obtener información o " \
+          "transmitir pedidos). Espera a que termine."
+  end
+
   desc "Descarga el dataset de la rueda desde rueda-api y puebla el Postgres local (idempotente). ENV: RUEDA_API_URL, RUEDA_ID"
   task down: :environment do
     base = ENV.fetch("RUEDA_API_URL") { abort "Falta RUEDA_API_URL (base de rueda-api, p.ej. http://localhost:4568)" }
     id   = ENV.fetch("RUEDA_ID")      { abort "Falta RUEDA_ID (id_rueda del ERP a descargar)" }
 
-    puts "[sync:down] descargando rueda #{id} desde #{base}"
-    data = begin
-      Sync::ApiClient.new(base).fetch_export(id)
-    rescue Sync::ApiClient::Error => e
-      abort "[sync:down] #{e.message}"
-    end
-    puts "[sync:down] descargado (#{data['products']&.size || 0} productos)"
+    run = start_run.call("down", Sync::Down)
 
-    result = nil
     begin
-      ActiveRecord::Base.transaction do
-        result = Sync::Down.new(data).run!
-      end
-    rescue Sync::Down::GuardError => e
+      puts "[sync:down] descargando rueda #{id} desde #{base}"
+      data = Sync::ApiClient.new(base).fetch_export(id)
+      puts "[sync:down] descargado (#{data['products']&.size || 0} productos)"
+
+      result = ActiveRecord::Base.transaction { Sync::Down.new(data).run! }
+    rescue Sync::ApiClient::Error, Sync::Down::GuardError => e
+      run.finish!(status: :failed, message: e.message)
       abort "[sync:down] abortado: #{e.message}"
+    rescue StandardError => e
+      run.finish!(status: :failed, message: e.message)
+      raise
     end
 
     s = result.summary
+    run.finish!(status: :completed, summary: s)
+
     puts "[sync:down] entidades:"
     s[:entities].each { |table, n| puts format("  %-24s %d", table, n) }
     puts "[sync:down] usuarios omitidos (sin credencial): #{s[:skipped_users].size} #{s[:skipped_users].inspect if s[:skipped_users].any?}"
@@ -42,11 +70,19 @@ namespace :sync do
     pending = Order.captured.where(erp_folio: nil).count
     puts "[sync:up] pedidos por transmitir: #{pending}"
 
+    run = start_run.call("up", Sync::Up)
+
     r = begin
       Sync::Up.new(base).run!
     rescue Sync::Up::GuardError => e
+      run.finish!(status: :failed, message: e.message)
       abort "[sync:up] abortado: #{e.message}"
+    rescue StandardError => e
+      run.finish!(status: :failed, message: e.message)
+      raise
     end
+
+    run.finish!(status: (r[:failed].any? ? :failed : :completed), summary: r)
 
     r[:transmitted].each { |t| puts "  ✓ #{t[:local]} → folio ERP #{t[:erp]}" }
     r[:failed].each      { |f| puts "  ✗ #{f[:local]} (HTTP #{f[:status]}): #{f[:error]}" }

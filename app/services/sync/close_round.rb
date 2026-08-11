@@ -1,10 +1,13 @@
 module Sync
   # Cierra la rueda activa en la laptop para poder cargar otra: elimina los
-  # pedidos locales (los transmitidos ya viven en el ERP; los borradores son
-  # capturas incompletas), borra el historial de corridas de sync (pertenece a
-  # la rueda que se cierra; el panel arranca limpio), desactiva la rueda y
-  # limpia la selección — así el sync-down de la siguiente rueda pasa su
-  # guarda (`Order.exists?`).
+  # pedidos ya transmitidos (viven en el ERP), borra el historial de corridas de
+  # sync (pertenece a la rueda que se cierra; el panel arranca limpio),
+  # desactiva la rueda y limpia la selección — así el sync-down de la siguiente
+  # rueda pasa su guarda.
+  #
+  # Solo transmitidos y no `Order.destroy_all`: la guarda ya exige que no haya
+  # otra cosa, y acotar el borrado es lo que hace imposible perder una venta si
+  # algo se finaliza en la ventana entre la guarda y el borrado.
   #
   # Guardas propias: NO cierra si hay pedidos que solo viven en la laptop —
   # borradores (capturas en curso) o finalizados sin transmitir (ventas reales
@@ -19,8 +22,6 @@ module Sync
     class SyncInProgressError < StandardError; end
 
     def self.run!
-      Guards.no_local_orders!(PendingOrdersError, "al cerrar la rueda")
-
       # La verificación y el borrado van bajo el MISMO lock que usa el alta de
       # corridas: si no, entre el `exists?` y el `delete_all` puede colarse una
       # corrida nueva y le borraríamos su registro al job recién arrancado
@@ -32,8 +33,21 @@ module Sync
                 "Espera a que termine para cerrar la rueda."
         end
 
-        removed = Order.count
-        Order.destroy_all
+        # La guarda va DENTRO del lock. Fuera quedaba una ventana que incluía la
+        # espera del lock —segundos si otra operación lo tenía— entre contar los
+        # pedidos y borrarlos.
+        Guards.no_local_orders!(PendingOrdersError, "al cerrar la rueda")
+
+        # Solo se borran los transmitidos, y se vuelve a comprobar después. La
+        # guarda de arriba y el borrado son dos sentencias distintas: entre ellas
+        # otra conexión todavía puede finalizar un pedido (`capture!` no toma
+        # este lock), y con `Order.destroy_all` esa venta se perdía en silencio.
+        # Así, si algo se coló, la segunda guarda deshace la transacción entera
+        # y no se pierde nada — el operador reintenta.
+        removed = Order.transmitted.count
+        Order.transmitted.destroy_all
+        Guards.no_local_orders!(PendingOrdersError, "al cerrar la rueda")
+
         SyncRun.delete_all
         BusinessRound.update_all(active: false)
         Setting.instance.update!(selected_round_erp_id: nil, selected_round_name: nil)

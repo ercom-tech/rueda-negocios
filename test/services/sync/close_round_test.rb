@@ -86,5 +86,50 @@ module Sync
 
       assert_nothing_raised { Sync::Down.guard! }
     end
+
+    # --- La carrera: un pedido finalizado entre la guarda y el borrado --------
+    # La guarda y el borrado son dos sentencias distintas, y `capture!` no toma
+    # el lock del sync. Antes, `Order.destroy_all` se llevaba esa venta sin que
+    # nada avisara. Ahora solo se borran los transmitidos y se vuelve a
+    # comprobar, así que la transacción entera se deshace.
+
+    test "un pedido finalizado en plena operación deshace el cierre completo" do
+      # Al pasar la guarda los dos están transmitidos, así que el cierre procede.
+      order(status: "transmitted", erp_folio: "1A0003")
+      rezagado = order(status: "transmitted", erp_folio: "1A0004")
+
+      # La carrera: el capturista finaliza su pedido justo DESPUÉS de la guarda.
+      # Se engancha al primer `Order.transmitted` del servicio (el conteo), que
+      # ocurre entre la guarda y el borrado.
+      #
+      # Módulo antepuesto y no `define_singleton_method` + `remove_method`: el
+      # scope del enum vive en el propio singleton de Order, así que quitarlo lo
+      # borra para el resto del proceso. Este se desactiva solo tras la primera
+      # llamada y queda como un `super` inocuo.
+      colado = false
+      Order.singleton_class.prepend(Module.new do
+        define_method(:transmitted) do
+          unless colado
+            colado = true
+            rezagado.update_columns(status: "captured", erp_folio: nil)
+          end
+          super()
+        end
+      end)
+
+      assert_raises(CloseRound::PendingOrdersError) { CloseRound.run! }
+
+      # Con `Order.destroy_all` y sin la segunda guarda, esa venta se perdía.
+      assert_equal 2, Order.count, "no se pierde ningún pedido"
+      assert @round.reload.active?, "la rueda no se cierra a medias"
+      assert_equal @round.erp_round_id, Setting.instance.reload.selected_round_erp_id
+    end
+
+    test "el cierre normal solo borra los transmitidos y devuelve su cuenta" do
+      2.times { |i| order(status: "transmitted", erp_folio: "1A000#{i}") }
+
+      assert_equal 2, CloseRound.run!
+      assert_equal 0, Order.count
+    end
   end
 end

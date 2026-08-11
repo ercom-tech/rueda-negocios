@@ -90,10 +90,20 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
   `Rails.application.server { }` — ese hook corre **solo al bootear el
   servidor web**, no en consola, rake ni tests, donde un `running` puede ser
   legítimo porque el server sigue vivo.
-- Las condiciones previas se validan **en el controlador, antes de crear la
-  corrida**: si se validan dentro del job, una condición que nunca llegó a
-  intentarse queda registrada como corrida *fallida*. El job conserva la misma
-  guarda como red para las carreras.
+- Las condiciones previas se validan **antes de crear la corrida** —en el
+  controlador y en el rake—: si se validan dentro del job, una condición que
+  nunca llegó a intentarse queda registrada como corrida *fallida*. El job
+  conserva la misma guarda como red para las carreras.
+- **Toda ruta que sincroniza abre su `SyncRun`, incluidas las tareas rake.** El
+  lock y las guardas del panel se apoyan en `SyncRun.running.exists?`: una
+  corrida que no se registra es invisible, y entonces "Cerrar rueda" se
+  habilita encima de ella.
+- **Una guarda antes de un borrado no cierra la carrera por sí sola:** son dos
+  sentencias distintas y entre ellas otra conexión puede escribir. Acotar el
+  borrado a lo que la guarda autorizó (`Order.transmitted`, no `Order`) y
+  **volver a comprobar después**, dentro de la misma transacción, sí la cierra:
+  si algo se coló, todo se deshace. Vale más que mover la guarda adentro del
+  lock, que solo estrecha la ventana.
 
 ## Validación
 

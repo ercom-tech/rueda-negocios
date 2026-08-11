@@ -125,6 +125,40 @@ los tres criterios que traía el reporte estaban enunciados sobre el recorte
 equivocado, y en ambos casos los números correctos se parecían lo bastante a
 los del reporte como para no notarlo sin volver a consultar.
 
+### Las dos carreras que perdían pedidos (cerradas)
+
+**1. El rake era invisible para el panel.** `bin/rails sync:down` / `sync:up`
+—que el README presenta al mismo nivel que el panel— no creaban `SyncRun` ni
+tomaban el lock, así que `SyncRun.running.exists?` daba falso y "Cerrar rueda"
+quedaba habilitado encima de una transmisión en curso. Ahora abren su corrida
+igual que los jobs, con la guarda **antes** de crearla (regla ya escrita: una
+condición que nunca llegó a intentarse no debe quedar como corrida fallida).
+
+**2. "Cerrar rueda" validaba fuera del lock.** Mover la guarda adentro era la
+corrección obvia, pero **no cierra la carrera**: la guarda y el borrado son dos
+sentencias distintas y `capture!` no toma ese lock, así que un pedido que se
+finaliza entre ambas seguía cayendo en `Order.destroy_all`. Lo que sí la cierra
+es acotar el borrado a `Order.transmitted` y **volver a comprobar después**: si
+algo se coló, la segunda guarda deshace la transacción entera. Nada se pierde;
+el operador reintenta.
+
+La alternativa era que `capture!` tomara el mismo lock. Se descartó: mete un
+lock en el camino más caliente del evento (finalizar pedido, desde tablet) para
+una ventana de microsegundos, y además `update!` sobre una fila ya borrada
+devuelve `true` sin excepción, así que habría que reabrir ese caso también.
+Acotar el borrado sale más barato y no toca la captura.
+
+**Cómo se comprobó que la prueba prueba algo:** se restauró el código viejo
+(`Order.destroy_all`, sin la segunda guarda) y la prueba **falló**. Vale la pena
+como método — una prueba de carrera que pasa con el bug presente no sirve de
+nada, y la primera versión de esta pasaba por el motivo equivocado (el borrador
+ya bloqueaba en la primera guarda, así que nunca llegaba a la carrera).
+
+**Trampa de Minitest:** el scope de un enum vive en el propio singleton de la
+clase, así que `remove_method` en un `ensure` lo borra **para el resto del
+proceso** y los tests siguientes revientan con `NoMethodError`. Para simular la
+carrera se antepone un módulo que se desactiva solo tras la primera llamada.
+
 ### Lo que dejaba al operador a ciegas (cerrado)
 
 Tres datos que **ya se calculaban y ninguna pantalla mostraba**. El arreglo no
