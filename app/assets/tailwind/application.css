@@ -5,7 +5,13 @@
 @theme {
   --color-brand-gold: #edc94c;       /* dorado principal (unifica #f1d24e) */
   --color-brand-gold-dark: #e3bd3a;  /* hover del dorado */
-  --color-brand-coral: #ce6150;      /* coral (acciones) */
-  --color-brand-coral-dark: #bd5343; /* hover del coral (unifica #b9553f) */
+  /* Coral oscurecido al tono que la paleta ya usaba como hover: blanco sobre
+     #ce6150 daba 3.85:1, debajo del 4.5 que pide AA para texto normal, y ahí
+     viven los botones de confirmación de TODOS los modales, "Finalizar
+     pedido", el renglón Total, el badge Transmitido y los dos avisos de error
+     del paso 1 — que son los que explican qué falta. Tablet en un salón con
+     ventanal y brillo bajo es el peor caso, y es el caso real. */
+  --color-brand-coral: #bd5343;      /* coral (acciones) — 4.69:1 sobre blanco */
+  --color-brand-coral-dark: #a84631; /* hover del coral — 5.9:1 */
   --color-brand-cream: #f4eedb;      /* crema de fondo (unifica #f4efe0) */
 }

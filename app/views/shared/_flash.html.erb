@@ -11,8 +11,14 @@
               class="-mr-1 text-white/80 transition-colors hover:text-white">&times;</button>
     </div>
   <% end %>
+  <%# Los avisos NO se auto-cierran (delay 0): por aquí viajan las
+      instrucciones de dos pasos de las guardas del sync —unas 30 palabras, más
+      de lo que se lee en los 8 segundos que duraban—, y aparecen arriba al
+      centro mientras el operador mira la card que acaba de picar. Se cerraban
+      antes de que alcanzara a leerlos y no había forma de recuperarlos. Los
+      `notice` sí siguen desapareciendo solos: son confirmaciones. %>
   <% if alert.present? %>
-    <div role="alert" data-controller="flash" data-flash-delay-value="8000"
+    <div role="alert" data-controller="flash" data-flash-delay-value="0"
          class="pointer-events-auto flex items-center gap-3 rounded-lg bg-red-600 px-4 py-2 text-sm text-white shadow-lg">
       <span><%= alert %></span>
       <button type="button" data-action="flash#dismiss" aria-label="Cerrar aviso"

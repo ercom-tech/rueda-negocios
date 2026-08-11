@@ -29,10 +29,15 @@
     </svg>
   <% end %>
   <% if has_round %>
-    <div class="<%= grid %> rounded-[1.75rem] bg-brand-coral px-7 py-5 opacity-60 shadow-lg" aria-disabled="true">
-      <%= round_icon %>
-      <h3 class="<%= title %> whitespace-nowrap text-white">Elegir rueda</h3>
-      <p class="<%= desc %> text-white/90">
+    <%# El 60% va solo al ÍCONO y al título, no al párrafo: este es el único
+        lugar de toda la app donde aparece el nombre de la rueda cargada, y
+        atenuado quedaba en ~2.9:1 con el patrón del fondo asomándose. El
+        operador que llega entre un día y otro necesita leerlo antes de picar
+        "Obtener información". Misma receta que el contador de partidas. %>
+    <div class="<%= grid %> rounded-[1.75rem] bg-brand-coral px-7 py-5 shadow-lg" aria-disabled="true">
+      <div class="opacity-60"><%= round_icon %></div>
+      <h3 class="<%= title %> whitespace-nowrap text-white opacity-60">Elegir rueda</h3>
+      <p class="<%= desc %> text-white">
         En curso: <span class="font-semibold"><%= setting.selected_round_name.presence || "Rueda ##{setting.selected_round_erp_id}" %></span>.
         Ciérrala para elegir otra.
       </p>

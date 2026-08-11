@@ -21,8 +21,15 @@
 
       <div class="mt-6 space-y-5">
         <%# Buscador de cliente con autocompletado (clave o nombre) %>
+        <%# Autofoco mientras no hay cliente elegido: es el campo con el que
+            EMPIEZA cada pedido, y el paso 3 ofrece "Capturar otro pedido"
+            justo para no volver al menú. Sin esto, cada cliente atendido
+            costaba un toque extra (o tres tabulaciones) antes de escribir. El
+            paso 2 ya lo hacía; faltaba aquí. Al editar el encabezado NO se
+            enfoca: ahí el cliente ya está y el foco robaría el scroll. %>
         <div class="relative" data-controller="autocomplete"
              data-autocomplete-url-value="<%= client_options_orders_path(order_id: @order.persisted? ? @order.id : nil) %>"
+             data-autocomplete-autofocus-value="<%= @client.nil? %>"
              data-action="click@window->autocomplete#hide">
           <%= form_with url: (@order.persisted? ? edit_order_path(@order) : new_order_path), method: :get do %>
             <div class="flex items-center gap-3 rounded-full bg-black px-5 py-3 text-white focus-within:ring-2 focus-within:ring-brand-gold">

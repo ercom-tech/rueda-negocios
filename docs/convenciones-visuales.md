@@ -27,6 +27,12 @@ desde `CLAUDE.md`. El relato de cómo se llegó a cada una vive en `memory.md`.
 | Crema | **Toda** superficie de contenido, fija o flotante (tablas, forms, totales, dropdowns, avisos) |
 | Negro | Controles de captura (buscadores, selects, `thead`) y barras de título |
 | Coral | Acción primaria o culminación (Finalizar, Total, badge Transmitido) |
+
+El coral es **#bd5343**, no el #ce6150 original: con blanco encima daba 3.85:1,
+debajo del 4.5 que pide AA para texto normal — y ahí viven los botones de
+confirmación de todos los modales y los avisos de error del paso 1, los que
+explican qué falta. Tablet en un salón con ventanal es el caso real. Cualquier
+tono nuevo que lleve texto blanco encima se mide antes de usarse.
 | Emerald | **Solo** feedback global (flash, "✓ Listo" del sync) |
 | Blanco | **Solo** campos de entrada — es la señal de "esto se escribe" |
 

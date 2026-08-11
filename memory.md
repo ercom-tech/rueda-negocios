@@ -125,6 +125,34 @@ los tres criterios que traía el reporte estaban enunciados sobre el recorte
 equivocado, y en ambos casos los números correctos se parecían lo bastante a
 los del reporte como para no notarlo sin volver a consultar.
 
+### Avisos y salidas (cerrado)
+
+Cinco hallazgos sobre lo mismo: que el usuario pueda **leer** lo que el sistema
+le dice y **salir** de donde quedó.
+
+- **El coral bajó a #bd5343** (decisión del usuario, 2026-08-11). Blanco sobre
+  el #ce6150 original daba 3.85:1, debajo del 4.5 de AA, y ahí viven los
+  botones de confirmación de todos los modales, "Finalizar pedido", el renglón
+  Total, el badge Transmitido y los dos avisos de error del paso 1 — los que
+  explican qué falta. El tono nuevo **ya estaba en la paleta** como hover, así
+  que no se inventó color; el hover bajó a #a84631. Se midió antes de proponer:
+  esa medición es la que convirtió una discusión de gusto en una decisión.
+- **Los avisos de error ya no se auto-cierran.** Por el flash viajan las
+  instrucciones de dos pasos de las guardas del sync —unas 30 palabras, más de
+  lo que se lee en 8 segundos— y aparecen arriba al centro mientras el operador
+  mira la card que acaba de picar. Los `notice` sí siguen desapareciendo solos:
+  son confirmaciones, no instrucciones.
+- **Las pantallas 400/404/422/500** pasan de las de Rails —en inglés, sin una
+  sola liga y pidiendo "revisar los logs"— a la gramática del proyecto, en
+  español y con botón al menú. El botón Atrás tras descartar un pedido llega
+  ahí, y sin internet no hay a quién preguntarle.
+- **El nombre de la rueda en curso** sale del bloque atenuado: es el único
+  lugar de la app donde aparece, y al 60% quedaba en ~2.9:1 con el patrón del
+  fondo asomándose. El 60% va al ícono y al título, no al dato.
+- **El buscador de cliente recibe el foco** mientras no hay cliente elegido. El
+  paso 2 ya lo hacía; faltaba en el campo con el que EMPIEZA cada pedido, y el
+  paso 3 ofrece "Capturar otro pedido" justo para no volver al menú.
+
 ### El PDF, los cinco hallazgos de un solo archivo (cerrados)
 
 Es el documento que el cliente se lleva en papel y **`render` no se ejecutaba
