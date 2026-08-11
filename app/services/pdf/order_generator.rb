@@ -22,6 +22,12 @@ module Pdf
       @order = order
     end
 
+    # Prawn avisa en CADA render que sus fuentes internas tienen soporte
+    # limitado de UTF-8. Es cierto y no aplica aquí: el documento va en
+    # Helvetica/WinAnsi, que cubre los acentos del español. Silenciarlo evita
+    # ensuciar el log del evento con un aviso que no requiere acción.
+    Prawn::Fonts::AFM.hide_m17n_warning = true
+
     def render
       pdf = Prawn::Document.new(
         page_size: "LETTER", page_layout: :landscape, margin: [ 36, 36, 54, 36 ],
@@ -33,6 +39,7 @@ module Pdf
       render_info(pdf)
       render_items_table(pdf)
       render_footer(pdf)
+      number_pages(pdf)
 
       pdf.render
     end
@@ -48,8 +55,8 @@ module Pdf
 
       pdf.text_box "PEDIDO", at: [ 455, top - 18 ], width: 110, size: 16, style: :bold, align: :center
 
-      pdf.text_box "#{@order.folio} - Página 1\n\n<b>CLAVE:  #{@order.folio}</b>\n<b>Fecha:  #{date_only}</b>",
-                   at: [ pdf.bounds.right - 180, top ], width: 180, size: 10, inline_format: true, align: :right, leading: 2
+      pdf.text_box "<b>CLAVE:  #{esc(@order.folio)}</b>\n<b>Fecha:  #{date_only}</b>",
+                   at: [ pdf.bounds.right - 180, top - 14 ], width: 180, size: 10, inline_format: true, align: :right, leading: 2
 
       pdf.move_cursor_to top - 62
       pdf.stroke_color "000000"
@@ -69,11 +76,11 @@ module Pdf
       header = [ "Código", "Descripción", "Unidad", "Cantidad", "Precio unitario",
                 "Monto", "%Dto.", "Subtotal", "%IVA", "Total" ]
 
-      rows = @order.order_items.map do |i|
+      rows = printed_items.map do |i|
         [
-          i.code, i.description, i.unit,
-          amount(i.quantity), money(i.unit_price), money(i.line_total),
-          pct(i.discount_percent), money(i.taxable), pct(i.tax_rate), money(i.total)
+          i[:code], i[:description], i[:unit],
+          amount(i[:quantity]), money(i[:unit_price]), money(i[:amount]),
+          pct(i[:discount_percent]), money(i[:subtotal]), pct(i[:tax_rate]), money(i[:total])
         ]
       end
       rows = [ [ "—" ] + [ "" ] * 9 ] if rows.empty?
@@ -96,19 +103,19 @@ module Pdf
       y = pdf.cursor
       # Importe en letra + observaciones (izquierda, en flujo)
       pdf.bounding_box([ 0, y + 4 ], width: 440) do
-        pdf.text amount_in_words(@order.total), size: 9, style: :bold
+        pdf.text amount_in_words(printed_total(:total)), size: 9, style: :bold
         if @order.observations.present?
           pdf.move_down 6
-          pdf.text "<b>Observaciones:</b>  #{@order.observations}", size: 9, inline_format: true
+          pdf.text "<b>Observaciones:</b>  #{esc(@order.observations)}", size: 9, inline_format: true
         end
       end
 
-      # Totales (derecha)
+      # Totales (derecha) — de los mismos importes que imprime la tabla.
       rows = [
-        [ "Subtotal",  number_to_currency(@order.subtotal) ],
-        [ "Descuento", number_to_currency(@order.discount_total) ],
-        [ "IVA",       number_to_currency(@order.tax_total) ],
-        [ "Total",     number_to_currency(@order.total) ]
+        [ "Subtotal",  number_to_currency(printed_total(:amount)) ],
+        [ "Descuento", number_to_currency(printed_total(:discount)) ],
+        [ "IVA",       number_to_currency(printed_total(:tax)) ],
+        [ "Total",     number_to_currency(printed_total(:total)) ]
       ]
       # Flush a la derecha contra el borde de la tabla de partidas: la columna
       # de montos sin padding derecho, para que los números terminen exactamente
@@ -127,19 +134,66 @@ module Pdf
       end
     end
 
+    # El folio y el número de página van al pie de CADA hoja. Un pedido de 45
+    # partidas —el tope, o sea un caso común— ocupa dos, y antes la primera
+    # decía "Página 1" en duro aunque hubiera dos, y la segunda salía sin logo,
+    # sin folio y sin cliente: separada del fajo, no había forma de saber de
+    # qué pedido era.
+    def number_pages(pdf)
+      pdf.number_pages "#{@order.folio} · Página <page> de <total>",
+                       at: [ 0, -24 ], width: pdf.bounds.width, align: :right, size: 8,
+                       inline_format: false
+    end
+
+    # ---- Importes impresos -------------------------------------------------
+
+    # El papel se cuadra sumando columnas, así que TODO lo impreso se deriva de
+    # los mismos importes ya redondeados a 2 decimales: la columna Total suma
+    # exactamente el Total del pie, y Subtotal − Descuento + IVA da ese mismo
+    # Total. Antes cada renglón se redondeaba al imprimirse pero el pie se
+    # redondeaba una sola vez, y con 45 partidas la deriva llegaba a ~$0.22: el
+    # cliente encontraba centavos de diferencia al revisar su copia.
+    #
+    # Solo afecta al PDF. Lo que viaja al ERP sigue saliendo de `Order` a
+    # precisión completa (ahí `rueda-api` redondea únicamente `total`, que es
+    # lo que hace el ERP con sus propios pedidos).
+    def printed_items
+      @printed_items ||= @order.order_items.map do |item|
+        amount   = round2(item.line_total)
+        discount = round2(item.discount_amount)
+        tax      = round2(item.tax_amount)
+        subtotal = amount - discount
+
+        { code: item.code, description: item.description, unit: item.unit,
+          quantity: item.quantity, unit_price: item.unit_price,
+          discount_percent: item.discount_percent, tax_rate: item.tax_rate,
+          amount: amount, discount: discount, tax: tax,
+          subtotal: subtotal, total: subtotal + tax }
+      end
+    end
+
+    def printed_total(key)
+      printed_items.sum { |i| i[key] } || 0
+    end
+
+    def round2(value)
+      (value || 0).round(2)
+    end
+
     # ---- Bloques de texto -------------------------------------------------
 
     def left_info
-      lines = [ "<b>Cliente:</b>  (#{@order.client.erp_client_key})  #{@order.client.commercial_name.presence || @order.client.name}" ]
+      client = @order.client
+      lines = [ "<b>Cliente:</b>  (#{esc(client.erp_client_key)})  #{esc(client.commercial_name.presence || client.name)}" ]
       if @order.invoice?
         t = @order.client_tax_profile
-        lines << "<b>POR FACTURAR</b>   RFC: #{t&.rfc}   Razón Social: #{t&.business_name}"
+        lines << "<b>POR FACTURAR</b>   RFC: #{esc(t&.rfc)}   Razón Social: #{esc(t&.business_name)}"
       else
-        lines << "<b>REMISIÓN:</b>  #{@order.client_receipt_profile&.name}"
+        lines << "<b>REMISIÓN:</b>  #{esc(@order.client_receipt_profile&.name)}"
       end
-      lines << "<b>Sucursal:</b>  #{@order.client_branch&.name}"
-      lines << "<b>Dirección:</b>  #{@order.client_branch&.address}" if @order.client_branch&.address.present?
-      lines << "<b>Uso CFDI:</b>  #{@order.cfdi_use.code} #{@order.cfdi_use.description}" if @order.invoice? && @order.cfdi_use
+      lines << "<b>Sucursal:</b>  #{esc(@order.client_branch&.name)}"
+      lines << "<b>Dirección:</b>  #{esc(@order.client_branch&.address)}" if @order.client_branch&.address.present?
+      lines << "<b>Uso CFDI:</b>  #{esc(@order.cfdi_use.code)} #{esc(@order.cfdi_use.description)}" if @order.invoice? && @order.cfdi_use
       lines.join("\n")
     end
 
@@ -147,10 +201,10 @@ module Pdf
       vendor     = @order.client.salesperson
       capturista = @order.user.full_name.presence || @order.user.username
       [
-        "<b>#{@order.business_round.name}</b>",
-        "Capturado: #{@order.created_at.strftime('%d/%m/%Y %H:%M')} — #{capturista}",
-        ("Transmitido: #{@order.transmitted_at.strftime('%d/%m/%Y %H:%M')}" if @order.transmitted? && @order.transmitted_at),
-        ("Vendedor: #{[ vendor.erp_salesperson_id, vendor.name ].compact.join(' ')}" if vendor),
+        "<b>#{esc(@order.business_round.name)}</b>",
+        "Capturado: #{stamp(@order.created_at)} — #{esc(capturista)}",
+        ("Transmitido: #{stamp(@order.transmitted_at)}" if @order.transmitted? && @order.transmitted_at),
+        ("Vendedor: #{esc([ vendor.erp_salesperson_id, vendor.name ].compact.join(' '))}" if vendor),
         "Estatus: #{@order.status_label.upcase}",
         "Renglones: #{@order.order_items.size}"
       ].compact.join("\n")
@@ -158,8 +212,27 @@ module Pdf
 
     # ---- Helpers ----------------------------------------------------------
 
+    # Los bloques del PDF van con `inline_format: true`, que hace que Prawn
+    # parsee el contenido como su mini-lenguaje de etiquetas. Sin escapar, un
+    # "ENTREGAR ANTES DE <5 DÍAS>" en observaciones se imprime como "ENTREGAR
+    # ANTES DE 5 DÍAS>": la instrucción cambia de sentido en el papel que se le
+    # entrega al cliente, y nada avisa. Aplica igual a los datos que vienen del
+    # ERP (razón social, dirección), que nadie controla desde aquí.
+    def esc(text)
+      text.to_s.gsub("&", "&amp;").gsub("<", "&lt;").gsub(">", "&gt;")
+    end
+
+    # `.localtime`: `created_at` se guarda en UTC y `Time.zone` de la app
+    # también lo es, así que sin esto un pedido capturado a las 19:30 salía en
+    # el papel del cliente como del DÍA SIGUIENTE a la 1:30 — en desacuerdo con
+    # el reporte en pantalla y con la fecha que se le manda al ERP, que sí van
+    # en hora local. Era el único lugar del proyecto que formateaba sin ella.
+    def stamp(time)
+      time.localtime.strftime("%d/%m/%Y %H:%M")
+    end
+
     def date_only
-      @order.created_at.strftime("%d/%m/%Y")
+      @order.created_at.localtime.strftime("%d/%m/%Y")
     end
 
     def amount(value)
@@ -185,7 +258,8 @@ module Pdf
       # Apócope: "uno" → "un" antes de sustantivo ("ciento un pesos",
       # "veintiun mil") — cubre también "veintiuno" por terminar en "uno".
       palabras = integer_to_words(entero).gsub(/uno(?= mil| millones|\z)/, "un")
-      "#{palabras} pesos #{format('%02d', centavos)}/100 M.N.".upcase
+      # Concordancia: un total de $1.xx es "UN PESO", no "UN PESOS".
+      "#{palabras} #{entero == 1 ? 'peso' : 'pesos'} #{format('%02d', centavos)}/100 M.N.".upcase
     end
 
     def integer_to_words(n)

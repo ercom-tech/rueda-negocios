@@ -125,6 +125,66 @@ los tres criterios que traía el reporte estaban enunciados sobre el recorte
 equivocado, y en ambos casos los números correctos se parecían lo bastante a
 los del reporte como para no notarlo sin volver a consultar.
 
+### El PDF, los cinco hallazgos de un solo archivo (cerrados)
+
+Es el documento que el cliente se lleva en papel y **`render` no se ejecutaba
+ni una vez en la suite**: solo se probaba el importe en letra, que es un método
+privado. Las pruebas nuevas generan el PDF de verdad y leen su texto.
+
+1. **Fecha en UTC.** Era el único lugar del proyecto que formateaba sin
+   `.localtime`: un pedido de las 19:30 salía como del día siguiente a la 1:30,
+   en desacuerdo con el reporte en pantalla y con lo que se manda al ERP.
+2. **La columna Total no sumaba el Total del pie.** Cada renglón se redondeaba
+   al imprimirse pero el pie una sola vez; con 45 partidas la deriva llegaba a
+   ~$0.22 y el cliente encontraba centavos de diferencia al cuadrar su copia.
+   Arreglado derivando **todo lo impreso de los mismos importes ya redondeados**
+   (`printed_items`): así la columna suma el pie *y* Subtotal − Descuento + IVA
+   da ese mismo Total. Solo afecta al PDF: lo que viaja al ERP sigue saliendo
+   de `Order` a precisión completa.
+3. **`inline_format` se comía el texto entre `<` y `>`.** "ENTREGAR ANTES DE
+   <5 DÍAS>" se imprimía como "ENTREGAR ANTES DE 5 DÍAS>": la instrucción
+   cambiaba de sentido en el papel y nada avisaba. Aplica también a lo que
+   viene del ERP (razón social, dirección), que nadie controla desde aquí.
+4. **"Página 1" en duro** y la segunda hoja sin logo, folio ni cliente. Con 45
+   partidas —el tope, o sea un caso común— son dos páginas: separada del fajo,
+   la segunda no se podía identificar.
+5. **"UN PESOS"** cuando el total era de $1.xx.
+
+**Trampa al probarlo:** Prawn no emite el texto entre paréntesis sino como
+cadenas **hexadecimales** dentro de arreglos `TJ` (los números intercalados son
+kerning), y los acentos van en Windows-1252. Un extractor que busque `(…)`
+devuelve cadena vacía y **las aserciones pasan por vacuidad si se usa
+`assert_no_match`** — otra razón para escribir primero una aserción positiva
+que deba encontrar algo.
+
+### La captura se pausa mientras corre un sync (cerrado)
+
+Dos MEDIA de operación que parecían distintas y resultaron ser **la misma**: un
+capturista escribiendo mientras corre un sync.
+
+- **Obtener información** vacía el catálogo dentro de su transacción. Un INSERT
+  concurrente con FK a un cliente o un producto esperaba el lock y luego
+  reventaba con violación de llave foránea: el capturista veía la pantalla de
+  error del sistema y no sabía si su pedido existía.
+- **Transmitir pedidos** arma el payload, hace el POST y hasta después marca
+  `transmitted`. Un pedido `captured` sigue siendo editable por su dueño, así
+  que un cambio en esa ventana dejaba al ERP con la versión vieja y a la
+  pantalla con la nueva, sin aviso.
+
+Un solo `before_action` cubre las dos. Verlas juntas antes de arreglarlas
+ahorró dos mecanismos distintos para el mismo problema.
+
+**Solo se bloquean las escrituras.** Leer un pedido, el reporte y el PDF siguen
+disponibles: el operador revisa mientras transmite, y bloquear la lectura sería
+un callejón sin salida durante el sync.
+
+**La ventana residual se reporta, no se ignora.** Entre la comprobación y el
+commit de una edición todavía cabe una carrera de milisegundos. `Sync::Up`
+guarda la huella (`updated_at`) antes de armar el payload y la compara después
+del POST; si cambió, el pedido queda transmitido —el ERP ya lo tiene— y sale en
+el panel como "revisa este pedido contra el ERP". Es el mismo criterio de todo
+el día: cuando no se puede evitar del todo, que al menos no sea silencioso.
+
 ### El folio y el vendedor (cerrados)
 
 **El folio se agota y nadie lo sabía.** `format('%04d')` es ancho **mínimo**, no
