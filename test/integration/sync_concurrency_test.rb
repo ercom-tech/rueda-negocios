@@ -30,6 +30,39 @@ class SyncConcurrencyTest < ActionDispatch::IntegrationTest
     assert_equal 0, SyncRun.up.count, "no debe crear el run de transmisión"
   end
 
+  # Hallazgo de la 3ª auditoría: el índice único de respaldo es POR TIPO, así
+  # que solo impide dos `down` (o dos `up`) simultáneos — no un `down` y un
+  # `up` a la vez, que es justo la combinación que corrompe datos (el replace
+  # del down borra los pedidos que el up está transmitiendo). La exclusión
+  # real la da `SyncRun.start`, que verifica y crea bajo un mismo lock.
+  test "SyncRun.start no crea una corrida si ya hay otra viva, sea del tipo que sea" do
+    SyncRun.create!(kind: "down", started_at: Time.current)
+
+    assert_nil SyncRun.start("up"), "un up no debe arrancar con un down vivo"
+    assert_nil SyncRun.start("down"), "ni otro down"
+    assert_equal 1, SyncRun.count
+  end
+
+  test "SyncRun.start sí crea la corrida cuando no hay ninguna viva" do
+    SyncRun.create!(kind: "down", started_at: 1.hour.ago).finish!(status: "completed")
+
+    run = SyncRun.start("up")
+    assert run.present?
+    assert run.running?
+    assert_equal 2, SyncRun.count, "una corrida terminada no bloquea"
+  end
+
+  # El índice único por tipo se conserva como red: dos altas del MISMO tipo en
+  # carrera (dos POST casi simultáneos) chocan contra él y el controller lo
+  # traduce a un aviso amigable.
+  test "el índice único sigue cubriendo dos corridas del mismo tipo" do
+    SyncRun.create!(kind: "up", started_at: Time.current)
+
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      SyncRun.create!(kind: "up", started_at: Time.current)
+    end
+  end
+
   test "con una corrida corriendo el menú bloquea obtener, transmitir y cerrar" do
     SyncRun.create!(kind: "down", started_at: Time.current)
 

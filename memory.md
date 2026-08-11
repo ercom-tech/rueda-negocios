@@ -28,6 +28,47 @@ Si es **algo por hacer**, va al backlog.
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
 
+## 3ª auditoría (2026-08-10) — remediación
+
+Artifact: https://claude.ai/code/artifact/d6dda895-e2d2-4bfb-ab8f-9811a7cd15f2
+(3 ALTA · 11 MEDIA · 9 BAJA · 0 vulnerabilidades). Método de siempre: 5
+revisiones en paralelo + **verificación de cada hallazgo grave contra el código
+en ejecución** antes de publicar — de los 5 reportes, varios "hallazgos" no
+sobrevivieron esa segunda pasada.
+
+- [x] **A1 — Producto con empaque mínimo 0 quedaba invendible.**
+  `min_sale_quantity.presence || 1` devolvía **0.0**: `presence` sobre un
+  decimal cero NO da nil (comprobado en consola). La partida nacía en cantidad
+  0, la validación la rechazaba y el capturista veía un error sin haber
+  tecleado nada — sin remedio offline. Ahora se exige positivo, el mismo
+  criterio que ya usaba `quantity_in_package_multiples`. Tests: 2 de modelo +
+  3 de integración (empaque, nil y CERO).
+- [x] **A2 — Descargar y transmitir podían correr a la vez y corromper datos.**
+  El índice único de respaldo es **por tipo**
+  (`index_sync_runs_one_running_per_kind`), así que solo impedía dos `down` o
+  dos `up`; un `down` y un `up` simultáneos pasaban ambos el `running.exists?`
+  e insertaban sin violarlo. Entonces el replace del sync-down hacía
+  `Order.destroy_all` mientras el sync-up transmitía: el pedido entraba al ERP
+  pero el `update!` del folio escribía sobre una fila ya borrada —cero filas,
+  sin excepción— y **el folio se perdía**. Fix: `SyncRun.exclusively`
+  (`pg_advisory_xact_lock` sobre una llave constante) y `SyncRun.start(kind)`,
+  que verifica y crea bajo el mismo lock; el controlador ya no hace los dos
+  pasos por separado. `CloseRound` usa el mismo lock: entre su `exists?` y su
+  `delete_all` podía colarse una corrida nueva y le borraba el registro al job
+  recién arrancado. El índice por tipo se conserva como red para dos altas
+  idénticas en carrera. Tests: 3 nuevos en `sync_concurrency_test`.
+- [x] **A3 — `rueda-api` aceptaba pedidos cuyo encabezado no cuadra con sus
+  partidas.** Solo validaba el encabezado CONSIGO MISMO: partidas por $500,000
+  con encabezado de $1.00 entraban al ERP y el ERP surtía contra un total que
+  no correspondía. Ahora `validate_items!` (cantidad > 0, precio ≥ 0, descuento
+  0–100, IVA ≥ 0) y `validate_totals_match_items!` (las cuatro sumas del
+  encabezado contra las partidas, tolerancia de un centavo).
+  **Verificado que NO rechaza pedidos legítimos:** se construyó el payload real
+  de un pedido y las cuatro diferencias dan exactamente `0.0`, también con un
+  descuento fraccionario (7.33%) — ambos lados salen de la misma fuente.
+  Tests: 5 nuevos; dos payloads viejos de prueba se completaron porque mandaban
+  partidas sin importes, cosa que la app real nunca hace.
+
 ## Decisiones tomadas
 
 - **Forma de trabajo:** flujo PAIVD. No edit/write sin aprobación previa del

@@ -165,8 +165,56 @@ la LAN; `config.hosts` de development ya acepta IPs 192.168.x.x y 10.x.x.x.
 3. Los capturistas quedan con las contraseñas que tengan **en el ERP de
    testing** (el sync trae sus digests bcrypt).
 
+## 8. Dejarlo corriendo como servicio (systemd)
+
+Para que el sitio arranque solo al encender la laptop y nadie tenga que abrir
+una consola en el evento. **`bin/dev` no sirve aquí**: levanta además el
+watcher de Tailwind, que solo hace falta al editar código; el CSS se compila al
+actualizar (`bin/rails tailwindcss:build`).
+
+`/etc/systemd/system/rueda-negocios.service` (ajusta `<usuario>`):
+
+```ini
+[Unit]
+Description=rueda-negocios (Rails) - laptop servidor LAN
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+User=<usuario>
+WorkingDirectory=/home/<usuario>/Projects/_fecego/rueda-negocios
+ExecStart=/home/<usuario>/.rbenv/shims/bundle exec rails server -b 0.0.0.0 -p 3000
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now rueda-negocios
+sudo systemctl status rueda-negocios
+journalctl -u rueda-negocios -f        # logs en vivo
+```
+
+En *development* la app carga su `.env` sola (dotenv-rails), así que el unit no
+necesita `EnvironmentFile`. El `After=postgresql.service` espera al Postgres
+local, y el barrido de corridas de sync huérfanas corre en cada arranque del
+servicio: un apagón a media corrida se recupera solo.
+
+Antes de habilitarlo, verifica que no quede un `bin/dev` corriendo
+(`ss -tlnp | grep 3000`), o el servicio no podrá tomar el puerto.
+
+**Actualizar después:** `git pull` + `bundle install` (si cambió el Gemfile) +
+`bin/rails db:migrate` + `bin/rails tailwindcss:build` +
+`sudo systemctl restart rueda-negocios`.
+
 ## Notas
 
+- **La API ya no corre en la laptop.** `rueda-api` vive en el servidor de
+  testing (`RUEDA_API_URL=http://fecegowstest:7011`); el paso 5 solo aplica si
+  se quiere una copia local para pruebas.
 - Zona horaria (`hora_pedido` usa hora local):
   `sudo timedatectl set-timezone America/Mexico_City`.
 - Firewall: si `ufw` está activo, `sudo ufw allow 3000/tcp`.

@@ -7,12 +7,17 @@ class OrderItemsController < ApplicationController
   # un product_id fuera del universo → 404, aunque el POST venga forjado.
   def create
     product = current_user.product_universe(active_round).find(params[:product_id])
-    # La cantidad inicial arranca en el empaque mínimo de venta (si el
-    # producto vende por múltiplos); 1 en caso contrario.
+    # La cantidad inicial arranca en el empaque mínimo de venta (si el producto
+    # vende por múltiplos); 1 en caso contrario. Se exige POSITIVO y no
+    # `presence`: sobre un decimal cero `presence` devuelve 0.0, no nil, así que
+    # un producto con empaque 0 en el ERP nacía en cantidad 0, la validación lo
+    # rechazaba y quedaba invendible sin remedio offline. Mismo criterio que
+    # `OrderItem#quantity_in_package_multiples`, que ya ignora el empaque ≤ 0.
+    empaque = product.min_sale_quantity
     item = @order.order_items.build(
       product.to_order_item_attributes.merge(
         position: @order.next_item_position, discount_percent: 0,
-        quantity: product.min_sale_quantity.presence || 1
+        quantity: (empaque&.positive? ? empaque : 1)
       )
     )
     if item.save

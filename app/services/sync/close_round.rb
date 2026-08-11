@@ -20,20 +20,25 @@ module Sync
 
     def self.run!
       Guards.no_local_orders!(PendingOrdersError, "al cerrar la rueda")
-      if SyncRun.running.exists?
-        raise SyncInProgressError,
-              "Se está obteniendo información o transmitiendo pedidos. " \
-              "Espera a que termine para cerrar la rueda."
-      end
 
-      removed = Order.count
-      ActiveRecord::Base.transaction do
+      # La verificación y el borrado van bajo el MISMO lock que usa el alta de
+      # corridas: si no, entre el `exists?` y el `delete_all` puede colarse una
+      # corrida nueva y le borraríamos su registro al job recién arrancado
+      # (queda huérfano y el panel gira "en progreso" para siempre).
+      SyncRun.exclusively do
+        if SyncRun.running.exists?
+          raise SyncInProgressError,
+                "Se está obteniendo información o transmitiendo pedidos. " \
+                "Espera a que termine para cerrar la rueda."
+        end
+
+        removed = Order.count
         Order.destroy_all
         SyncRun.delete_all
         BusinessRound.update_all(active: false)
         Setting.instance.update!(selected_round_erp_id: nil, selected_round_name: nil)
+        removed
       end
-      removed
     end
   end
 end

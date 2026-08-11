@@ -71,6 +71,16 @@ class OrderItemTest < ActiveSupport::TestCase
     assert item(product: product(0), quantity: 7).valid?
   end
 
+  # Un empaque 0 en el ERP no es regla de múltiplos: si se tratara como tal, la
+  # partida nacería en cantidad 0 y el producto quedaría invendible.
+  test "empaque mínimo 0 se trata como sin regla" do
+    p = product(0)
+    p.update!(min_sale_quantity: 0)
+
+    assert item(product: p, quantity: 1).valid?
+    assert item(product: p, quantity: 7).valid?
+  end
+
   test "empaque mínimo decimal también valida múltiplos exactos" do
     p = product(0)
     p.update!(min_sale_quantity: 2.5)

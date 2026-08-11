@@ -39,18 +39,18 @@ class ServerController < ApplicationController
     if Setting.instance.selected_round_erp_id.blank?
       return redirect_to server_rounds_path, alert: "Primero elige la rueda a trabajar."
     end
-    # Cualquier corrida viva bloquea lanzar otra, del tipo que sea: una
-    # descarga a media transmisión (o viceversa) pisaría los datos del job
-    # en vuelo. Mismo criterio que la guarda de "Cerrar rueda".
-    if SyncRun.running.exists?
-      return redirect_to root_path, alert: "Se está obteniendo información o transmitiendo pedidos. Espera a que termine."
-    end
     # Mismo patrón que "Cerrar rueda" y "Transmitir pedidos": la condición no
     # cumplida se avisa al confirmar. Va ANTES de crear el SyncRun para no
     # dejar una corrida fallida por algo que nunca llegó a intentarse.
     Sync::Down.guard!
 
-    run = SyncRun.create!(kind: "down", started_at: Time.current)
+    # Cualquier corrida viva bloquea lanzar otra, del tipo que sea: una
+    # descarga a media transmisión (o viceversa) pisaría los datos del job en
+    # vuelo. `SyncRun.start` verifica y crea bajo un mismo lock — hacerlo en
+    # dos pasos deja pasar un down y un up simultáneos.
+    run = SyncRun.start("down")
+    return redirect_to root_path, alert: sync_busy_alert if run.nil?
+
     SyncDownJob.perform_later(run.id)
     redirect_to root_path, notice: "Obteniendo la información. El menú se actualizará al terminar."
   rescue Sync::Down::GuardError => e
@@ -66,15 +66,14 @@ class ServerController < ApplicationController
     unless round_in_progress?
       return redirect_to root_path, alert: "No hay rueda en curso; no hay pedidos que transmitir."
     end
-    if SyncRun.running.exists?
-      return redirect_to root_path, alert: "Se está obteniendo información o transmitiendo pedidos. Espera a que termine."
-    end
     # Mismo patrón que "Cerrar rueda": la card se ve normal, el modal aparece
     # y la condición no cumplida se avisa al confirmar. Va ANTES de crear el
     # SyncRun para no dejar una corrida fallida por una condición previa.
     Sync::Up.guard!
 
-    run = SyncRun.create!(kind: "up", started_at: Time.current)
+    run = SyncRun.start("up")
+    return redirect_to root_path, alert: sync_busy_alert if run.nil?
+
     SyncUpJob.perform_later(run.id)
     redirect_to root_path, notice: "Transmisión iniciada. El menú se actualizará al terminar."
   rescue Sync::Up::GuardError => e
@@ -102,6 +101,10 @@ class ServerController < ApplicationController
 
   def round_in_progress?
     Setting.instance.selected_round_erp_id.present?
+  end
+
+  def sync_busy_alert
+    "Se está obteniendo información o transmitiendo pedidos. Espera a que termine."
   end
 
   def round_in_progress_alert
