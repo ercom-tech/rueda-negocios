@@ -23,6 +23,7 @@ Rails.application.routes.draw do
   # Reportes de venta (hub de reportes).
   get "reports", to: "reports#index", as: :reports
   get "reports/captured-orders", to: "reports#captured_orders", as: :captured_orders_report
+  get "reports/product-options", to: "reports#product_options", as: :product_options_report # autocompletado del filtro de producto
 
   # Levantamiento de pedido.
   resources :orders, only: %i[new create show edit update destroy] do

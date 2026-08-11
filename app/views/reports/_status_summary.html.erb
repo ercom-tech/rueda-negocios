@@ -1,5 +1,12 @@
 <%# Resumen por estatus, que es TAMBIÉN el filtro de estatus.
-    Locals: summary (Order.totals_by_status), filter (OrdersFilter), per_page.
+    Locals: summary, filter, per_page, supplier_name, brand_name.
+
+    Estética tomada de la captura de partidas: superficies CREMA (antes eran
+    paneles `bg-white/5` que se perdían sobre el patrón del fondo), el badge de
+    estatus con el mismo color que la columna Estatus de la tabla, y la tarjeta
+    de Total en CORAL — el mismo cierre que el renglón Total de la card de
+    totales del pedido. Hover que escala la card completa, como en el resto del
+    sitio.
 
     Va ARRIBA de la tabla, no en el paginador: el paginador dice dónde estás
     dentro del listado y el resumen cómo va el conjunto — juntos se leería
@@ -9,11 +16,22 @@
     Las tarjetas son el filtro para no tener el estatus dos veces (resumen +
     combo). Por eso el resumen se calcula con todos los demás filtros pero SIN
     el de estatus: los tres tienen que seguir visibles, aunque vengan en cero,
-    para poder saltar entre ellos.
-
-    Refleja el mismo alcance que la tabla: el capturista ve el resumen de SUS
-    pedidos; el equipo-servidor, el de todos. %>
+    para poder saltar entre ellos. Refleja el alcance de quien mira: el
+    capturista ve el resumen de SUS pedidos; el servidor, el de todos. %>
 <% base = filter.to_params.except(:status).merge(per_page: per_page) %>
+<% card = "block rounded-2xl px-5 py-4 transition-transform hover:scale-[1.015]" %>
+
+<%# Con un filtro de partida activo, los importes de esta pantalla (resumen y
+    columna Total) son los de las partidas que coinciden, NO los del pedido
+    completo. Decirlo es obligatorio: el mismo número significa otra cosa. %>
+<% if (aviso = filter.items_label(supplier_name: supplier_name, brand_name: brand_name)) %>
+  <p class="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-gold">
+    <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
+    </svg>
+    <%= aviso %>
+  </p>
+<% end %>
 
 <div class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
   <% Order::STATUS_LABELS.each do |status, label| %>
@@ -22,28 +40,28 @@
     <%# Volver a picar la tarjeta activa quita el filtro. %>
     <%= link_to captured_orders_report_path(base.merge(activo ? {} : { status: status })),
           aria: { pressed: activo.to_s },
-          class: "block rounded-2xl border px-5 py-4 transition-colors #{activo ? 'border-brand-gold bg-brand-gold/15' : 'border-white/10 bg-white/5 hover:bg-white/10'}" do %>
+          class: "#{card} bg-brand-cream text-neutral-900 #{'ring-4 ring-brand-gold' if activo}" do %>
       <div class="flex items-center justify-between gap-3">
         <span class="rounded-full px-3 py-1 text-xs font-semibold <%= Order::STATUS_COLORS[status] %>">
           <%= label %>
         </span>
-        <span class="text-2xl font-extrabold tabular-nums text-white"><%= datos[:count] %></span>
+        <span class="text-3xl font-extrabold tabular-nums"><%= datos[:count] %></span>
       </div>
-      <p class="mt-2 text-sm tabular-nums text-white/70"><%= number_to_currency(datos[:total]) %></p>
+      <p class="mt-2 text-lg font-semibold tabular-nums"><%= number_to_currency(datos[:total]) %></p>
     <% end %>
   <% end %>
 
-  <%# Total general: cierra la fila y evita sumar de cabeza los tres estatus.
-      Con un estatus filtrado, este enlace es la vuelta a "todos". %>
-  <%= link_to captured_orders_report_path(base),
-        class: "block rounded-2xl border border-brand-gold/40 bg-brand-gold/10 px-5 py-4 transition-colors hover:bg-brand-gold/20" do %>
+  <%# Total general en coral, como el renglón Total de la card de totales del
+      pedido: cierra la fila y evita sumar de cabeza los tres estatus. Con un
+      estatus filtrado, este enlace es la vuelta a "todos". %>
+  <%= link_to captured_orders_report_path(base), class: "#{card} bg-brand-coral text-white" do %>
     <div class="flex items-center justify-between gap-3">
-      <span class="text-xs font-semibold uppercase tracking-wide text-brand-gold">Total</span>
-      <span class="text-2xl font-extrabold tabular-nums text-white">
+      <span class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">Total</span>
+      <span class="text-3xl font-extrabold tabular-nums">
         <%= summary.values.sum { |d| d[:count] } %>
       </span>
     </div>
-    <p class="mt-2 text-sm font-semibold tabular-nums text-white">
+    <p class="mt-2 text-lg font-bold tabular-nums">
       <%= number_to_currency(summary.values.sum { |d| d[:total] }) %>
     </p>
   <% end %>

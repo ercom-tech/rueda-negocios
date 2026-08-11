@@ -26,6 +26,13 @@ desde `CLAUDE.md`. El relato de cómo se llegó a cada una vive en `memory.md`.
 Grises del manual de identidad: `neutral-400` para el fondo de controles
 grises (buscador de producto), con texto e íconos `neutral-700/900`.
 
+**Nada de paneles translúcidos** (`bg-white/5`, `bg-white/10`) como superficie
+de contenido: sobre el shell negro con patrón se lavan y el bloque "no se
+aprecia". Un bloque de contenido es crema; si necesita jerarquía propia, se
+enmarca con la gramática de card: marco dorado delgado (`p-2`) + barra negra
+de título + cuerpo crema. El `bg-white/10` queda solo para botones
+secundarios sobre fondo oscuro.
+
 ## Iconografía
 
 **100% Heroicons outline**, `currentColor`, trazo 1.5. Cero emojis y cero

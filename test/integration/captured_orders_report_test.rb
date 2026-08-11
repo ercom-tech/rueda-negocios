@@ -17,11 +17,18 @@ class CapturedOrdersReportTest < ActionDispatch::IntegrationTest
     Setting.instance.update!(selected_round_erp_id: 980, selected_round_name: "Rueda 980")
   end
 
+  # Folio de prueba correlativo: con `rand` dos pedidos podían chocar contra el
+  # índice único de local_folio y el test fallaba de forma intermitente.
+  def next_folio
+    @folio_seq = (@folio_seq || 0) + 1
+    format("RN-%06d", @folio_seq)
+  end
+
   # Pedido con una partida de $100 + 16% = $116 (sin descuento).
   def order!(user:, status: "captured", items: 1)
     o = Order.create!(user: user, business_round: @round, client: @client, kind: "remission",
                       status: status,
-                      local_folio: (status == "draft" ? nil : "RN-#{format('%06d', rand(1_000_000))}"),
+                      local_folio: (status == "draft" ? nil : next_folio),
                       erp_folio: (status == "transmitted" ? "1A0001" : nil))
     items.times { |i| o.order_items.create!(position: i + 1, quantity: 1, unit_price: 100, tax_rate: 16, discount_percent: 0) }
     o

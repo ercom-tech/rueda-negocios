@@ -103,24 +103,36 @@ class Order < ApplicationRecord
   # OrderItem#total, pero EN SQL: `Order#total` se calcula en Ruby, así que
   # totalizar un reporte con él obligaría a cargar cada pedido con todas sus
   # partidas (300 pedidos × 45 renglones) cada vez que se abre la pantalla.
-  ITEMS_TOTAL_SQL = <<~SQL.squish.freeze
-    COALESCE(SUM(
-      order_items.quantity * order_items.unit_price
-        * (1 - order_items.discount_percent / 100.0)
-        * (1 + order_items.tax_rate / 100.0)
-    ), 0)
+  ITEM_TOTAL_SQL = <<~SQL.squish.freeze
+    order_items.quantity * order_items.unit_price
+      * (1 - order_items.discount_percent / 100.0)
+      * (1 + order_items.tax_rate / 100.0)
   SQL
 
+  ITEMS_TOTAL_SQL = "COALESCE(SUM(#{ITEM_TOTAL_SQL}), 0)".freeze
+
+  # Igual, pero sumando SOLO las partidas de los productos recibidos (?).
+  MATCHING_ITEMS_TOTAL_SQL =
+    "COALESCE(SUM(CASE WHEN order_items.product_id IN (?) THEN #{ITEM_TOTAL_SQL} ELSE 0 END), 0)".freeze
+
   # Resumen { estatus => { count:, total: } } del alcance recibido — se llama
-  # sobre el scope ya acotado por rol (y, cuando existan, por los filtros), de
-  # modo que resumen y listado no puedan divergir. Devuelve SIEMPRE los tres
-  # estatus, con ceros los que no tengan pedidos: las tarjetas del reporte son
-  # también el filtro de estatus y deben mostrarse completas.
-  def self.totals_by_status
+  # sobre el scope ya acotado por rol y por los filtros, de modo que resumen y
+  # listado no puedan divergir. Devuelve SIEMPRE los tres estatus, con ceros
+  # los que no tengan pedidos: las tarjetas del reporte son también el filtro
+  # de estatus y deben mostrarse completas.
+  #
+  # `products` (subconsulta de ids) restringe la suma a las partidas de esos
+  # productos: con un filtro de proveedor/marca/producto activo, el importe que
+  # se reporta es el de las partidas que coinciden, no el del pedido completo.
+  # Va como CASE dentro del SUM y no como condición del join, para que el
+  # conteo de pedidos no cambie y los pedidos sin partidas sigan apareciendo.
+  def self.totals_by_status(products = nil)
+    suma = products ? sanitize_sql_array([ MATCHING_ITEMS_TOTAL_SQL, products ]) : ITEMS_TOTAL_SQL
+
     filas = reorder(nil).left_joins(:order_items).group(:status)
                         .pluck(Arel.sql("orders.status"),
                                Arel.sql("COUNT(DISTINCT orders.id)"),
-                               Arel.sql(ITEMS_TOTAL_SQL))
+                               Arel.sql(suma))
                         .to_h { |status, count, total| [status, { count: count, total: total }] }
 
     statuses.keys.index_with { |status| filas[status] || { count: 0, total: 0 } }

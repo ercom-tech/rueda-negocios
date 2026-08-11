@@ -1,57 +1,106 @@
 <%# Barra de filtros del reporte. Locals: filter (OrdersFilter), options, per_page.
 
-    Va entre el título y las tarjetas de estatus: filtros → resumen → tabla →
-    paginador. El estatus NO está aquí — sus tarjetas son el filtro.
+    Marco dorado DELGADO con los mismos márgenes del paso 2 (`p-2` y `gap-2`):
+    el dorado se lee como borde, no como fondo con aire. Controles en pill
+    negro, todos del mismo fondo, sin título y sin etiquetas — el nombre de la
+    dimensión va DENTRO del control como hint ("Todos los proveedores"), que es
+    la línea que se ahorra por filtro.
 
-    Formulario GET sin `page`: cambiar un filtro regresa siempre a la primera
-    página (quedarse en la 7 con menos resultados deja la tabla vacía). El
-    tamaño de página sí viaja, para no perderlo al filtrar. %>
-<%= form_with url: captured_orders_report_path, method: :get, data: { turbo_frame: "_top" },
-      class: "mb-6 rounded-3xl border border-white/10 bg-white/5 p-5" do %>
+    Renglones fijos: 1) usuario · cliente · vendedor — los del pedido;
+    2) proveedor · marca · producto — los de PARTIDA, juntos porque son los que
+    cambian el significado de los importes; 3) rango de fechas y "limpiar".
+    Sin el filtro de usuario (capturista) el primer renglón queda con dos y un
+    hueco: se conserva la rejilla a propósito, para que los grupos no se
+    mezclen entre renglones.
+
+    Filtra al seleccionar (`change->form-submit#submit`), así que no hay botón
+    "Filtrar". El estatus NO está aquí: sus tarjetas son el filtro.
+
+    GET sin `page`: cambiar un filtro regresa siempre a la primera página
+    (quedarse en la 7 con menos resultados deja la tabla vacía). El tamaño de
+    página sí viaja, para no perderlo al filtrar. %>
+<% pill      = "flex h-[46px] items-center gap-2 rounded-full bg-black px-5 text-white" %>
+<% al_elegir = { action: "change->form-submit#submit" } %>
+
+<%= form_with url: captured_orders_report_path, method: :get,
+      data: { controller: "form-submit" } do %>
   <%= hidden_field_tag :per_page, per_page %>
 
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    <% if options[:users] %>
-      <div>
-        <span class="mb-1 block text-sm font-semibold text-white/80">Usuario crea</span>
+  <section class="mb-6 rounded-3xl bg-brand-gold p-2">
+    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <%# ── Renglón 1: filtros del pedido ── %>
+      <% if options[:users] %>
         <%= render "shared/custom_select", name: "user_id", options: options[:users],
-              selected: filter.user_id, placeholder: "Todos", filterable: true %>
-      </div>
-    <% end %>
+              selected: filter.user_id, placeholder: "Todos los usuarios",
+              filterable: true, input_data: al_elegir %>
+      <% end %>
 
-    <div>
-      <span class="mb-1 block text-sm font-semibold text-white/80">Cliente</span>
       <%= render "shared/custom_select", name: "client_id", options: options[:clients],
-            selected: filter.client_id, placeholder: "Todos", filterable: true %>
-    </div>
+            selected: filter.client_id, placeholder: "Todos los clientes",
+            filterable: true, input_data: al_elegir %>
 
-    <div>
-      <span class="mb-1 block text-sm font-semibold text-white/80">Vendedor</span>
       <%= render "shared/custom_select", name: "salesperson_id", options: options[:salespeople],
-            selected: filter.salesperson_id, placeholder: "Todos", filterable: true %>
-    </div>
+            selected: filter.salesperson_id, placeholder: "Todos los vendedores",
+            filterable: true, input_data: al_elegir %>
 
-    <%# Rango de fechas: una rueda dura varios días y lo que se pregunta es
-        "cómo fue el día 2", no una fecha suelta. %>
-    <div>
-      <span class="mb-1 block text-sm font-semibold text-white/80">Fecha crea — desde</span>
-      <%= date_field_tag :from, filter.from,
-            class: "h-[46px] w-full rounded-full bg-black px-5 text-white outline-none focus:ring-2 focus:ring-brand-gold" %>
-    </div>
+      <% unless options[:users] %>
+        <%# Sin filtro de usuario (capturista) el renglón cierra con un hueco,
+            para que proveedor no se suba al primero y los grupos no se
+            mezclen. Va al FINAL: un hueco al inicio se lee como un control
+            que falta. %>
+        <div class="hidden lg:block"></div>
+      <% end %>
 
-    <div>
-      <span class="mb-1 block text-sm font-semibold text-white/80">Fecha crea — hasta</span>
-      <%= date_field_tag :to, filter.to,
-            class: "h-[46px] w-full rounded-full bg-black px-5 text-white outline-none focus:ring-2 focus:ring-brand-gold" %>
-    </div>
-  </div>
+      <%# ── Renglón 2: filtros de PARTIDA ──
+          Acotan a los pedidos que traen al menos una partida que coincida, y
+          hacen que los importes de la pantalla pasen a ser los de esas
+          partidas (el aviso lo dice arriba del resumen). %>
+      <%= render "shared/custom_select", name: "supplier_id", options: options[:suppliers],
+            selected: filter.supplier_id, placeholder: "Todos los proveedores",
+            filterable: true, input_data: al_elegir %>
 
-  <div class="mt-4 flex flex-wrap items-center gap-3">
-    <%= submit_tag "Filtrar",
-          class: "cursor-pointer rounded-full bg-brand-gold px-6 py-2.5 font-bold text-neutral-900 transition-colors hover:bg-brand-gold-dark" %>
-    <% if filter.any? %>
-      <%= link_to "Limpiar filtros", captured_orders_report_path(per_page: per_page),
-            class: "rounded-full bg-white/10 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-white/20" %>
-    <% end %>
-  </div>
+      <%= render "shared/custom_select", name: "brand_id", options: options[:brands],
+            selected: filter.brand_id, placeholder: "Todas las marcas",
+            filterable: true, input_data: al_elegir %>
+
+      <%# Producto va como buscador y no como combo: son 13,000+. Muestra
+          sugerencias conforme se teclea (mismo autocompletado del paso 2) y al
+          elegir una escribe su CÓDIGO y filtra. Tecleando libre ("disco flap")
+          se sigue pudiendo acotar a una familia entera. %>
+      <div class="relative" data-controller="autocomplete product-filter"
+           data-autocomplete-url-value="<%= product_options_report_path %>"
+           data-action="click@window->autocomplete#hide">
+        <div class="<%= pill %>">
+          <svg class="h-5 w-5 shrink-0 text-white/60" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+          <%= text_field_tag :product_q, filter.product_q, "aria-label": "Producto",
+                placeholder: "Producto: código, nombre o No. de parte", autocomplete: "off",
+                role: "combobox", aria: { autocomplete: "list", expanded: "false", controls: "product-filter-results" },
+                class: "w-full bg-transparent outline-none placeholder:text-white/60",
+                data: { autocomplete_target: "input", product_filter_target: "input",
+                        action: "input->autocomplete#search keydown->autocomplete#navigate change->form-submit#submit" } %>
+        </div>
+        <div id="product-filter-results" role="listbox" aria-label="Resultados de producto"
+             data-autocomplete-target="results" class="absolute inset-x-0 top-full z-30 mt-1"></div>
+      </div>
+
+      <%# ── Renglón 3: rango de fechas + limpiar ──
+          Una rueda dura varios días y lo que se pregunta es "cómo fue el día
+          2", no una fecha suelta: el calendario marca el rango arrastrando o
+          con clic-clic y filtra al completarlo. %>
+      <%= render "shared/date_range", from_name: "from", to_name: "to",
+            from: filter.from, to: filter.to, placeholder: "Fecha crea",
+            input_data: al_elegir %>
+
+      <% if filter.any? %>
+        <%# Link y no botón: es una salida, no un filtro — no debe competir
+            visualmente con los controles. %>
+        <%# `items-end`: alineado abajo, a la altura del borde inferior de los
+            pills, no a media celda. %>
+        <div class="flex h-[46px] items-end px-2 pb-2">
+          <%= link_to "Limpiar filtros", captured_orders_report_path(per_page: per_page),
+                class: "text-sm font-semibold text-neutral-900 underline decoration-neutral-900/40 underline-offset-4 transition-colors hover:decoration-neutral-900" %>
+        </div>
+      <% end %>
+    </div>
+  </section>
 <% end %>

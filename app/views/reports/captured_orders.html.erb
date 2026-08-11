@@ -23,7 +23,9 @@
     <div class="w-full">
     <%# Orden de lectura: filtros → agregado → detalle → navegación. %>
     <%= render "filters", filter: @filter, options: @options, per_page: @pagy.limit %>
-    <%= render "status_summary", summary: @summary, filter: @filter, per_page: @pagy.limit %>
+    <%= render "status_summary", summary: @summary, filter: @filter, per_page: @pagy.limit,
+          supplier_name: (@options[:suppliers].find { |(_n, id)| id == @filter.supplier_id }&.first),
+          brand_name: (@options[:brands].find { |(_n, id)| id == @filter.brand_id }&.first) %>
 
     <div class="overflow-x-auto rounded-3xl border border-white/10 bg-brand-cream text-neutral-900">
       <table class="w-full text-sm">
@@ -66,8 +68,11 @@
                 <%= link_to (order.local_folio.presence || "(borrador)"), order_path(order), title: "Abrir pedido",
                       class: "underline decoration-brand-gold decoration-2 underline-offset-4 hover:text-brand-coral" %>
               </td>
-              <td class="px-4 py-3 text-right"><%= order.order_items.size %></td>
-              <td class="px-4 py-3 text-right whitespace-nowrap"><%= number_to_currency(order.total) %></td>
+              <%# Con filtro de partida, renglones e importe son los de las
+                  partidas que coinciden (el aviso arriba del resumen lo dice). %>
+              <% coincide = @matching&.dig(order.id) %>
+              <td class="px-4 py-3 text-right"><%= coincide ? coincide[:count] : order.order_items.size %></td>
+              <td class="px-4 py-3 text-right whitespace-nowrap"><%= number_to_currency(coincide ? coincide[:total] : order.total) %></td>
               <td class="px-4 py-3 text-center">
                 <span class="rounded-full px-3 py-1 text-xs font-semibold <%= order.status_color %>">
                   <%= order.status_label %>

@@ -330,9 +330,96 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
   - **Trampa de tests:** el renglón "No hay pedidos capturados" también es un
     `<tr>`; contar `tbody tr` daba 1 con la tabla vacía y escondía un fallo.
     Se descarta por su celda con `colspan`.
-  - Los tres filtros de partida (proveedor, marca, producto) quedan en el
-    backlog: van con `EXISTS` y traen una decisión de negocio sobre qué
-    importe mostrar.
+- **Filtros del reporte — entrega 2 (2026-08-10):** proveedor, marca y
+  producto. No son del pedido sino de sus partidas ("pedidos que traen al menos
+  una partida de MAKITA").
+  - **Los tres se reducen a un conjunto de productos** (`matching_products`,
+    intersección de los tres) y se aplican con `WHERE orders.id IN (SELECT
+    order_id FROM order_items WHERE product_id IN …)`. **Nunca con un JOIN a
+    `order_items`:** unir repetiría el pedido por cada partida que coincida en
+    la tabla e inflaría el importe del resumen, que ya hace su propio join
+    para sumar.
+  - **Decisión del usuario: con un filtro de partida activo, los importes son
+    los de las PARTIDAS QUE COINCIDEN, no los del pedido completo.** Quien
+    pregunta "¿cuánto vendió MAKITA?" quiere la venta de MAKITA, no el tamaño
+    de los pedidos donde aparece — y con dos proveedores los totales se
+    traslaparían. Aplica al resumen, a la columna Total y a Renglones.
+  - Como el mismo número pasa a significar otra cosa, **la pantalla lo dice**:
+    "Importes de las partidas de MAKITA" arriba del resumen.
+  - En el resumen la restricción va como **`CASE` dentro del `SUM`**, no como
+    condición del join, para que el conteo de pedidos no cambie. Los importes
+    por pedido de la página salen de **una sola consulta agrupada** para los 25
+    visibles, no de recalcular pedido por pedido.
+  - **Producto es buscador con autocompletado** (no combo: son 13,222).
+    Sugiere conforme se teclea (`GET /reports/product-options`, reusando el
+    controller `autocomplete` del paso 2) y al elegir una opción escribe su
+    **código** en el campo y filtra — el código va a 6 dígitos, así que como
+    texto de búsqueda identifica a ese producto y a ningún otro. Se conserva el
+    texto libre: "disco flap" acota a esa familia entera, que un selector de un
+    solo SKU no podría. Las sugerencias se acotan al universo de quien mira.
+    (Primero se hizo solo como campo de texto; el usuario pidió ver y elegir
+    coincidencias.)
+  - El aviso enuncia distinto el producto: "Importes de las partidas de MAKITA"
+    (proveedor/marca) vs "…que coinciden con \"037857\"" — un código suelto
+    tras "de" se lee como si fuera un proveedor.
+  - Proveedor y marca se ofrecen del **universo de quien mira**
+    (`available_suppliers`/`available_brands`): al capturista no se le muestran
+    opciones que jamás podrían aparecer en sus pedidos. El índice de
+    `products.brand_id` ya existía.
+  - **Trampa de tests:** los folios locales con `rand` chocaban contra el
+    índice único de `local_folio` y el test fallaba de forma intermitente —
+    secuencia correlativa.
+  - **Estética, en tres pasadas con el usuario (mismo día):**
+    1. Filtros y tarjetas se habían hecho con paneles translúcidos
+       `bg-white/5`, que sobre el shell negro con patrón se lavan ("no se
+       aprecian bien"). Norma en `docs/convenciones-visuales.md`.
+    2. Se retomó la card del levantamiento de pedido: marco dorado con **sus
+       mismos márgenes** (`p-6 sm:p-8`) y los controles directamente sobre el
+       dorado, **todos del mismo fondo** (pill negro) — antes unos eran negros
+       (combos) y otros blancos (campos de escritura), y se veía disparejo.
+       Las tarjetas de estatus quedaron crema con su badge de color y la de
+       Total en **coral**, igual que el renglón Total de la card de totales.
+    3. **Compactada:** fuera el título "Filtros" y fuera las etiquetas arriba
+       de cada campo — el nombre de la dimensión va DENTRO del control como
+       hint ("Todos los proveedores"), que es la línea que se ahorra por
+       filtro. Y **filtra al seleccionar** (`change->form-submit#submit`), así
+       que desapareció el botón "Filtrar"; solo queda "Limpiar filtros", con
+       `justify-self-start` para que la celda del grid no lo estire y una
+       acción secundaria no pese más que los filtros.
+  - Los tres filtros de partida van juntos en el orden: mezclados con los del
+    pedido confundían qué acota qué.
+  - **Selector de rango de fechas hecho a mano** (`date_range_controller` +
+    `shared/_date_range`): un solo control con calendario de un mes, rango por
+    **arrastre** (escritorio) o **clic-clic** (tablet, donde arrastrar es
+    incómodo). Se descartó vendorear Flatpickr: el proyecto no tiene ninguna
+    dependencia de JS externa (combo, autocompletado y modal están hechos a
+    mano) y su CSS habría que sobrescribirlo casi por completo.
+    - Al completar el rango escribe los hidden y **dispara `change` en el
+      `from`**, que es lo que hace que el formulario filtre solo. El partial
+      recibe `input_data` para esa acción: sin eso el evento burbujea al form
+      pero nadie lo escucha (los controles llevan la acción uno por uno, y no
+      el form completo, para que el campo de filtrar opciones del combo no
+      dispare envíos de más).
+    - **Trampa del preview:** el día bajo el cursor no se marcaba durante el
+      arrastre — `end` sigue nulo, así que no era "extremo" ni caía "dentro"
+      del rango. Hay que tratar `hover` como extremo mientras `dragging`.
+    - **Trampa grande (la reportó el usuario: "sigue sin seleccionar la
+      segunda fecha"):** el grid se reconstruía en cada movimiento y en cada
+      selección. Eso destruye el botón que está bajo el cursor, y como
+      **Stimulus enlaza las acciones de los nodos nuevos de forma asíncrona**
+      (MutationObserver), el clic siguiente caía en un botón todavía sin
+      acción y el segundo día no se registraba — intermitente y **invisible
+      con eventos sintéticos**: solo apareció al probar con clics reales del
+      mouse. Fix: el grid se **construye** solo al abrir o cambiar de mes
+      (`buildGrid`) y la selección solo **repinta clases** (`paint`). Regla
+      general: no reconstruir DOM que está recibiendo eventos de puntero.
+    - **Rango de un solo día:** dos clics sobre el mismo día. La etiqueta
+      muestra una sola fecha, no "X — X".
+    - **Hoy siempre marcado** con anillo coral, aunque no sea parte del rango:
+      es la referencia para ubicarse. Y sin rango elegido, el calendario abre
+      en el mes actual.
+    - Todo en fecha **local**: `new Date("2026-08-10")` se interpreta como UTC
+      y en México adelanta un día; se parte el ISO a mano.
 
 ### Sistema visual y detalles de pantalla (decisiones)
 

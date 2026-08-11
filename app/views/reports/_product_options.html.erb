@@ -1,0 +1,35 @@
+<%# Sugerencias del filtro de producto del reporte. Locals: products.
+
+    A diferencia del buscador del paso 2 (que AGREGA el producto al pedido),
+    aquí elegir una opción escribe su código en el campo y filtra: el código va
+    a 6 dígitos, así que como texto de búsqueda identifica a ese producto y a
+    ningún otro. Tecleando libre ("disco flap") se sigue pudiendo acotar a una
+    familia entera. %>
+<% if products.any? %>
+  <ul class="max-h-80 overflow-auto rounded-2xl border border-black/10 bg-brand-cream shadow-xl">
+    <% products.each do |product| %>
+      <li>
+        <button type="button" data-action="click->product-filter#choose"
+                data-code="<%= product.erp_code %>"
+                class="flex w-full items-center justify-between gap-4 px-5 py-3 text-left hover:bg-black/5">
+          <span>
+            <span class="font-semibold text-neutral-900"><%= product.description %></span>
+            <%# Solo los datos que existen: modelo/N.P vacíos no dejan rótulos
+                huérfanos ("Modelo ·"). %>
+            <span class="block text-xs text-neutral-600">
+              <%= safe_join([
+                    "Código #{product.erp_code}",
+                    product.model.presence && "Modelo #{product.model}",
+                    product.part_number.presence && "N/P #{product.part_number}"
+                  ].compact, " · ") %>
+            </span>
+          </span>
+        </button>
+      </li>
+    <% end %>
+  </ul>
+<% else %>
+  <div role="status" class="rounded-2xl border border-black/10 bg-brand-cream px-5 py-3 text-sm text-neutral-600 shadow-xl">
+    Sin coincidencias.
+  </div>
+<% end %>

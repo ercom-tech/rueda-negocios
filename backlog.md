@@ -9,7 +9,7 @@ aprendizajes de lo que ya se hizo.
 
 ## Prioridad alta
 
-### 1. El rol servidor debe poder descartar pedidos ajenos
+### El rol servidor debe poder descartar pedidos ajenos
 
 Desde el reporte "Pedidos capturados", donde ya los ve todos con dueño y
 estatus.
@@ -22,7 +22,7 @@ usuario, pospuesto ese día.
 
 **Alcance:** botón + modal de confirmación en el reporte, ruta y guarda de rol.
 
-### 2. Empaquetado / deployment de la laptop-servidor
+### Empaquetado / deployment de la laptop-servidor
 
 Cómo instalar la app en el equipo del evento y servirla en la LAN.
 
@@ -45,45 +45,20 @@ Cómo instalar la app en el equipo del evento y servirla en la LAN.
   (pre-descargar las imágenes Docker en la oficina); primer arranque
   (`db:prepare` + seed del server + `sync:down`).
 
-### 3. Instalación de `rueda-api` en la VM de producción
+### Instalación de `rueda-api` en la VM de producción
 
 Guía en borrador: `rueda-api/docs/instalacion-vm-produccion.md`. Faltan los
 datos reales (hostname, usuario, IP del ERP, puerto final) y ejecutarla.
 
 ## Funcionalidad pendiente
 
-### 4. Filtros de PARTIDA en el reporte "Pedidos capturados"
-
-Faltan **proveedor, marca y producto**. Los cuatro filtros del pedido (usuario
-crea, cliente, vendedor, fecha crea) y el de estatus ya están hechos
-(2026-08-10, `OrdersFilter`).
-
-**Por qué van aparte:** no son del pedido sino de sus partidas — "pedidos que
-traen al menos una partida de MAKITA". Se resuelven con **`EXISTS`, no con
-`JOIN`**: unir `order_items` repetiría el pedido por cada partida que coincida
-e inflaría el importe del resumen, que ya hace su propio join para sumar.
-
-**Decisión de negocio pendiente (bloquea la implementación):** con un filtro de
-partida activo, ¿el importe mostrado es el del **pedido completo** o el de las
-**partidas que coinciden**? Un pedido de $50,000 con $8,000 de MAKITA:
-filtrando por MAKITA, ¿la columna Total y el resumen dicen $50,000 u $8,000?
-Recomendación: **$8,000** — quien pregunta "¿cuánto vendió MAKITA?" quiere la
-venta de MAKITA, no el tamaño de los pedidos donde aparece (y con dos
-proveedores los totales se traslaparían). Implica que la columna Total y el
-resumen cambian de significado, así que la pantalla debe decirlo
-explícitamente ("Importes de las partidas de MAKITA").
-
-**Alcance:** proveedor y marca como combos (respetando el universo del
-capturista); producto como buscador — 13,222 productos no caben en un combo,
-se reusa el autocompletado del paso 2. Índice en `products.brand_id`.
-
-### 5. Pantallas del menú que faltan
+### Pantallas del menú que faltan
 
 - Read-only: productos, clientes, rueda activa.
 - Asistencia de clientes.
 - Cotización.
 
-### 6. Precios / beneficios especiales de la rueda
+### Precios / beneficios especiales de la rueda
 
 Hallazgo ya resuelto: el ERP **no** tiene precios ligados a `id_rueda` — viven
 en el catálogo general `com_producto_has_precio` (niveles mayoreo / público /
@@ -93,7 +68,7 @@ El "precio especial por rueda" es un **concepto a definir en la app**: modelo
 propio con FK `id_rueda` + `id_producto`, o reúso del catálogo. Decisión
 diferida.
 
-### 7. Regalos por promoción
+### Regalos por promoción
 
 Mencionado por el usuario (2026-08-10) al fijar el tope de 45 partidas: los
 regalos pueden hacer que un pedido rebase el tope. Al implementarlos hay que
@@ -102,20 +77,20 @@ sube `Order::MAX_ITEMS`.
 
 ## Definiciones con FECEGO
 
-### 8. Defaults de configuración de la cabecera del pedido
+### Defaults de configuración de la cabecera del pedido
 
 `c_FormaPago`, `c_MetodoPago`, `condicion_pago`, `tipo_precio`,
 `id_negociaciontipo`, `id_enviotipo`. Hoy son fijos en
 `OrderCreate::HEADER_DEFAULTS` (la moda del ERP). Confirmar cuáles son
 correctos para una rueda y si alguno debe salir del cliente en vez de ser fijo.
 
-### 9. LAN del evento
+### LAN del evento
 
 IP fija + hostname (mDNS `laptop.local`), router dedicado. Por definir.
 
 ## Sync
 
-### 10. Membresías de rueda que el export no trae
+### Membresías de rueda que el export no trae
 
 `business_round_people` **ya** se sincroniza (2026-07-26, es el universo de
 productos por capturista). Siguen sin venir en el export `brands_suppliers` y
@@ -124,17 +99,17 @@ Definir si alguna pantalla llega a necesitarlas.
 
 ## Operación y seguridad (fase de strengthening)
 
-### 11. Punto único de falla: la laptop-servidor
+### Punto único de falla: la laptop-servidor
 
 Definir backups (`pg_dump` a USB u otro equipo) y evaluar una laptop de
 respaldo.
 
-### 12. Endurecimiento del transporte
+### Endurecimiento del transporte
 
 HTTPS, tokens de autenticación, allowlist, throttling y proxy en AWS para
 `rueda-api`. Hoy el transporte es HTTP plano en red interna; la materia prima
 para el throttling ya existe (`login_events` registra los intentos fallidos).
 
-### 13. Seguridad de los datos en la laptop
+### Seguridad de los datos en la laptop
 
 Lleva datos de clientes y precios: cifrado de disco + limpieza post-evento.

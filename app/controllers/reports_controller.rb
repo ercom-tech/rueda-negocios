@@ -22,13 +22,24 @@ class ReportsController < ApplicationController
     # tarjetas son el filtro de estatus y deben seguir mostrando el panorama
     # completo para poder saltar entre ellas.
     filtrado   = @filter.apply_without_status(orders_scope)
-    @summary   = filtrado.totals_by_status
+    @productos = @filter.matching_products
+    @summary   = filtrado.totals_by_status(@productos)
     @options   = filter_options
 
     @pagy, @orders = pagy(@filter.apply_status(filtrado)
                                  .includes(:user, :order_items, client: :salesperson)
                                  .order(created_at: :desc),
                           limit: page_size)
+    @matching = matching_totals(@orders, @productos)
+  end
+
+  # Sugerencias del filtro de producto. Acotadas al universo de quien mira: al
+  # capturista no se le ofrecen productos que jamás podrían aparecer en sus
+  # pedidos.
+  def product_options
+    universo = current_user.can_see_all_orders? ? Product.all : current_user.product_universe(active_round)
+    @products = params[:q].present? ? universo.search(params[:q]).includes(:price).limit(10) : Product.none
+    render partial: "product_options", locals: { products: @products }, layout: false
   end
 
   private
@@ -59,8 +70,25 @@ class ReportsController < ApplicationController
     {
       users: (User.capturista.order(:name, :username).map { |u| [ u.full_name.presence || u.username, u.id ] } if @all_scope),
       clients: Client.order(:name).map { |c| [ "#{c.erp_client_key} — #{c.name}", c.id ] },
-      salespeople: Salesperson.order(:name).map { |s| [ "#{s.erp_salesperson_id} — #{s.name}", s.id ] }
+      salespeople: Salesperson.order(:name).map { |s| [ "#{s.erp_salesperson_id} — #{s.name}", s.id ] },
+      # Proveedores y marcas del universo de quien mira: al capturista no se le
+      # ofrecen opciones que jamás podrían aparecer en sus pedidos.
+      suppliers: (@all_scope ? Supplier.order(:name) : available_suppliers).map { |s| [ s.name, s.id ] },
+      brands: (@all_scope ? Brand.order(:name) : available_brands).map { |b| [ b.name, b.id ] }
     }.compact
+  end
+
+  # Importe y renglones POR PEDIDO de la página, contando solo las partidas que
+  # coinciden con el filtro de proveedor/marca/producto. Una sola consulta para
+  # los 25 pedidos visibles, en vez de recalcular en Ruby pedido por pedido.
+  def matching_totals(orders, products)
+    return nil if products.nil? || orders.empty?
+
+    OrderItem.where(order_id: orders.map(&:id), product_id: products)
+             .group(:order_id)
+             .pluck(:order_id, Arel.sql("COUNT(*)"),
+                    Arel.sql("COALESCE(SUM(#{Order::ITEM_TOTAL_SQL}), 0)"))
+             .to_h { |id, count, total| [ id, { count: count, total: total } ] }
   end
 
   def require_round

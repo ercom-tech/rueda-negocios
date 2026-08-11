@@ -1,0 +1,51 @@
+<%# Selector de rango de fechas (un solo control).
+    Locals: from_name, to_name, from, to, placeholder (opcional),
+            input_data (opcional — data-attrs para el hidden `from`, que es
+            donde el controller dispara `change` al completarse el rango).
+
+    Pill negro como el resto de los controles; al abrirlo, un panel crema con
+    el calendario del mes — misma gramática que el panel del combo. El rango se
+    marca arrastrando (escritorio) o con clic-clic (tablet), y al completarse
+    dispara `change` en el hidden `from` para que el formulario filtre solo.
+
+    El calendario lo dibuja `date_range_controller`; aquí solo va el armazón. %>
+<% placeholder ||= "Fecha crea" %>
+
+<div class="relative" data-controller="date-range" data-placeholder="<%= placeholder %>"
+     data-action="click@window->date-range#hide keydown@window->date-range#closeOnEsc">
+  <button type="button" data-date-range-target="button" data-action="date-range#toggle"
+          aria-haspopup="dialog" aria-expanded="false"
+          class="flex h-[46px] w-full items-center gap-2 rounded-full bg-black px-5 text-left text-white">
+    <svg class="h-5 w-5 shrink-0 text-white/60" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+    </svg>
+    <span data-date-range-target="label" class="truncate text-white/60"><%= placeholder %></span>
+  </button>
+
+  <%= hidden_field_tag from_name, from,
+        data: (local_assigns[:input_data] || {}).merge(date_range_target: "from") %>
+  <%= hidden_field_tag to_name,   to,   data: { date_range_target: "to" } %>
+
+  <div data-date-range-target="panel" hidden role="dialog" aria-label="Rango de fechas"
+       class="absolute right-0 top-full z-30 mt-1 w-72 rounded-2xl border border-black/10 bg-brand-cream p-3 text-neutral-900 shadow-xl">
+    <div class="mb-2 flex items-center justify-between gap-2">
+      <button type="button" data-action="date-range#prevMonth" aria-label="Mes anterior"
+              class="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-black/5">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
+      </button>
+      <span data-date-range-target="title" class="text-sm font-bold capitalize"></span>
+      <button type="button" data-action="date-range#nextMonth" aria-label="Mes siguiente"
+              class="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-black/5">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
+      </button>
+    </div>
+
+    <div data-date-range-target="grid" class="grid grid-cols-7 gap-1"></div>
+
+    <div class="mt-3 flex items-center justify-between border-t border-black/10 pt-2 text-xs text-neutral-600">
+      <span>Arrastra o da dos clics</span>
+      <button type="button" data-action="date-range#clear"
+              class="rounded-full px-3 py-1 font-semibold hover:bg-black/5">Limpiar</button>
+    </div>
+  </div>
+</div>

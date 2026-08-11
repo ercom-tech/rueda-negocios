@@ -20,6 +20,13 @@ Normas y trampas ya pagadas en este proyecto. Se cargan en contexto desde
 - **El atributo HTML `autofocus` no es confiable tras una visita Turbo.**
   Darlo explícito en el `connect()` del controller Stimulus, con un value para
   activarlo por pantalla.
+- **No reconstruyas DOM que está recibiendo eventos de puntero.** Stimulus
+  enlaza las acciones de los nodos nuevos de forma asíncrona
+  (MutationObserver): si un `mousedown`/`mouseenter` regenera los elementos, el
+  clic siguiente cae en un nodo todavía sin acción y se pierde. Construir la
+  estructura una vez (al abrir, al cambiar de página/mes) y en la interacción
+  **solo actualizar clases**. Falla intermitente e **invisible con eventos
+  sintéticos**: hay que probar con clics reales.
 
 ## Formularios
 

@@ -25,12 +25,20 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
     Setting.instance.update!(selected_round_erp_id: 990, selected_round_name: "Rueda 990")
   end
 
-  def order!(user:, client:, status: "captured", created_at: Time.current)
+  # Folio correlativo: con `rand` dos pedidos podían chocar contra el índice
+  # único de local_folio y el test fallaba de forma intermitente.
+  def next_folio
+    @folio_seq = (@folio_seq || 0) + 1
+    format("RN-%06d", @folio_seq)
+  end
+
+  def order!(user:, client:, status: "captured", created_at: Time.current, product: nil)
     o = Order.create!(user: user, business_round: @round, client: client, kind: "remission",
                       status: status,
-                      local_folio: (status == "draft" ? nil : "RN-#{format('%06d', rand(1_000_000))}"),
+                      local_folio: (status == "draft" ? nil : next_folio),
                       erp_folio: (status == "transmitted" ? "1A0001" : nil))
-    o.order_items.create!(position: 1, quantity: 1, unit_price: 100, tax_rate: 16, discount_percent: 0)
+    o.order_items.create!(position: 1, product: product, quantity: 1, unit_price: 100,
+                          tax_rate: 16, discount_percent: 0)
     o.update_column(:created_at, created_at)
     o
   end
@@ -154,6 +162,161 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
     login("ana991")
     get captured_orders_report_path
     assert_select "input[name=?]", "user_id", 0
+  end
+
+  # --- Filtros de PARTIDA (proveedor / marca / producto) -------------------
+  # Regla del usuario: con uno activo, los importes que se muestran son los de
+  # las partidas que COINCIDEN, no los del pedido completo.
+
+  def catalogo!
+    @makita  = Supplier.create!(erp_supplier_id: 993, name: "MAKITA")
+    @stihl   = Supplier.create!(erp_supplier_id: 994, name: "STIHL")
+    @m_brand = Brand.create!(erp_brand_id: 993, name: "MARCA MAKITA")
+    @disco   = Product.create!(erp_product_id: 19_163, description: "DISCO CRTE 7", brand: @m_brand, unit: "PZA")
+    @motosi  = Product.create!(erp_product_id: 44_444, description: "MOTOSIERRA", unit: "PZA")
+    ProductSupplier.create!(product: @disco,  supplier: @makita)
+    ProductSupplier.create!(product: @motosi, supplier: @stihl)
+  end
+
+  # Pedido mixto: una partida MAKITA ($116) y una STIHL ($232).
+  def pedido_mixto!
+    o = Order.create!(user: @ana, business_round: @round, client: @c1, kind: "remission",
+                      status: "captured", local_folio: next_folio)
+    o.order_items.create!(position: 1, product: @disco,  quantity: 1, unit_price: 100, tax_rate: 16, discount_percent: 0)
+    o.order_items.create!(position: 2, product: @motosi, quantity: 2, unit_price: 100, tax_rate: 16, discount_percent: 0)
+    o
+  end
+
+  test "el filtro de proveedor trae los pedidos que traen al menos una partida suya" do
+    catalogo!
+    pedido_mixto!
+    order!(user: @ana, client: @c1, product: @motosi)
+    login("srv990")
+
+    get captured_orders_report_path(supplier_id: @makita.id)
+    assert_equal 1, filas, "solo el mixto trae MAKITA"
+
+    get captured_orders_report_path(supplier_id: @stihl.id)
+    assert_equal 2, filas
+  end
+
+  test "con filtro de proveedor el importe es el de SUS partidas, no el del pedido" do
+    catalogo!
+    o = pedido_mixto!
+    assert_in_delta 348, o.total, 0.01, "el pedido completo son $348"
+    login("srv990")
+
+    resumen = OrdersFilter.new(supplier_id: @makita.id)
+                          .then { |f| f.apply_without_status(Order.all).totals_by_status(f.matching_products) }
+    assert_equal 1, resumen["captured"][:count]
+    assert_in_delta 116, resumen["captured"][:total], 0.01, "solo la partida MAKITA"
+
+    get captured_orders_report_path(supplier_id: @makita.id)
+    assert_match(/\$116\.00/, response.body)
+    assert_no_match(/\$348\.00/, response.body)
+  end
+
+  test "la pantalla avisa que los importes son de las partidas" do
+    catalogo!
+    pedido_mixto!
+    login("srv990")
+
+    get captured_orders_report_path(supplier_id: @makita.id)
+    assert_match(/Importes de las partidas de MAKITA/, response.body)
+
+    # El producto se busca por texto: se enuncia distinto que un proveedor.
+    get captured_orders_report_path(product_q: "019163")
+    assert_match(/Importes de las partidas que coinciden con &quot;019163&quot;/, response.body)
+
+    get captured_orders_report_path
+    assert_no_match(/Importes de las partidas/, response.body)
+  end
+
+  # --- Autocompletado del filtro de producto -------------------------------
+
+  test "el autocompletado sugiere productos por nombre y por código" do
+    catalogo!
+    login("srv990")
+
+    get product_options_report_path(q: "DISCO")
+    assert_response :success
+    assert_match(/DISCO CRTE 7/, response.body)
+    assert_match(/019163/, response.body, "muestra el código a 6 dígitos")
+    assert_match(/data-code="019163"/, response.body, "elegir escribe el código en el filtro")
+
+    get product_options_report_path(q: "019163")
+    assert_match(/DISCO CRTE 7/, response.body)
+  end
+
+  test "sin coincidencias el autocompletado lo dice" do
+    catalogo!
+    login("srv990")
+
+    get product_options_report_path(q: "NO EXISTE")
+    assert_match(/Sin coincidencias/, response.body)
+  end
+
+  # El capturista solo ve productos de su universo: ofrecerle otros sería
+  # sugerirle filtros que nunca podrían aparecer en sus pedidos.
+  test "el autocompletado del capturista se acota a su universo" do
+    catalogo!
+    BusinessRoundPerson.create!(business_round: @round, user: @ana, position: 1, supplier: @makita)
+    login("ana991")
+
+    get product_options_report_path(q: "DISCO")
+    assert_match(/DISCO CRTE 7/, response.body, "el disco es del proveedor que tiene asignado")
+
+    get product_options_report_path(q: "MOTOSIERRA")
+    assert_match(/Sin coincidencias/, response.body, "la motosierra es de otro proveedor")
+  end
+
+  test "renglones también cuenta solo las partidas que coinciden" do
+    catalogo!
+    pedido_mixto!   # 2 partidas, 1 de MAKITA
+    login("srv990")
+
+    get captured_orders_report_path(supplier_id: @makita.id)
+    assert_select "tbody tr td:nth-last-child(3)", text: "1"
+  end
+
+  test "marca y producto filtran igual" do
+    catalogo!
+    pedido_mixto!
+    login("srv990")
+
+    get captured_orders_report_path(brand_id: @m_brand.id)
+    assert_equal 1, filas
+    assert_match(/\$116\.00/, response.body)
+
+    get captured_orders_report_path(product_q: "019163")
+    assert_equal 1, filas, "busca por el código a 6 dígitos"
+
+    get captured_orders_report_path(product_q: "MOTOSIERRA")
+    assert_equal 1, filas
+    assert_match(/\$232\.00/, response.body)
+  end
+
+  test "los filtros de partida se combinan entre sí (intersección)" do
+    catalogo!
+    pedido_mixto!
+    login("srv990")
+
+    # MAKITA + su marca → coincide; MAKITA + producto de STIHL → nada.
+    get captured_orders_report_path(supplier_id: @makita.id, brand_id: @m_brand.id)
+    assert_equal 1, filas
+
+    get captured_orders_report_path(supplier_id: @makita.id, product_q: "MOTOSIERRA")
+    assert_equal 0, filas
+  end
+
+  test "un filtro de partida sin coincidencias deja el resumen en ceros" do
+    catalogo!
+    pedido_mixto!
+    login("srv990")
+
+    get captured_orders_report_path(product_q: "NO EXISTE ESTE PRODUCTO")
+    assert_response :success
+    assert_equal 0, filas
   end
 
   # --- Enlaces -------------------------------------------------------------
