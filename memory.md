@@ -141,6 +141,17 @@ sobrevivieron esa segunda pasada.
   estos"/"Quitar filtro" y usan `aria-current` (`aria-pressed` no es válido en
   un enlace); foco visible en los tres buscadores; "Capturar otro pedido" en el
   paso 3; y el aviso de cliente sin datos fiscales ahora dice qué hacer.
+- [x] **Foco al quitar una partida** (era lo único que había quedado pendiente):
+  el botón que abre el modal vive DENTRO de la fila, así que al borrarla el
+  `modal#close` no tenía a dónde devolver el foco y caía al `<body>` — había que
+  retabular desde el inicio de la página en cada baja. Solución: un elemento
+  vacío `#focus-director` que `OrderItems#destroy` **reemplaza** (no morphea) con
+  un partial que trae `data-controller="focus"`; al insertarse, Stimulus lo
+  conecta y mueve el foco al buscador, que es la acción natural siguiente. El
+  truco está en el `replace`: con morph el nodo se conserva y `connect()` no
+  volvería a correr. Solo viaja en la baja, así que editar cantidad o descuento
+  sigue sin mover el foco (validado en navegador con clics reales, y con test
+  de ambos casos).
 - [x] **Consistencia:** `accessible_orders` vive en `ApplicationController` y lo
   usan los dos controllers (antes la misma expresión con dos nombres);
   `client_from_key` extraído (el parseo estaba duplicado en `new` y `edit`);

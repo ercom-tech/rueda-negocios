@@ -1,0 +1,7 @@
+<%# Elemento vacío cuyo único trabajo es mover el foco cuando el servidor lo
+    pide. Locals: selector (opcional; sin él no hace nada).
+
+    Se reemplaza con `turbo_stream.replace` —no morph— a propósito: el nodo
+    nuevo hace que Stimulus conecte el controller, y ahí se mueve el foco. %>
+<span id="focus-director" hidden
+      <% if local_assigns[:selector] %>data-controller="focus" data-focus-selector-value="<%= selector %>"<% end %>></span>

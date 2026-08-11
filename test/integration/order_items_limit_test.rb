@@ -75,6 +75,34 @@ class OrderItemsLimitTest < ActionDispatch::IntegrationTest
     assert_no_match(/Alcanzaste el máximo/, response.body)
   end
 
+  # Al quitar una partida, el botón que abrió el modal se va con su fila y el
+  # foco caía al <body>: había que retabular desde el inicio de la página en
+  # cada baja. El stream del "focus director" lo manda al buscador.
+  test "quitar una partida manda el foco al buscador" do
+    fill_order_to(2)
+    item = @order.order_items.first
+
+    delete order_order_item_path(@order, item),
+           headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    assert_response :success
+    assert_match(/focus-director/, response.body)
+    assert_match(/data-focus-selector-value="#product-search input"/, response.body)
+  end
+
+  # Editar cantidad o descuento NO debe mover el foco: el director solo viaja
+  # en la baja.
+  test "editar una partida no manda el foco a ningún lado" do
+    fill_order_to(2)
+    item = @order.order_items.first
+
+    patch order_order_item_path(@order, item), params: { order_item: { quantity: 3 } },
+          headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    assert_response :success
+    assert_no_match(/data-focus-selector-value/, response.body)
+  end
+
   # Borrar una partida intermedia dejaba huecos en la columna Consecutivo.
   test "borrar una partida intermedia renumera el consecutivo" do
     fill_order_to(4)

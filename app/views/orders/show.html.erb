@@ -116,6 +116,9 @@
         <%# ── Tabla de partidas (Turbo) ── %>
         <%= render "items_table", order: @order %>
 
+        <%# Destino de los streams que mueven el foco (ver OrderItems#destroy). %>
+        <%= render "focus_director" %>
+
         <%# ── Observaciones (izquierda) + Totales (derecha) ── %>
         <div class="flex flex-col gap-2 lg:flex-row lg:items-stretch">
           <% if can_edit_order?(@order) %>

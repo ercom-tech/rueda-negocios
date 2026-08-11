@@ -51,7 +51,14 @@ class OrderItemsController < ApplicationController
     @order.order_items.find(params[:id]).destroy
     # Quitar una partida intermedia dejaba huecos en el consecutivo.
     @order.renumber_items!
-    render turbo_stream: detail_streams
+    # El botón que abrió el modal se fue con su fila, así que el foco caía al
+    # <body> y había que retabular desde el inicio en cada baja. Va al buscador,
+    # que es la acción natural siguiente.
+    render turbo_stream: [
+      *detail_streams,
+      turbo_stream.replace("focus-director", partial: "orders/focus_director",
+                                             locals: { selector: "#product-search input" })
+    ]
   end
 
   private
