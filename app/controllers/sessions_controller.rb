@@ -21,7 +21,7 @@ class SessionsController < ApplicationController
     username = params[:username].to_s.strip
     user     = User.find_by(username: username)
 
-    if user&.active? && user.authenticate(params[:password].to_s)
+    if user&.active? && authenticates?(user, params[:password].to_s)
       # Sin rueda cargada un capturista no tiene nada que operar: se bloquea
       # en la puerta. El rol server sí entra siempre — es quien la carga.
       if !user.can_see_all_orders? && BusinessRound.active.none?
@@ -51,6 +51,19 @@ class SessionsController < ApplicationController
   end
 
   private
+
+  # El digest viene del ERP por el sync (`cnf_persona_has_metodoidentifica`), y
+  # el import solo descarta los VACÍOS. Un hash con otro formato —md5, texto
+  # plano, un valor migrado— hace que `BCrypt::Password` reviente, y el
+  # capturista recibe un error del sistema en vez de "usuario o contraseña
+  # incorrectos", en bucle y sin que nadie sepa por qué. Un digest ilegible es
+  # una credencial que no sirve: se trata como inválida.
+  def authenticates?(user, password)
+    user.authenticate(password)
+  rescue BCrypt::Errors::InvalidHash
+    Rails.logger.warn("[login] #{user.username} tiene un digest ilegible en la BD local")
+    false
+  end
 
   # Auditoría: un renglón por intento de login, exitoso o no. `success: false`
   # cubre credenciales malas, usuario inactivo/inexistente y capturista sin

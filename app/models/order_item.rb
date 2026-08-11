@@ -22,8 +22,16 @@ class OrderItem < ApplicationRecord
   # Mensajes en `:base` (sin default_locale :es, que alteraría formatos de
   # moneda/fecha en toda la UI): así `full_messages` los muestra tal cual, en
   # español, para el flash de OrderItems#update.
+  # El tope superior es el de la columna (`numeric(14,3)`): sin él, una cantidad
+  # pegada o tecleada de más salía del `update` como ActiveRecord::RangeError,
+  # que ningún rescue atrapa. Como el PATCH es un Turbo Stream, la tabla no se
+  # repintaba y el capturista solo veía que "no pasó nada", sin mensaje.
+  MAX_QUANTITY = 10**11
+
   def quantity_positive
-    errors.add(:base, "La cantidad debe ser mayor a 0.") if quantity.blank? || quantity <= 0
+    return errors.add(:base, "La cantidad debe ser mayor a 0.") if quantity.blank? || quantity <= 0
+
+    errors.add(:base, "La cantidad es demasiado grande.") if quantity >= MAX_QUANTITY
   end
 
   # Empaque mínimo de venta (com_producto_has_empaque): el producto solo se

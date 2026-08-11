@@ -184,9 +184,19 @@ class OrdersController < ApplicationController
   end
 
   def order_params
-    params.require(:order).permit(
+    permitted = params.require(:order).permit(
       :client_id, :kind, :client_tax_profile_id, :cfdi_use_id,
       :client_receipt_profile_id, :client_branch_id, :dividir_facturas
     )
+    # `kind` es un enum: asignarle un valor fuera del catálogo levanta
+    # ArgumentError ANTES de cualquier validación, así que no hay forma de
+    # atajarlo en el modelo. El campo viaja como radio (o hidden cuando el
+    # cliente solo admite un tipo), o sea que basta con cambiarlo en el
+    # inspector para tumbar la pantalla con un 500 — y en el modo con que corre
+    # la laptop, ese 500 es la página de depuración de Rails para toda la LAN.
+    # En blanco lo recoge `validates :kind, presence: true` y sale por el
+    # camino normal de "revisa los datos obligatorios".
+    permitted[:kind] = nil if permitted.key?(:kind) && !Order.kinds.key?(permitted[:kind])
+    permitted
   end
 end

@@ -48,6 +48,14 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
 - **El atributo HTML `autofocus` no es confiable tras una visita Turbo.**
   Darlo explícito en el `connect()` del controller Stimulus, con un value para
   activarlo por pantalla.
+- **Un diálogo dentro de una región que se repinta con morph necesita
+  `data-turbo-permanent` y un id estable.** El estado "abierto" vive en un
+  `style` en línea, y morph reescribe los atributos con los del HTML nuevo: el
+  modal recién abierto se cierra solo. Pasaba al corregir una cantidad y tocar
+  el bote de basura de otra fila —el `blur` dispara el repintado—, que es la
+  pareja de acciones más común de la captura. El id tiene que venir del
+  registro (`dom_id(item, :remove_dialog)`), nunca de un aleatorio: Turbo
+  empareja por id para saber qué conservar.
 - **No reconstruyas DOM que está recibiendo eventos de puntero.** Stimulus
   enlaza las acciones de los nodos nuevos de forma asíncrona
   (MutationObserver): si un `mousedown`/`mouseenter` regenera los elementos, el
@@ -70,6 +78,17 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
   empaque), el `min` del input **es** el tamaño de la rejilla, y la flecha
   avanza al siguiente múltiplo en su dirección — si no, bajar desde el mínimo
   desalinea toda la secuencia.
+- **Lo que el combo ofrece, el modelo lo valida.** Los selects del encabezado
+  viajan en campos ocultos, así que la lista de opciones no es una restricción:
+  hay que comprobar en el modelo que el valor esté en el catálogo y que los
+  perfiles sean **del cliente del pedido**.
+- **Todo campo numérico necesita tope superior, no solo inferior.** Rebasar la
+  precisión de la columna sale como `ActiveRecord::RangeError`, que ningún
+  rescue atrapa; y en una respuesta Turbo Stream el usuario ni siquiera ve el
+  error: la pantalla no se repinta y parece que "no pasó nada".
+- **Un enum no se puede validar en el modelo:** asignarle un valor desconocido
+  levanta `ArgumentError` antes de que corra ninguna validación. Se sanea en
+  los `params` (a nil) y se deja que lo recoja el `validates presence`.
 
 ## Consultas al ERP
 
@@ -109,6 +128,12 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
 
 - Suite: `PARALLEL_WORKERS=1 bin/rails test`. El runner paralelo de minitest a
   veces se cuelga en `at_exit` después de terminar (sleep eterno).
+- **`bin/rails test` NO incluye las de sistema**: van aparte con
+  `bin/rails test:system` (Chrome headless; Selenium Manager resuelve el driver
+  solo). Son las únicas que ven los defectos que nacen entre Turbo, idiomorph y
+  Stimulus. **Una prueba de sistema nueva se corre primero contra el código sin
+  arreglar**: si no falla, no está probando el defecto — y con el DOM de por
+  medio es fácil que pase por el camino equivocado.
 - `bin/rails runner - <<'RUBY' … RUBY` (heredoc con comillas): pasar el script
   como argumento en una línea se come las comillas internas.
 - **`node --check archivo.js` tras tocar un controller Stimulus.** El proyecto

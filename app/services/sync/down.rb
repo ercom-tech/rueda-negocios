@@ -159,7 +159,11 @@ module Sync
 
       rows = []
       importable.each do |u|
-        if u["password_hash"].to_s.empty?
+        # No solo el vacío: un digest que no es bcrypt tampoco sirve para
+        # entrar, y además tumbaba el login con un error del sistema. Se omite
+        # aquí, donde el operador puede verlo en la lista de omitidos, en vez de
+        # descubrirlo cuando el capturista no logra entrar en pleno evento.
+        unless u["password_hash"].to_s.start_with?("$2")
           @skipped_users << (u["username"] || u["erp_person_id"])
           next
         end

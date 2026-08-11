@@ -137,7 +137,8 @@ class OrderTest < ActiveSupport::TestCase
   test "cambiar a remisión también suelta el monto de división de facturas" do
     client, tax, receipt, cfdi = profiles_client
     order = Order.create!(user: @user, business_round: @round, client: client, kind: "invoice",
-                          client_tax_profile: tax, cfdi_use: cfdi, dividir_facturas: 2000)
+                          client_tax_profile: tax, cfdi_use: cfdi,
+                          dividir_facturas: DivideAmount.create!(erp_consecutive: 1, amount: 2000).amount)
 
     assert order.update(kind: "remission", client_receipt_profile: receipt)
 

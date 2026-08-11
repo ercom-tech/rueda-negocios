@@ -33,6 +33,21 @@ class AuthenticationFlowTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  # El digest viene del ERP por el sync. Uno con otro formato hacía reventar a
+  # BCrypt y el capturista recibía un error del sistema en vez del aviso de
+  # credenciales, en bucle y sin pista de la causa.
+  test "un digest que no es bcrypt no tumba el login" do
+    @user.update_column(:password_digest, "md5:deadbeefdeadbeefdeadbeefdeadbeef")
+
+    assert_nothing_raised do
+      post login_path, params: { username: "tester", password: "secret123" }
+    end
+
+    assert_response :unprocessable_entity
+    get root_path
+    assert_redirected_to login_path
+  end
+
   test "logout cierra la sesión" do
     post login_path, params: { username: "tester", password: "secret123" }
     delete logout_path

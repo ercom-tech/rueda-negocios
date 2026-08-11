@@ -12,7 +12,12 @@ class Order < ApplicationRecord
   # Importe máximo por factura al facturar el pedido (vta_pedido.
   # dividir_facturas); 0 = no dividir. Solo tiene sentido en facturas, pero
   # se guarda siempre (0) para transmitir el encabezado completo.
+  #
+  # Acotado al catálogo del ERP: el combo lo ofrece de ahí, pero el valor viaja
+  # en un campo oculto y solo se validaba `>= 0`. Un 0.01 forjado se guardaba y
+  # se transmitía, y el ERP entiende "divide la factura cada un centavo".
   validates :dividir_facturas, numericality: { greater_than_or_equal_to: 0 }
+  validate  :dividir_facturas_in_catalog
 
   # Valor plano para el combo del paso 1 ("0", "2000") — mismo formato que
   # DivideAmount#option_value para que `selected` empareje.
@@ -47,6 +52,7 @@ class Order < ApplicationRecord
 
   validates :kind, presence: true
   validate  :header_selections_present
+  validate  :header_selections_belong_to_client
 
   def subtotal
     order_items.sum(&:line_total)
@@ -193,6 +199,32 @@ class Order < ApplicationRecord
       self.dividir_facturas      = 0
     elsif invoice?
       self.client_receipt_profile_id = nil
+    end
+  end
+
+  # 0 siempre vale ("no dividir"); el resto tiene que estar en el catálogo. Si
+  # el catálogo no se ha sincronizado no hay nada contra qué comparar y la
+  # pantalla tampoco ofrece el campo, así que solo se exige el 0.
+  def dividir_facturas_in_catalog
+    amount = dividir_facturas
+    return if amount.blank? || amount.zero?
+    return if DivideAmount.exists?(amount: amount)
+
+    errors.add(:dividir_facturas, "no es uno de los montos configurados")
+  end
+
+  # Los perfiles del encabezado tienen que ser DEL cliente del pedido. Los
+  # combos solo ofrecen los suyos, pero el valor viaja en un campo oculto: sin
+  # esto, un pedido forjado llegaba al ERP con el RFC de otro contribuyente y
+  # el PDF lo imprimía.
+  def header_selections_belong_to_client
+    { client_tax_profile: :client_tax_profile_id,
+      client_receipt_profile: :client_receipt_profile_id,
+      client_branch: :client_branch_id }.each do |association, attribute|
+      record = public_send(association)
+      next if record.blank? || record.client_id == client_id
+
+      errors.add(attribute, "no corresponde a este cliente")
     end
   end
 

@@ -125,6 +125,62 @@ los tres criterios que traía el reporte estaban enunciados sobre el recorte
 equivocado, y en ambos casos los números correctos se parecían lo bastante a
 los del reporte como para no notarlo sin volver a consultar.
 
+### Las entradas que no se validaban (cerradas)
+
+Cinco MEDIA con la misma forma: la pantalla no ofrece ese valor, pero llega
+igual —los combos del encabezado viajan en campos ocultos y el tipo de pedido
+en un radio—, y la app o revienta con un 500 o escribe un dato que nunca habría
+producido. En el modo con que corre la laptop, ese 500 es **la página de
+depuración de Rails servida a toda la LAN**.
+
+1. **`kind` fuera del enum.** No se puede atajar en el modelo: asignar un valor
+   desconocido a un enum levanta `ArgumentError` **antes** de cualquier
+   validación. Se sanea en `order_params` dejándolo en blanco, y de ahí lo
+   recoge `validates :kind, presence: true` por el camino normal.
+2. **Perfiles del encabezado de otro cliente.** El pedido llegaba al ERP con el
+   RFC de otro contribuyente y el PDF lo imprimía.
+3. **`dividir_facturas` fuera del catálogo.** Un `0.01` forjado se transmitía y
+   el ERP entiende "divide la factura cada un centavo".
+4. **Cantidad fuera del rango de la columna** (`numeric(14,3)`): salía como
+   `ActiveRecord::RangeError`, sin rescue. Como es Turbo Stream, la tabla no se
+   repintaba y el capturista solo veía que "no pasó nada".
+5. **Digest que no es bcrypt.** El sync solo descartaba los vacíos; uno con
+   otro formato hacía reventar a BCrypt en el login. Ahora se trata como
+   credencial inválida **y** el sync lo manda a "usuarios omitidos", que es
+   donde el operador puede verlo antes del evento en vez de descubrirlo cuando
+   el capturista no logra entrar.
+
+**Lo que confirmó que valía la pena:** al agregar la validación del catálogo,
+dos pruebas existentes empezaron a fallar porque creaban pedidos con montos que
+no estaban en él. Eran datos que la pantalla nunca habría producido — la
+validación cazó primero a las pruebas.
+
+### `test/system/` arranca con un defecto real (2026-08-11)
+
+Las pruebas de sistema llevaban dos auditorías en el backlog. Se arrancaron
+**enganchadas a un defecto concreto** en vez de como tarea de cobertura: el
+modal de "Quitar producto" que se cerraba solo. Esa elección es la que hizo que
+valieran desde el primer día — la prueba se escribió antes del arreglo, se
+corrió contra el código roto y **falló**, así que se sabe que prueba algo.
+
+**El defecto:** el diálogo vive dentro de `#order-detail`, que se repinta con
+morph en cada alta, baja y edición de cantidad. El estado "abierto" es un
+`style` en línea, e idiomorph lo reescribía con el `display:none` del HTML
+nuevo. Se disparaba al corregir una cantidad y tocar el bote de basura de otra
+fila: el `blur` manda el PATCH, el clic abre el modal, y la respuesta lo cierra.
+Se veía como "el bote de basura no hace nada", y de forma intermitente — sin
+edición previa no hay repintado y el modal sí se queda.
+
+**El arreglo:** `data-turbo-permanent` + id estable (`dom_id(item,
+:remove_dialog)`, no el `SecureRandom` que traía el partial). Se comprobó que
+Turbo **sí** respeta `turbo-permanent` en un morph de stream, cosa que no era
+obvia — la duda se resolvió corriendo la prueba, no leyendo el fuente de Turbo.
+
+Se dejó opt-in (`permanent: true` en `home/_confirm_dialog`): los diálogos del
+panel del servidor NO deben serlo, porque su mensaje es dinámico —el de
+"Obtener información" lleva el número de pedidos que se van a quitar— y
+congelarlo sería otro defecto.
+
 ### Las dos carreras que perdían pedidos (cerradas)
 
 **1. El rake era invisible para el panel.** `bin/rails sync:down` / `sync:up`

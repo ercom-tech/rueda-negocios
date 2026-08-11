@@ -64,6 +64,7 @@ module Sync
     test "una factura transmite su monto de división de facturas" do
       tax  = ClientTaxProfile.create!(client: @client, rfc: "AAA010101AAA", business_name: "ISMAEL SA")
       cfdi = CfdiUse.create!(code: "G01", description: "ADQUISICIÓN DE MERCANCÍAS")
+      DivideAmount.create!(erp_consecutive: 1, amount: 5000) # el monto debe estar en el catálogo
       @order.update!(kind: "invoice", client_tax_profile: tax, cfdi_use: cfdi, dividir_facturas: 5000)
 
       req = stub_request(:post, "#{API}/pedidos").with do |request|
