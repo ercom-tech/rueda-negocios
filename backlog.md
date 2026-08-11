@@ -52,13 +52,37 @@ datos reales (hostname, usuario, IP del ERP, puerto final) y ejecutarla.
 
 ## Funcionalidad pendiente
 
-### 4. Pantallas del menú que faltan
+### 4. Filtros en el reporte "Pedidos capturados"
+
+Diseño ya acordado (2026-08-10) al construir el resumen por estatus; el
+terreno quedó preparado para que sea agregar la barra y los parámetros, no
+rehacer.
+
+- **Las tarjetas de estatus SON el filtro de estatus:** se le pica a
+  "Borradores · 3 · $12,400" y la tabla se acota, con la tarjeta marcada como
+  activa. Evita tener el estatus dos veces (resumen + combo).
+- **El resumen refleja todos los filtros menos el de estatus** — las tarjetas
+  deben seguir mostrando el panorama completo para poder saltar entre
+  estatus. Filtrar por capturista muestra cómo se reparten *sus* pedidos.
+- Filtros a agregar en la barra: capturista (**solo para el rol servidor**; el
+  capturista ya está acotado a lo suyo), cliente y fecha.
+- **Un solo lugar arma el alcance:** `ReportsController#orders_scope` ya es
+  ese lugar — listado, resumen y conteo del paginador salen de ahí y no
+  pueden divergir.
+- **Cambiar un filtro regresa a la página 1** (si no, se cae en una página que
+  ya no existe y la tabla sale vacía).
+- Los enlaces del paginador **ya** conservan los parámetros de la URL
+  (`request.query_parameters.merge`), así que los filtros sobreviven al
+  paginar sin tocar nada.
+- Layout final: título → filtros → tarjetas de estatus → tabla → paginador.
+
+### 5. Pantallas del menú que faltan
 
 - Read-only: productos, clientes, rueda activa.
 - Asistencia de clientes.
 - Cotización.
 
-### 5. Precios / beneficios especiales de la rueda
+### 6. Precios / beneficios especiales de la rueda
 
 Hallazgo ya resuelto: el ERP **no** tiene precios ligados a `id_rueda` — viven
 en el catálogo general `com_producto_has_precio` (niveles mayoreo / público /
@@ -68,7 +92,7 @@ El "precio especial por rueda" es un **concepto a definir en la app**: modelo
 propio con FK `id_rueda` + `id_producto`, o reúso del catálogo. Decisión
 diferida.
 
-### 6. Regalos por promoción
+### 7. Regalos por promoción
 
 Mencionado por el usuario (2026-08-10) al fijar el tope de 45 partidas: los
 regalos pueden hacer que un pedido rebase el tope. Al implementarlos hay que
@@ -77,20 +101,20 @@ sube `Order::MAX_ITEMS`.
 
 ## Definiciones con FECEGO
 
-### 7. Defaults de configuración de la cabecera del pedido
+### 8. Defaults de configuración de la cabecera del pedido
 
 `c_FormaPago`, `c_MetodoPago`, `condicion_pago`, `tipo_precio`,
 `id_negociaciontipo`, `id_enviotipo`. Hoy son fijos en
 `OrderCreate::HEADER_DEFAULTS` (la moda del ERP). Confirmar cuáles son
 correctos para una rueda y si alguno debe salir del cliente en vez de ser fijo.
 
-### 8. LAN del evento
+### 9. LAN del evento
 
 IP fija + hostname (mDNS `laptop.local`), router dedicado. Por definir.
 
 ## Sync
 
-### 9. Membresías de rueda que el export no trae
+### 10. Membresías de rueda que el export no trae
 
 `business_round_people` **ya** se sincroniza (2026-07-26, es el universo de
 productos por capturista). Siguen sin venir en el export `brands_suppliers` y
@@ -99,17 +123,17 @@ Definir si alguna pantalla llega a necesitarlas.
 
 ## Operación y seguridad (fase de strengthening)
 
-### 10. Punto único de falla: la laptop-servidor
+### 11. Punto único de falla: la laptop-servidor
 
 Definir backups (`pg_dump` a USB u otro equipo) y evaluar una laptop de
 respaldo.
 
-### 11. Endurecimiento del transporte
+### 12. Endurecimiento del transporte
 
 HTTPS, tokens de autenticación, allowlist, throttling y proxy en AWS para
 `rueda-api`. Hoy el transporte es HTTP plano en red interna; la materia prima
 para el throttling ya existe (`login_events` registra los intentos fallidos).
 
-### 12. Seguridad de los datos en la laptop
+### 13. Seguridad de los datos en la laptop
 
 Lleva datos de clientes y precios: cifrado de disco + limpieza post-evento.

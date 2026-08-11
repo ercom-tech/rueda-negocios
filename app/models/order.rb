@@ -99,6 +99,33 @@ class Order < ApplicationRecord
 
   STATUS_LABELS = { "draft" => "Borrador", "captured" => "Capturado", "transmitted" => "Transmitido" }.freeze
 
+  # Importe de las partidas con descuento e IVA — la misma fórmula de
+  # OrderItem#total, pero EN SQL: `Order#total` se calcula en Ruby, así que
+  # totalizar un reporte con él obligaría a cargar cada pedido con todas sus
+  # partidas (300 pedidos × 45 renglones) cada vez que se abre la pantalla.
+  ITEMS_TOTAL_SQL = <<~SQL.squish.freeze
+    COALESCE(SUM(
+      order_items.quantity * order_items.unit_price
+        * (1 - order_items.discount_percent / 100.0)
+        * (1 + order_items.tax_rate / 100.0)
+    ), 0)
+  SQL
+
+  # Resumen { estatus => { count:, total: } } del alcance recibido — se llama
+  # sobre el scope ya acotado por rol (y, cuando existan, por los filtros), de
+  # modo que resumen y listado no puedan divergir. Devuelve SIEMPRE los tres
+  # estatus, con ceros los que no tengan pedidos: las tarjetas del reporte son
+  # también el filtro de estatus y deben mostrarse completas.
+  def self.totals_by_status
+    filas = reorder(nil).left_joins(:order_items).group(:status)
+                        .pluck(Arel.sql("orders.status"),
+                               Arel.sql("COUNT(DISTINCT orders.id)"),
+                               Arel.sql(ITEMS_TOTAL_SQL))
+                        .to_h { |status, count, total| [status, { count: count, total: total }] }
+
+    statuses.keys.index_with { |status| filas[status] || { count: 0, total: 0 } }
+  end
+
   # Clases Tailwind del badge de estatus (mismas en reporte y detalle).
   STATUS_COLORS = {
     "draft"       => "bg-neutral-200 text-neutral-700",

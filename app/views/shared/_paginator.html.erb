@@ -1,0 +1,60 @@
+<%# Paginador reutilizable. Locals: pagy · noun (singular, p.ej. "pedido") ·
+    page_sizes (opcional).
+
+    Los enlaces se arman con `request.query_parameters.merge`, no solo con
+    `page:`, para que cualquier filtro que traiga la URL sobreviva al cambiar
+    de página. Cambiar el tamaño de página SIEMPRE regresa a la 1: quedarse en
+    la 7 con menos páginas deja la tabla vacía. %>
+<% pagina = ->(params) { url_for(request.query_parameters.merge(params.transform_keys(&:to_s))) } %>
+<% sizes  = defined?(page_sizes) ? page_sizes : [] %>
+
+<nav class="mt-4 flex flex-wrap items-center justify-between gap-4 text-sm text-white/80"
+     aria-label="Paginación">
+  <%# El conteo se muestra SIEMPRE (aunque haya una sola página): saber
+      cuántos hay es dato útil por sí mismo, sobre todo antes de transmitir. %>
+  <span class="tabular-nums">
+    <%= pluralize(pagy.count, noun) %>
+    <% if pagy.pages > 1 %>
+      · página <%= pagy.page %> de <%= pagy.pages %>
+    <% end %>
+  </span>
+
+  <% if sizes.any? && pagy.count > sizes.first %>
+    <div class="flex items-center gap-2">
+      <span class="text-white/50">Por página</span>
+      <% sizes.each do |size| %>
+        <% activo = pagy.limit == size %>
+        <%= link_to size, pagina.call(per_page: size, page: 1), aria: { current: ("true" if activo) },
+              class: "rounded-full px-3 py-1.5 font-semibold transition-colors #{activo ? 'bg-brand-gold text-neutral-900' : 'bg-white/10 text-white hover:bg-white/20'}" %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <% if pagy.pages > 1 %>
+    <div class="flex flex-wrap items-center gap-2">
+      <% if pagy.prev %>
+        <%= link_to "← Anterior", pagina.call(page: pagy.prev),
+              class: "rounded-full bg-white/10 px-4 py-2 font-semibold text-white transition-colors hover:bg-white/20" %>
+      <% end %>
+
+      <%# `series` numera con elipsis (1 … 6 [7] 8 … 12) y marca la página
+          actual devolviéndola como String. %>
+      <% pagy.series.each do |item| %>
+        <% if item == :gap %>
+          <span class="px-1 text-white/40">…</span>
+        <% elsif item.is_a?(String) %>
+          <span aria-current="page"
+                class="rounded-full bg-brand-gold px-3.5 py-2 font-bold text-neutral-900 tabular-nums"><%= item %></span>
+        <% else %>
+          <%= link_to item, pagina.call(page: item),
+                class: "rounded-full bg-white/10 px-3.5 py-2 font-semibold text-white tabular-nums transition-colors hover:bg-white/20" %>
+        <% end %>
+      <% end %>
+
+      <% if pagy.next %>
+        <%= link_to "Siguiente →", pagina.call(page: pagy.next),
+              class: "rounded-full bg-brand-gold px-4 py-2 font-semibold text-neutral-900 transition-colors hover:bg-brand-gold-dark" %>
+      <% end %>
+    </div>
+  <% end %>
+</nav>

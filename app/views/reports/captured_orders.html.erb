@@ -21,6 +21,10 @@
     </div>
 
     <div class="w-full">
+    <%# Orden de lectura: agregado → detalle → navegación. (Cuando entren los
+        filtros del reporte van entre el título y este resumen.) %>
+    <%= render "status_summary", summary: @summary %>
+
     <div class="overflow-x-auto rounded-3xl border border-white/10 bg-brand-cream text-neutral-900">
       <table class="w-full text-sm">
         <thead class="bg-black text-white">
@@ -78,22 +82,8 @@
       </table>
     </div>
 
-    <% if @pagy.pages > 1 %>
-      <nav class="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-white/80"
-           aria-label="Paginación de pedidos">
-        <span>Página <%= @pagy.page %> de <%= @pagy.pages %> · <%= @pagy.count %> pedidos</span>
-        <div class="flex gap-2">
-          <% if @pagy.prev %>
-            <%= link_to "← Anterior", captured_orders_report_path(page: @pagy.prev),
-                  class: "rounded-full bg-white/10 px-4 py-2 font-semibold text-white transition-colors hover:bg-white/20" %>
-          <% end %>
-          <% if @pagy.next %>
-            <%= link_to "Siguiente →", captured_orders_report_path(page: @pagy.next),
-                  class: "rounded-full bg-brand-gold px-4 py-2 font-semibold text-neutral-900 transition-colors hover:bg-brand-gold-dark" %>
-          <% end %>
-        </div>
-      </nav>
-    <% end %>
+    <%= render "shared/paginator", pagy: @pagy, noun: "pedido",
+          page_sizes: ReportsController::PAGE_SIZES %>
     </div>
   </div>
 </div>

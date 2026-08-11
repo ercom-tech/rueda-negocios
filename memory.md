@@ -278,6 +278,35 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
   "Todos los pedidos".
 - **Seed:** usuarios `servidor` (rol server) y `capturista2`, + un pedido de
   capturista2 para demostrar el scoping. Ambos con `rueda2026`.
+- **Resumen por estatus + paginador (2026-08-10):**
+  - El paginador ya existía (25 por página) pero se **ocultaba con una sola
+    página**, así que en desarrollo parecía no existir. Ahora el conteo se
+    muestra siempre —saber cuántos hay es dato útil por sí mismo— y la
+    navegación aparece solo cuando hace falta. Se agregaron números de página
+    con elipsis (`@pagy.series`) y selector de 25/50/100 (lista cerrada: por
+    URL nadie debe pedir 5,000 renglones). Partial `shared/_paginator`,
+    reutilizable.
+  - **Los enlaces se arman con `request.query_parameters.merge`**, no solo con
+    `page:`: así los filtros que vienen en el backlog sobrevivirán al paginar
+    sin tocar el partial.
+  - **Resumen ARRIBA de la tabla, no dentro del paginador** (decisión
+    discutida con el usuario): son dos trabajos distintos —el paginador dice
+    dónde estás en el listado, el resumen cómo va el conjunto— y juntos se
+    leería ambiguo ("¿este total es de la página o de todo?"). Además el
+    paginador se oculta con una sola página, que es justo cuando el resumen sí
+    importa. Orden de lectura: agregado → detalle → navegación.
+  - **`Order.totals_by_status` agrega EN SQL** (`ITEMS_TOTAL_SQL`, la misma
+    fórmula de `OrderItem#total`): `Order#total` se calcula en Ruby, así que
+    totalizar con él obligaría a cargar cada pedido con sus partidas (300
+    pedidos × 45 renglones) en cada apertura. Devuelve siempre los tres
+    estatus, con ceros los vacíos, porque las tarjetas serán también el filtro
+    de estatus.
+  - **`ReportsController#orders_scope` es el ÚNICO lugar que arma el alcance**
+    — listado, resumen y conteo del paginador salen de ahí y no pueden
+    divergir. El mismo reporte sirve a los dos roles: el capturista ve el
+    resumen y el paginador de SUS pedidos; el servidor, de todos.
+  - Diseño de los filtros (tarjetas de estatus como filtro, reglas de alcance
+    y reset de página) acordado y anotado en `backlog.md`.
 
 ### Sistema visual y detalles de pantalla (decisiones)
 

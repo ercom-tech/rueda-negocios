@@ -1,0 +1,38 @@
+<%# Resumen por estatus. Locals: summary (Order.totals_by_status).
+    Va ARRIBA de la tabla, no en el paginador: el paginador dice dónde estás
+    dentro del listado y el resumen cómo va el conjunto — juntos se leería
+    ambiguo ("¿este total es de la página o de todo?"), y además el paginador
+    se oculta con una sola página, que es justo cuando el resumen sí importa.
+
+    Refleja el mismo alcance que la tabla: el capturista ve el resumen de SUS
+    pedidos; el equipo-servidor, el de todos. Cuando entren los filtros, las
+    tarjetas serán también el filtro de estatus (por eso se muestran los tres
+    siempre, aunque vengan en cero). %>
+<div class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+  <% Order::STATUS_LABELS.each do |status, label| %>
+    <% datos = summary[status] || { count: 0, total: 0 } %>
+    <div class="rounded-2xl border border-white/10 bg-white/5 px-5 py-4">
+      <div class="flex items-center justify-between gap-3">
+        <span class="rounded-full px-3 py-1 text-xs font-semibold <%= Order::STATUS_COLORS[status] %>">
+          <%= label %>
+        </span>
+        <span class="text-2xl font-extrabold text-white tabular-nums"><%= datos[:count] %></span>
+      </div>
+      <p class="mt-2 text-sm text-white/70 tabular-nums"><%= number_to_currency(datos[:total]) %></p>
+    </div>
+  <% end %>
+
+  <%# Total general: cierra la fila y evita que el operador tenga que sumar
+      de cabeza los tres estatus. %>
+  <div class="rounded-2xl border border-brand-gold/40 bg-brand-gold/10 px-5 py-4">
+    <div class="flex items-center justify-between gap-3">
+      <span class="text-xs font-semibold uppercase tracking-wide text-brand-gold">Total</span>
+      <span class="text-2xl font-extrabold text-white tabular-nums">
+        <%= summary.values.sum { |d| d[:count] } %>
+      </span>
+    </div>
+    <p class="mt-2 text-sm font-semibold text-white tabular-nums">
+      <%= number_to_currency(summary.values.sum { |d| d[:total] }) %>
+    </p>
+  </div>
+</div>
