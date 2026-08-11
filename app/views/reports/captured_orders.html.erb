@@ -21,9 +21,9 @@
     </div>
 
     <div class="w-full">
-    <%# Orden de lectura: agregado → detalle → navegación. (Cuando entren los
-        filtros del reporte van entre el título y este resumen.) %>
-    <%= render "status_summary", summary: @summary %>
+    <%# Orden de lectura: filtros → agregado → detalle → navegación. %>
+    <%= render "filters", filter: @filter, options: @options, per_page: @pagy.limit %>
+    <%= render "status_summary", summary: @summary, filter: @filter, per_page: @pagy.limit %>
 
     <div class="overflow-x-auto rounded-3xl border border-white/10 bg-brand-cream text-neutral-900">
       <table class="w-full text-sm">

@@ -305,8 +305,34 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
     — listado, resumen y conteo del paginador salen de ahí y no pueden
     divergir. El mismo reporte sirve a los dos roles: el capturista ve el
     resumen y el paginador de SUS pedidos; el servidor, de todos.
-  - Diseño de los filtros (tarjetas de estatus como filtro, reglas de alcance
-    y reset de página) acordado y anotado en `backlog.md`.
+- **Filtros del reporte — entrega 1 (2026-08-10):** usuario crea, cliente,
+  vendedor, fecha crea (rango) y estatus, en `OrdersFilter` (`app/queries/`).
+  - **Se aplican SOBRE el scope ya acotado por rol**, así que un capturista no
+    puede filtrar hacia pedidos ajenos ni por URL. El combo "Usuario crea"
+    solo se le ofrece al servidor: al capturista le mostraría nombres que no
+    puede consultar. Ambos casos con test.
+  - **El estatus se aplica aparte** (`apply_status`): el resumen se calcula con
+    todos los demás filtros pero SIN él, porque sus tarjetas **son** el filtro
+    de estatus y deben seguir mostrando el panorama completo para poder saltar
+    entre ellas (volver a picar la tarjeta activa lo quita).
+  - **Las fechas se interpretan en hora LOCAL**, igual que la columna Fecha del
+    reporte (`created_at.localtime`). Con `Time.zone` en UTC, un pedido
+    capturado a las 19:00 del día 10 se guarda como 01:00 del 11: filtrar en
+    UTC lo dejaría fuera del mismo día que la pantalla le muestra al usuario.
+    Test con esa hora exacta.
+  - **El formulario no lleva `page`:** cambiar un filtro regresa a la primera
+    página; si no, se cae en una página que ya no existe y la tabla sale vacía.
+    El `per_page` sí viaja.
+  - Los catálogos de una rueda son chicos (3 capturistas, 15 vendedores, 47
+    clientes), así que van en combos con filtro de texto — se descartó el
+    buscador que se había propuesto para cliente. Solo producto lo necesitará
+    (13,222).
+  - **Trampa de tests:** el renglón "No hay pedidos capturados" también es un
+    `<tr>`; contar `tbody tr` daba 1 con la tabla vacía y escondía un fallo.
+    Se descarta por su celda con `colspan`.
+  - Los tres filtros de partida (proveedor, marca, producto) quedan en el
+    backlog: van con `EXISTS` y traen una decisión de negocio sobre qué
+    importe mostrar.
 
 ### Sistema visual y detalles de pantalla (decisiones)
 

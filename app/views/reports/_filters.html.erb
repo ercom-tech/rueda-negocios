@@ -1,0 +1,57 @@
+<%# Barra de filtros del reporte. Locals: filter (OrdersFilter), options, per_page.
+
+    Va entre el título y las tarjetas de estatus: filtros → resumen → tabla →
+    paginador. El estatus NO está aquí — sus tarjetas son el filtro.
+
+    Formulario GET sin `page`: cambiar un filtro regresa siempre a la primera
+    página (quedarse en la 7 con menos resultados deja la tabla vacía). El
+    tamaño de página sí viaja, para no perderlo al filtrar. %>
+<%= form_with url: captured_orders_report_path, method: :get, data: { turbo_frame: "_top" },
+      class: "mb-6 rounded-3xl border border-white/10 bg-white/5 p-5" do %>
+  <%= hidden_field_tag :per_page, per_page %>
+
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <% if options[:users] %>
+      <div>
+        <span class="mb-1 block text-sm font-semibold text-white/80">Usuario crea</span>
+        <%= render "shared/custom_select", name: "user_id", options: options[:users],
+              selected: filter.user_id, placeholder: "Todos", filterable: true %>
+      </div>
+    <% end %>
+
+    <div>
+      <span class="mb-1 block text-sm font-semibold text-white/80">Cliente</span>
+      <%= render "shared/custom_select", name: "client_id", options: options[:clients],
+            selected: filter.client_id, placeholder: "Todos", filterable: true %>
+    </div>
+
+    <div>
+      <span class="mb-1 block text-sm font-semibold text-white/80">Vendedor</span>
+      <%= render "shared/custom_select", name: "salesperson_id", options: options[:salespeople],
+            selected: filter.salesperson_id, placeholder: "Todos", filterable: true %>
+    </div>
+
+    <%# Rango de fechas: una rueda dura varios días y lo que se pregunta es
+        "cómo fue el día 2", no una fecha suelta. %>
+    <div>
+      <span class="mb-1 block text-sm font-semibold text-white/80">Fecha crea — desde</span>
+      <%= date_field_tag :from, filter.from,
+            class: "h-[46px] w-full rounded-full bg-black px-5 text-white outline-none focus:ring-2 focus:ring-brand-gold" %>
+    </div>
+
+    <div>
+      <span class="mb-1 block text-sm font-semibold text-white/80">Fecha crea — hasta</span>
+      <%= date_field_tag :to, filter.to,
+            class: "h-[46px] w-full rounded-full bg-black px-5 text-white outline-none focus:ring-2 focus:ring-brand-gold" %>
+    </div>
+  </div>
+
+  <div class="mt-4 flex flex-wrap items-center gap-3">
+    <%= submit_tag "Filtrar",
+          class: "cursor-pointer rounded-full bg-brand-gold px-6 py-2.5 font-bold text-neutral-900 transition-colors hover:bg-brand-gold-dark" %>
+    <% if filter.any? %>
+      <%= link_to "Limpiar filtros", captured_orders_report_path(per_page: per_page),
+            class: "rounded-full bg-white/10 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-white/20" %>
+    <% end %>
+  </div>
+<% end %>

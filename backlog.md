@@ -52,29 +52,30 @@ datos reales (hostname, usuario, IP del ERP, puerto final) y ejecutarla.
 
 ## Funcionalidad pendiente
 
-### 4. Filtros en el reporte "Pedidos capturados"
+### 4. Filtros de PARTIDA en el reporte "Pedidos capturados"
 
-Diseño ya acordado (2026-08-10) al construir el resumen por estatus; el
-terreno quedó preparado para que sea agregar la barra y los parámetros, no
-rehacer.
+Faltan **proveedor, marca y producto**. Los cuatro filtros del pedido (usuario
+crea, cliente, vendedor, fecha crea) y el de estatus ya están hechos
+(2026-08-10, `OrdersFilter`).
 
-- **Las tarjetas de estatus SON el filtro de estatus:** se le pica a
-  "Borradores · 3 · $12,400" y la tabla se acota, con la tarjeta marcada como
-  activa. Evita tener el estatus dos veces (resumen + combo).
-- **El resumen refleja todos los filtros menos el de estatus** — las tarjetas
-  deben seguir mostrando el panorama completo para poder saltar entre
-  estatus. Filtrar por capturista muestra cómo se reparten *sus* pedidos.
-- Filtros a agregar en la barra: capturista (**solo para el rol servidor**; el
-  capturista ya está acotado a lo suyo), cliente y fecha.
-- **Un solo lugar arma el alcance:** `ReportsController#orders_scope` ya es
-  ese lugar — listado, resumen y conteo del paginador salen de ahí y no
-  pueden divergir.
-- **Cambiar un filtro regresa a la página 1** (si no, se cae en una página que
-  ya no existe y la tabla sale vacía).
-- Los enlaces del paginador **ya** conservan los parámetros de la URL
-  (`request.query_parameters.merge`), así que los filtros sobreviven al
-  paginar sin tocar nada.
-- Layout final: título → filtros → tarjetas de estatus → tabla → paginador.
+**Por qué van aparte:** no son del pedido sino de sus partidas — "pedidos que
+traen al menos una partida de MAKITA". Se resuelven con **`EXISTS`, no con
+`JOIN`**: unir `order_items` repetiría el pedido por cada partida que coincida
+e inflaría el importe del resumen, que ya hace su propio join para sumar.
+
+**Decisión de negocio pendiente (bloquea la implementación):** con un filtro de
+partida activo, ¿el importe mostrado es el del **pedido completo** o el de las
+**partidas que coinciden**? Un pedido de $50,000 con $8,000 de MAKITA:
+filtrando por MAKITA, ¿la columna Total y el resumen dicen $50,000 u $8,000?
+Recomendación: **$8,000** — quien pregunta "¿cuánto vendió MAKITA?" quiere la
+venta de MAKITA, no el tamaño de los pedidos donde aparece (y con dos
+proveedores los totales se traslaparían). Implica que la columna Total y el
+resumen cambian de significado, así que la pantalla debe decirlo
+explícitamente ("Importes de las partidas de MAKITA").
+
+**Alcance:** proveedor y marca como combos (respetando el universo del
+capturista); producto como buscador — 13,222 productos no caben en un combo,
+se reusa el autocompletado del paso 2. Índice en `products.brand_id`.
 
 ### 5. Pantallas del menú que faltan
 

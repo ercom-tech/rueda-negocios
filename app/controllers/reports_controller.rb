@@ -15,10 +15,19 @@ class ReportsController < ApplicationController
   # equipo-servidor ve todos (para transmitirlos al ERP). Paginado: en un
   # evento grande la lista completa se vuelve pesada para la tablet.
   def captured_orders
-    scope      = orders_scope
-    @summary   = scope.totals_by_status
     @all_scope = current_user.can_see_all_orders?
-    @pagy, @orders = pagy(scope.includes(:user, :order_items, client: :salesperson).order(created_at: :desc),
+    @filter    = OrdersFilter.new(params)
+
+    # El resumen se calcula con TODOS los filtros menos el de estatus: sus
+    # tarjetas son el filtro de estatus y deben seguir mostrando el panorama
+    # completo para poder saltar entre ellas.
+    filtrado   = @filter.apply_without_status(orders_scope)
+    @summary   = filtrado.totals_by_status
+    @options   = filter_options
+
+    @pagy, @orders = pagy(@filter.apply_status(filtrado)
+                                 .includes(:user, :order_items, client: :salesperson)
+                                 .order(created_at: :desc),
                           limit: page_size)
   end
 
@@ -39,6 +48,19 @@ class ReportsController < ApplicationController
   def page_size
     size = params[:per_page].to_i
     PAGE_SIZES.include?(size) ? size : PAGE_SIZES.first
+  end
+
+  # Opciones de los combos. Los catálogos de una rueda son chicos (decenas de
+  # clientes y vendedores, un puñado de capturistas), así que caben en combos
+  # con filtro de texto — no hacen falta buscadores. "Usuario crea" solo para
+  # el equipo-servidor: un capturista ya está acotado a lo suyo y el combo le
+  # ofrecería nombres que no puede consultar.
+  def filter_options
+    {
+      users: (User.capturista.order(:name, :username).map { |u| [ u.full_name.presence || u.username, u.id ] } if @all_scope),
+      clients: Client.order(:name).map { |c| [ "#{c.erp_client_key} — #{c.name}", c.id ] },
+      salespeople: Salesperson.order(:name).map { |s| [ "#{s.erp_salesperson_id} — #{s.name}", s.id ] }
+    }.compact
   end
 
   def require_round
