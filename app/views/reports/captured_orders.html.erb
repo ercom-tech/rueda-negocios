@@ -35,9 +35,9 @@
               <th class="px-4 py-3 text-left font-semibold">Capturista</th>
             <% end %>
             <th class="px-4 py-3 text-left font-semibold">Fecha</th>
-            <th class="px-4 py-3 text-left font-semibold">Hora</th>
+            <th class="hidden px-4 py-3 text-left font-semibold lg:table-cell">Hora</th>
             <th class="px-4 py-3 text-left font-semibold">Cliente</th>
-            <th class="px-4 py-3 text-left font-semibold">Vendedor</th>
+            <th class="hidden px-4 py-3 text-left font-semibold lg:table-cell">Vendedor</th>
             <th class="px-4 py-3 text-left font-semibold">Clave local</th>
             <th class="px-4 py-3 text-right font-semibold">Renglones</th>
             <th class="px-4 py-3 text-right font-semibold">Total</th>
@@ -52,12 +52,12 @@
                 <td class="px-4 py-3"><%= order.user.full_name.presence || order.user.username %></td>
               <% end %>
               <td class="px-4 py-3 whitespace-nowrap"><%= captured.strftime("%d/%m/%Y") %></td>
-              <td class="px-4 py-3"><%= captured.strftime("%H:%M") %></td>
+              <td class="hidden px-4 py-3 lg:table-cell"><%= captured.strftime("%H:%M") %></td>
               <td class="px-4 py-3">
                 <span class="font-semibold"><%= order.client.erp_client_key %></span>
                 — <%= order.client.name %>
               </td>
-              <td class="px-4 py-3">
+              <td class="hidden px-4 py-3 lg:table-cell">
                 <% if (sp = order.client.salesperson) %>
                   <span class="font-semibold"><%= sp.erp_salesperson_id %></span> — <%= sp.name %>
                 <% else %>
@@ -65,7 +65,7 @@
                 <% end %>
               </td>
               <td class="px-4 py-3 font-semibold whitespace-nowrap">
-                <%= link_to (order.local_folio.presence || "(borrador)"), order_path(order), title: "Abrir pedido",
+                <%= link_to order.folio, order_path(order), title: "Abrir pedido",
                       class: "underline decoration-brand-gold decoration-2 underline-offset-4 hover:text-brand-coral" %>
               </td>
               <%# Con filtro de partida, renglones e importe son los de las
@@ -80,15 +80,28 @@
               </td>
             </tr>
           <% end %>
+          <%# Con siete filtros que aplican al seleccionar es fácil quedar en
+              cero: "No hay pedidos capturados" se leería como que se perdieron
+              los pedidos y dispararía una llamada al equipo del servidor. %>
           <% if @orders.empty? %>
-            <tr><td colspan="<%= @all_scope ? 9 : 8 %>" class="px-4 py-10 text-center text-neutral-500">No hay pedidos capturados.</td></tr>
+            <tr>
+              <td colspan="<%= @all_scope ? 9 : 8 %>" class="px-4 py-10 text-center text-neutral-500">
+                <% if @filter.any? %>
+                  Ningún pedido coincide con lo que elegiste.
+                  <%= link_to "Quitar filtros", captured_orders_report_path(per_page: @pagy.limit),
+                        class: "ml-2 font-semibold text-neutral-900 underline decoration-brand-gold decoration-2 underline-offset-4" %>
+                <% else %>
+                  Todavía no hay pedidos capturados.
+                <% end %>
+              </td>
+            </tr>
           <% end %>
         </tbody>
       </table>
     </div>
 
     <%= render "shared/paginator", pagy: @pagy, noun: "pedido",
-          page_sizes: ReportsController::PAGE_SIZES %>
+          base_params: @filter.to_params, page_sizes: @page_sizes %>
     </div>
   </div>
 </div>

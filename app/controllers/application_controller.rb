@@ -10,7 +10,8 @@ class ApplicationController < ActionController::Base
   before_action :require_round_for_capturista
 
   helper_method :current_user, :logged_in?, :active_round, :available_suppliers,
-                :current_supplier, :available_brands, :current_brand, :can_edit_order?
+                :current_supplier, :available_brands, :current_brand, :can_edit_order?,
+                :report_back_path
 
   private
 
@@ -22,6 +23,25 @@ class ApplicationController < ActionController::Base
   # El rol server puede VER cualquier pedido, pero no editarlo.
   def can_edit_order?(order)
     order.editable? && order.user_id == current_user&.id
+  end
+
+  # Regreso al reporte CON sus filtros, cuando se llegó al pedido desde ahí.
+  # Se toma del referer porque así vuelven también el estatus y la página; sin
+  # esto, el equipo-servidor que revisa pedidos antes de transmitir tenía que
+  # rearmar los siete filtros a mano en cada regreso. nil si no se vino de ahí.
+  #
+  # Se valida el host: un referer externo no debe convertirse en un enlace de
+  # regreso hacia afuera.
+  def report_back_path
+    return @report_back_path if defined?(@report_back_path)
+
+    @report_back_path = begin
+      uri = URI.parse(request.referer.to_s)
+      mismo_sitio = uri.host.blank? || (uri.host == request.host && uri.port == request.port)
+      [ uri.path, uri.query ].compact_blank.join("?") if mismo_sitio && uri.path == captured_orders_report_path
+    rescue URI::InvalidURIError
+      nil
+    end
   end
 
   def logged_in?

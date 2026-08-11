@@ -20,13 +20,20 @@
       <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-black px-6 py-3">
         <div class="flex flex-wrap items-center gap-3">
           <h2 class="text-xl font-extrabold text-white sm:text-2xl">
-            # Pedido <%= @order.erp_folio.presence || @order.local_folio.presence || "(borrador)" %>
+            # Pedido <%= @order.folio %>
           </h2>
           <span class="rounded-full px-4 py-1.5 text-sm font-semibold <%= @order.status_color %>">
             <%= @order.status_label %>
           </span>
         </div>
         <div class="flex flex-wrap items-center gap-3">
+          <%# Si se llegó desde el reporte, el regreso conserva sus filtros, su
+              estatus y su página: rearmarlos a mano en cada pedido revisado es
+              justo lo que se hace antes de transmitir. %>
+          <% if report_back_path %>
+            <%= link_to "← Volver al reporte", report_back_path,
+                  class: "rounded-full bg-neutral-700 px-6 py-2.5 font-bold text-white transition-colors hover:bg-neutral-600" %>
+          <% end %>
           <% if can_edit_order?(@order) %>
             <%= link_to "Editar", edit_order_path(@order),
                   class: "rounded-full bg-neutral-700 px-6 py-2.5 font-bold text-white transition-colors hover:bg-neutral-600" %>

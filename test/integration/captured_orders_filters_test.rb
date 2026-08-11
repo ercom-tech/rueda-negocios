@@ -97,6 +97,54 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
     assert_equal 2, filas
   end
 
+  # El día se cierra con un rango excluyente hasta el inicio del siguiente: con
+  # las 23:59:59 exactas, los microsegundos de Postgres dejaban fuera lo
+  # capturado en el último segundo del día que la pantalla sí muestra.
+  test "el último segundo del día final entra en el rango" do
+    o = order!(user: @ana, client: @c1)
+    o.update_column(:created_at, ::Time.new(2026, 8, 10, 23, 59, 59.5))
+    login("srv990")
+
+    get captured_orders_report_path(from: "2026-08-10", to: "2026-08-10")
+    assert_equal 1, filas, "23:59:59.5 sigue siendo del día 10"
+  end
+
+  # Una página que ya no existe (marcador viejo, o la lista encogió) daba la
+  # pantalla de error de Rails en plena laptop del evento.
+  test "una página fuera de rango redirige en vez de reventar" do
+    3.times { order!(user: @ana, client: @c1) }
+    login("srv990")
+
+    get captured_orders_report_path(page: 99)
+    assert_response :redirect
+    follow_redirect!
+    assert_response :success
+    assert_equal 3, filas
+  end
+
+  # Con el hash crudo de la petición, un `?host=` hacía que Rails generara los
+  # enlaces del paginador como URLs ABSOLUTAS a ese dominio.
+  test "un host inyectado en la URL no se cuela a los enlaces del paginador" do
+    30.times { order!(user: @ana, client: @c1) }
+    login("srv990")
+
+    get captured_orders_report_path(host: "sitio-ajeno.example.com")
+    assert_response :success
+    assert_no_match(/sitio-ajeno\.example\.com/, response.body)
+  end
+
+  test "el estado vacío distingue sin pedidos de sin coincidencias" do
+    login("srv990")
+
+    get captured_orders_report_path
+    assert_match(/Todavía no hay pedidos capturados/, response.body)
+
+    order!(user: @ana, client: @c1)
+    get captured_orders_report_path(client_id: @c2.id)
+    assert_match(/Ningún pedido coincide/, response.body)
+    assert_match(/Quitar filtros/, response.body)
+  end
+
   test "una fecha inválida se ignora en vez de reventar" do
     order!(user: @ana, client: @c1)
     login("srv990")

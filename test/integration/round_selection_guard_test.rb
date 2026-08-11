@@ -66,4 +66,23 @@ class RoundSelectionGuardTest < ActionDispatch::IntegrationTest
     get server_rounds_path
     assert_response :success
   end
+
+  # Hallazgo de la 3ª auditoría: esta pantalla armaba su propio encabezado (sin
+  # barra superior) y pintaba las ruedas en paneles translúcidos `bg-white/5`,
+  # que sobre el fondo con patrón se lavan — las dos cosas contra
+  # `docs/convenciones-visuales.md`.
+  test "usa el shell único y superficies crema, no paneles translúcidos" do
+    stub_request(:get, %r{/ruedas$}).to_return(
+      status: 200, headers: { "Content-Type" => "application/json" },
+      body: [ { erp_round_id: 7, name: "Rueda Nueva", year: 2026 } ].to_json
+    )
+
+    get server_rounds_path
+    assert_response :success
+    assert_match(/Usuario:/, response.body, "debe usar la barra superior compartida")
+    assert_match(/Cerrar sesión/, response.body)
+    assert_match(/lg:px-\[5%\]/, response.body, "margen lateral del shell")
+    assert_match(/bg-brand-cream/, response.body, "la card de rueda va en crema")
+    assert_no_match(/bg-white\/5/, response.body, "sin paneles translúcidos")
+  end
 end

@@ -1,11 +1,16 @@
 <%# Paginador reutilizable. Locals: pagy · noun (singular, p.ej. "pedido") ·
-    page_sizes (opcional).
+    base_params (los filtros vigentes, ya saneados) · page_sizes (opcional).
 
-    Los enlaces se arman con `request.query_parameters.merge`, no solo con
-    `page:`, para que cualquier filtro que traiga la URL sobreviva al cambiar
-    de página. Cambiar el tamaño de página SIEMPRE regresa a la 1: quedarse en
-    la 7 con menos páginas deja la tabla vacía. %>
-<% pagina = ->(params) { url_for(request.query_parameters.merge(params.transform_keys(&:to_s))) } %>
+    Los enlaces conservan `base_params` para que los filtros sobrevivan al
+    cambiar de página. Se recibe la lista de parámetros LEGÍTIMOS y no
+    `request.query_parameters`: con el hash crudo de la petición, un `?host=`
+    en la URL hacía que Rails generara enlaces ABSOLUTOS a ese dominio (basta
+    con que exista la llave `host` para que deje de ser una ruta relativa), y
+    un `?controller=` reventaba la pantalla.
+
+    Cambiar el tamaño de página SIEMPRE regresa a la 1: quedarse en la 7 con
+    menos páginas deja la tabla vacía. %>
+<% pagina = ->(extra) { url_for(base_params.merge(extra)) } %>
 <% sizes  = defined?(page_sizes) ? page_sizes : [] %>
 
 <nav class="mt-4 flex flex-wrap items-center justify-between gap-4 text-sm text-white/80"

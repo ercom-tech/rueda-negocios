@@ -49,6 +49,15 @@ export default class extends Controller {
     this.panelTarget.hidden = true
     this.buttonTarget.setAttribute("aria-expanded", "false")
     this.dragging = false
+    // Una selección a medias se descarta al cerrar. Si sobrevive, el control
+    // sigue mostrando "10/08/2026 — …" aunque NUNCA se filtró, y al reabrirlo
+    // el primer toque cierra el rango contra una fecha que el usuario ya
+    // olvidó: los importes cambian sin explicación.
+    if (this.start && !this.end) {
+      this.start = null
+      this.hover = null
+      this.paintLabel()
+    }
   }
 
   // Clic afuera (el @window del data-action). Ignora los clics dentro.

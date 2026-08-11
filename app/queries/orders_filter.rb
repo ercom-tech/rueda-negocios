@@ -61,8 +61,8 @@ class OrdersFilter
     scope = scope.where(user_id: user_id)     if user_id
     scope = scope.where(client_id: client_id) if client_id
     scope = scope.joins(:client).where(clients: { salesperson_id: salesperson_id }) if salesperson_id
-    scope = scope.where(created_at: day_start(from)..) if from
-    scope = scope.where(created_at: ..day_end(to))     if to
+    scope = scope.where(created_at: day_start(from)..)      if from
+    scope = scope.where(created_at: ...day_start(to + 1))   if to
     if (productos = matching_products)
       scope = scope.where(id: OrderItem.where(product_id: productos).select(:order_id))
     end
@@ -116,11 +116,11 @@ class OrdersFilter
   # Fecha del reporte (`created_at.localtime`). Con `Time.zone` en UTC, un
   # pedido capturado a las 19:00 del día 10 se guarda como 01:00 del 11: filtrar
   # en UTC lo dejaría fuera del mismo día que la pantalla le muestra al usuario.
+  # El día final se cierra con un rango EXCLUYENTE hasta el inicio del día
+  # siguiente, no con las 23:59:59: los timestamps de Postgres traen
+  # microsegundos, así que un pedido capturado a las 23:59:59.5 quedaba fuera
+  # del mismo día que la pantalla le mostraba al usuario.
   def day_start(date)
     ::Time.new(date.year, date.month, date.day, 0, 0, 0)
-  end
-
-  def day_end(date)
-    ::Time.new(date.year, date.month, date.day, 23, 59, 59)
   end
 end

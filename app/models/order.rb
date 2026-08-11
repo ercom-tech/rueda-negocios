@@ -32,7 +32,11 @@ class Order < ApplicationRecord
   belongs_to :client_branch,          optional: true
   belongs_to :cfdi_use,               optional: true
 
-  has_many :order_items, -> { order(:position) }, dependent: :destroy
+  # `includes(:product)`: cada renglón de la tabla de partidas necesita el
+  # empaque mínimo de su producto, y sin precargarlo eran 45 consultas extra en
+  # CADA repintado — o sea en cada alta, baja y edición de cantidad, que es el
+  # flujo más usado del evento y desde una tablet.
+  has_many :order_items, -> { order(:position).includes(:product) }, dependent: :destroy
 
   enum :kind,   { invoice: "invoice", remission: "remission" }
   # draft: en captura · captured: finalizado por el capturista, editable ·
@@ -153,8 +157,14 @@ class Order < ApplicationRecord
     STATUS_COLORS.fetch(status, STATUS_COLORS["draft"])
   end
 
+  # Identificador visible del pedido, con UNA sola precedencia para todas las
+  # pantallas: el folio local (`RN-000123`) existe desde que se captura y es el
+  # que va en el PDF; el del ERP solo aparece si por alguna razón faltara el
+  # local. Antes cada pantalla resolvía distinto —el paso 2 prefería el del ERP,
+  # el paso 3 y el PDF el local, el reporte solo el local— y el mismo pedido se
+  # llamaba de dos formas según dónde se mirara.
   def folio
-    local_folio.presence || erp_folio.presence
+    local_folio.presence || erp_folio.presence || "(borrador)"
   end
 
   private

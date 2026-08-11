@@ -81,8 +81,8 @@ Modelo **una laptop = servidor LAN**:
   membresías capturista↔proveedor/marca, vendedores, clientes, proveedores,
   marcas, productos, precios/beneficios, definición de la rueda) desde
   `rueda-api` → puebla Postgres local.
-- **Durante (offline, LAN):** pedidos con **ID local UUID**, estado
-  `pendiente`.
+- **Durante (offline, LAN):** pedidos con **folio local** (`RN-000123`), estado
+  `draft` mientras se capturan y `captured` al finalizarse.
 - **Después / entre días (oficina):** la laptop transmite pedidos a
   `rueda-api` → inserción en ERP → devuelve folio ERP → se marca
   `transmitido`. Idempotente y reintentable.

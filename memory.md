@@ -69,6 +69,54 @@ sobrevivieron esa segunda pasada.
   Tests: 5 nuevos; dos payloads viejos de prueba se completaron porque mandaban
   partidas sin importes, cosa que la app real nunca hace.
 
+### Las 11 MEDIA (mismo día)
+
+- [x] **Datos que se perdían en silencio.** El filtro de fecha cerraba el día
+  en `23:59:59` y los timestamps de Postgres traen microsegundos: lo capturado
+  a las 23:59:59.5 quedaba fuera del mismo día que la pantalla mostraba. Ahora
+  el rango es **excluyente hasta el inicio del día siguiente**. Y el calendario
+  conservaba una **selección a medias** al cerrarse: la etiqueta decía
+  "10/08/2026 — …" sin haber filtrado, y al reabrir el primer toque cerraba el
+  rango contra esa fecha olvidada — ahora se descarta en `close()`.
+- [x] **Robustez del reporte.** Los enlaces del paginador se armaban con el
+  hash CRUDO de la petición: bastaba un `?host=` en la URL para que Rails los
+  generara como URLs absolutas a ese dominio (y un `?controller=` reventaba la
+  pantalla). Ahora recibe `base_params` = los filtros ya saneados. Y una página
+  fuera de rango daba la pantalla de error de Rails: `rescue_from
+  Pagy::OverflowError` redirige a la primera conservando los filtros.
+- [x] **N+1 en la tabla de partidas:** cada renglón pedía su producto por
+  separado — 45 consultas en CADA repintado, o sea en cada edición de cantidad,
+  desde una tablet. `has_many :order_items` precarga `:product`. Medido: de una
+  consulta por partida a **una sola**.
+- [x] **Tabla del reporte en tablet:** nueve columnas sin adaptación dejaban
+  Total y Estatus fuera del viewport. Hora y Vendedor se ocultan bajo `lg`,
+  igual que la tabla de partidas del paso 2.
+- [x] **Regreso al reporte:** `report_back_path` (helper de
+  ApplicationController) lee el referer **validando el host** y pinta "← Volver
+  al reporte" en el pedido; conserva filtros, estatus y página. Antes, el
+  servidor que revisa pedidos antes de transmitir tenía que rearmar los siete
+  filtros en cada regreso, y el capturista viendo un pedido propio no tenía
+  ningún botón de salida.
+- [x] **Estado vacío ambiguo:** "No hay pedidos capturados" se leía como que se
+  habían perdido. Ahora distingue "Todavía no hay pedidos capturados" de
+  "Ningún pedido coincide con lo que elegiste" + "Quitar filtros".
+- [x] **Un pedido, un folio.** Convivían tres precedencias (el paso 2 prefería
+  el del ERP, el paso 3 y el PDF el local, el reporte solo el local): el mismo
+  pedido se llamaba distinto según la pantalla. `Order#folio` es la única
+  fuente, con el `"(borrador)"` adentro.
+- [x] **`server/rounds.html.erb`** rompía tres normas visuales: armaba su
+  propio encabezado (sin barra superior), centraba a `max-w-4xl` en vez del 5%
+  y pintaba las ruedas en `bg-white/5`. Migrada al shell único con la gramática
+  de card (marco dorado + cuerpo crema) y el `data-controller="modal"` movido a
+  un wrapper neutro, que es lo que permite el hover sin romper el diálogo.
+  Test que fija las tres cosas.
+- [x] **`CLAUDE.md` describía un modelo que no existe** ("ID local UUID",
+  estado `pendiente`): es el archivo que se carga en cada sesión. Corregido a
+  folio local `RN-000123` y estados `draft`/`captured`; el renglón equivalente
+  de esta bitácora quedó marcado como superado.
+
+Suites tras la remediación: rueda-negocios **163/599**, rueda-api **27/79**.
+
 ## Decisiones tomadas
 
 - **Forma de trabajo:** flujo PAIVD. No edit/write sin aprobación previa del
@@ -85,6 +133,10 @@ sobrevivieron esa segunda pasada.
   Seguridad/hardening → fase posterior de strengthening (diferido).
 - **IDs de pedido:** UUID local generado offline; folio ERP se asigna al
   transmitir; se guarda el mapeo. Transmisión idempotente y reintentable.
+  *(Superado: nunca hubo UUID. El identificador offline es `local_folio`
+  `RN-000123` (`Order#generate_local_folio`) y los estados son `draft` →
+  `captured` → `transmitted`; lo del folio del ERP y la idempotencia sí
+  aplica.)*
 - **Estructura: dos repos separados** (convención b2b, uno por deployable):
   - `_fecego/rueda-negocios/` — app Rails de la laptop; incluye las rake
     tasks de sync (down/up). No hay repo de sync aparte.

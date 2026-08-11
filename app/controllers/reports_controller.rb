@@ -9,6 +9,14 @@ class ReportsController < ApplicationController
   # vacíos); a un capturista sin rueda activa ya lo expulsó el guard de sesión.
   before_action :require_round
 
+  # Una página que ya no existe (marcador viejo, o la lista encogió tras cerrar
+  # la rueda) daba la pantalla de error de Rails en plena laptop del evento.
+  rescue_from Pagy::OverflowError do
+    # Se rearma con los filtros ya saneados, no con los parámetros crudos de la
+    # petición: un `?host=` en la URL se colaría al enlace de regreso.
+    redirect_to captured_orders_report_path((@filter&.to_params || {}).merge(per_page: page_size))
+  end
+
   def index; end
 
   # Reporte de pedidos capturados. Un capturista ve solo los suyos; el
@@ -23,8 +31,9 @@ class ReportsController < ApplicationController
     # completo para poder saltar entre ellas.
     filtrado   = @filter.apply_without_status(orders_scope)
     @productos = @filter.matching_products
-    @summary   = filtrado.totals_by_status(@productos)
-    @options   = filter_options
+    @summary    = filtrado.totals_by_status(@productos)
+    @options    = filter_options
+    @page_sizes = PAGE_SIZES
 
     @pagy, @orders = pagy(@filter.apply_status(filtrado)
                                  .includes(:user, :order_items, client: :salesperson)

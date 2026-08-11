@@ -4,43 +4,57 @@
   <div class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.18]"
        style="background-image: url('<%= image_path "tools_pattern_white.svg" %>');"></div>
 
-  <div class="relative z-10 mx-auto flex min-h-screen w-full max-w-4xl flex-col px-6 py-8 lg:px-10">
-    <header class="flex items-center justify-between gap-4">
-      <%= image_tag "fecego_logo_white.png", alt: "FECEGO", class: "h-12 w-auto" %>
+  <%# Shell único del sitio: barra superior compartida, título en el cuerpo y
+      margen lateral del 5%. Antes esta pantalla armaba su propio encabezado
+      (sin pill de Usuario ni Cerrar sesión) y centraba a max-w-4xl. %>
+  <div class="relative z-10 flex min-h-screen flex-col px-6 py-6 sm:px-10 lg:px-[5%] lg:py-8">
+    <%= render "shared/top_bar" %>
+
+    <div class="mt-8 mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-extrabold text-white sm:text-4xl">Elige la rueda a trabajar</h1>
+        <p class="mt-2 text-white/70">
+          La rueda seleccionada es la que se descarga al obtener la información del servidor.
+        </p>
+      </div>
       <%= link_to "← Volver al menú", root_path,
-            class: "rounded-full bg-neutral-400 px-5 py-2.5 text-sm font-semibold text-neutral-900 transition-colors hover:bg-neutral-300" %>
-    </header>
+            class: "rounded-full bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/20" %>
+    </div>
 
-    <h1 class="mt-10 text-4xl font-extrabold text-white sm:text-5xl">Elige la rueda a trabajar</h1>
-    <p class="mt-2 text-white/70">
-      La rueda seleccionada es la que se descarga al obtener la información del servidor.
-    </p>
-
-    <div class="mt-8 flex flex-col gap-4 pb-10">
+    <div class="flex flex-col gap-3 pb-10">
+      <%# Superficie de contenido en CREMA, no en un panel translúcido: sobre el
+          fondo con patrón, `bg-white/5` se lava y el bloque no se aprecia. %>
       <% if @rounds.blank? %>
-        <p class="rounded-2xl bg-white/5 px-6 py-8 text-center text-white/70">
+        <p class="rounded-3xl border border-black/10 bg-brand-cream px-6 py-8 text-center text-neutral-700">
           No hay ruedas disponibles (o no se pudo contactar al servidor).
         </p>
       <% end %>
 
       <%# Esta pantalla solo se alcanza SIN rueda en curso (guarda del
           controller): no hay estado "Seleccionada" que pintar. La selección
-          se confirma con modal — desde aquí solo se sale cerrando la rueda. %>
-      <% @rounds.each do |r| %>
-        <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white/5 px-6 py-5 text-white shadow-lg"
-             data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
-          <div>
-            <h3 class="text-xl font-bold"><%= r["name"] %></h3>
-            <p class="mt-1 text-sm text-white/70">
-              <%= r["location"] %> · <%= r["year"] %>
-              <% if r["starts_on"] %>· <%= r["starts_on"] %><% if r["ends_on"] %> a <%= r["ends_on"] %><% end %><% end %>
-            </p>
-          </div>
+          se confirma con modal — desde aquí solo se sale cerrando la rueda.
 
-          <button type="button" data-action="modal#open"
-                  class="rounded-full bg-brand-coral px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-coral-dark">
-            Seleccionar
-          </button>
+          El `data-controller="modal"` va en un wrapper NEUTRO y la card visible
+          es el div interno que escala: un `transform` en el ancestro rompería
+          el `position: fixed` del diálogo. %>
+      <% @rounds.each do |r| %>
+        <div data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
+          <div class="rounded-3xl bg-brand-gold p-2 shadow-lg transition-transform hover:scale-[1.015]">
+            <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-brand-cream px-6 py-5 text-neutral-900">
+              <div>
+                <h3 class="text-xl font-bold"><%= r["name"] %></h3>
+                <p class="mt-1 text-sm text-neutral-700">
+                  <%= r["location"] %> · <%= r["year"] %>
+                  <% if r["starts_on"] %>· <%= r["starts_on"] %><% if r["ends_on"] %> a <%= r["ends_on"] %><% end %><% end %>
+                </p>
+              </div>
+
+              <button type="button" data-action="modal#open"
+                      class="rounded-full bg-brand-coral px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-coral-dark">
+                Seleccionar
+              </button>
+            </div>
+          </div>
           <%= render "home/confirm_dialog", title: "Elegir rueda",
                 message: "Se seleccionará la rueda \"#{r["name"]}\" para trabajar en esta laptop. Para cambiarla después tendrás que cerrarla. ¿Continuar?",
                 confirm_label: "Sí, seleccionar", path: server_select_round_path,
