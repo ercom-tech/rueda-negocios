@@ -130,7 +130,8 @@ hace falta.
 | `backlog.md` | Lo que falta implementar |
 | `docs/erp-esquema-catalogos.md`, `docs/erp-esquema-pedidos.md` | Esquema del ERP |
 | `docs/instalacion-laptop.md` | Instalación en la laptop-servidor |
-| `docs/auditorias-2026-07.md` | Historial de las 2 auditorías (cerradas) |
+| `docs/auditorias.md` | Cómo se audita el proyecto: método y dimensiones |
+| `docs/auditorias-2026-07.md` | Historial de las 2 primeras auditorías (cerradas) |
 
 Criterio: si es **norma que rige cada cambio**, va a las convenciones (que sí
 se cargan); si es **el porqué de una decisión**, a `memory.md`; si es **algo
