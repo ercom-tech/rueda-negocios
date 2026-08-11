@@ -1,6 +1,11 @@
 require "test_helper"
 
 class SettingTest < ActiveSupport::TestCase
+  # `settings` no tiene fixture, así que nada la trunca entre corridas: una fila
+  # dejada por un `bin/rails runner` con RAILS_ENV=test tumbaba dos de estas
+  # pruebas con un error que no apunta a su causa.
+  setup { Setting.delete_all }
+
   test "instance crea la fila única al primer acceso y la reusa después" do
     assert_equal 0, Setting.count
     s = Setting.instance

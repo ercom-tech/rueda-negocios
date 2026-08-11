@@ -19,11 +19,20 @@
     </span>
 
   <% elsif run.failed? %>
-    <span class="font-semibold text-red-700">
-      ✗ Falló<% if run.kind == "up" && run.summary["failed"].to_a.any? %>
-        (<%= pluralize(run.summary["failed"].size, "pedido") %> sin transmitir)<% end %>.
-    </span>
-    <% if run.message.present? %><span class="text-neutral-800/70"><%= run.message %></span><% end %>
+    <% failed = run.summary["failed"].to_a %>
+    <% sent   = run.summary["transmitted"].to_a.size %>
+    <%# "Falló" a secas leía como "no pasó nada" aunque hubiera pedidos ya
+        insertados en el ERP: con transmisión parcial el rótulo lo dice. %>
+    <span class="font-semibold text-red-700">✗ <%= sent.positive? ? "Parcial" : "Falló" %></span>
+    <% if failed.any? %>
+      <span class="text-neutral-800/70">
+        <% if sent.positive? %>· <%= pluralize(sent, "pedido") %> <%= "transmitido".pluralize(sent) %><% end %>
+        · <%= failed.size %> sin transmitir
+      </span>
+      <%= render "server/sync_failures", failed: failed %>
+    <% elsif run.message.present? %>
+      <span class="text-neutral-800/70"><%= run.message %></span>
+    <% end %>
 
   <% else # completed %>
     <span class="font-semibold text-emerald-800">✓ Listo</span>
@@ -39,5 +48,22 @@
       <% end %>
       <% if run.finished_at %>· <%= run.finished_at.localtime.strftime("%d/%m %H:%M") %><% end %>
     </span>
+
+    <%# Capturistas que se quedaron sin universo de productos: el dato ya se
+        calculaba (`skipped_people`) y no se mostraba en ningún lado, así que
+        el defecto llegaba vivo al evento.
+
+        Los pedidos que el reemplazo quitó NO se avisan aquí: el modal ya lo
+        advierte ANTES de confirmar, que es cuando sirve. %>
+    <% if run.kind == "down" && (skipped = run.summary["skipped_people"].to_i).positive? %>
+      <%# Concordancia a mano: `pluralize` usa el inflector INGLÉS y deja
+          "capturista" sin cambio (ver docs/convenciones-codigo.md). %>
+      <div class="mt-3 rounded-2xl bg-brand-cream px-4 py-3 text-left text-sm leading-snug text-neutral-900">
+        <span class="font-semibold"><%= skipped %> <%= skipped == 1 ? "capturista" : "capturistas" %></span>
+        sin proveedor ni marca asignados: no <%= skipped == 1 ? "va" : "van" %> a poder
+        agregar productos. Pide que <%= skipped == 1 ? "lo asignen" : "los asignen" %>
+        en el ERP y vuelve a obtener la información.
+      </div>
+    <% end %>
   <% end %>
 </div>

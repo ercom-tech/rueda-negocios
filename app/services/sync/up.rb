@@ -47,6 +47,9 @@ module Sync
           results[:transmitted] << { local: order.local_folio, erp: folio }
         else
           msg = parse_error(res)
+          # El motivo vive en el resumen de la corrida, que "Cerrar rueda"
+          # borra. El log es el único rastro que sobrevive al evento.
+          Rails.logger.warn("[sync:up] #{order.local_folio} rechazado (HTTP #{res.code}): #{msg}")
           results[:failed] << { local: order.local_folio, status: res.code, error: msg }
         end
       rescue SystemCallError, SocketError, Timeout::Error, Net::ReadTimeout,
@@ -57,7 +60,8 @@ module Sync
         # Sin `ActiveRecordError` en la lista, un `update!` que fallara sacaba
         # la excepción del `find_each` y los pedidos restantes ni se intentaban,
         # con el primero ya insertado en el ERP.
-        results[:failed] << { local: order.local_folio, status: "—", error: e.message }
+        Rails.logger.warn("[sync:up] #{order.local_folio} falló: #{e.class} — #{e.message}")
+        results[:failed] << { local: order.local_folio, status: "—", error: failure_reason(e) }
       end
 
       results
@@ -132,6 +136,28 @@ module Sync
       JSON.parse(res.body)["message"]
     rescue StandardError
       res.body.to_s[0, 200]
+    end
+
+    # El motivo que ve el operador en el panel. Los rechazos del ERP ya vienen
+    # redactados (`parse_error`), pero las fallas de red llegan como el mensaje
+    # crudo de Ruby —"execution expired"— que no le dice nada a quien está en el
+    # salón. El detalle técnico queda en el log, que es donde sirve.
+    #
+    # El caso de ActiveRecord es el que más importa: si falla ahí, el pedido YA
+    # entró al ERP y lo que no se pudo guardar es el folio de vuelta.
+    def failure_reason(error)
+      case error
+      when ActiveRecord::ActiveRecordError
+        "el pedido entró al ERP pero no se pudo guardar su folio en esta laptop"
+      when Timeout::Error, Net::ReadTimeout
+        "el servidor tardó demasiado en responder"
+      when SystemCallError, SocketError
+        "no se pudo conectar con el servidor"
+      when JSON::ParserError
+        "el servidor respondió algo que no se entiende"
+      else
+        error.message
+      end
     end
   end
 end

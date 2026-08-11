@@ -62,9 +62,21 @@
       </button>
       <%= render "server/sync_status", kind: "down", run: sync_down %>
     </div>
+    <%# Las guardas ya bloquean con borradores o con capturados sin transmitir,
+        así que lo único que puede haber en la laptop al llegar aquí son
+        pedidos ya transmitidos — y el reemplazo los quita. Decirlo con el
+        número: antes solo se hablaba de "reemplazar la información local" y el
+        reporte del día anterior amanecía en cero sin explicación. %>
+    <% transmitted = Order.transmitted.count %>
+    <% down_message = [
+         "Se descargarán los datos de la rueda seleccionada y se reemplazará la información local.",
+         ("Se #{transmitted == 1 ? 'quitará' : 'quitarán'} #{transmitted} " \
+          "#{transmitted == 1 ? 'pedido' : 'pedidos'} ya " \
+          "#{transmitted == 1 ? 'transmitido' : 'transmitidos'}." if transmitted.positive?),
+         "¿Continuar?"
+       ].compact.join(" ") %>
     <%= render "home/confirm_dialog", title: "Obtener información",
-          message: "Se descargarán los datos de la rueda seleccionada y se reemplazará la información local. ¿Continuar?",
-          confirm_label: "Sí, obtener", path: server_sync_down_path %>
+          message: down_message, confirm_label: "Sí, obtener", path: server_sync_down_path %>
   </div>
 
   <%# ── 3. Transmitir pedidos / sync-up (amarilla) — arrow-up-tray ── %>

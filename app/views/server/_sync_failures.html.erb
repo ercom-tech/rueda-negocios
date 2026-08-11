@@ -1,0 +1,37 @@
+<%#
+  Pedidos que el ERP no aceptó, con su motivo. Va dentro de la card amarilla
+  del panel, así que el bloque es crema (superficie de contenido).
+
+  Aquí SÍ va el texto que devolvió el ERP: es diagnóstico, no instrucción — el
+  operador necesita distinguir un problema de red (reintentar sirve) de uno del
+  contenido del pedido (reintentar nunca va a servir). Se limpia y se acota
+  porque `Sync::Up#parse_error` guarda el cuerpo crudo cuando la respuesta
+  viene rota (p. ej. `<html>502 Bad Gateway</html>`).
+
+  Locals: failed (Array de {"local", "status", "error"}).
+%>
+<%# Se listan los primeros 4 y se dice cuántos quedan: un tope silencioso se
+    leería como "esos son todos". %>
+<% shown = failed.first(4) %>
+<div class="mt-3 rounded-2xl bg-brand-cream px-4 py-3 text-left">
+  <p class="text-xs font-bold uppercase tracking-wide text-neutral-700">Sin transmitir</p>
+
+  <ul class="mt-1.5 space-y-1.5">
+    <% shown.each do |item| %>
+      <li class="text-sm leading-snug text-neutral-900">
+        <span class="font-semibold"><%= item["local"].presence || "(sin folio)" %></span>
+        <span class="text-neutral-700">— <%= truncate(strip_tags(item["error"].to_s).squish, length: 140) %></span>
+      </li>
+    <% end %>
+  </ul>
+
+  <% if failed.size > shown.size %>
+    <p class="mt-1.5 text-sm text-neutral-700">y <%= failed.size - shown.size %> más.</p>
+  <% end %>
+
+  <p class="mt-2 text-xs text-neutral-700">
+    Los encuentras en
+    <%= link_to "Pedidos capturados", captured_orders_report_path(status: "captured"),
+          class: "font-semibold underline hover:no-underline" %>.
+  </p>
+</div>

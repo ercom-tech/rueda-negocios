@@ -94,6 +94,25 @@ module Sync
       assert_equal 1, result[:failed].size
       assert_nil @order.reload.erp_folio
       assert @order.captured?
+      # El panel muestra este texto: "execution expired" no le dice nada a
+      # quien está operando en el salón.
+      assert_match(/tardó demasiado en responder/, result[:failed].first[:error])
+    end
+
+    # Cada falla de red se traduce a algo que el operador pueda leer. El caso
+    # de ActiveRecord es el que más importa: si falla ahí, el pedido YA está en
+    # el ERP y lo único que no se guardó es el folio de vuelta.
+    test "cada tipo de falla se traduce a un motivo legible" do
+      up = Up.new(API)
+      {
+        ActiveRecord::StatementInvalid.new("PG::Error") => /entró al ERP pero no se pudo guardar su folio/,
+        Net::ReadTimeout.new                            => /tardó demasiado en responder/,
+        Errno::ECONNREFUSED.new                         => /no se pudo conectar con el servidor/,
+        SocketError.new("getaddrinfo")                  => /no se pudo conectar con el servidor/,
+        JSON::ParserError.new("unexpected token")       => /respondió algo que no se entiende/
+      }.each do |error, expected|
+        assert_match expected, up.send(:failure_reason, error), "#{error.class} sin motivo legible"
+      end
     end
 
     test "un 200 con cuerpo no-JSON marca fallido ese pedido y sigue con el resto" do

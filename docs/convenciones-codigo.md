@@ -18,6 +18,19 @@ parámetro) está en español a propósito, para espejar literalmente
 `vta_pedido.dividir_facturas` del ERP y que el mapeo del sync sea evidente. Es
 la única; cualquier otra hay que justificarla igual de explícito.
 
+## Textos: `pluralize` es el inflector inglés
+
+`pluralize(n, "palabra")` y `String#pluralize` aplican reglas del **inglés**.
+Con la mayoría del vocabulario del proyecto acierta por casualidad (*pedido →
+pedidos*, *cliente → clientes*), pero **no con todo**: `"capturista".pluralize`
+devuelve `"capturista"`, y el texto sale con "2 capturista" sin que nada avise.
+
+Antes de usarlo con una palabra nueva, comprobarla
+(`bin/rails runner 'puts "palabra".pluralize'`). Si falla —o si la frase
+necesita concordar además en verbo o artículo— escribir la concordancia a mano,
+como hace `Sync::Guards`. La regla de concordancia siempre está en
+`docs/convenciones-visuales.md`; esto es la trampa de la herramienta.
+
 ## Hotwire / Turbo
 
 - **Nunca `link_to` con `data: { turbo_method: … }`.** Turbo intercepta el clic

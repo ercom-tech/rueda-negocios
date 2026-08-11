@@ -125,6 +125,48 @@ los tres criterios que traía el reporte estaban enunciados sobre el recorte
 equivocado, y en ambos casos los números correctos se parecían lo bastante a
 los del reporte como para no notarlo sin volver a consultar.
 
+### Lo que dejaba al operador a ciegas (cerrado)
+
+Tres datos que **ya se calculaban y ninguna pantalla mostraba**. El arreglo no
+fue producir información nueva, sino enseñar la que ya existía:
+
+1. **Motivos de la transmisión parcial.** El panel imprimía solo el conteo, así
+   que el operador no distinguía un problema de red (reintentar sirve) de uno
+   del contenido del pedido (nunca va a servir). Ahora lista folio + motivo en
+   un bloque crema, con enlace al reporte filtrado. Dos decisiones dentro:
+   - **"✗ Falló" pasa a "✗ Parcial" cuando algo sí entró.** "Falló" a secas
+     leía como "no pasó nada" habiendo pedidos ya insertados en el ERP.
+   - **Se listan 4 y se dice cuántos faltan.** Un tope silencioso se lee como
+     "esos son todos".
+2. **`skipped_people`** avisa de capturistas que se quedaron sin universo de
+   productos: el defecto llegaba vivo al evento porque nadie lo veía. Junto con
+   `purged_orders` se imprime también en el rake, que solo mostraba tres de las
+   cinco cifras.
+3. **El modal de "Obtener información" dice cuántos pedidos se van a quitar.**
+   Como las guardas ya bloquean con borradores o con capturados sin transmitir,
+   lo único que puede haber ahí son transmitidos.
+
+**Los pedidos purgados se avisan ANTES, no después** (decisión del usuario,
+2026-08-11). El primer intento los reportaba también en el resumen de la
+corrida —"Se quitó 1 pedido de esta laptop. Sigue en el ERP."— y el usuario lo
+rechazó por dos razones que vale la pena conservar: era **demasiada
+información** para un resumen, y **"sigue en el ERP" mezcla dos sistemas** en
+un aviso que solo habla de la laptop. La advertencia útil va en el modal,
+cuando el operador todavía puede decidir; contarlo después es ruido sobre algo
+que ya no tiene vuelta. Criterio general: un aviso sobre una acción
+irreversible pertenece al momento de confirmarla.
+
+**Lo que solo se vio al probarlo en el navegador:** los motivos de red llegaban
+crudos de Ruby — *"execution expired"*, en inglés y sin sentido para quien está
+en el salón. `Sync::Up#failure_reason` los traduce; el detalle técnico se queda
+en el log, que es donde sirve. El caso que más importa es el de ActiveRecord:
+si falla ahí, **el pedido ya entró al ERP** y lo único que no se guardó es el
+folio de vuelta — dato que decide si reintentar es seguro.
+
+Además, `Sync::Up` ahora escribe cada rechazo al log: el resumen de la corrida
+vive en `sync_runs`, que "Cerrar rueda" borra, así que el log es el único
+rastro que sobrevive al evento.
+
 ## 3ª auditoría (2026-08-10) — remediación
 
 Artifact: https://claude.ai/code/artifact/d6dda895-e2d2-4bfb-ab8f-9811a7cd15f2
