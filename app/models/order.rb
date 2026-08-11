@@ -131,15 +131,15 @@ class Order < ApplicationRecord
   # Va como CASE dentro del SUM y no como condición del join, para que el
   # conteo de pedidos no cambie y los pedidos sin partidas sigan apareciendo.
   def self.totals_by_status(products = nil)
-    suma = products ? sanitize_sql_array([ MATCHING_ITEMS_TOTAL_SQL, products ]) : ITEMS_TOTAL_SQL
+    amount_sql = products ? sanitize_sql_array([ MATCHING_ITEMS_TOTAL_SQL, products ]) : ITEMS_TOTAL_SQL
 
-    filas = reorder(nil).left_joins(:order_items).group(:status)
-                        .pluck(Arel.sql("orders.status"),
-                               Arel.sql("COUNT(DISTINCT orders.id)"),
-                               Arel.sql(suma))
-                        .to_h { |status, count, total| [status, { count: count, total: total }] }
+    rows = reorder(nil).left_joins(:order_items).group(:status)
+                       .pluck(Arel.sql("orders.status"),
+                              Arel.sql("COUNT(DISTINCT orders.id)"),
+                              Arel.sql(amount_sql))
+                       .to_h { |status, count, total| [ status, { count: count, total: total } ] }
 
-    statuses.keys.index_with { |status| filas[status] || { count: 0, total: 0 } }
+    statuses.keys.index_with { |status| rows[status] || { count: 0, total: 0 } }
   end
 
   # Clases Tailwind del badge de estatus (mismas en reporte y detalle).

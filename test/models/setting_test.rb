@@ -18,7 +18,7 @@ class SettingTest < ActiveSupport::TestCase
     ganadora = Setting.create!
     # Simula al perdedor de la carrera: primero no ve la fila (create! choca
     # con el índice singleton) y en el rescue la relee.
-    respuestas = [nil, ganadora]
+    respuestas = [ nil, ganadora ]
     Setting.define_singleton_method(:first) { respuestas.shift }
 
     assert_equal ganadora, Setting.instance

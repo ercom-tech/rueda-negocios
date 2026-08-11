@@ -39,16 +39,16 @@ export default class extends Controller {
     event.preventDefault()
     const input = event.target
     const dir = event.key === "ArrowUp" ? 1 : -1
-    const pack = parseFloat(input.dataset.stepSize)
+    const step = parseFloat(input.dataset.stepSize)
     const current = parseFloat(input.value) || 0
     let next
-    if (pack) {
+    if (step) {
       // Producto con empaque: la flecha va al SIGUIENTE múltiplo en su
       // dirección (10→20→30; un 15 tecleado va a 20 con ↑ y a 10 con ↓),
       // sin bajar del empaque (10↓ se queda en 10, no cae a 1).
-      next = dir > 0 ? Math.floor(current / pack) * pack + pack
-                     : Math.ceil(current / pack) * pack - pack
-      if (next < pack) next = pack
+      next = dir > 0 ? Math.floor(current / step) * step + step
+                     : Math.ceil(current / step) * step - step
+      if (next < step) next = step
     } else {
       next = current + dir
     }

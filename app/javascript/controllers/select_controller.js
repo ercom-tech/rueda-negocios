@@ -11,6 +11,11 @@ import { Controller } from "@hotwired/stimulus"
 // la lista es role="listbox" con options role="option"/aria-selected. El
 // resaltado del teclado se expone con aria-activedescendant en el elemento con
 // foco (el botón, o el campo de filtro cuando es filtrable).
+// A partir de cuántas opciones vale la pena enfocar el campo de filtro (ver
+// `open()`): abajo de eso, la lista se recorre con la vista y enfocar solo
+// serviría para levantar el teclado del tablet.
+const MIN_OPTIONS_TO_FOCUS_FILTER = 8
+
 export default class extends Controller {
   static targets = ["button", "label", "input", "panel", "filter", "list"]
   static values = { filterable: Boolean }
@@ -31,7 +36,10 @@ export default class extends Controller {
     if (this.filterableValue && this.hasFilterTarget) {
       this.filterTarget.value = ""
       this.applyFilter("")
-      this.filterTarget.focus()
+      // Solo se enfoca el campo de filtro si la lista es larga: en tablet,
+      // enfocarlo levanta el teclado en pantalla y tapa la mitad del panel —
+      // absurdo para un combo de tres opciones (proveedor, marca).
+      if (this.optionItems.length > MIN_OPTIONS_TO_FOCUS_FILTER) this.filterTarget.focus()
     }
   }
 

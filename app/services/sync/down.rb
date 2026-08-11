@@ -79,15 +79,15 @@ module Sync
     # Las tablas de membresía se vacían primero: cuelgan de brands/suppliers/
     # salespeople/clients/rounds y bloquearían el delete por FK.
     def clear_catalog!
-      [BusinessRoundPerson, BusinessRoundClient].each(&:delete_all)
+      [ BusinessRoundPerson, BusinessRoundClient ].each(&:delete_all)
       exec_delete("business_round_brands")
       exec_delete("business_round_suppliers")
       exec_delete("business_round_salespeople")
       exec_delete("brands_suppliers")
 
-      [Price, ProductSupplier, Product,
+      [ Price, ProductSupplier, Product,
        ClientTaxProfile, ClientReceiptProfile, ClientBranch, Client,
-       Salesperson, Supplier, Brand, CfdiUse, DivideAmount, BusinessRound].each(&:delete_all)
+       Salesperson, Supplier, Brand, CfdiUse, DivideAmount, BusinessRound ].each(&:delete_all)
     end
 
     def exec_delete(table)
@@ -140,16 +140,25 @@ module Sync
       row = { erp_round_id: r["erp_round_id"], name: r["name"], year: r["year"],
               starts_on: r["starts_on"], ends_on: r["ends_on"],
               location: r["location"], active: true }
-      insert BusinessRound, [row]
+      insert BusinessRound, [ row ]
     end
 
     # --- Usuarios (capturistas): merge + cleanup, preservando servers -----
 
+    # `erp_person_id = 0` está RESERVADO para la cuenta `server` que se seedea
+    # (es infraestructura de la app, no una persona del ERP). Si el export
+    # trajera una persona con ese id, el upsert le sobrescribiría usuario y
+    # contraseña conservando el rol: esa persona se quedaría con la cuenta que
+    # ve todos los pedidos y opera el sync, y el operador real perdería el
+    # acceso sin ningún aviso.
+    SERVER_ERP_ID = 0
+
     def import_users
-      erp_keys = @data["users"].map { |u| u["erp_person_id"] }.compact
+      importable = @data["users"].reject { |u| u["erp_person_id"].to_i == SERVER_ERP_ID }
+      erp_keys   = importable.map { |u| u["erp_person_id"] }.compact
 
       rows = []
-      @data["users"].each do |u|
+      importable.each do |u|
         if u["password_hash"].to_s.empty?
           @skipped_users << (u["username"] || u["erp_person_id"])
           next
@@ -245,7 +254,7 @@ module Sync
         # Vínculo producto↔proveedor = `supplier_ids` (com_proveedor_has_producto,
         # la relación real que define el universo por proveedor) ∪ los SKUs
         # (com_producto_has_sku, que además traen el código del proveedor).
-        sku_by_supplier = (p["supplier_skus"] || []).to_h { |sk| [sk["erp_supplier_id"], sk["supplier_sku"]] }
+        sku_by_supplier = (p["supplier_skus"] || []).to_h { |sk| [ sk["erp_supplier_id"], sk["supplier_sku"] ] }
         erp_supplier_ids = (Array(p["supplier_ids"]) | sku_by_supplier.keys)
         erp_supplier_ids.each do |erp_sid|
           sid = supplier_by_erp[erp_sid]

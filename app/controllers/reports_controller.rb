@@ -29,17 +29,17 @@ class ReportsController < ApplicationController
     # El resumen se calcula con TODOS los filtros menos el de estatus: sus
     # tarjetas son el filtro de estatus y deben seguir mostrando el panorama
     # completo para poder saltar entre ellas.
-    filtrado   = @filter.apply_without_status(orders_scope)
-    @productos = @filter.matching_products
-    @summary    = filtrado.totals_by_status(@productos)
+    filtered    = @filter.apply_without_status(orders_scope)
+    @products   = @filter.matching_products
+    @summary    = filtered.totals_by_status(@products)
     @options    = filter_options
     @page_sizes = PAGE_SIZES
 
-    @pagy, @orders = pagy(@filter.apply_status(filtrado)
+    @pagy, @orders = pagy(@filter.apply_status(filtered)
                                  .includes(:user, :order_items, client: :salesperson)
                                  .order(created_at: :desc),
                           limit: page_size)
-    @matching = matching_totals(@orders, @productos)
+    @matching = matching_totals(@orders, @products)
   end
 
   # Sugerencias del filtro de producto. Acotadas al universo de quien mira: al
@@ -59,10 +59,11 @@ class ReportsController < ApplicationController
   PAGE_SIZES = [ 25, 50, 100 ].freeze
 
   # UN solo lugar arma el alcance: de aquí salen el listado, el resumen por
-  # estatus y el conteo del paginador, para que no puedan divergir. Cuando
-  # entren los filtros del reporte, se aplican aquí y los tres los heredan.
+  # estatus y el conteo del paginador, para que no puedan divergir. El alcance
+  # por rol es `accessible_orders` (ApplicationController), compartido con
+  # OrdersController; los filtros se aplican SOBRE él en `OrdersFilter`.
   def orders_scope
-    current_user.can_see_all_orders? ? Order.all : current_user.orders
+    accessible_orders
   end
 
   def page_size

@@ -6,8 +6,7 @@ class OrdersController < ApplicationController
   def new
     if params[:client_key].present?
       # El buscador puede traer "CLAVE - Nombre"; toma la clave (primer token).
-      key = params[:client_key].to_s.strip.split(/\s[–-]\s/).first.to_s.strip
-      @client = Client.find_by(erp_client_key: key) || client_search(key).first
+      @client = client_from_key(params[:client_key])
     end
     @cfdi_uses = CfdiUse.order(:code)
     @order = Order.new(client: @client)
@@ -51,8 +50,7 @@ class OrdersController < ApplicationController
     return redirect_to @order, alert: "Un pedido transmitido no se puede editar." unless @order.editable?
 
     if params[:client_key].present?
-      key        = params[:client_key].to_s.strip.split(/\s[–-]\s/).first.to_s.strip
-      new_client = Client.find_by(erp_client_key: key) || client_search(key).first
+      new_client = client_from_key(params[:client_key])
       if new_client && new_client != @order.client
         @order.client = new_client
         # Los perfiles del encabezado eran del cliente anterior: se resetean.
@@ -137,10 +135,12 @@ class OrdersController < ApplicationController
   private
 
   # Lectura (show/summary/pdf): el server puede abrir cualquier pedido — ya los
-  # ve todos en el reporte. La escritura sigue restringida al dueño
-  # (current_user.orders en el resto de acciones).
-  def accessible_orders
-    current_user.can_see_all_orders? ? Order.all : current_user.orders
+  # El buscador manda "CLAVE — Nombre comercial": se toma la clave y, si no
+  # existe tal cual, se busca por texto (mismo criterio en el paso 1 y al
+  # editar el encabezado).
+  def client_from_key(value)
+    key = value.to_s.strip.split(/\s[–-]\s/).first.to_s.strip
+    Client.find_by(erp_client_key: key) || client_search(key).first
   end
 
   def client_search(query)

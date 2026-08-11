@@ -13,7 +13,7 @@ class CreateBusinessRoundClients < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :business_round_clients, [:business_round_id, :client_id],
+    add_index :business_round_clients, [ :business_round_id, :client_id ],
               unique: true, name: "idx_brc_round_client"
   end
 end

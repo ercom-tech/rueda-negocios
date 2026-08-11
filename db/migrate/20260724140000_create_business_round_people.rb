@@ -12,7 +12,7 @@ class CreateBusinessRoundPeople < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :business_round_people, [:business_round_id, :user_id, :consecutivo],
+    add_index :business_round_people, [ :business_round_id, :user_id, :consecutivo ],
               unique: true, name: "idx_brp_round_user_consec"
   end
 end

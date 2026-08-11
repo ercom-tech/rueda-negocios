@@ -25,6 +25,14 @@ class ApplicationController < ActionController::Base
     order.editable? && order.user_id == current_user&.id
   end
 
+  # Pedidos que el usuario puede LEER: el capturista los suyos, el
+  # equipo-servidor todos (los transmite y los revisa). La escritura siempre va
+  # por `current_user.orders`. Vive aquí, y no repetido en cada controller, para
+  # que la regla de visibilidad se cambie en un solo lugar.
+  def accessible_orders
+    current_user.can_see_all_orders? ? Order.all : current_user.orders
+  end
+
   # Regreso al reporte CON sus filtros, cuando se llegó al pedido desde ahí.
   # Se toma del referer porque así vuelven también el estatus y la página; sin
   # esto, el equipo-servidor que revisa pedidos antes de transmitir tenía que

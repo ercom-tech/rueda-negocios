@@ -87,17 +87,17 @@ export default class extends Controller {
 
   // mousedown: arranca el rango (y el posible arrastre).
   pickStart(event) {
-    const dia = this.dayFrom(event)
-    if (!dia) return
+    const day = this.dayFrom(event)
+    if (!day) return
 
     event.preventDefault()
     // Rango completo + clic nuevo = empezar de cero. Con solo inicio, el
     // segundo clic cierra el rango (gesto clic-clic de tablet).
     if (this.start && !this.end) {
-      this.commit(this.start, dia)
+      this.commit(this.start, day)
       return
     }
-    this.start = dia
+    this.start = day
     this.end = null
     this.dragging = true
     this.paint()
@@ -107,10 +107,10 @@ export default class extends Controller {
   preview(event) {
     if (!this.dragging) return
 
-    const dia = this.dayFrom(event)
-    if (!dia) return
+    const day = this.dayFrom(event)
+    if (!day) return
 
-    this.hover = dia
+    this.hover = day
     this.paint()
   }
 
@@ -118,18 +118,41 @@ export default class extends Controller {
   pickEnd(event) {
     if (!this.dragging) return
 
-    const dia = this.dayFrom(event)
-    if (!dia) return
+    const day = this.dayFrom(event)
+    if (!day) return
     // Un mousedown+mouseup en el MISMO día no cierra el rango: es un clic, y
     // se espera el segundo (si no, no habría manera de elegir un rango de un
     // solo día distinto al de un clic accidental).
-    if (this.sameDay(dia, this.start)) {
+    if (this.sameDay(day, this.start)) {
       this.dragging = false
       this.hover = null
       this.paint()
       return
     }
-    this.commit(this.start, dia)
+    this.commit(this.start, day)
+  }
+
+  // Activación por TECLADO (Enter/Espacio). El navegador manda `click` con
+  // detail = 0 cuando viene del teclado y > 0 cuando viene del mouse: así se
+  // ignora el click que sigue a un clic real, ya atendido por
+  // pickStart/pickEnd.
+  pickByKeyboard(event) {
+    if (event.detail > 0) return // vino del mouse: ya lo atendieron pickStart/pickEnd
+
+    this.pick(event)
+  }
+
+  pick(event) {
+    const day = this.dayFrom(event)
+    if (!day) return
+
+    // Primer toque fija el inicio; el segundo cierra el rango (el mismo día
+    // dos veces = rango de un día).
+    if (this.start && !this.end) return this.commit(this.start, day)
+
+    this.start = day
+    this.end = null
+    this.paint()
   }
 
   clear(event) {
@@ -142,9 +165,9 @@ export default class extends Controller {
   }
 
   commit(a, b) {
-    const [ini, fin] = a <= b ? [a, b] : [b, a]
-    this.start = ini
-    this.end = fin
+    const [first, last] = a <= b ? [a, b] : [b, a]
+    this.start = first
+    this.end = last
     this.dragging = false
     this.hover = null
     this.write()
@@ -176,17 +199,23 @@ export default class extends Controller {
       this.gridTarget.appendChild(th)
     })
     // Lunes primero: getDay() es 0=domingo.
-    const hueco = (new Date(this.cursor).getDay() + 6) % 7
-    for (let i = 0; i < hueco; i++) this.gridTarget.appendChild(document.createElement("span"))
+    const blanks = (new Date(this.cursor).getDay() + 6) % 7
+    for (let i = 0; i < blanks; i++) this.gridTarget.appendChild(document.createElement("span"))
 
-    const ultimo = new Date(this.cursor.getFullYear(), this.cursor.getMonth() + 1, 0).getDate()
-    for (let d = 1; d <= ultimo; d++) {
-      const fecha = new Date(this.cursor.getFullYear(), this.cursor.getMonth(), d)
+    const lastDay = new Date(this.cursor.getFullYear(), this.cursor.getMonth() + 1, 0).getDate()
+    for (let d = 1; d <= lastDay; d++) {
+      const date = new Date(this.cursor.getFullYear(), this.cursor.getMonth(), d)
       const btn = document.createElement("button")
       btn.type = "button"
       btn.textContent = d
-      btn.dataset.date = this.format(fecha)
-      btn.dataset.action = "mousedown->date-range#pickStart mouseenter->date-range#preview mouseup->date-range#pickEnd"
+      btn.dataset.date = this.format(date)
+      // `click` además de los eventos de mouse: Enter y Espacio sobre un
+      // <button> disparan click y NUNCA mousedown, así que sin esto el
+      // calendario era inoperable con teclado (la laptop del servidor se usa
+      // así). `pick` es idempotente con el gesto de arrastre, que ya cerró el
+      // rango en su mouseup.
+      btn.dataset.action = "mousedown->date-range#pickStart mouseenter->date-range#preview " +
+                           "mouseup->date-range#pickEnd click->date-range#pickByKeyboard"
       this.gridTarget.appendChild(btn)
     }
     this.paint()
@@ -196,26 +225,26 @@ export default class extends Controller {
     this.paintLabel()
     if (this.panelTarget.hidden) return
 
-    const fin = this.end || (this.dragging ? this.hover : null)
-    const [a, b] = this.start && fin && this.start > fin ? [fin, this.start] : [this.start, fin]
+    const until = this.end || (this.dragging ? this.hover : null)
+    const [a, b] = this.start && until && this.start > until ? [until, this.start] : [this.start, until]
 
     this.gridTarget.querySelectorAll("[data-date]").forEach((btn) => {
-      const fecha = this.parse(btn.dataset.date)
+      const date = this.parse(btn.dataset.date)
       // El día bajo el cursor cuenta como extremo mientras se arrastra: si no,
       // el día donde vas a soltar se queda sin marcar y el preview se ve corto.
-      const extremo = this.sameDay(fecha, this.start) || this.sameDay(fecha, this.end) ||
-                      (this.dragging && this.sameDay(fecha, this.hover))
-      const dentro  = a && b && fecha > a && fecha < b
+      const isEdge = this.sameDay(date, this.start) || this.sameDay(date, this.end) ||
+                      (this.dragging && this.sameDay(date, this.hover))
+      const isInside = a && b && date > a && date < b
       // Hoy siempre marcado (anillo), aunque no sea parte del rango: es la
       // referencia para ubicarse en el calendario.
-      const hoy = this.sameDay(fecha, this.today)
+      const isToday = this.sameDay(date, this.today)
 
       btn.className = "h-9 rounded-lg text-sm font-semibold transition-colors " +
-        (extremo ? "bg-brand-coral text-white"
-                 : dentro ? "bg-brand-gold text-neutral-900"
+        (isEdge ? "bg-brand-coral text-white"
+                 : isInside ? "bg-brand-gold text-neutral-900"
                           : "text-neutral-900 hover:bg-black/5") +
-        (hoy && !extremo ? " ring-2 ring-inset ring-brand-coral" : "")
-      btn.setAttribute("aria-current", hoy ? "date" : "false")
+        (isToday && !isEdge ? " ring-2 ring-inset ring-brand-coral" : "")
+      btn.setAttribute("aria-current", isToday ? "date" : "false")
     })
   }
 
@@ -249,22 +278,22 @@ export default class extends Controller {
     return new Date(y, m - 1, d)
   }
 
-  format(fecha) {
-    if (!fecha) return ""
+  format(date) {
+    if (!date) return ""
 
-    return [fecha.getFullYear(), fecha.getMonth() + 1, fecha.getDate()]
+    return [date.getFullYear(), date.getMonth() + 1, date.getDate()]
       .map((n, i) => String(n).padStart(i === 0 ? 4 : 2, "0")).join("-")
   }
 
-  short(fecha) {
-    return `${String(fecha.getDate()).padStart(2, "0")}/${String(fecha.getMonth() + 1).padStart(2, "0")}/${fecha.getFullYear()}`
+  short(date) {
+    return `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`
   }
 
   sameDay(a, b) {
     return !!a && !!b && a.getTime() === b.getTime()
   }
 
-  stripTime(fecha) {
-    return new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate())
+  stripTime(date) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate())
   }
 }

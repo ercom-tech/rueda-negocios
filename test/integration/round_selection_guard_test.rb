@@ -26,7 +26,7 @@ class RoundSelectionGuardTest < ActionDispatch::IntegrationTest
   test "la selección pide confirmación: modal con el PATCH y sus params adentro" do
     stub_request(:get, %r{/ruedas$}).to_return(
       status: 200, headers: { "Content-Type" => "application/json" },
-      body: [{ erp_round_id: 7, name: "Rueda Nueva", year: 2026 }].to_json
+      body: [ { erp_round_id: 7, name: "Rueda Nueva", year: 2026 } ].to_json
     )
 
     get server_rounds_path

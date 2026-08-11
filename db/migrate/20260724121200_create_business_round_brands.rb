@@ -6,7 +6,7 @@ class CreateBusinessRoundBrands < ActiveRecord::Migration[8.1]
       t.references :brand,          null: false, foreign_key: true
     end
 
-    add_index :business_round_brands, [:business_round_id, :brand_id],
+    add_index :business_round_brands, [ :business_round_id, :brand_id ],
               unique: true, name: "idx_brb_round_brand"
   end
 end

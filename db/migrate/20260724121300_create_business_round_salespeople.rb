@@ -6,7 +6,7 @@ class CreateBusinessRoundSalespeople < ActiveRecord::Migration[8.1]
       t.references :salesperson,    null: false, foreign_key: true
     end
 
-    add_index :business_round_salespeople, [:business_round_id, :salesperson_id],
+    add_index :business_round_salespeople, [ :business_round_id, :salesperson_id ],
               unique: true, name: "idx_brsp_round_salesperson"
   end
 end

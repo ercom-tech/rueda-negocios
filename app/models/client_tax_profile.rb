@@ -7,6 +7,6 @@ class ClientTaxProfile < ApplicationRecord
   validates :rfc, presence: true
 
   def label
-    [rfc, business_name].compact_blank.join(" — ")
+    [ rfc, business_name ].compact_blank.join(" — ")
   end
 end

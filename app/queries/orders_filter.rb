@@ -35,7 +35,11 @@ class OrdersFilter
     @status         = params[:status].presence_in(Order.statuses.keys)
     @supplier_id    = id_param(params[:supplier_id])
     @brand_id       = id_param(params[:brand_id])
-    @product_q      = params[:product_q].presence&.strip
+    @product_q      = text_param(params[:product_q])
+
+    # Rango al revés (solo alcanzable por URL: el calendario ya normaliza el
+    # orden al cerrar): se endereza en vez de devolver vacío sin explicación.
+    @from, @to = @to, @from if @from && @to && @from > @to
   end
 
   # ¿Hay algún filtro de partida? Es lo que cambia el significado de los
@@ -71,16 +75,20 @@ class OrdersFilter
 
   # Aviso para la pantalla cuando los importes dejan de ser los del pedido
   # completo. nil si no hay filtro de partida.
-  def items_label(supplier_name: nil, brand_name: nil)
+  def items_label
     return nil unless items?
 
-    quienes = [ supplier_name, brand_name ].compact
-    texto   = "Importes de las partidas"
-    texto  += " de #{quienes.to_sentence(two_words_connector: ' y ', last_word_connector: ' y ')}" if quienes.any?
+    # Los nombres se resuelven aquí y no en la vista: la plantilla los buscaba
+    # recorriendo el array de opciones del combo, duplicando la misma búsqueda
+    # para proveedor y para marca.
+    named = [ supplier_id && Supplier.find_by(id: supplier_id)&.name,
+              brand_id && Brand.find_by(id: brand_id)&.name ].compact
+    label = "Importes de las partidas"
+    label += " de #{named.to_sentence(two_words_connector: ' y ', last_word_connector: ' y ')}" if named.any?
     # El producto se busca por texto, así que no se enuncia igual: un código
     # suelto ("de \"037857\"") se lee como si fuera un proveedor.
-    texto  += " que coinciden con \"#{product_q}\"" if product_q
-    texto
+    label += " que coinciden con \"#{product_q}\"" if product_q
+    label
   end
 
   def apply_status(scope)
@@ -102,12 +110,25 @@ class OrdersFilter
 
   private
 
+  # Los parámetros vienen de la URL: pueden llegar como arreglo o hash
+  # (`?user_id[]=1`), y ahí `to_i`/`strip` reventaban con 500. Se acepta solo
+  # texto o número, y un id no numérico se descarta en vez de volverse 0 —que
+  # filtraba hacia la nada y además se quedaba pegado en todos los enlaces.
   def id_param(value)
-    value.presence&.to_i
+    return nil unless value.is_a?(String) || value.is_a?(Integer)
+
+    number = Integer(value, exception: false)
+    number if number&.positive?
+  end
+
+  def text_param(value)
+    value.strip.presence if value.is_a?(String)
   end
 
   def date_param(value)
-    Date.parse(value.to_s)
+    return nil unless value.is_a?(String)
+
+    Date.parse(value)
   rescue Date::Error
     nil
   end

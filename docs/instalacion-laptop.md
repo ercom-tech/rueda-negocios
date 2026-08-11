@@ -95,7 +95,11 @@ sudo -u postgres psql -c "CREATE ROLE fecego LOGIN SUPERUSER PASSWORD 'fecego';"
 El Postgres de Ubuntu escucha en el puerto **5432** (no el 1702 del entorno
 Mac de desarrollo).
 
-## 5. rueda-api → ERP de testing
+## 5. rueda-api → ERP de testing (OPCIONAL)
+
+> Solo si se quiere una copia local de la API para pruebas. En operación,
+> `rueda-api` vive en el servidor de testing y la laptop le apunta con
+> `RUEDA_API_URL=http://fecegowstest:7011` (ver las Notas del final).
 
 ```bash
 cd ~/Projects/_fecego/rueda-api
@@ -141,7 +145,7 @@ DB_NAME=rueda_negocios_development
 DB_NAME_TEST=rueda_negocios_test
 DB_USER=fecego
 DB_PASSWORD=fecego
-RUEDA_API_URL=http://localhost:4568
+RUEDA_API_URL=http://fecegowstest:7011   # o http://localhost:4568 con la copia local del paso 5
 RUEDA_ID=3
 ```
 

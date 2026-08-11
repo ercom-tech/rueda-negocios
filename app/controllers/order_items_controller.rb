@@ -13,15 +13,15 @@ class OrderItemsController < ApplicationController
     # un producto con empaque 0 en el ERP nacía en cantidad 0, la validación lo
     # rechazaba y quedaba invendible sin remedio offline. Mismo criterio que
     # `OrderItem#quantity_in_package_multiples`, que ya ignora el empaque ≤ 0.
-    empaque = product.min_sale_quantity
+    package_size = product.min_sale_quantity
     item = @order.order_items.build(
       product.to_order_item_attributes.merge(
         position: @order.next_item_position, discount_percent: 0,
-        quantity: (empaque&.positive? ? empaque : 1)
+        quantity: (package_size&.positive? ? package_size : 1)
       )
     )
     if item.save
-      render turbo_stream: [*detail_streams, clear_search_stream]
+      render turbo_stream: [ *detail_streams, clear_search_stream ]
     else
       # P.ej. producto sin precio: avisa sin agregar la partida.
       render turbo_stream: [

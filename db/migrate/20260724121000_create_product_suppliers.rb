@@ -10,6 +10,6 @@ class CreateProductSuppliers < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :product_suppliers, [:product_id, :supplier_id], unique: true
+    add_index :product_suppliers, [ :product_id, :supplier_id ], unique: true
   end
 end

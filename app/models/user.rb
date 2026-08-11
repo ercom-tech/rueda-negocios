@@ -28,7 +28,7 @@ class User < ApplicationRecord
   validates :password_digest, presence: true
 
   def full_name
-    [name, paternal_surname, maternal_surname].compact_blank.join(" ")
+    [ name, paternal_surname, maternal_surname ].compact_blank.join(" ")
   end
 
   # Proveedores del capturista en una rueda (cnf_rueda_negocios_persona),

@@ -24,7 +24,7 @@
       <div class="mt-6 space-y-4">
         <%= link_to pdf_order_path(@order),
               class: "flex items-center gap-4 rounded-2xl bg-black px-6 py-5 text-lg font-semibold text-white transition-colors hover:bg-neutral-800" do %>
-          <%= image_tag "icon_pdf.svg", alt: "", class: "h-8 w-8" %> Descargar PDF
+          <svg class="h-8 w-8 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 13.5v-3a1.5 1.5 0 0 1 3 0v3m-3-1.5h3m3-1.5v3m-9-3v3M3 6.75A2.25 2.25 0 0 1 5.25 4.5h13.5A2.25 2.25 0 0 1 21 6.75v10.5A2.25 2.25 0 0 1 18.75 19.5H5.25A2.25 2.25 0 0 1 3 17.25V6.75Z" /></svg> Descargar PDF
         <% end %>
 
         <%# Correo aún no implementado: deshabilitado para no confirmar un
@@ -34,7 +34,7 @@
         <div class="flex w-full cursor-not-allowed items-center gap-4 rounded-2xl bg-neutral-400/60 px-6 py-5 text-lg font-semibold text-white"
              aria-disabled="true" title="Próximamente">
           <div class="flex flex-1 items-center gap-4 opacity-60">
-            <%= image_tag "icon_mail.svg", alt: "", class: "h-8 w-8" %> Enviar por correo
+            <svg class="h-8 w-8 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" /></svg> Enviar por correo
           </div>
           <span class="rounded-full bg-brand-gold px-3 py-1 text-xs font-semibold text-neutral-900 shadow-md ring-1 ring-black/10">Próximamente</span>
         </div>
@@ -45,6 +45,11 @@
           <%= link_to "Volver al pedido", order_path(@order),
                 class: "inline-block rounded-full bg-neutral-700 px-8 py-3 font-bold text-white transition-colors hover:bg-neutral-600" %>
           <%= link_to "Terminar", root_path,
+                class: "inline-block rounded-full bg-neutral-700 px-8 py-3 font-bold text-white transition-colors hover:bg-neutral-600" %>
+          <%# En sesiones de captura seguidas, la acción siguiente SIEMPRE es
+              otro pedido: sin esto son dos toques y dos cargas por cliente
+              atendido (menú → Registrar pedido). %>
+          <%= link_to "Capturar otro pedido", new_order_path,
                 class: "inline-block rounded-full bg-brand-coral px-8 py-3 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
         </div>
       </div>

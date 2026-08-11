@@ -33,7 +33,7 @@ class UserTest < ActiveSupport::TestCase
     BusinessRoundPerson.create!(business_round: @round, user: @user,
                                 supplier: @supplier, position: 1)
 
-    assert_equal [@by_supplier], @user.product_universe(@round).search("proveedor").to_a
+    assert_equal [ @by_supplier ], @user.product_universe(@round).search("proveedor").to_a
     assert_empty @user.product_universe(@round).search("ajeno")
   end
 end

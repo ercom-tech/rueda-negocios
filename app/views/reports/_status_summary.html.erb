@@ -1,5 +1,5 @@
 <%# Resumen por estatus, que es TAMBIÉN el filtro de estatus.
-    Locals: summary, filter, per_page, supplier_name, brand_name.
+    Locals: summary, filter, per_page.
 
     Estética tomada de la captura de partidas: superficies CREMA (antes eran
     paneles `bg-white/5` que se perdían sobre el patrón del fondo), el badge de
@@ -18,43 +18,48 @@
     el de estatus: los tres tienen que seguir visibles, aunque vengan en cero,
     para poder saltar entre ellos. Refleja el alcance de quien mira: el
     capturista ve el resumen de SUS pedidos; el servidor, el de todos. %>
-<% base = filter.to_params.except(:status).merge(per_page: per_page) %>
-<% card = "block rounded-2xl px-5 py-4 transition-transform hover:scale-[1.015]" %>
+<% base_params = filter.to_params.except(:status).merge(per_page: per_page) %>
+<% card_class = "block rounded-2xl px-5 py-4 transition-transform hover:scale-[1.015]" %>
 
 <%# Con un filtro de partida activo, los importes de esta pantalla (resumen y
     columna Total) son los de las partidas que coinciden, NO los del pedido
     completo. Decirlo es obligatorio: el mismo número significa otra cosa. %>
-<% if (aviso = filter.items_label(supplier_name: supplier_name, brand_name: brand_name)) %>
+<% if (notice = filter.items_label) %>
   <p class="mb-3 flex items-center gap-2 text-sm font-semibold text-brand-gold">
     <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
       <path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
     </svg>
-    <%= aviso %>
+    <%= notice %>
   </p>
 <% end %>
 
 <div class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
   <% Order::STATUS_LABELS.each do |status, label| %>
-    <% datos  = summary[status] || { count: 0, total: 0 } %>
-    <% activo = filter.status == status %>
+    <% counts  = summary[status] || { count: 0, total: 0 } %>
+    <% active = filter.status == status %>
     <%# Volver a picar la tarjeta activa quita el filtro. %>
-    <%= link_to captured_orders_report_path(base.merge(activo ? {} : { status: status })),
-          aria: { pressed: activo.to_s },
-          class: "#{card} bg-brand-cream text-neutral-900 #{'ring-4 ring-brand-gold' if activo}" do %>
+    <%= link_to captured_orders_report_path(base_params.merge(active ? {} : { status: status })),
+          aria: { current: (active ? "true" : nil) },
+          class: "#{card_class} bg-brand-cream text-neutral-900 #{'ring-4 ring-brand-gold' if active}" do %>
       <div class="flex items-center justify-between gap-3">
         <span class="rounded-full px-3 py-1 text-xs font-semibold <%= Order::STATUS_COLORS[status] %>">
           <%= label %>
         </span>
-        <span class="text-3xl font-extrabold tabular-nums"><%= datos[:count] %></span>
+        <span class="text-3xl font-extrabold tabular-nums"><%= counts[:count] %></span>
       </div>
-      <p class="mt-2 text-lg font-semibold tabular-nums"><%= number_to_currency(datos[:total]) %></p>
+      <p class="mt-2 text-lg font-semibold tabular-nums"><%= number_to_currency(counts[:total]) %></p>
+      <%# Pista visible de que la tarjeta filtra: el hover no existe en tablet
+          y el estado activo solo aparece DESPUÉS de acertar. %>
+      <p class="mt-1 text-xs font-semibold text-neutral-600">
+        <%= active ? "Quitar filtro" : "Ver solo estos" %>
+      </p>
     <% end %>
   <% end %>
 
   <%# Total general en coral, como el renglón Total de la card de totales del
       pedido: cierra la fila y evita sumar de cabeza los tres estatus. Con un
       estatus filtrado, este enlace es la vuelta a "todos". %>
-  <%= link_to captured_orders_report_path(base), class: "#{card} bg-brand-coral text-white" do %>
+  <%= link_to captured_orders_report_path(base_params), class: "#{card_class} bg-brand-coral text-white" do %>
     <div class="flex items-center justify-between gap-3">
       <span class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">Total</span>
       <span class="text-3xl font-extrabold tabular-nums">

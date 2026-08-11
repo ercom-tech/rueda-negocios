@@ -84,6 +84,6 @@ class OrderItemsLimitTest < ActionDispatch::IntegrationTest
            headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
     assert_response :success
-    assert_equal [1, 2, 3], @order.order_items.reload.map(&:position)
+    assert_equal [ 1, 2, 3 ], @order.order_items.reload.map(&:position)
   end
 end

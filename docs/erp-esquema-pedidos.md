@@ -103,7 +103,12 @@ Desglose **por partida**: `iva_porcentaje` + `iva_monto`, `descto_porcentaje` +
 | `order_items.count` | `renglones` |
 | `dividir_facturas` (NUMERIC(18,6); importe máximo por factura al facturar, 0 = no dividir — se captura en el paso 1, solo Factura) | `dividir_facturas` |
 | totales | `subtotal`/`descto_monto`/`iva_monto`/`total` |
-| item: `code`/`quantity`/`unit_price`/`discount_%`/`tax_%` (+ montos) | `id_producto`/`cantidad`/`precio`/`descto_porcentaje`/`iva_porcentaje` (+ `descto_monto`/`iva_monto`/`subtotal`/`total`) |
+| item: `product.erp_product_id`/`quantity`/`unit_price`/`discount_%`/`tax_%` (+ montos) | `id_producto`/`cantidad`/`precio`/`descto_porcentaje`/`iva_porcentaje` (+ `descto_monto`/`iva_monto`/`subtotal`/`total`) |
+
+⚠️ `OrderItem#code` **no** es lo que viaja: desde 2026-07-30 es el código
+FECEGO a 6 dígitos (`"017768"`, string) y existe solo para mostrarse. El
+ERP espera el entero `com_producto.id_producto`, que es
+`product.erp_product_id`.
 
 ## Pendientes (confirmar con FECEGO)
 

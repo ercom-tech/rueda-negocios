@@ -115,7 +115,59 @@ sobrevivieron esa segunda pasada.
   folio local `RN-000123` y estados `draft`/`captured`; el renglón equivalente
   de esta bitácora quedó marcado como superado.
 
-Suites tras la remediación: rueda-negocios **163/599**, rueda-api **27/79**.
+### Las 9 BAJA (mismo día)
+
+- [x] **Parámetros de URL sin validar de tipo:** `?user_id[]=1` daba 500 (un
+  arreglo no responde a `to_i`) y `?client_id=abc` se volvía 0, filtrando hacia
+  la nada y quedándose pegado en todos los enlaces. Ahora solo se aceptan texto
+  o número, y un id no numérico se descarta. **Rango invertido** (`desde >
+  hasta`) se endereza en vez de devolver vacío sin explicación.
+- [x] **`erp_person_id = 0` reservado:** el sync-down excluye ese id del alta
+  masiva de usuarios — si el ERP mandara una persona con id 0, el upsert le
+  sobrescribía usuario y contraseña a la cuenta `server` **conservando el rol**,
+  y el operador perdía el acceso sin aviso.
+- [x] **Un fallo local ya no aborta el lote** del sync-up (`ActiveRecordError`
+  en la lista de rescates por pedido); antes el primero quedaba insertado en el
+  ERP y los demás ni se intentaban.
+- [x] **El barrido de corridas huérfanas** solo corre con el adapter de jobs en
+  proceso: con un worker aparte (producción) un reinicio marcaría "interrumpida"
+  una corrida viva y liberaría la guarda de "una a la vez".
+- [x] **Los jobs ya no vuelcan la excepción cruda al panel** (clase, rutas
+  internas, IPs): guía accionable en pantalla, `full_message` al log.
+- [x] **Interacción:** el calendario se opera con teclado (`click` además de los
+  eventos de mouse: Enter/Espacio disparan click y NUNCA mousedown); el combo
+  solo enfoca su campo de filtro con más de 8 opciones (en tablet levantaba el
+  teclado para un combo de tres); las tarjetas de estatus dicen "Ver solo
+  estos"/"Quitar filtro" y usan `aria-current` (`aria-pressed` no es válido en
+  un enlace); foco visible en los tres buscadores; "Capturar otro pedido" en el
+  paso 3; y el aviso de cliente sin datos fiscales ahora dice qué hacer.
+- [x] **Consistencia:** `accessible_orders` vive en `ApplicationController` y lo
+  usan los dos controllers (antes la misma expresión con dos nombres);
+  `client_from_key` extraído (el parseo estaba duplicado en `new` y `edit`);
+  `items_label` resuelve sus propios nombres (la vista los buscaba recorriendo
+  el array del combo); íconos sueltos → Heroicons inline; `pedido(s)` →
+  `pluralize`; **rubocop en cero ofensas** en ambos repos.
+- [x] **Documentación:** el mapeo del detalle decía `code` cuando se envía
+  `product.erp_product_id` (`code` es el padded de 6 dígitos, solo para
+  mostrar); el paso 5 de la guía de la laptop quedó marcado OPCIONAL (la API
+  vive en el servidor de testing).
+
+### Idioma del código — regla escrita (a raíz de la auditoría)
+
+El hallazgo de nomenclatura mezclada era mío y yo seguía reincidiendo, así que
+la regla quedó en `docs/convenciones-codigo.md` (que sí se carga siempre):
+**identificadores en inglés; español solo en comentarios y en el texto que ve
+el usuario**, con `dividir_facturas` como única excepción registrada (espeja la
+columna del ERP). Se normalizó el código nuevo Y el viejo de las vistas.
+
+**Trampa del barrido:** hacerlo con expresiones regulares tocó texto visible y
+comentarios ("Ningún pedido **coincide**" → "matching"); lo cazó la suite, pero
+conviene revisar el diff palabra por palabra. Y una continuación de línea estilo
+Ruby (`\`) se coló en JavaScript: **`node --check` existe en la máquina** aunque
+el proyecto no necesite Node en runtime — usarlo tras tocar los controllers.
+
+Suites tras la remediación: rueda-negocios **163/599**, rueda-api **27/79**,
+rubocop limpio en ambos.
 
 ## Decisiones tomadas
 

@@ -6,7 +6,7 @@ class LoginEvent < ApplicationRecord
   belongs_to :user, optional: true
 
   validates :username, presence: true
-  validates :success, inclusion: { in: [true, false] }
+  validates :success, inclusion: { in: [ true, false ] }
 
   scope :recent_first, -> { order(created_at: :desc) }
   scope :failed, -> { where(success: false) }

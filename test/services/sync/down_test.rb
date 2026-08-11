@@ -8,28 +8,28 @@ module Sync
       {
         "round"       => { "erp_round_id" => 3, "name" => "Oaxaca", "year" => 2026,
                            "starts_on" => "2026-08-27", "ends_on" => "2026-08-28", "location" => "Oaxaca" },
-        "cfdi_uses"   => [{ "code" => "G01", "description" => "Adquisición de mercancías" }],
-        "users"       => [{ "erp_person_id" => 90092, "username" => "makita1", "password_hash" => digest,
+        "cfdi_uses"   => [ { "code" => "G01", "description" => "Adquisición de mercancías" } ],
+        "users"       => [ { "erp_person_id" => 90092, "username" => "makita1", "password_hash" => digest,
                             "name" => "PROVEEDOR", "paternal_surname" => nil, "maternal_surname" => nil,
-                            "rfc" => nil, "prefijo" => "1A" }],
-        "salespeople" => [{ "erp_salesperson_id" => 168, "name" => "Omar", "erp_person_id" => nil }],
-        "suppliers"   => [{ "erp_supplier_id" => 10, "code" => "S1", "name" => "Prov", "commercial_name" => nil }],
-        "brands"      => [{ "erp_brand_id" => 1, "name" => "Stanley", "code" => "ST" }],
-        "clients"     => [{ "erp_client_key" => "ABAISM", "name" => "Ismael", "commercial_name" => "Ferretería Inti",
+                            "rfc" => nil, "prefijo" => "1A" } ],
+        "salespeople" => [ { "erp_salesperson_id" => 168, "name" => "Omar", "erp_person_id" => nil } ],
+        "suppliers"   => [ { "erp_supplier_id" => 10, "code" => "S1", "name" => "Prov", "commercial_name" => nil } ],
+        "brands"      => [ { "erp_brand_id" => 1, "name" => "Stanley", "code" => "ST" } ],
+        "clients"     => [ { "erp_client_key" => "ABAISM", "name" => "Ismael", "commercial_name" => "Ferretería Inti",
                             "email" => nil, "erp_salesperson_id" => 168,
-                            "tax_profiles"    => [{ "rfc" => "XAXX010101000", "business_name" => "RS", "default_cfdi_use" => "G01" }],
+                            "tax_profiles"    => [ { "rfc" => "XAXX010101000", "business_name" => "RS", "default_cfdi_use" => "G01" } ],
                             "receipt_profiles" => [],
-                            "branches"        => [{ "consecutive" => 1, "name" => "Matriz", "address" => "Calle 1", "is_default" => true }] }],
-        "products"    => [{ "erp_product_id" => 3, "description" => "Rotomartillo", "part_number" => nil, "model" => nil,
+                            "branches"        => [ { "consecutive" => 1, "name" => "Matriz", "address" => "Calle 1", "is_default" => true } ] } ],
+        "products"    => [ { "erp_product_id" => 3, "description" => "Rotomartillo", "part_number" => nil, "model" => nil,
                             "erp_brand_id" => 1, "stock" => "0.0", "unit" => "PZA",
                             "public_price" => "471.08", "wholesale_price" => "407.82", "tax_rate" => "16.0", "max_discount" => "0.0",
                             "min_sale_quantity" => "6",
-                            "supplier_ids" => [10, 99],
-                            "supplier_skus" => [{ "erp_supplier_id" => 10, "supplier_sku" => "SKU1" }] }],
-        "people"      => [{ "erp_person_id" => 90092, "position" => 1,
-                            "erp_supplier_id" => 10, "erp_brand_id" => nil }],
-        "divide_amounts" => [{ "consecutive" => 1, "amount" => "0" },
-                             { "consecutive" => 2, "amount" => "2000" }]
+                            "supplier_ids" => [ 10, 99 ],
+                            "supplier_skus" => [ { "erp_supplier_id" => 10, "supplier_sku" => "SKU1" } ] } ],
+        "people"      => [ { "erp_person_id" => 90092, "position" => 1,
+                            "erp_supplier_id" => 10, "erp_brand_id" => nil } ],
+        "divide_amounts" => [ { "consecutive" => 1, "amount" => "0" },
+                             { "consecutive" => 2, "amount" => "2000" } ]
       }
     end
 
@@ -38,7 +38,7 @@ module Sync
 
       assert_equal 1, CfdiUse.count
       assert_equal 2, DivideAmount.count
-      assert_equal ["No dividir", "$2,000"], DivideAmount.ordered.map(&:label)
+      assert_equal [ "No dividir", "$2,000" ], DivideAmount.ordered.map(&:label)
       assert_equal 1, Brand.count
       assert_equal 1, Supplier.count
       assert_equal 1, Salesperson.count
@@ -157,7 +157,7 @@ module Sync
 
       assert_not User.exists?(capturista.id), "el replace deja los capturistas idénticos al export"
       assert User.exists?(server.id), "el server seedeado debe sobrevivir siempre"
-      assert_equal ["makita1"], result.summary[:removed_users]
+      assert_equal [ "makita1" ], result.summary[:removed_users]
       assert_equal 1, result.summary[:skipped_people],
                    "la membresía de un usuario inexistente se omite y se reporta"
     end

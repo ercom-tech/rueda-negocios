@@ -4,6 +4,6 @@ class CfdiUse < ApplicationRecord
   validates :code, presence: true, uniqueness: true
 
   def label
-    [code, description].compact_blank.join(" — ")
+    [ code, description ].compact_blank.join(" — ")
   end
 end

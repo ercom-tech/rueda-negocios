@@ -25,7 +25,7 @@
              data-autocomplete-url-value="<%= client_options_orders_path(order_id: @order.persisted? ? @order.id : nil) %>"
              data-action="click@window->autocomplete#hide">
           <%= form_with url: (@order.persisted? ? edit_order_path(@order) : new_order_path), method: :get do %>
-            <div class="flex items-center gap-3 rounded-full bg-black px-5 py-3 text-white">
+            <div class="flex items-center gap-3 rounded-full bg-black px-5 py-3 text-white focus-within:ring-2 focus-within:ring-brand-gold">
               <svg class="h-5 w-5 shrink-0 text-white/60" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
               <%= text_field_tag :client_key, (@client ? "#{@client.erp_client_key} - #{@client.commercial_name.presence || @client.name}" : nil),
                     placeholder: "Buscar cliente por clave o nombre",
@@ -54,8 +54,10 @@
 
           <% if !has_invoice && !has_remission %>
             <p class="rounded-2xl bg-brand-coral px-5 py-4 text-sm font-semibold text-white">
-              El cliente no tiene datos fiscales ni remisiones en el ERP; no es
-              posible capturarle un pedido.
+              Este cliente no tiene datos para facturar ni para remisionar, así
+              que no se le puede capturar un pedido. Avisa al equipo del
+              servidor para que actualicen su información, y mientras tanto
+              busca otro cliente.
             </p>
           <% else %>
           <%# cfdi-default: al cambiar de razón social, el combo de Uso de CFDI

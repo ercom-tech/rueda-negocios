@@ -4,6 +4,6 @@ class ClientBranch < ApplicationRecord
   belongs_to :client
 
   def label
-    [name, address].compact_blank.join(" — ")
+    [ name, address ].compact_blank.join(" — ")
   end
 end

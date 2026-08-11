@@ -21,7 +21,7 @@
   <% elsif run.failed? %>
     <span class="font-semibold text-red-700">
       ✗ Falló<% if run.kind == "up" && run.summary["failed"].to_a.any? %>
-        (<%= run.summary["failed"].size %> pedido(s) sin transmitir)<% end %>.
+        (<%= pluralize(run.summary["failed"].size, "pedido") %> sin transmitir)<% end %>.
     </span>
     <% if run.message.present? %><span class="text-neutral-800/70"><%= run.message %></span><% end %>
 
@@ -34,7 +34,8 @@
         · <%= e["clients"].to_i %> clientes
         · <%= e["users"].to_i %> usuarios
       <% else %>
-        · <%= run.summary["transmitted"].to_a.size %> pedido(s) transmitido(s)
+        <% sent = run.summary["transmitted"].to_a.size %>
+        · <%= pluralize(sent, "pedido") %> <%= "transmitido".pluralize(sent) %>
       <% end %>
       <% if run.finished_at %>· <%= run.finished_at.localtime.strftime("%d/%m %H:%M") %><% end %>
     </span>

@@ -50,10 +50,13 @@ module Sync
           results[:failed] << { local: order.local_folio, status: res.code, error: msg }
         end
       rescue SystemCallError, SocketError, Timeout::Error, Net::ReadTimeout,
-             JSON::ParserError, ApiClient::Error => e
-        # Un error de red o una respuesta rota (200 no-JSON, 200 sin folio) en
-        # un pedido no aborta la transmisión: se marca fallido y se sigue (el
-        # sync-up es reintentable).
+             JSON::ParserError, ApiClient::Error, ActiveRecord::ActiveRecordError => e
+        # Un error de red, una respuesta rota (200 no-JSON, 200 sin folio) o un
+        # fallo al guardar el folio localmente no abortan la transmisión: se
+        # marca fallido ESE pedido y el lote sigue (el sync-up es reintentable).
+        # Sin `ActiveRecordError` en la lista, un `update!` que fallara sacaba
+        # la excepción del `find_each` y los pedidos restantes ni se intentaban,
+        # con el primero ya insertado en el ERP.
         results[:failed] << { local: order.local_folio, status: "—", error: e.message }
       end
 

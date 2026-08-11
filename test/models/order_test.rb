@@ -83,11 +83,11 @@ class OrderTest < ActiveSupport::TestCase
     order = order_with_items(4)
     order.order_items.find_by(position: 2).destroy
 
-    assert_equal [1, 3, 4], order.order_items.reload.map(&:position), "el hueco existe antes de renumerar"
+    assert_equal [ 1, 3, 4 ], order.order_items.reload.map(&:position), "el hueco existe antes de renumerar"
 
     order.renumber_items!
 
-    assert_equal [1, 2, 3], order.order_items.reload.map(&:position)
+    assert_equal [ 1, 2, 3 ], order.order_items.reload.map(&:position)
   end
 
   test "tras renumerar, la siguiente partida sigue el consecutivo sin saltos" do
@@ -105,6 +105,6 @@ class OrderTest < ActiveSupport::TestCase
     order.renumber_items!
 
     assert_equal codigos, order.order_items.reload.map(&:id), "no debe reordenar las partidas"
-    assert_equal [1, 2, 3], order.order_items.map(&:position)
+    assert_equal [ 1, 2, 3 ], order.order_items.map(&:position)
   end
 end

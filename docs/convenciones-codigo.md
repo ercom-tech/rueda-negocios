@@ -3,6 +3,21 @@
 Normas y trampas ya pagadas en este proyecto. Se cargan en contexto desde
 `CLAUDE.md`. El relato de cada hallazgo vive en `memory.md`.
 
+## Idioma: el código va en inglés
+
+**Identificadores en inglés** — variables, métodos, constantes, clases,
+columnas, locals de partials, targets y values de Stimulus. **Español solo en
+los comentarios y en el texto que ve el usuario.**
+
+Es fácil de romper justo porque los comentarios van en español: al terminar de
+escribir uno, la variable siguiente sale en español sin pensarlo. Si el
+comentario dice "el empaque mínimo", la variable sigue siendo `package_size`.
+
+Excepción registrada: **`orders.dividir_facturas`** (columna, atributo y
+parámetro) está en español a propósito, para espejar literalmente
+`vta_pedido.dividir_facturas` del ERP y que el mapeo del sync sea evidente. Es
+la única; cualquier otra hay que justificarla igual de explícito.
+
 ## Hotwire / Turbo
 
 - **Nunca `link_to` con `data: { turbo_method: … }`.** Turbo intercepta el clic
@@ -73,6 +88,13 @@ Normas y trampas ya pagadas en este proyecto. Se cargan en contexto desde
   veces se cuelga en `at_exit` después de terminar (sleep eterno).
 - `bin/rails runner - <<'RUBY' … RUBY` (heredoc con comillas): pasar el script
   como argumento en una línea se come las comillas internas.
+- **`node --check archivo.js` tras tocar un controller Stimulus.** El proyecto
+  no necesita Node en runtime (importmap), pero está instalado y es lo único
+  que caza un error de sintaxis antes del navegador — una continuación de línea
+  estilo Ruby (`\`) en JS rompe el controller entero sin que nada más avise.
+- **Renombres masivos con expresiones regulares: revisar el diff palabra por
+  palabra.** Un `\bcoincide\b` pensado para una variable también reescribe el
+  texto visible ("Ningún pedido coincide") y los comentarios.
 - **Validación en navegador:** levantar un servidor efímero en otro puerto y en
   `127.0.0.1` (no `localhost`: las cookies ignoran el puerto y se pisaría la
   sesión del usuario). Usar datos efímeros propios y borrarlos al terminar;

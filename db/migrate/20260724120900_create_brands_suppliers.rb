@@ -6,6 +6,6 @@ class CreateBrandsSuppliers < ActiveRecord::Migration[8.1]
       t.references :supplier, null: false, foreign_key: true
     end
 
-    add_index :brands_suppliers, [:brand_id, :supplier_id], unique: true
+    add_index :brands_suppliers, [ :brand_id, :supplier_id ], unique: true
   end
 end
