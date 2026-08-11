@@ -27,8 +27,23 @@ afuera y transmitidos (≈49% de los pedidos traen `clave_pedido_ruta`, vigente
 ### Cabecera → `fecego.vta_pedido`
 - **PK compuesta:** `(id_empresa, clave_cliente, fecha_pedido, hora_pedido)` — el
   pedido se identifica por empresa + cliente + **fecha + hora de captura**.
-- **`clave_pedido varchar(6)` NOT NULL** = folio oficial (prefijo 2 letras + 4
-  dígitos, ej. `ZA0959`).
+- **`clave_pedido varchar(6)` NOT NULL** = folio oficial. Mide **siempre 6**, y
+  el ancho del consecutivo se **deriva** del prefijo: 2 caracteres → 4 dígitos
+  (`ZA0959`), 1 carácter → 5. No es "prefijo + 4 dígitos" fijo.
+  - El ERP lo arma por **dos ramas**: si la sucursal tiene `venta_prefijo`
+    (sucursales 3, 5, 6, 8…), 1 carácter + contador en `cnf_sucursal.venta_consec`;
+    si no (**1 = MATRIZ**, que es por donde insertamos nosotros), el `prefijo`
+    de `cnf_persona` (varchar(2)). Medir la regla en la rama equivocada da una
+    certeza falsa: en la nuestra son 514,660 folios de 2+4 sin una excepción.
+  - **El prefijo se agota:** al llegar a 9999 no cabe otro folio. `rueda-api`
+    lo rechaza con un 422 accionable ("pide que le asignen una clave nueva")
+    en vez de dejar que reviente el INSERT con un 500 opaco. FECEGO ya rota
+    prefijos agotados como práctica (`cnf_persona_prefijo_hist`).
+  - **`MAX + 1` es la elección correcta** aunque el ERP recicle folios (hay
+    1,765 `clave_pedido` duplicados y ningún UNIQUE): los huecos del ERP
+    quedan por debajo del máximo y nosotros siempre emitimos por encima, así
+    que no podemos colisionar. Depende de que los capturistas de rueda usen su
+    bloque reservado de prefijos y no uno con actividad viva del ERP.
 - **NOT NULL:** `id_empresa` (def 1), `clave_cliente`, `fecha_pedido`,
   `hora_pedido`, `clave_pedido`, `id_vendedor_cliente_pos` (0), `id_usuario_caja`
   (0), `id_estatus_cliente` (0), `facturado_linux` (false). El resto default.
@@ -80,7 +95,13 @@ Desglose **por partida**: `iva_porcentaje` + `iva_monto`, `descto_porcentaje` +
 - `observaciones` sin texto = **`' '`** (un espacio, la moda del ERP; `''`
   casi no existe en el histórico).
 - `id_vendedor` = **el vendedor del cliente** (`vta_cliente.id_vendedor`), no el
-  capturista.
+  capturista. El export trae los vendedores de la lista de la rueda **más los
+  que traen sus clientes**: si el cliente venía con uno que nadie dio de alta
+  en el evento, la app no podía resolverlo y el pedido llegaba con
+  `id_vendedor = 0` — fuera del índice por vendedor, de sus reportes y de la
+  comisión, sin error (1 de 1,245,383 pedidos del histórico está así). Si el
+  payload llega sin él, `rueda-api` lo resuelve contra el cliente. 0 solo es
+  legítimo cuando el cliente de veras no tiene vendedor (4 de 22,580).
 - `bodega` = **no se usa**.
 - `remision` = false (Factura) / true (Remisión).
 - **Remisión: a nombre de quién va.** `consec_remision` es el consecutivo del

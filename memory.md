@@ -125,6 +125,37 @@ los tres criterios que traía el reporte estaban enunciados sobre el recorte
 equivocado, y en ambos casos los números correctos se parecían lo bastante a
 los del reporte como para no notarlo sin volver a consultar.
 
+### El folio y el vendedor (cerrados)
+
+**El folio se agota y nadie lo sabía.** `format('%04d')` es ancho **mínimo**, no
+truncamiento: con el consecutivo en 10000 armaba un folio de 7 caracteres, el
+INSERT lo rechazaba y el operador solo leía **"Error interno."**, reintentando
+en bucle sin saber que la salida está en el ERP. Hoy el ancho se **deriva**
+(`6 − len(prefijo)`) y el agotamiento sale como error de negocio con la
+instrucción: "pide que le asignen una clave nueva".
+
+La prueba que existía **consagraba el modelo equivocado** —afirmaba `"ZAB0007"`,
+siete caracteres en una columna de seis—, así que había que corregirla junto con
+el código. Es el riesgo de escribir la prueba desde la implementación en vez de
+desde el dato: la implementación estaba mal y la prueba la protegía.
+
+De paso, acotar la consulta con `id_empresa` y `clave_pedido LIKE 'XX%'` la hizo
+sargable: la asignación de folio bajó de ~135 ms a ~27 ms. Con 500 pedidos son
+70 s menos de transmisión, y se cerró sola la BAJA de rendimiento.
+
+**El vendedor en 0.** El pedido lleva el vendedor **del cliente**, pero el
+export solo traía los de la lista de la rueda: si el cliente venía con uno que
+nadie dio de alta en el evento, la app no podía resolverlo y el pedido llegaba
+con `id_vendedor = 0` —fuera del índice por vendedor, de sus reportes y de la
+comisión— sin error de ningún lado. Cerrado en dos capas: el export ahora trae
+la lista **∪** los vendedores de sus clientes, y si aun así el payload llega sin
+él, `rueda-api` lo resuelve contra el cliente, que es el dueño del dato.
+
+Medido antes de tocar nada: para la rueda 3 el export nuevo devuelve **los
+mismos 15** vendedores y deja 0 clientes sin resolver. O sea que el cambio es
+**preventivo**, no correctivo — vale la pena saberlo para no atribuirle un
+arreglo que no hizo.
+
 ### Las entradas que no se validaban (cerradas)
 
 Cinco MEDIA con la misma forma: la pantalla no ofrece ese valor, pero llega
