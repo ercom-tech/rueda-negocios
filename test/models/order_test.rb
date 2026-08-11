@@ -107,4 +107,64 @@ class OrderTest < ActiveSupport::TestCase
     assert_equal codigos, order.order_items.reload.map(&:id), "no debe reordenar las partidas"
     assert_equal [ 1, 2, 3 ], order.order_items.map(&:position)
   end
+
+  # --- La rama inactiva del encabezado se descarta al guardar ---------------
+  # El paso 1 pinta los campos de factura y los de remisión en el mismo
+  # formulario y solo oculta con CSS los de la rama que no aplica, así que se
+  # envían igual. Sin esto, un pedido que empezó como factura y terminó como
+  # remisión viajaba al ERP con el RFC real del cliente.
+
+  def profiles_client
+    client = Client.create!(erp_client_key: "TEST02", name: "Cliente Con Perfiles")
+    tax    = ClientTaxProfile.create!(client: client, rfc: "AAA010101AAA", business_name: "CLIENTE SA")
+    receipt = ClientReceiptProfile.create!(client: client, erp_receipt_profile_id: 1, name: "MATRIZ")
+    cfdi   = CfdiUse.create!(code: "G01", description: "ADQUISICIÓN DE MERCANCÍAS")
+    [ client, tax, receipt, cfdi ]
+  end
+
+  test "una remisión no conserva el perfil fiscal ni el uso de CFDI" do
+    client, tax, receipt, cfdi = profiles_client
+    order = Order.new(user: @user, business_round: @round, client: client, kind: "remission",
+                      client_tax_profile: tax, cfdi_use: cfdi, client_receipt_profile: receipt)
+
+    assert order.save, order.errors.full_messages.to_sentence
+
+    assert_nil order.client_tax_profile_id, "una remisión no lleva el RFC del cliente"
+    assert_nil order.cfdi_use_id
+    assert_equal receipt.id, order.client_receipt_profile_id
+  end
+
+  test "cambiar a remisión también suelta el monto de división de facturas" do
+    client, tax, receipt, cfdi = profiles_client
+    order = Order.create!(user: @user, business_round: @round, client: client, kind: "invoice",
+                          client_tax_profile: tax, cfdi_use: cfdi, dividir_facturas: 2000)
+
+    assert order.update(kind: "remission", client_receipt_profile: receipt)
+
+    assert_equal 0, order.reload.dividir_facturas,
+                 "el campo se oculta en remisión: si sobrevive, nadie puede corregirlo"
+  end
+
+  test "una factura no conserva el perfil de remisión" do
+    client, tax, receipt, cfdi = profiles_client
+    order = Order.new(user: @user, business_round: @round, client: client, kind: "invoice",
+                      client_tax_profile: tax, cfdi_use: cfdi, client_receipt_profile: receipt)
+
+    assert order.save, order.errors.full_messages.to_sentence
+
+    assert_nil order.client_receipt_profile_id
+    assert_equal tax.id, order.client_tax_profile_id
+    assert_equal cfdi.id, order.cfdi_use_id
+  end
+
+  test "cambiar de factura a remisión limpia el perfil fiscal ya guardado" do
+    client, tax, receipt, cfdi = profiles_client
+    order = Order.create!(user: @user, business_round: @round, client: client, kind: "invoice",
+                          client_tax_profile: tax, cfdi_use: cfdi)
+
+    assert order.update(kind: "remission", client_receipt_profile: receipt)
+
+    assert_nil order.reload.client_tax_profile_id
+    assert_nil order.cfdi_use_id
+  end
 end

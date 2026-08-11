@@ -43,6 +43,8 @@ class Order < ApplicationRecord
   # transmitted: ya en el ERP (folio asignado), NO editable.
   enum :status, { draft: "draft", captured: "captured", transmitted: "transmitted" }
 
+  before_validation :clear_inactive_header_branch
+
   validates :kind, presence: true
   validate  :header_selections_present
 
@@ -173,6 +175,26 @@ class Order < ApplicationRecord
     "RN-#{id.to_s.rjust(6, "0")}"
   end
 
+
+  # Los campos de la rama que NO aplica se descartan al guardar. El paso 1
+  # muestra los de factura y los de remisión en el mismo formulario y solo
+  # oculta con CSS los de la rama inactiva, así que se envían igual: un pedido
+  # que empezó como factura y terminó como remisión llegaba al ERP con el RFC
+  # real del cliente, forma que no existe en ninguna de sus 212,860 remisiones.
+  # `dividir_facturas` entra aquí porque la pantalla lo rotula como campo de
+  # factura y lo oculta en remisión: si sobrevive al cambio de tipo, el
+  # capturista no puede verlo ni corregirlo. El ERP sí tolera remisiones con
+  # monto de división (3,079 de 110,577), así que esto es regla de negocio
+  # nuestra, no forma del ERP — la columna es NOT NULL, va a 0 y no a nil.
+  def clear_inactive_header_branch
+    if remission?
+      self.client_tax_profile_id = nil
+      self.cfdi_use_id           = nil
+      self.dividir_facturas      = 0
+    elsif invoice?
+      self.client_receipt_profile_id = nil
+    end
+  end
 
   # Fuerza los datos obligatorios del encabezado (paso 1).
   def header_selections_present

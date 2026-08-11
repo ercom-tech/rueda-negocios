@@ -12,9 +12,10 @@ module Sync
       @client  = Client.create!(erp_client_key: "ABAISM", name: "Ismael", salesperson: @sp)
       @product = Product.create!(erp_product_id: 3, description: "Rotomartillo")
 
+      # Remisión: el cliente no tiene perfiles, así que no exige encabezado.
+      # `dividir_facturas` es campo de factura y en una remisión queda en 0.
       @order = Order.new(user: @user, business_round: @round, client: @client,
-                         kind: "remission", status: "captured", local_folio: "RN-000001",
-                         dividir_facturas: 5000)
+                         kind: "remission", status: "captured", local_folio: "RN-000001")
       @order.order_items.build(product: @product, quantity: 2, unit_price: 100,
                                discount_percent: 0, tax_rate: 16, code: "3", description: "Rotomartillo", unit: "PZA")
       @order.save!
@@ -52,9 +53,21 @@ module Sync
         body["clave_cliente"] == "ABAISM" &&
           body["capturista_erp_person_id"] == 90092 &&
           body["id_vendedor"] == 168 &&
-          body["dividir_facturas"].to_d == 5000 &&
           body["items"].first["id_producto"] == 3 &&
           body["items"].first["cantidad"].to_d == 2
+      end.to_return(status: 201, body: { clave_pedido: "1A0007" }.to_json)
+
+      Up.new(API).run!
+      assert_requested req
+    end
+
+    test "una factura transmite su monto de división de facturas" do
+      tax  = ClientTaxProfile.create!(client: @client, rfc: "AAA010101AAA", business_name: "ISMAEL SA")
+      cfdi = CfdiUse.create!(code: "G01", description: "ADQUISICIÓN DE MERCANCÍAS")
+      @order.update!(kind: "invoice", client_tax_profile: tax, cfdi_use: cfdi, dividir_facturas: 5000)
+
+      req = stub_request(:post, "#{API}/pedidos").with do |request|
+        JSON.parse(request.body)["dividir_facturas"].to_d == 5000
       end.to_return(status: 201, body: { clave_pedido: "1A0007" }.to_json)
 
       Up.new(API).run!
@@ -114,6 +127,60 @@ module Sync
       @order.reload
       assert @order.captured?, "sin folio no puede darse por transmitido"
       assert_nil @order.erp_folio
+    end
+
+    # --- Remisión: a nombre de quién va -------------------------------------
+    # El ERP resuelve el destinatario y la cuenta de cobranza de una remisión
+    # contra el consecutivo de su perfil. El capturista lo elige en el paso 1 y
+    # se quedaba en la laptop: la remisión llegaba al ERP sin destinatario.
+
+    test "el payload de una remisión lleva a nombre de quién va" do
+      profile = ClientReceiptProfile.create!(client: @client, erp_receipt_profile_id: 2, name: "SUCURSAL CENTRO")
+      @order.update!(client_receipt_profile: profile)
+
+      req = stub_request(:post, "#{API}/pedidos").with do |request|
+        JSON.parse(request.body)["consec_remision"] == 2
+      end.to_return(status: 201, body: { clave_pedido: "1A0007" }.to_json)
+
+      Up.new(API).run!
+      assert_requested req
+    end
+
+    # Un pedido capturado ANTES de que el encabezado limpiara su rama inactiva
+    # puede traer perfil de remisión siendo factura: no debe viajar al ERP.
+    test "una factura no transmite destinatario de remisión" do
+      profile = ClientReceiptProfile.create!(client: @client, erp_receipt_profile_id: 2, name: "SUCURSAL CENTRO")
+      @order.update_column(:kind, "invoice")
+      @order.update_column(:client_receipt_profile_id, profile.id)
+
+      req = stub_request(:post, "#{API}/pedidos").with do |request|
+        JSON.parse(request.body)["consec_remision"].nil?
+      end.to_return(status: 201, body: { clave_pedido: "1A0007" }.to_json)
+
+      Up.new(API).run!
+      assert_requested req
+    end
+
+    test "una remisión no transmite monto de división de facturas" do
+      # El pedido del setup es remisión y se creó con dividir_facturas 5000
+      # (fila anterior a la limpieza del encabezado): no debe viajar.
+      @order.update_column(:dividir_facturas, 5000)
+
+      req = stub_request(:post, "#{API}/pedidos").with do |request|
+        JSON.parse(request.body)["dividir_facturas"].to_d.zero?
+      end.to_return(status: 201, body: { clave_pedido: "1A0007" }.to_json)
+
+      Up.new(API).run!
+      assert_requested req
+    end
+
+    test "un cliente sin perfiles de remisión transmite sin destinatario" do
+      req = stub_request(:post, "#{API}/pedidos").with do |request|
+        JSON.parse(request.body)["consec_remision"].nil?
+      end.to_return(status: 201, body: { clave_pedido: "1A0007" }.to_json)
+
+      Up.new(API).run!
+      assert_requested req
     end
 
     # --- Guarda: no transmitir con pedidos en borrador ----------------------

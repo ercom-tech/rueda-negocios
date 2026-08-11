@@ -28,6 +28,73 @@ Si es **algo por hacer**, va al backlog.
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
 
+## 4ª auditoría (2026-08-11) — remediación
+
+Artifact: https://claude.ai/code/artifact/2e76bab0-c6ae-4a0a-b219-9999f7e6dda2
+(1 ALTA · 37 MEDIA · 31 BAJA · 0 vulnerabilidades). Primera con **7
+dimensiones**: se estrenaron *Fidelidad con el ERP* y *Operación y
+recuperación*, y produjeron el único ALTA y buena parte de las medias caras —
+justo lo que predecía su justificación.
+
+**Lo que enseñó la pasada de verificación.** De los 6 hallazgos que llegaron
+marcados ALTA, **5 bajaron a MEDIA y 1 se refutó**. El refutado es el aviso
+más útil: alegaba que el folio se rellena a `6 − len(prefijo)`, tomando la
+regla de la rama de **sucursal** del ERP (1 carácter + 5 dígitos, contador en
+`cnf_sucursal.venta_consec`). Nuestros pedidos entran por `id_sucursal_crea =
+1` (matriz), que usa la rama de **persona**: 514,660 folios de 2+4, sin una
+sola excepción. Medir la invariante en el recorte equivocado da una certeza
+falsa con evidencia de aspecto sólido.
+
+### A1 — Las remisiones llegaban al ERP sin destinatario (cerrado)
+
+El capturista elige en el paso 1 a nombre de quién va la remisión y ese dato
+**se quedaba en la laptop**: no estaba en el payload. En el ERP el pedido caía
+con `consec_remision = 0` y sin datos en línea, combinación que el ERP nunca
+ha producido — sus 383,881 remisiones desde 2024 se reparten en dos cuadrantes
+(ticket de mostrador con datos en línea, flujo de pedido con puntero al
+perfil) y el cuadrante "ninguno de los dos" tiene **cero filas**. De ese
+puntero cuelga la cuenta referenciada de cobranza (`vta_remision_has_cuenta`)
+y `fac_cfdi` copia esas columnas al timbrar en vez de re-resolverlas.
+
+Cuatro piezas:
+
+1. **`Order#clear_inactive_header_branch`** (`before_validation`). El paso 1
+   pinta los campos de factura y los de remisión en el mismo formulario y solo
+   oculta con CSS la rama que no aplica, **así que se envían igual**: una
+   remisión podía llegar con el RFC real del cliente (peor que el nulo — 0 de
+   212,860 remisiones lo llevan) y una factura con perfil de remisión. Ya
+   estaba pasando: había facturas guardadas con `client_receipt_profile_id`.
+2. **`Sync::Up` transmite `consec_remision`**, atado a `order.remission?` y no
+   solo al dato guardado: las facturas lo llevan en 0 (243,318 de 243,334) y
+   los pedidos capturados antes de esta remediación traen el valor rancio. Sin
+   ese candado, la primera prueba contra un pedido real de la BD de desarrollo
+   transmitía `consec_remision: 1` en una factura.
+3. **`OrderCreate::REMISSION_DEFAULTS`** — RFC genérico `XAXX010101000` y uso
+   `S01`, **impuestos** (no tomados del payload): si la app dejara escapar el
+   RFC del cliente en una remisión, la API lo corrige. Defensa en profundidad
+   sobre el punto 1.
+4. **Guarda en `rueda-api`:** una remisión sin destinatario se rechaza **solo
+   si el cliente sí tiene perfiles** en el ERP. Hay clientes sin ninguno (20 de
+   los 47 de la rueda 3) y no podemos inventarles uno; lo que se rechaza es
+   que el dato exista y no lo mandemos. Un consecutivo que no es de ese cliente
+   también se rechaza.
+
+**`dividir_facturas` entró a la limpieza por una razón distinta.** Está en el
+mismo bloque oculto del paso 1, así que una remisión que empezó como factura
+conservaba el monto sin que nadie pudiera verlo ni corregirlo. Pero aquí el ERP
+**no** decide: 3,079 de sus 110,577 remisiones sí traen monto de división, o
+sea que no es forma mal escrita sino regla de negocio. Se preguntó y se
+resolvió limpiarlo (decisión del usuario, 2026-08-11): una remisión viaja
+siempre en 0, coherente con la pantalla que ya lo rotula como campo de factura.
+Es la distinción que conviene conservar: **la invariante del ERP obliga; su
+moda solo sugiere.**
+
+**S01 vs P01: lo decidió el catálogo, no una preferencia.** El reporte proponía
+P01 por ser la moda global (60%), pero `sat_uso_cfdi` lo tiene con `baja = t`:
+está **retirado**. S01 "SIN EFECTOS LEGALES" es el vigente. La lección se
+repite: antes de copiar la moda del histórico, revisar si el catálogo sigue
+aceptando ese valor — la moda incluye décadas de datos con reglas viejas.
+
 ## 3ª auditoría (2026-08-10) — remediación
 
 Artifact: https://claude.ai/code/artifact/d6dda895-e2d2-4bfb-ab8f-9811a7cd15f2

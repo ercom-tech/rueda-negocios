@@ -83,6 +83,24 @@ Desglose **por partida**: `iva_porcentaje` + `iva_monto`, `descto_porcentaje` +
   capturista.
 - `bodega` = **no se usa**.
 - `remision` = false (Factura) / true (Remisión).
+- **Remisión: a nombre de quién va.** `consec_remision` es el consecutivo del
+  perfil del cliente (`vta_cliente_has_remision.consecutivo`) y de él cuelga la
+  cuenta referenciada de cobranza (`vta_remision_has_cuenta`). El ERP escribe
+  el destinatario por una de **dos** vías y nunca por ninguna: ticket de
+  mostrador con datos en línea (`remision_nombre`…) o flujo de pedido con este
+  puntero. En 383,881 remisiones desde 2024, el cuadrante "ninguna de las dos"
+  tiene **cero filas**. `0` solo es legítimo si el cliente no tiene ningún
+  perfil dado de alta.
+- **Remisión: RFC y uso de CFDI son fijos, no del cliente.** `rfc` =
+  `XAXX010101000` (el genérico del SAT: 212,854 de 212,860 remisiones del flujo
+  de pedido) y `c_UsoCFDI` = **`S01`** ("SIN EFECTOS LEGALES"). Ojo con la moda
+  del histórico: P01 aparece mucho pero está **dado de baja** en
+  `sat_uso_cfdi`. El RFC real del cliente NO va en una remisión — es lo que
+  discrimina factura de remisión, y `rueda-api` lo impone por si la app lo
+  dejara escapar.
+- En una **factura**, `consec_remision` va en 0 (243,318 de 243,334).
+- `dividir_facturas` es **campo de factura**: en remisión va en 0 por decisión
+  nuestra, no del ERP (él sí acepta remisiones con monto: 3,079 de 110,577).
 - `transmitido` = true + `id_usuario_transmision`/`fecha`/`hora` al transmitir.
 - `id_empresa` = 1; `baja` = false; auditoría (`id_usuario_crea`, `fecha/hora_crea`).
 
@@ -95,8 +113,9 @@ Desglose **por partida**: `iva_porcentaje` + `iva_monto`, `descto_porcentaje` +
 | — (referencia offline) | `local_folio` (no se envía) |
 | (asigna rueda-api en transmisión) | `clave_pedido` → `erp_folio` |
 | `kind` invoice/remission | `remision` false/true |
-| `client_tax_profile.rfc` | `rfc` |
-| `cfdi_use.code` | `"c_UsoCFDI"` |
+| `client_tax_profile.rfc` (solo Factura) | `rfc` (Remisión: `XAXX010101000`) |
+| `cfdi_use.code` (solo Factura) | `"c_UsoCFDI"` (Remisión: `S01`) |
+| `client_receipt_profile.erp_receipt_profile_id` (solo Remisión) | `consec_remision` |
 | `client_branch` (sucursal) | `sucursal` |
 | `client.salesperson.erp_salesperson_id` | `id_vendedor` |
 | `observations` | `observaciones` (vacía → `' '`) |
