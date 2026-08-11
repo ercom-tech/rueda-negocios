@@ -4,8 +4,13 @@
   Locals: title, message, confirm_label, path, method (default :post),
   params (Hash opcional — viaja en el form del botón de confirmación).
 %>
-<% dialog_id = "dlg-#{SecureRandom.hex(4)}" %>
-<div data-modal-target="dialog" style="display:none"
+<%# `id`: obligatorio cuando el diálogo vive dentro de una región que se
+    repinta con morph. Con `permanent: true` se marca `data-turbo-permanent`,
+    y entonces el id tiene que ser ESTABLE entre repintados (dom_id del
+    registro, no un aleatorio) o Turbo no sabrá qué conservar. %>
+<% dialog_id = local_assigns[:id].presence || "dlg-#{SecureRandom.hex(4)}" %>
+<div id="<%= dialog_id %>" data-modal-target="dialog" style="display:none"
+     <%= "data-turbo-permanent".html_safe if local_assigns[:permanent] %>
      role="dialog" aria-modal="true"
      aria-labelledby="<%= dialog_id %>-title" aria-describedby="<%= dialog_id %>-msg"
      class="fixed inset-0 z-50 items-center justify-center p-4">

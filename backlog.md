@@ -52,23 +52,24 @@ datos reales (hostname, usuario, IP del ERP, puerto final) y ejecutarla.
 
 ## Funcionalidad pendiente
 
-### Pruebas de sistema: el JavaScript no tiene ni una línea cubierta
+### Pruebas de sistema: ampliar la cobertura del JavaScript
 
-Detectado en la 3ª auditoría (2026-08-10). No existe `test/system/`, aunque
-`capybara` y `selenium-webdriver` ya están en el Gemfile.
+**Arranque hecho (2026-08-11):** existe `test/system/` con
+`ApplicationSystemTestCase` (Chrome headless) y `order_items_test.rb`, que nació
+para cazar el modal de quitar partida que se cerraba solo. Se corren con
+`bin/rails test:system`, aparte de la suite normal.
 
-**Por qué pesa ahora:** el proyecto acumuló piezas de JS hechas a mano y con
-lógica real —calendario de rango (arrastre, clic-clic, preview, fechas
-locales), autocompletado, combo custom, paso por múltiplos del empaque con las
-flechas, director de foco—, y **todas se validan a mano en el navegador cada
-vez**. Ahí ya se escaparon dos defectos que ninguna prueba habría dejado pasar:
-el segundo día del rango que no se registraba (DOM reconstruido bajo el cursor)
-y una continuación de línea estilo Ruby dentro de JS.
+**Lo que falta cubrir**, por orden de dolor si se rompe:
 
-**Alcance:** arrancar con los flujos que más duelen si se rompen —agregar y
-quitar partidas, y el rango de fechas del reporte— antes que cobertura amplia.
-Ojo: los eventos sintéticos NO reprodujeron el bug del calendario; las pruebas
-tienen que ir por clics reales de Capybara.
+- **Calendario de rango** del reporte: arrastre, clic-clic, preview, rango de
+  un solo día, día actual. Ahí ya se escapó el segundo día que no se
+  registraba. Ojo: los eventos sintéticos NO lo reprodujeron.
+- **Buscador de producto**: autocompletado, agregar al pedido, tope de 45
+  partidas, aviso de capturista sin proveedor ni marca.
+- **Paso por múltiplos del empaque** con las flechas ↑/↓ (`step="any"` y el
+  paso implementado a mano) y el auto-guardado en `blur` solo si cambió.
+- **Combo custom** (`shared/_custom_select`) y los pills de contexto.
+- **Paso 1**: cambio de tipo factura/remisión y los campos que se ocultan.
 
 ### `users.prefix` no se lee en ningún lado: decidir si se conserva
 
