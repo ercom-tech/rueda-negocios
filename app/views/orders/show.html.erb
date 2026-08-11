@@ -9,7 +9,19 @@
       cerrar sesión — con el mismo z, el contenido lo taparía. %>
   <div class="relative z-20 px-6 pt-6 sm:px-10 lg:px-[5%] lg:pt-8">
     <%= render "shared/top_bar" %>
-    <h1 class="mt-8 text-3xl font-extrabold text-white sm:text-4xl">Levantamiento de pedido</h1>
+    <%# El regreso va en la fila del título, como en el resto del sitio, y es
+        UNO solo: al reporte si se llegó desde ahí (conservando sus filtros, su
+        estatus y su página — rearmarlos a mano en cada pedido revisado es justo
+        lo que se hace antes de transmitir), al menú si no. La barra de la card
+        se queda con las acciones. %>
+    <div class="mt-8 flex flex-wrap items-center justify-between gap-4">
+      <h1 class="text-3xl font-extrabold text-white sm:text-4xl">Levantamiento de pedido</h1>
+      <% if report_back_path %>
+        <%= link_to "← Volver al reporte", report_back_path, class: back_link_class %>
+      <% else %>
+        <%= link_to "← Volver al menú", root_path, class: back_link_class %>
+      <% end %>
+    </div>
   </div>
 
   <%# ── Card dorada única (misma gramática que los pasos 1 y 3): barra negra
@@ -27,13 +39,6 @@
           </span>
         </div>
         <div class="flex flex-wrap items-center gap-3">
-          <%# Si se llegó desde el reporte, el regreso conserva sus filtros, su
-              estatus y su página: rearmarlos a mano en cada pedido revisado es
-              justo lo que se hace antes de transmitir. %>
-          <% if report_back_path %>
-            <%= link_to "← Volver al reporte", report_back_path,
-                  class: "rounded-full bg-neutral-700 px-6 py-2.5 font-bold text-white transition-colors hover:bg-neutral-600" %>
-          <% end %>
           <% if can_edit_order?(@order) %>
             <%= link_to "Editar", edit_order_path(@order),
                   class: "rounded-full bg-neutral-700 px-6 py-2.5 font-bold text-white transition-colors hover:bg-neutral-600" %>
@@ -58,8 +63,6 @@
           <% else %>
             <%= link_to "Descargar PDF", pdf_order_path(@order),
                   class: "rounded-full bg-brand-gold px-6 py-2.5 font-bold text-neutral-900 transition-colors hover:bg-brand-gold-dark" %>
-            <%= link_to "Volver al menú", root_path,
-                  class: "rounded-full bg-neutral-700 px-6 py-2.5 font-bold text-white transition-colors hover:bg-neutral-600" %>
           <% end %>
         </div>
       </div>

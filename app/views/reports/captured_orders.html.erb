@@ -16,8 +16,7 @@
           <%= @all_scope ? "Todos los pedidos" : "Mis pedidos" %>
         </span>
       </div>
-      <%= link_to "← Volver a reportes", reports_path,
-            class: "rounded-full bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/20" %>
+      <%= link_to "← Volver a reportes", reports_path, class: back_link_class %>
     </div>
 
     <div class="w-full">

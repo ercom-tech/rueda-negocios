@@ -11,6 +11,13 @@ desde `CLAUDE.md`. El relato de cómo se llegó a cada una vive en `memory.md`.
   barra. Margen lateral **5%**.
 - Superficies de contenido en **card**, con barra negra de título cuando la
   pantalla tiene acciones (folio/estatus a la izquierda, botones a la derecha).
+- **El regreso va en la fila del título de la pantalla**, alineado a la
+  derecha, y es **uno solo**: "← Volver a …" con `back_link_class`
+  (`bg-white/10`, más ligero que un botón de acción — es navegación, no
+  acción). Nunca dentro de la barra negra de la card, que es solo para
+  acciones. El helper existe para que el estándar tenga un único lugar donde
+  cambiarlo: cuando estaba copiado en cada vista, el detalle del pedido se
+  desvió al estilo de acción y nadie lo notó.
 
 ## Roles por color
 
