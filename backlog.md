@@ -52,6 +52,31 @@ datos reales (hostname, usuario, IP del ERP, puerto final) y ejecutarla.
 
 ## Funcionalidad pendiente
 
+### Pruebas de sistema: el JavaScript no tiene ni una línea cubierta
+
+Detectado en la 3ª auditoría (2026-08-10). No existe `test/system/`, aunque
+`capybara` y `selenium-webdriver` ya están en el Gemfile.
+
+**Por qué pesa ahora:** el proyecto acumuló piezas de JS hechas a mano y con
+lógica real —calendario de rango (arrastre, clic-clic, preview, fechas
+locales), autocompletado, combo custom, paso por múltiplos del empaque con las
+flechas, director de foco—, y **todas se validan a mano en el navegador cada
+vez**. Ahí ya se escaparon dos defectos que ninguna prueba habría dejado pasar:
+el segundo día del rango que no se registraba (DOM reconstruido bajo el cursor)
+y una continuación de línea estilo Ruby dentro de JS.
+
+**Alcance:** arrancar con los flujos que más duelen si se rompen —agregar y
+quitar partidas, y el rango de fechas del reporte— antes que cobertura amplia.
+Ojo: los eventos sintéticos NO reprodujeron el bug del calendario; las pruebas
+tienen que ir por clics reales de Capybara.
+
+### `users.prefix` no se lee en ningún lado: decidir si se conserva
+
+El sync-down llena la columna, pero el prefijo del folio lo resuelve
+`rueda-api` contra el ERP en vivo (`cnf_persona.prefijo`), así que
+`rueda-negocios` nunca la consulta. Decidir: borrarla, o dejarla documentada
+como copia de respaldo por si el folio se llegara a armar del lado de la app.
+
 ### Pantallas del menú que faltan
 
 - Read-only: productos, clientes, rueda activa.
