@@ -29,7 +29,7 @@ class OrderItemsController < ApplicationController
       # cierra al elegir: sin este aviso, un duplicado agregado de prisa se
       # perdía entre 45 renglones y el ERP surtía doble. No se bloquea —el
       # mismo producto con distinto descuento es legítimo—, se hace visible.
-      streams = [ *detail_streams, clear_search_stream ]
+      streams = [ *detail_streams, clear_search_stream, scroll_to_stream(item) ]
       if previous_position
         streams << turbo_stream.replace("flash", partial: "shared/flash",
                                                  locals: { alert: duplicate_message(item, previous_position) })
@@ -112,5 +112,14 @@ class OrderItemsController < ApplicationController
 
   def clear_search_stream
     turbo_stream.update("product-search-results", "")
+  end
+
+  # Nodo efímero (ver scroll_to_controller): tras el morph, desliza la vista
+  # hasta la fila recién agregada. Va DESPUÉS del repintado de la tabla en la
+  # lista de streams, para que la fila ya exista cuando el controller conecte.
+  def scroll_to_stream(item)
+    turbo_stream.append("order-detail",
+                        helpers.tag.div(nil, data: { controller: "scroll-to",
+                                                     scroll_to_anchor_value: helpers.dom_id(item) }))
   end
 end

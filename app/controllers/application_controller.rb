@@ -149,8 +149,13 @@ class ApplicationController < ActionController::Base
     return unless SyncRun.running.exists?
 
     if request.format.turbo_stream?
+      # 422 y no 200: Turbo pinta el flash igual, pero `turbo:submit-end`
+      # llega con `success: false`. Con 200, la palomita "Guardado ✓"
+      # aparecía JUNTO al aviso de "vuelve a intentar" y el capturista le
+      # creía a la palomita (5ª auditoría, confirmado en navegador).
       render turbo_stream: turbo_stream.replace("flash", partial: "shared/flash",
-                                                         locals: { alert: SYNC_PAUSE_MESSAGE })
+                                                         locals: { alert: SYNC_PAUSE_MESSAGE }),
+             status: :unprocessable_entity
     else
       redirect_back fallback_location: root_path, alert: SYNC_PAUSE_MESSAGE
     end

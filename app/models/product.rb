@@ -29,8 +29,18 @@ class Product < ApplicationRecord
   # resultó engañoso: "81" está contenido en 003381, 004817, etc. El índice
   # trigram de expresión sobre el LPAD mantiene la rama indexada.
   scope :search, ->(query) {
-    like = "%#{sanitize_sql_like(query.to_s.strip)}%"
-    where(<<~SQL, q: like)
+    q    = sanitize_sql_like(query.to_s.strip)
+    like = "%#{q}%"
+    # Rango de relevancia + orden estable (espejo de Client.search): sin
+    # ORDER BY, Postgres devolvía el top-10 del autocompletado en orden
+    # arbitrario — con >10 coincidencias el producto buscado podía no
+    # aparecer, y la lista cambiaba entre teclas sin cambiar el criterio.
+    relevance = sanitize_sql_array([
+      "CASE WHEN LPAD(CAST(products.erp_product_id AS TEXT), 6, '0') ILIKE :p " \
+      "OR products.description ILIKE :p THEN 0 ELSE 1 END, products.description, products.id",
+      { p: "#{q}%" }
+    ])
+    where(<<~SQL, q: like).order(Arel.sql(relevance))
       products.id IN (
         SELECT id FROM products
          WHERE LPAD(CAST(erp_product_id AS TEXT), 6, '0') ILIKE :q

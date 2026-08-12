@@ -55,11 +55,19 @@
                                             : "Se eliminará el pedido #{@order.folio} con todas sus partidas. ¿Continuar?"),
                     confirm_label: "Sí, descartar", path: order_path(@order), method: :delete %>
             </div>
-            <%# button_to (form real) y no link con turbo_method: el intercept
-                del link fallaba en silencio (no emitía el POST). %>
-            <%= button_to "Finalizar pedido", capture_order_path(@order),
-                  form_class: "inline-block",
-                  class: "cursor-pointer rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
+            <% if @order.draft? %>
+              <%# button_to (form real) y no link con turbo_method: el intercept
+                  del link fallaba en silencio (no emitía el POST). %>
+              <%= button_to "Finalizar pedido", capture_order_path(@order),
+                    form_class: "inline-block",
+                    class: "cursor-pointer rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
+            <% else %>
+              <%# Ya está capturado: el coral lleva al resumen (ahí vive el
+                  PDF), no a "finalizarlo" otra vez — con ese rótulo, llegar
+                  al PDF del cliente exigía tocar un botón que mentía. %>
+              <%= link_to "Ir al resumen", summary_order_path(@order),
+                    class: "inline-block rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
+            <% end %>
           <% else %>
             <%= link_to "Descargar PDF", pdf_order_path(@order),
                   class: "rounded-full bg-brand-gold px-6 py-2.5 font-bold text-neutral-900 transition-colors hover:bg-brand-gold-dark" %>
@@ -138,9 +146,12 @@
                   idéntico al bloque de solo lectura de abajo —mismo color, mismo
                   radio, mismo borde— y el capturista no sabía si podía escribir
                   hasta hacer clic. %>
+              <%# `remember` guarda el valor al entrar: si el envío falla (la
+                  pausa de sync responde 422), el campo revierte a lo guardado
+                  en vez de quedarse mintiendo con lo tecleado. %>
               <%= text_area_tag :observations, @order.observations,
                     placeholder: "Observaciones", "aria-label": "Observaciones del pedido",
-                    data: { action: "change->form-submit#submit" },
+                    data: { action: "focus->form-submit#remember change->form-submit#submit" },
                     class: "h-full min-h-32 w-full rounded-2xl border border-black/10 bg-white p-4 uppercase text-neutral-900 outline-none placeholder:normal-case placeholder:text-neutral-500 focus:border-brand-gold-dark" %>
               <span data-form-submit-target="status" role="status"
                     class="pointer-events-none absolute bottom-3 right-4 text-sm font-semibold text-neutral-900 opacity-0 transition-opacity duration-300">

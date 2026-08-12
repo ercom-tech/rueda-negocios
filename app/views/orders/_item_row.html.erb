@@ -6,8 +6,12 @@
   <td class="px-2 py-2">
     <% if can_edit_order?(order) %>
       <div data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
-        <button type="button" data-action="modal#open" aria-label="Quitar producto"
-                class="inline-flex h-11 w-11 items-center justify-center text-neutral-400 transition-colors hover:text-red-600">
+        <%# neutral-600 en reposo: el 400 daba 2.2:1 sobre crema y el realce
+            rojo es hover-only — en tablet siempre se veía en su versión más
+            tenue. El aria-label nombra la partida: las 45 filas se anunciaban
+            igual y el lector de pantalla no sabía cuál borraba. %>
+        <button type="button" data-action="modal#open" aria-label="Quitar producto — <%= item.description %>"
+                class="inline-flex h-11 w-11 items-center justify-center text-neutral-600 transition-colors hover:text-red-600">
           <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
           </svg>
@@ -35,8 +39,13 @@
 
   <td class="px-3 py-2">
     <% if can_edit_order?(order) %>
+      <%# `turbo:submit-end` revierte el campo al valor guardado si el envío
+          falló (la pausa de sync responde 422): sin eso, el input se quedaba
+          con lo tecleado, el total sin recalcular, y el siguiente blur ya no
+          reenviaba porque el valor "no cambió". %>
       <%= form_with model: item, url: order_order_item_path(order, item), method: :patch,
-            id: dom_id(item, :quantity_form), data: { controller: "form-submit" } do |f| %>
+            id: dom_id(item, :quantity_form),
+            data: { controller: "form-submit", action: "turbo:submit-end->form-submit#flashStatus" } do |f| %>
         <%# Con empaque mínimo: el min del input ES el empaque (si no, la flecha
             ↓ desde el empaque se sujetaba a 1 y desalineaba: 10→1→11) y
             data-step-size hace que las flechas avancen alineadas a la rejilla
@@ -67,7 +76,8 @@
   <td class="px-3 py-2">
     <% if can_edit_order?(order) %>
       <%= form_with model: item, url: order_order_item_path(order, item), method: :patch,
-            id: dom_id(item, :discount_form), data: { controller: "form-submit" } do |f| %>
+            id: dom_id(item, :discount_form),
+            data: { controller: "form-submit", action: "turbo:submit-end->form-submit#flashStatus" } do |f| %>
         <div class="flex items-center justify-center gap-1">
           <%= f.number_field :discount_percent, min: 0, max: 100, step: "any", id: dom_id(item, :discount),
                 value: number_with_precision(item.discount_percent, strip_insignificant_zeros: true),

@@ -27,7 +27,9 @@ class OrderItemsTest < ApplicationSystemTestCase
   end
 
   def trash_button_of(item)
-    find("#order_item_#{item.id} button[aria-label='Quitar producto']")
+    # Por prefijo: el aria-label completo nombra la partida ("Quitar producto
+    # — MARTILLO..."), para que las filas no se anuncien todas igual.
+    find("#order_item_#{item.id} button[aria-label^='Quitar producto']")
   end
 
   # El defecto: el diálogo se abre poniendo un `style` en línea, y el

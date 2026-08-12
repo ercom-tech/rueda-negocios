@@ -46,8 +46,14 @@ export default class extends Controller {
       // Producto con empaque: la flecha va al SIGUIENTE múltiplo en su
       // dirección (10→20→30; un 15 tecleado va a 20 con ↑ y a 10 con ↓),
       // sin bajar del empaque (10↓ se queda en 10, no cae a 1).
-      next = dir > 0 ? Math.floor(current / step) * step + step
-                     : Math.ceil(current / step) * step - step
+      //
+      // La aritmética va en unidades ENTERAS del empaque: con pasos
+      // decimales, la división flotante (0.3/0.1 = 2.9999…) atoraba la
+      // flecha o dejaba 0.30000000000000004 visible en el campo.
+      const decimals = (String(step).split(".")[1] || "").length
+      const units = Math.round((current / step) * 1e6) / 1e6
+      next = (dir > 0 ? Math.floor(units) + 1 : Math.ceil(units) - 1) * step
+      next = parseFloat(next.toFixed(decimals))
       if (next < step) next = step
     } else {
       next = current + dir
@@ -59,12 +65,28 @@ export default class extends Controller {
     input.value = next
   }
 
+  // Cierre de cada envío. Si falló (p. ej. la pausa durante un sync responde
+  // 422): sin palomita, y los campos con valor recordado se revierten al
+  // guardado — dejarlos con lo tecleado era doble mentira: la tabla no se
+  // repinta (solo cambió el flash) y el siguiente blur ya no reenviaba
+  // porque el valor "no cambió" respecto a lo tecleado. Si salió bien,
+  // muestra el "Guardado ✓" unos segundos (cuando el form trae target).
   flashStatus(event) {
-    if (!this.hasStatusTarget || event.detail?.success === false) return
+    if (event.detail?.success === false) {
+      this.revertRemembered()
+      return
+    }
+    if (!this.hasStatusTarget) return
 
     this.statusTarget.classList.remove("opacity-0")
     clearTimeout(this._statusTimer)
     this._statusTimer = setTimeout(() => this.statusTarget.classList.add("opacity-0"), 2000)
+  }
+
+  revertRemembered() {
+    this.element.querySelectorAll("[data-initial-value]").forEach((field) => {
+      field.value = field.dataset.initialValue
+    })
   }
 
   disconnect() {

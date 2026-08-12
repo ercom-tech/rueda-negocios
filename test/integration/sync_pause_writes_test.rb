@@ -36,7 +36,9 @@ class SyncPauseWritesTest < ActionDispatch::IntegrationTest
     patch order_order_item_path(@order, @item), params: { order_item: { quantity: 7 } },
           headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
-    assert_response :success
+    # 422 y no 200: con éxito, `turbo:submit-end` traía `success: true` y la
+    # palomita "Guardado ✓" salía junto al aviso de reintento (5ª auditoría).
+    assert_response :unprocessable_entity
     assert_match(/Se está actualizando la información/, response.body)
     assert_equal 1, @item.reload.quantity, "no debe escribir nada"
   end
