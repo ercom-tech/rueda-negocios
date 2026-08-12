@@ -10,7 +10,10 @@
   <%= form_with url: url, method: :patch, data: { controller: "form-submit" } do %>
     <div class="flex items-center gap-2 rounded-full bg-brand-cream px-5 py-2.5 text-neutral-800">
       <span><%= label %>:</span>
-      <%= render "shared/custom_select", name: param, include_blank: false,
+      <%# `label:` da el nombre accesible: el rótulo visible es un <span>, no
+          un <label>, así que sin esto los combos de Proveedor y Marca se
+          anunciaban ambos "— Selecciona —" (5ª auditoría). %>
+      <%= render "shared/custom_select", name: param, include_blank: false, label: label,
             options: items.map { |i| [i.name, i.id] }, selected: current&.id,
             input_data: { action: "change->form-submit#submit" },
             button_class: "flex items-center gap-1 font-semibold text-neutral-800",

@@ -43,11 +43,9 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
     o
   end
 
-  def login(username) = post(login_path, params: { username: username, password: "secret123" })
-
   # El renglón de "No hay pedidos capturados" también es un <tr>: se descarta
   # por su celda con colspan, o un listado vacío contaría como una fila.
-  def filas
+  def data_rows
     css_select("tbody tr").count { |tr| tr.css("td[colspan]").empty? }
   end
 
@@ -57,11 +55,11 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
     order!(user: @ana,  client: @c1)
     order!(user: @beto, client: @c1)
     order!(user: @beto, client: @c2)
-    login("srv990")
+    login_as("srv990")
 
     get captured_orders_report_path(user_id: @beto.id)
     assert_response :success
-    assert_equal 2, filas
+    assert_equal 2, data_rows
 
     summary = OrdersFilter.new(user_id: @beto.id).apply_without_status(Order.all).totals_by_status
     assert_equal 2, summary["captured"][:count], "el resumen se acota igual que la tabla"
@@ -70,13 +68,13 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
   test "cliente y vendedor acotan el listado" do
     order!(user: @ana, client: @c1)
     order!(user: @ana, client: @c2)
-    login("srv990")
+    login_as("srv990")
 
     get captured_orders_report_path(client_id: @c2.id)
-    assert_equal 1, filas
+    assert_equal 1, data_rows
 
     get captured_orders_report_path(salesperson_id: @v1.id)
-    assert_equal 1, filas, "el vendedor es el del cliente del pedido"
+    assert_equal 1, data_rows, "el vendedor es el del cliente del pedido"
   end
 
   test "el rango de fechas usa el día LOCAL que muestra la pantalla" do
@@ -85,16 +83,16 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
     tarde = ::Time.new(2026, 8, 10, 19, 0, 0)
     order!(user: @ana, client: @c1, created_at: tarde)
     order!(user: @ana, client: @c1, created_at: ::Time.new(2026, 8, 12, 9, 0, 0))
-    login("srv990")
+    login_as("srv990")
 
     get captured_orders_report_path(from: "2026-08-10", to: "2026-08-10")
-    assert_equal 1, filas
+    assert_equal 1, data_rows
 
     get captured_orders_report_path(from: "2026-08-11")
-    assert_equal 1, filas, "solo el del día 12"
+    assert_equal 1, data_rows, "solo el del día 12"
 
     get captured_orders_report_path(from: "2026-08-10", to: "2026-08-12")
-    assert_equal 2, filas
+    assert_equal 2, data_rows
   end
 
   # El día se cierra con un rango excluyente hasta el inicio del siguiente: con
@@ -103,30 +101,30 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
   test "el último segundo del día final entra en el rango" do
     o = order!(user: @ana, client: @c1)
     o.update_column(:created_at, ::Time.new(2026, 8, 10, 23, 59, 59.5))
-    login("srv990")
+    login_as("srv990")
 
     get captured_orders_report_path(from: "2026-08-10", to: "2026-08-10")
-    assert_equal 1, filas, "23:59:59.5 sigue siendo del día 10"
+    assert_equal 1, data_rows, "23:59:59.5 sigue siendo del día 10"
   end
 
   # Una página que ya no existe (marcador viejo, o la lista encogió) daba la
   # pantalla de error de Rails en plena laptop del evento.
   test "una página fuera de rango redirige en vez de reventar" do
     3.times { order!(user: @ana, client: @c1) }
-    login("srv990")
+    login_as("srv990")
 
     get captured_orders_report_path(page: 99)
     assert_response :redirect
     follow_redirect!
     assert_response :success
-    assert_equal 3, filas
+    assert_equal 3, data_rows
   end
 
   # Con el hash crudo de la petición, un `?host=` hacía que Rails generara los
   # enlaces del paginador como URLs ABSOLUTAS a ese dominio.
   test "un host inyectado en la URL no se cuela a los enlaces del paginador" do
     30.times { order!(user: @ana, client: @c1) }
-    login("srv990")
+    login_as("srv990")
 
     get captured_orders_report_path(host: "sitio-ajeno.example.com")
     assert_response :success
@@ -134,7 +132,7 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
   end
 
   test "el estado vacío distingue sin pedidos de sin coincidencias" do
-    login("srv990")
+    login_as("srv990")
 
     get captured_orders_report_path
     assert_match(/Todavía no hay pedidos capturados/, response.body)
@@ -147,11 +145,11 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
 
   test "una fecha inválida se ignora en vez de reventar" do
     order!(user: @ana, client: @c1)
-    login("srv990")
+    login_as("srv990")
 
     get captured_orders_report_path(from: "no-es-fecha")
     assert_response :success
-    assert_equal 1, filas
+    assert_equal 1, data_rows
   end
 
   # --- Estatus: las tarjetas son el filtro ---------------------------------
@@ -159,10 +157,10 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
   test "el estatus acota la tabla pero NO el resumen" do
     order!(user: @ana, client: @c1, status: "draft")
     2.times { order!(user: @ana, client: @c1, status: "captured") }
-    login("srv990")
+    login_as("srv990")
 
     get captured_orders_report_path(status: "draft")
-    assert_equal 1, filas, "la tabla sí se acota"
+    assert_equal 1, data_rows, "la tabla sí se acota"
     # El resumen conserva los tres estatus para poder saltar entre tarjetas.
     assert_match(/Capturado/, response.body)
     assert_select "a[href*=?]", "status=captured"
@@ -172,7 +170,7 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
     order!(user: @ana,  client: @c1, status: "captured")
     order!(user: @beto, client: @c1, status: "captured")
     order!(user: @beto, client: @c1, status: "draft")
-    login("srv990")
+    login_as("srv990")
 
     summary = OrdersFilter.new(user_id: @beto.id).apply_without_status(Order.all).totals_by_status
     assert_equal 1, summary["captured"][:count], "solo los de BETO"
@@ -181,11 +179,11 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
 
   test "un estatus desconocido se ignora" do
     order!(user: @ana, client: @c1)
-    login("srv990")
+    login_as("srv990")
 
     get captured_orders_report_path(status: "inventado")
     assert_response :success
-    assert_equal 1, filas
+    assert_equal 1, data_rows
   end
 
   # --- Alcance por rol -----------------------------------------------------
@@ -193,21 +191,21 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
   test "el capturista no puede filtrar hacia pedidos ajenos" do
     order!(user: @ana,  client: @c1)
     order!(user: @beto, client: @c1)
-    login("ana991")
+    login_as("ana991")
 
     get captured_orders_report_path(user_id: @beto.id)
     assert_response :success
-    assert_equal 0, filas, "el filtro se aplica SOBRE su propio alcance"
+    assert_equal 0, data_rows, "el filtro se aplica SOBRE su propio alcance"
   end
 
   test "el combo de usuario crea solo se ofrece al equipo-servidor" do
     order!(user: @ana, client: @c1)
 
-    login("srv990")
+    login_as("srv990")
     get captured_orders_report_path
     assert_select "input[name=?]", "user_id", 1
 
-    login("ana991")
+    login_as("ana991")
     get captured_orders_report_path
     assert_select "input[name=?]", "user_id", 0
   end
@@ -216,7 +214,7 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
   # Regla del usuario: con uno activo, los importes que se muestran son los de
   # las partidas que COINCIDEN, no los del pedido completo.
 
-  def catalogo!
+  def build_catalog!
     @makita  = Supplier.create!(erp_supplier_id: 993, name: "MAKITA")
     @stihl   = Supplier.create!(erp_supplier_id: 994, name: "STIHL")
     @m_brand = Brand.create!(erp_brand_id: 993, name: "MARCA MAKITA")
@@ -227,7 +225,7 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
   end
 
   # Pedido mixto: una partida MAKITA ($116) y una STIHL ($232).
-  def pedido_mixto!
+  def mixed_kinds_order!
     o = Order.create!(user: @ana, business_round: @round, client: @c1, kind: "remission",
                       status: "captured", local_folio: next_folio)
     o.order_items.create!(position: 1, product: @disco,  quantity: 1, unit_price: 100, tax_rate: 16, discount_percent: 0)
@@ -236,23 +234,23 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
   end
 
   test "el filtro de proveedor trae los pedidos que traen al menos una partida suya" do
-    catalogo!
-    pedido_mixto!
+    build_catalog!
+    mixed_kinds_order!
     order!(user: @ana, client: @c1, product: @motosi)
-    login("srv990")
+    login_as("srv990")
 
     get captured_orders_report_path(supplier_id: @makita.id)
-    assert_equal 1, filas, "solo el mixto trae MAKITA"
+    assert_equal 1, data_rows, "solo el mixto trae MAKITA"
 
     get captured_orders_report_path(supplier_id: @stihl.id)
-    assert_equal 2, filas
+    assert_equal 2, data_rows
   end
 
   test "con filtro de proveedor el importe es el de SUS partidas, no el del pedido" do
-    catalogo!
-    o = pedido_mixto!
+    build_catalog!
+    o = mixed_kinds_order!
     assert_in_delta 348, o.total, 0.01, "el pedido completo son $348"
-    login("srv990")
+    login_as("srv990")
 
     summary = OrdersFilter.new(supplier_id: @makita.id)
                           .then { |f| f.apply_without_status(Order.all).totals_by_status(f.matching_products) }
@@ -265,9 +263,9 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
   end
 
   test "la pantalla avisa que los importes son de las partidas" do
-    catalogo!
-    pedido_mixto!
-    login("srv990")
+    build_catalog!
+    mixed_kinds_order!
+    login_as("srv990")
 
     get captured_orders_report_path(supplier_id: @makita.id)
     assert_match(/Importes de las partidas de MAKITA/, response.body)
@@ -283,8 +281,8 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
   # --- Autocompletado del filtro de producto -------------------------------
 
   test "el autocompletado sugiere productos por nombre y por código" do
-    catalogo!
-    login("srv990")
+    build_catalog!
+    login_as("srv990")
 
     get product_options_report_path(q: "DISCO")
     assert_response :success
@@ -297,74 +295,74 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
   end
 
   test "sin coincidencias el autocompletado lo dice" do
-    catalogo!
-    login("srv990")
+    build_catalog!
+    login_as("srv990")
 
     get product_options_report_path(q: "NO EXISTE")
-    assert_match(/Sin coincidencias/, response.body)
+    assert_match(/Sin resultados/, response.body)
   end
 
   # El capturista solo ve productos de su universo: ofrecerle otros sería
   # sugerirle filtros que nunca podrían aparecer en sus pedidos.
   test "el autocompletado del capturista se acota a su universo" do
-    catalogo!
+    build_catalog!
     BusinessRoundPerson.create!(business_round: @round, user: @ana, position: 1, supplier: @makita)
-    login("ana991")
+    login_as("ana991")
 
     get product_options_report_path(q: "DISCO")
     assert_match(/DISCO CRTE 7/, response.body, "el disco es del proveedor que tiene asignado")
 
     get product_options_report_path(q: "MOTOSIERRA")
-    assert_match(/Sin coincidencias/, response.body, "la motosierra es de otro proveedor")
+    assert_match(/Sin resultados/, response.body, "la motosierra es de otro proveedor")
   end
 
   test "renglones también cuenta solo las partidas que coinciden" do
-    catalogo!
-    pedido_mixto!   # 2 partidas, 1 de MAKITA
-    login("srv990")
+    build_catalog!
+    mixed_kinds_order!   # 2 partidas, 1 de MAKITA
+    login_as("srv990")
 
     get captured_orders_report_path(supplier_id: @makita.id)
     assert_select "tbody tr td:nth-last-child(3)", text: "1"
   end
 
   test "marca y producto filtran igual" do
-    catalogo!
-    pedido_mixto!
-    login("srv990")
+    build_catalog!
+    mixed_kinds_order!
+    login_as("srv990")
 
     get captured_orders_report_path(brand_id: @m_brand.id)
-    assert_equal 1, filas
+    assert_equal 1, data_rows
     assert_match(/\$116\.00/, response.body)
 
     get captured_orders_report_path(product_q: "019163")
-    assert_equal 1, filas, "busca por el código a 6 dígitos"
+    assert_equal 1, data_rows, "busca por el código a 6 dígitos"
 
     get captured_orders_report_path(product_q: "MOTOSIERRA")
-    assert_equal 1, filas
+    assert_equal 1, data_rows
     assert_match(/\$232\.00/, response.body)
   end
 
   test "los filtros de partida se combinan entre sí (intersección)" do
-    catalogo!
-    pedido_mixto!
-    login("srv990")
+    build_catalog!
+    mixed_kinds_order!
+    login_as("srv990")
 
     # MAKITA + su marca → coincide; MAKITA + producto de STIHL → nada.
     get captured_orders_report_path(supplier_id: @makita.id, brand_id: @m_brand.id)
-    assert_equal 1, filas
+    assert_equal 1, data_rows
 
     get captured_orders_report_path(supplier_id: @makita.id, product_q: "MOTOSIERRA")
-    assert_equal 0, filas
+    assert_equal 0, data_rows
   end
 
   test "un filtro de partida sin coincidencias deja el resumen en ceros" do
-    catalogo!
-    pedido_mixto!
-    login("srv990")
+    build_catalog!
+    mixed_kinds_order!
+    login_as("srv990")
 
     get captured_orders_report_path(product_q: "NO EXISTE ESTE PRODUCTO")
     assert_response :success
-    assert_equal 0, filas
+    assert_equal 0, data_rows
   end
 
   # --- Enlaces -------------------------------------------------------------
@@ -372,19 +370,19 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
   test "los enlaces del paginador conservan los filtros" do
     30.times { order!(user: @beto, client: @c1) }
     order!(user: @ana, client: @c1)
-    login("srv990")
+    login_as("srv990")
 
     get captured_orders_report_path(user_id: @beto.id)
-    assert_equal 25, filas
+    assert_equal 25, data_rows
     assert_select "a[href*=?]", "user_id=#{@beto.id}"
 
     get captured_orders_report_path(user_id: @beto.id, page: 2)
-    assert_equal 5, filas, "la segunda página sigue filtrada"
+    assert_equal 5, data_rows, "la segunda página sigue filtrada"
   end
 
   test "el formulario de filtros no arrastra la página" do
     30.times { order!(user: @ana, client: @c1) }
-    login("srv990")
+    login_as("srv990")
 
     get captured_orders_report_path(page: 2)
     assert_select "form input[name=?]", "page", 0,
@@ -393,7 +391,7 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
 
   test "limpiar filtros aparece solo cuando hay alguno activo" do
     order!(user: @ana, client: @c1)
-    login("srv990")
+    login_as("srv990")
 
     get captured_orders_report_path
     assert_no_match(/Limpiar filtros/, response.body)

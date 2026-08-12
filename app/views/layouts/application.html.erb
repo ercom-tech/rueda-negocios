@@ -4,10 +4,10 @@
 <!DOCTYPE html>
 <html lang="es">
   <head>
-    <title><%= content_for(:title) || "Rueda Negocios" %></title>
+    <title><%= content_for(:title) || "Rueda de Negocios · FECEGO" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="application-name" content="Rueda Negocios">
+    <meta name="application-name" content="Rueda de Negocios · FECEGO">
     <meta name="mobile-web-app-capable" content="yes">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
@@ -33,7 +33,12 @@
           <% end %>
           <div class="flex items-center gap-4 text-sm">
             <span class="text-white/70"><%= current_user.full_name.presence || current_user.username %></span>
+            <%# Con confirmación, como el estándar del shell (que usa modal):
+                si una vista futura cae en este fallback, no debe caer con un
+                cierre de sesión de un solo toque. El confirm nativo basta
+                aquí — este layout no carga el controller del modal. %>
             <%= button_to "Cerrar sesión", logout_path, method: :delete,
+                  form: { data: { turbo_confirm: "Se cerrará tu sesión. ¿Continuar?" } },
                   class: "rounded-md bg-white/10 px-3 py-1.5 font-medium hover:bg-white/20 transition-colors" %>
           </div>
         </div>

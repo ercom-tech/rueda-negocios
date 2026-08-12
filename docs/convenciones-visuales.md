@@ -27,14 +27,17 @@ desde `CLAUDE.md`. El relato de cómo se llegó a cada una vive en `memory.md`.
 | Crema | **Toda** superficie de contenido, fija o flotante (tablas, forms, totales, dropdowns, avisos) |
 | Negro | Controles de captura (buscadores, selects, `thead`) y barras de título |
 | Coral | Acción primaria o culminación (Finalizar, Total, badge Transmitido) |
+| Rojo | **Solo** error: flash de alerta (`red-700`), anillos de campo faltante, motivos de falla del panel |
+| Neutral-700 | Acción secundaria o destructiva-con-modal (Editar, Descartar, Cancelar, Cerrar rueda) |
+| Emerald | **Solo** feedback global (flash, "✓ Listo" del sync) |
+| Blanco | **Solo** campos de entrada — es la señal de "esto se escribe" |
 
 El coral es **#bd5343**, no el #ce6150 original: con blanco encima daba 3.85:1,
 debajo del 4.5 que pide AA para texto normal — y ahí viven los botones de
 confirmación de todos los modales y los avisos de error del paso 1, los que
-explican qué falta. Tablet en un salón con ventanal es el caso real. Cualquier
-tono nuevo que lleve texto blanco encima se mide antes de usarse.
-| Emerald | **Solo** feedback global (flash, "✓ Listo" del sync) |
-| Blanco | **Solo** campos de entrada — es la señal de "esto se escribe" |
+explican qué falta. Tablet en un salón con ventanal es el caso real. Por la
+misma regla el flash de alerta es `red-700` (~6:1), no `red-600` (4.08:1).
+Cualquier tono nuevo que lleve texto blanco encima se mide antes de usarse.
 
 Grises del manual de identidad: `neutral-400` para el fondo de controles
 grises (buscador de producto), con texto e íconos `neutral-700/900`.

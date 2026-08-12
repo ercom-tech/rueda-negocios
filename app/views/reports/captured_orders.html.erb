@@ -24,7 +24,7 @@
     <%= render "filters", filter: @filter, options: @options, per_page: @pagy.limit %>
     <%= render "status_summary", summary: @summary, filter: @filter, per_page: @pagy.limit %>
 
-    <div class="overflow-x-auto rounded-3xl border border-white/10 bg-brand-cream text-neutral-900">
+    <div class="overflow-x-auto rounded-3xl border border-black/10 bg-brand-cream text-neutral-900">
       <table class="w-full text-sm">
         <thead class="bg-black text-white">
           <tr>
@@ -82,7 +82,7 @@
               los pedidos y dispararía una llamada al equipo del servidor. %>
           <% if @orders.empty? %>
             <tr>
-              <td colspan="<%= @all_scope ? 9 : 8 %>" class="px-4 py-10 text-center text-neutral-500">
+              <td colspan="<%= @all_scope ? 9 : 8 %>" class="px-4 py-10 text-center text-neutral-600">
                 <% if @filter.any? %>
                   Ningún pedido coincide con lo que elegiste.
                   <%= link_to "Quitar filtros", captured_orders_report_path(per_page: @pagy.limit),

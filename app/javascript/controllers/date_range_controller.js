@@ -208,6 +208,9 @@ export default class extends Controller {
       const btn = document.createElement("button")
       btn.type = "button"
       btn.textContent = d
+      // Nombre accesible completo: el contexto (mes/año) vive en un <span>
+      // aparte, así que sin esto cada botón se anunciaba solo como "5".
+      btn.setAttribute("aria-label", `${d} de ${MONTH_NAMES[date.getMonth()]} de ${date.getFullYear()}`)
       btn.dataset.date = this.format(date)
       // `click` además de los eventos de mouse: Enter y Espacio sobre un
       // <button> disparan click y NUNCA mousedown, así que sin esto el
@@ -244,7 +247,9 @@ export default class extends Controller {
                  : isInside ? "bg-brand-gold text-neutral-900"
                           : "text-neutral-900 hover:bg-black/5") +
         (isToday && !isEdge ? " ring-2 ring-inset ring-brand-coral" : "")
-      btn.setAttribute("aria-current", isToday ? "date" : "false")
+      // `aria-current="false"` literal no es un valor válido: se quita.
+      if (isToday) btn.setAttribute("aria-current", "date")
+      else btn.removeAttribute("aria-current")
     })
   }
 

@@ -8,7 +8,15 @@
       cerrar sesión — con el mismo z, el contenido lo taparía. %>
   <div class="relative z-20 px-6 pt-6 sm:px-10 lg:px-[5%] lg:pt-8">
     <%= render "shared/top_bar" %>
-    <h1 class="mt-8 text-3xl font-extrabold text-white sm:text-4xl">Levantamiento de pedido</h1>
+    <%# El regreso va en la fila del título con `back_link_class` (estándar
+        del sitio): dentro de la card iba en estilo de botón de acción — la
+        desviación exacta que motivó el helper. El pedido capturado sigue
+        siendo editable hasta transmitirse, así que el camino de regreso
+        importa (evita el callejón sin salida). %>
+    <div class="mt-8 flex flex-wrap items-center justify-between gap-4">
+      <h1 class="text-3xl font-extrabold text-white sm:text-4xl">Levantamiento de pedido</h1>
+      <%= link_to "← Volver al pedido", order_path(@order), class: back_link_class %>
+    </div>
   </div>
 
   <div class="relative z-10 mx-auto max-w-xl px-6 py-12">
@@ -40,10 +48,6 @@
         </div>
 
         <div class="flex items-center justify-center gap-3 pt-2">
-          <%# El pedido capturado sigue siendo editable hasta transmitirse: dejar
-              siempre un camino de regreso (evita el callejón sin salida). %>
-          <%= link_to "Volver al pedido", order_path(@order),
-                class: "inline-block rounded-full bg-neutral-700 px-8 py-3 font-bold text-white transition-colors hover:bg-neutral-600" %>
           <%= link_to "Terminar", root_path,
                 class: "inline-block rounded-full bg-neutral-700 px-8 py-3 font-bold text-white transition-colors hover:bg-neutral-600" %>
           <%# En sesiones de captura seguidas, la acción siguiente SIEMPRE es

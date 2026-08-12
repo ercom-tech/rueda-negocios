@@ -9,8 +9,12 @@
       <span><%= notice %></span>
       <%# Heroicon outline `x-mark`: el &times; tipográfico era el único cierre
           del sitio que no era un ícono del pack. %>
+      <%# Área táctil de 44px (como el bote de basura de las partidas): el
+          único cuerpo del botón era el ícono de 16px, imposible de atinar en
+          tablet — y los alerts no se cierran solos, así que este botón es el
+          único camino. Los márgenes negativos conservan el tamaño del pill. %>
       <button type="button" data-action="flash#dismiss" aria-label="Cerrar aviso"
-              class="-mr-1 text-white/80 transition-colors hover:text-white">
+              class="-my-2.5 -mr-3 flex h-11 w-11 shrink-0 items-center justify-center text-white/80 transition-colors hover:text-white">
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
         </svg>
@@ -25,12 +29,16 @@
       `notice` sí siguen desapareciendo solos: son confirmaciones. %>
   <% if alert.present? %>
     <div role="alert" data-controller="flash" data-flash-delay-value="0"
-         class="pointer-events-auto flex items-center gap-3 rounded-lg bg-red-600 px-4 py-2 text-sm text-white shadow-lg">
+         class="pointer-events-auto flex items-center gap-3 rounded-lg bg-red-700 px-4 py-2 text-sm text-white shadow-lg">
       <span><%= alert %></span>
       <%# Heroicon outline `x-mark`: el &times; tipográfico era el único cierre
           del sitio que no era un ícono del pack. %>
+      <%# Área táctil de 44px (como el bote de basura de las partidas): el
+          único cuerpo del botón era el ícono de 16px, imposible de atinar en
+          tablet — y los alerts no se cierran solos, así que este botón es el
+          único camino. Los márgenes negativos conservan el tamaño del pill. %>
       <button type="button" data-action="flash#dismiss" aria-label="Cerrar aviso"
-              class="-mr-1 text-white/80 transition-colors hover:text-white">
+              class="-my-2.5 -mr-3 flex h-11 w-11 shrink-0 items-center justify-center text-white/80 transition-colors hover:text-white">
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
         </svg>
