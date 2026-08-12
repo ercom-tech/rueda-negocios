@@ -79,7 +79,9 @@
             <% if @order.errors.any? %>
               <% field_labels = { "cfdi_use_id" => "Uso de CFDI", "client_tax_profile_id" => "Nombre o razón social",
                                   "client_receipt_profile_id" => "Remisión", "client_branch_id" => "Dirección de entrega" } %>
-              <div class="rounded-2xl bg-brand-coral px-5 py-3 text-sm font-semibold text-white">
+              <%# `data-missing-fields`: el combo lo esconde cuando ya no queda
+                  ningún campo marcado en rojo (select_controller#clearInvalid). %>
+              <div data-missing-fields class="rounded-2xl bg-brand-coral px-5 py-3 text-sm font-semibold text-white">
                 Faltan datos obligatorios:
                 <%= @order.errors.attribute_names.map { |a| field_labels[a.to_s] || a.to_s.humanize }.uniq.join(", ") %>.
               </div>

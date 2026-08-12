@@ -125,6 +125,31 @@ los tres criterios que traía el reporte estaban enunciados sobre el recorte
 equivocado, y en ambos casos los números correctos se parecían lo bastante a
 los del reporte como para no notarlo sin volver a consultar.
 
+### Las dos últimas de usabilidad (cerradas)
+
+**Producto repetido sin aviso.** Agregar dos veces el mismo producto creaba dos
+partidas idénticas y la sugerencia se veía igual que la de uno nuevo: con la
+tabla scrolleando y 45 renglones posibles, el duplicado no se notaba y el ERP
+surtía doble. **No se bloquea** —el mismo producto con distinto descuento es
+legítimo, y el hallazgo era la ausencia del aviso, no la posibilidad—: se marca
+en el buscador ("Ya está en el pedido, partida 3", y el botón pasa a "Agregar
+otra vez") y el controlador lo repite al agregarlo, porque la lista se cierra
+al elegir y el aviso previo ya no está a la vista. El modal de quitar nombra
+ahora la partida: con el producto repetido, la descripción sola no decía cuál.
+
+**Los anillos rojos no se apagaban al corregir.** Tras un submit inválido el
+capturista elegía el valor que faltaba y veía todo igual de rojo, dudaba si
+había guardado y volvía a abrir el combo a verificar. `select#choose` ahora
+apaga su propio anillo y esconde el banner cuando ya no queda ninguno marcado.
+
+Lo interesante fue el caso que **duplicaba** el defecto: elegir la razón social
+auto-llena el uso de CFDI (`cfdi-default`), así que quedaban DOS campos llenos
+y los dos seguían marcados. Se resuelve solo porque `cfdi-default` hace click
+en la opción del otro combo, o sea que pasa por el mismo `choose`. La prueba de
+sistema lo fija, y para escribirla hubo que darle a la razón social un uso de
+CFDI por omisión — sin eso la prueba pasaba por el camino equivocado, con el
+CFDI legítimamente pendiente.
+
 ### Deuda de convenciones (cerrada)
 
 Cuatro MEDIA que no producían un defecto hoy pero cuyo costo **crece**: cada

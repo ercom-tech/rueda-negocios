@@ -103,6 +103,67 @@ class OrderItemsLimitTest < ActionDispatch::IntegrationTest
     assert_no_match(/data-focus-selector-value/, response.body)
   end
 
+  # --- Producto repetido ---------------------------------------------------
+  # Agregar dos veces el mismo producto es legítimo (mismo producto con
+  # distinto descuento), pero pasaba SIN NINGÚN AVISO: la sugerencia se veía
+  # idéntica a la de uno nuevo y, con la tabla scrolleando, el duplicado no se
+  # notaba. El pedido llegaba al ERP con dos renglones iguales y se surte doble.
+
+  test "el buscador marca el producto que ya está en el pedido y en qué partida" do
+    producto = product!(950_010)
+    @order.order_items.create!(position: 1, quantity: 1, unit_price: 100, tax_rate: 16,
+                               discount_percent: 0, product: producto)
+
+    get product_options_order_path(@order), params: { q: "Producto 950010" }
+
+    assert_match(/Ya está en el pedido, partida 1/, response.body)
+    assert_match(/Agregar otra vez/, response.body)
+  end
+
+  test "un producto nuevo no se marca como repetido" do
+    product!(950_011)
+
+    get product_options_order_path(@order), params: { q: "Producto 950011" }
+
+    assert_no_match(/Ya está en el pedido/, response.body)
+    assert_match(/>\s*Agregar\s*</, response.body)
+  end
+
+  # La lista se cierra al elegir, así que el aviso previo ya no está a la vista:
+  # se repite al agregarlo.
+  test "agregar un producto repetido avisa con las dos partidas" do
+    producto = product!(950_012)
+    @order.order_items.create!(position: 1, quantity: 1, unit_price: 100, tax_rate: 16,
+                               discount_percent: 0, product: producto)
+
+    post order_order_items_path(@order), params: { product_id: producto.id },
+         headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    assert_response :success
+    assert_match(/ya estaba en la partida 1/, response.body)
+    assert_match(/ahora está también en la 2/, response.body)
+    assert_equal 2, @order.order_items.count, "no se bloquea: se avisa"
+  end
+
+  test "agregar un producto nuevo no avisa de nada" do
+    producto = product!(950_013)
+
+    post order_order_items_path(@order), params: { product_id: producto.id },
+         headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    assert_no_match(/ya estaba en la partida/, response.body)
+  end
+
+  # Con el producto repetido, la descripción sola no dice cuál se va a quitar.
+  test "el modal de quitar nombra la partida" do
+    fill_order_to(2)
+
+    get order_path(@order)
+
+    assert_match(/¿Quitar la partida 1/, response.body)
+    assert_match(/¿Quitar la partida 2/, response.body)
+  end
+
   # Borrar una partida intermedia dejaba huecos en la columna Consecutivo.
   test "borrar una partida intermedia renumera el consecutivo" do
     fill_order_to(4)

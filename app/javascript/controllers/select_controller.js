@@ -59,9 +59,30 @@ export default class extends Controller {
       const opt = li.querySelector("button")
       opt.setAttribute("aria-selected", opt === btn ? "true" : "false")
     })
+    this.clearInvalid()
     this.close()
     this.buttonTarget.focus()
     this.inputTarget.dispatchEvent(new Event("change", { bubbles: true }))
+  }
+
+  // Tras un submit inválido, el combo queda con anillo rojo. Al elegir un
+  // valor el anillo se quedaba puesto y el banner "Faltan datos obligatorios"
+  // intacto: el capturista corregía, veía todo igual de rojo, dudaba si se
+  // había guardado y volvía a abrir el combo a verificar. Con `cfdi-default`
+  // el efecto se duplicaba — elegir la razón social auto-llena el uso de CFDI,
+  // así que los DOS campos quedaban llenos y los dos seguían marcados.
+  //
+  // El banner se esconde cuando ya no queda ningún campo marcado; el servidor
+  // vuelve a pintarlo tal cual si el siguiente envío sigue incompleto.
+  clearInvalid() {
+    if (this.inputTarget.value === "") return
+
+    this.buttonTarget.classList.remove("ring-2", "ring-red-500")
+
+    const form = this.element.closest("form")
+    if (!form || form.querySelector(".ring-red-500")) return
+
+    form.querySelector("[data-missing-fields]")?.classList.add("hidden")
   }
 
   filter(event) {

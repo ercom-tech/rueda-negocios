@@ -6,8 +6,16 @@
     productos. Pide al equipo del servidor actualizar la información.
   </div>
 <% elsif products.any? %>
+  <%# Qué producto ya está en el pedido, y en qué partida. Sin esto, la
+      sugerencia de uno ya agregado se veía IDÉNTICA a la de uno nuevo: con la
+      tabla scrolleando y 45 renglones posibles, el duplicado no se notaba y el
+      pedido llegaba al ERP con dos renglones del mismo producto — se surte
+      doble. No se bloquea (un mismo producto con distinto descuento es
+      legítimo); se avisa antes, y el controlador lo repite después. %>
+  <% already_in = order.order_items.where.not(product_id: nil).pluck(:product_id, :position).to_h %>
   <ul class="max-h-80 overflow-auto rounded-2xl border border-black/10 bg-brand-cream shadow-xl">
     <% products.each do |product| %>
+      <% existing_position = already_in[product.id] %>
       <li>
         <%= button_to order_order_items_path(order, product_id: product.id),
               class: "flex w-full items-center justify-between gap-4 px-5 py-3 text-left hover:bg-black/5" do %>
@@ -23,8 +31,15 @@
                     number_to_currency(product.price&.public_price)
                   ].compact, " · ") %>
             </span>
+            <% if existing_position %>
+              <span class="mt-1 block text-xs font-semibold text-brand-coral-dark">
+                Ya está en el pedido, partida <%= existing_position %>
+              </span>
+            <% end %>
           </span>
-          <span class="shrink-0 rounded-full bg-black px-3 py-1 text-xs font-semibold text-white">Agregar</span>
+          <span class="shrink-0 rounded-full bg-black px-3 py-1 text-xs font-semibold text-white">
+            <%= existing_position ? "Agregar otra vez" : "Agregar" %>
+          </span>
         <% end %>
       </li>
     <% end %>

@@ -53,7 +53,9 @@ class OrderItemsTest < ApplicationSystemTestCase
     assert_selector "#order_item_#{@first.id}", text: "$500.00"
 
     assert_selector "[role=dialog]", visible: true, wait: 0
-    assert_text "¿Quitar \"LLAVE PERICO 10\" del pedido?"
+    # El mensaje nombra la partida: con el mismo producto repetido, la
+    # descripción sola no dice cuál de las dos se va a quitar.
+    assert_text "¿Quitar la partida 2, \"LLAVE PERICO 10\", del pedido?"
   end
 
   # Sin edición previa no hay repintado, así que el modal se queda abierto: es

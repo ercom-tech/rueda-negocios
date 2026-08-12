@@ -16,6 +16,8 @@ class OrderItemsController < ApplicationController
     # rechazaba y quedaba invendible sin remedio offline. Mismo criterio que
     # `OrderItem#quantity_in_package_multiples`, que ya ignora el empaque ≤ 0.
     package_size = product.min_sale_quantity
+    # Se mira ANTES de agregar: después, el producto ya está dos veces.
+    previous_position = @order.order_items.where(product_id: product.id).minimum(:position)
     item = @order.order_items.build(
       product.to_order_item_attributes.merge(
         position: @order.next_item_position, discount_percent: 0,
@@ -23,7 +25,16 @@ class OrderItemsController < ApplicationController
       )
     )
     if item.save
-      render turbo_stream: [ *detail_streams, clear_search_stream ]
+      # El buscador ya marcaba el producto como repetido, pero la lista se
+      # cierra al elegir: sin este aviso, un duplicado agregado de prisa se
+      # perdía entre 45 renglones y el ERP surtía doble. No se bloquea —el
+      # mismo producto con distinto descuento es legítimo—, se hace visible.
+      streams = [ *detail_streams, clear_search_stream ]
+      if previous_position
+        streams << turbo_stream.replace("flash", partial: "shared/flash",
+                                                 locals: { alert: duplicate_message(item, previous_position) })
+      end
+      render turbo_stream: streams
     else
       # P.ej. producto sin precio: avisa sin agregar la partida.
       render turbo_stream: [
@@ -64,6 +75,11 @@ class OrderItemsController < ApplicationController
   end
 
   private
+
+  def duplicate_message(item, previous_position)
+    "\"#{item.description}\" ya estaba en la partida #{previous_position}; " \
+      "ahora está también en la #{item.position}. Si fue por error, quita una."
+  end
 
   def set_order
     @order = current_user.orders.find(params[:order_id])
