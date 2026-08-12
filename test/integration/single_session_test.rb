@@ -10,19 +10,15 @@ class SingleSessionTest < ActionDispatch::IntegrationTest
     BusinessRound.create!(erp_round_id: 930, name: "Rueda 930", active: true)
   end
 
-  def login(device)
-    device.post "/login", params: { username: "cap930", password: "secret123" }
-  end
-
   test "un segundo login desplaza a la sesión anterior" do
     device_a = open_session
     device_b = open_session
 
-    login(device_a)
+    login_as("cap930", session: device_a)
     device_a.get "/"
     device_a.assert_response :success
 
-    login(device_b)
+    login_as("cap930", session: device_b)
 
     device_a.get "/"
     device_a.assert_redirected_to "/login"
@@ -46,8 +42,8 @@ class SingleSessionTest < ActionDispatch::IntegrationTest
   test "el logout de una sesión desplazada no choca" do
     device_a = open_session
     device_b = open_session
-    login(device_a)
-    login(device_b)
+    login_as("cap930", session: device_a)
+    login_as("cap930", session: device_b)
 
     device_a.delete "/logout"
     device_a.assert_redirected_to "/login"

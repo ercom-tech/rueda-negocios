@@ -19,36 +19,36 @@ class OrderItemsQuantityTest < ActionDispatch::IntegrationTest
     post login_path, params: { username: "cap1011", password: "secret123" }
   end
 
-  def product!(code, empaque)
+  def product!(code, package)
     p = Product.create!(erp_product_id: code, description: "Producto #{code}", brand: @brand,
-                        unit: "PZA", max_discount: 0, min_sale_quantity: empaque)
+                        unit: "PZA", max_discount: 0, min_sale_quantity: package)
     ProductSupplier.create!(product: p, supplier: @sup)
     Price.create!(product: p, public_price: 100, tax_rate: 16)
     p
   end
 
-  def agregar(producto)
-    post order_order_items_path(@order), params: { product_id: producto.id },
+  def add_product(product)
+    post order_order_items_path(@order), params: { product_id: product.id },
          headers: { "Accept" => "text/vnd.turbo-stream.html" }
   end
 
   test "con empaque mínimo la cantidad arranca en el empaque" do
     assert_difference "OrderItem.count", 1 do
-      agregar(product!(1_010_001, 10))
+      add_product(product!(1_010_001, 10))
     end
     assert_equal 10, @order.order_items.last.quantity
   end
 
   test "sin empaque mínimo (nil) la cantidad arranca en 1" do
     assert_difference "OrderItem.count", 1 do
-      agregar(product!(1_010_002, nil))
+      add_product(product!(1_010_002, nil))
     end
     assert_equal 1, @order.order_items.last.quantity
   end
 
   test "con empaque mínimo CERO la cantidad arranca en 1, no en 0" do
     assert_difference "OrderItem.count", 1, "el producto debe poder agregarse" do
-      agregar(product!(1_010_003, 0))
+      add_product(product!(1_010_003, 0))
     end
     assert_equal 1, @order.order_items.last.quantity
     assert_no_match(/cantidad debe ser mayor/, response.body)

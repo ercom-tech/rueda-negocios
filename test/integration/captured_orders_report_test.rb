@@ -34,16 +34,12 @@ class CapturedOrdersReportTest < ActionDispatch::IntegrationTest
     o
   end
 
-  def login(username)
-    post login_path, params: { username: username, password: "secret123" }
-  end
-
   # --- Resumen por estatus ------------------------------------------------
 
   test "el resumen suma cantidad e importe por estatus" do
     2.times { order!(user: @cap, status: "draft") }
     3.times { order!(user: @cap, status: "captured", items: 2) }
-    login("srv980")
+    login_as("srv980")
 
     get captured_orders_report_path
     assert_response :success
@@ -90,7 +86,7 @@ class CapturedOrdersReportTest < ActionDispatch::IntegrationTest
   test "el reporte del capturista no muestra pedidos ajenos" do
     order!(user: @cap,  status: "captured")
     order!(user: @otro, status: "captured")
-    login("cap981")
+    login_as("cap981")
 
     get captured_orders_report_path
     assert_response :success
@@ -101,7 +97,7 @@ class CapturedOrdersReportTest < ActionDispatch::IntegrationTest
 
   test "con más de una página aparece la navegación y la segunda trae el resto" do
     30.times { order!(user: @cap) }
-    login("srv980")
+    login_as("srv980")
 
     get captured_orders_report_path
     assert_select "tbody tr", 25
@@ -113,7 +109,7 @@ class CapturedOrdersReportTest < ActionDispatch::IntegrationTest
 
   test "el conteo se muestra aunque haya una sola página" do
     3.times { order!(user: @cap) }
-    login("srv980")
+    login_as("srv980")
 
     get captured_orders_report_path
     assert_match(/3 pedidos/, response.body)
@@ -122,7 +118,7 @@ class CapturedOrdersReportTest < ActionDispatch::IntegrationTest
 
   test "per_page cambia el tamaño de página" do
     30.times { order!(user: @cap) }
-    login("srv980")
+    login_as("srv980")
 
     get captured_orders_report_path(per_page: 50)
     assert_select "tbody tr", 30
@@ -130,7 +126,7 @@ class CapturedOrdersReportTest < ActionDispatch::IntegrationTest
 
   test "un per_page fuera de la lista cae al default" do
     30.times { order!(user: @cap) }
-    login("srv980")
+    login_as("srv980")
 
     get captured_orders_report_path(per_page: 5000)
     assert_select "tbody tr", 25
@@ -140,7 +136,7 @@ class CapturedOrdersReportTest < ActionDispatch::IntegrationTest
   # perdería al cambiar de página (y los filtros ya están en el backlog).
   test "los enlaces del paginador conservan los demás parámetros" do
     30.times { order!(user: @cap) }
-    login("srv980")
+    login_as("srv980")
 
     get captured_orders_report_path(per_page: 25, page: 1)
     assert_select "a[href*=?]", "per_page=25"

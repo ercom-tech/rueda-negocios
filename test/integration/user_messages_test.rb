@@ -47,8 +47,8 @@ class UserMessagesTest < ActionDispatch::IntegrationTest
     get new_order_path(client_key: @client.erp_client_key)
 
     assert_response :success
-    [ "Uso de CFDI", "Nombre o razón social (RFC)", "Dirección de entrega" ].each do |nombre|
-      assert_select "button[aria-label=?]", nombre
+    [ "Uso de CFDI", "Nombre o razón social (RFC)", "Dirección de entrega" ].each do |name|
+      assert_select "button[aria-label=?]", name
     end
   end
 
