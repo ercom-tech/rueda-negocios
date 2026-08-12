@@ -15,7 +15,7 @@ stack y patrones). La API que habla con el ERP vive en el repo aparte
 ## Stack
 
 Ruby 3.3.7 · Rails 8 + Hotwire (Turbo/Stimulus, importmap) + Tailwind v4 ·
-Postgres 16 · bcrypt · Solid Queue (jobs) · dotenv-rails · prawn (PDF).
+Postgres (17 en desarrollo; el ERP corre 16) · bcrypt · dotenv-rails · prawn (PDF).
 
 ## Correr en desarrollo
 
@@ -47,13 +47,14 @@ Requiere `rueda-api` accesible; configúrala en `.env`
 Ambos también se operan desde la UI: al entrar el usuario `server` ve un panel
 para **elegir rueda**, **obtener información** (sync-down), **transmitir
 pedidos** (sync-up), consultar **reportes** y **cerrar rueda**. Los dos syncs
-corren en background (Solid Queue) y reflejan su estado en vivo (Turbo Streams).
+corren en background (adapter `async` en la laptop; Solid Queue queda para el
+empacado a producción) y reflejan su estado en vivo (Turbo Streams).
 
 **Cerrar rueda** elimina los pedidos ya transmitidos de la laptop, borra el
 historial de corridas y libera la selección: es el paso obligado para cargar
-otra rueda, y la única operación destructiva del panel. Las tres —obtener,
-transmitir y cerrar— se bloquean si queda algún pedido que solo viva en la
-laptop (borradores o capturados sin transmitir).
+otra rueda, y la única operación destructiva del panel. Obtener y cerrar se
+bloquean si queda algún pedido que solo viva en la laptop (borradores o
+capturados sin transmitir); transmitir se bloquea solo por borradores.
 
 Mientras una corrida está viva, la captura se pausa: los capturistas ven un
 aviso en vez de escribir sobre un catálogo que se está reemplazando.
@@ -66,7 +67,10 @@ aviso en vez de escribir sobre un catálogo que se está reemplazando.
 ## Documentación
 
 - `CLAUDE.md` — contexto de negocio, arquitectura y forma de trabajo (flujo PAIVD).
-- `memory.md` — bitácora de decisiones y puntos abiertos.
+- `docs/convenciones-visuales.md` y `docs/convenciones-codigo.md` — normas que
+  rigen cada cambio.
+- `memory.md` — bitácora de decisiones y aprendizajes.
+- `backlog.md` — lo que falta implementar (los puntos abiertos viven aquí).
 - `docs/erp-esquema-catalogos.md` — esquema de lectura del ERP (sync-down).
 - `docs/erp-esquema-pedidos.md` — esquema de alta de pedidos en el ERP (sync-up).
 

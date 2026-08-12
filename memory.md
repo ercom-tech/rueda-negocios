@@ -14,7 +14,9 @@ escribe en el paso **Documentar** del flujo PAIVD.
 | **`memory.md`** | **Bitácora: decisiones y su porqué** | **No — se consulta** |
 | `backlog.md` | Lo que falta implementar | No — se consulta |
 | `docs/erp-esquema-*.md` | Esquema del ERP (catálogos y pedidos) | No — se consulta |
-| `docs/auditorias-2026-07.md` | Historial de las 2 auditorías (cerradas) | No — archivo |
+| `docs/instalacion-laptop.md` | Instalación en la laptop-servidor | No — se consulta |
+| `docs/auditorias.md` | Cómo se audita: método y dimensiones | No — se consulta |
+| `docs/auditorias-2026-07.md` | Historial de las 2 primeras auditorías (cerradas) | No — archivo |
 
 Regla práctica: si es **norma que debe regir cada cambio**, va a las
 convenciones (que sí se cargan). Si es **el porqué de una decisión**, va aquí.
@@ -23,10 +25,70 @@ Si es **algo por hacer**, va al backlog.
 ## Índice de la bitácora
 
 - Decisiones generales del proyecto (abajo)
+- 5ª y 4ª auditorías — remediación (las dos secciones siguientes)
 - Descubrimiento del esquema de catálogos (ERP)
 - Fase A — scaffolding · Fase B — login, menú, reportes, pedido (arcos 1–3)
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
+
+## 5ª auditoría (2026-08-12) — remediación
+
+Artifact: https://claude.ai/code/artifact/a354356c-0f4b-4ce8-a62e-06656c5ba144
+(1 ALTA · 13 MEDIA · 43 BAJA tras verificación · 1 retirado). Remediada el
+mismo día en 10 bloques: el ALTA, las 13 MEDIA y 39 BAJA; 4 BAJA diferidas a
+conciencia con registro en backlog (fiscales de factura en la API y CSP →
+strengthening; `sucursal=0` → definir con FECEGO; kebab vs snake en URLs).
+Suites al cierre: app **246** + 7 de sistema, API **51**. Una migración
+(`sync_runs.pid`).
+
+**El ALTA (duplicado en el ERP guiado por el propio 422)** se rompió en sus
+tres eslabones: los motivos de falla posteriores al envío advierten "el pedido
+pudo haber entrado al ERP: vuelve a transmitir sin editar"; el 422 de colisión
+enuncia el camino completo (comparar contra el ERP, cancelar allá si es el
+mismo, recapturar después); y la idempotencia compara las **partidas**
+(producto, cantidad, precio, descuento), no solo total±1¢ y conteo — el
+intercambio de productos del mismo precio ya no pasa como reintento legítimo.
+
+**Aprendizajes que valen más que su arreglo:**
+
+- **La invariante del redondeo del ERP es composicional:** encabezado = suma
+  de las columnas de sus partidas *tal como quedaron guardadas* (total de
+  partida redondeado a 2; descuento e IVA con precisión completa). Nuestro
+  `round(Σ exacta)` divergía en ~47% de los pedidos. Y al cambiar el esquema
+  de escritura, **la comparación de idempotencia tiene que derivar igual**
+  (`written_total`), o el reintento legítimo colisiona — con 45 partidas la
+  brecha llega a ~22 centavos, 22× la tolerancia. Bono: el PDF (suma de
+  renglones redondeados) ahora cuadra centavo a centavo con la factura.
+- **`insert_all` trae `ON CONFLICT DO NOTHING`:** un duplicado en el export
+  se descarta en silencio, no revienta. Para probar la atomicidad del replace
+  hubo que corromper con NOT NULL, no con duplicados.
+- **El barrido de huérfanos ahora es seguro por `pid`, no por contexto:**
+  cada corrida registra a su proceso dueño y solo se barre lo muerto. Eso
+  permitió correrlo también al cargar el menú del servidor (autorrecuperación
+  sin reiniciar) y eliminó la dependencia del adapter de jobs — la trampa
+  documentada de Solid Queue en producción desapareció. El `ensure` del rake
+  cierra la corrida ante Ctrl-C/kill (`Interrupt` no es `StandardError`: los
+  `rescue` no lo tocan, el `ensure` sí).
+- **La pausa de sync responde 422, no 200:** con 200, Turbo reportaba éxito y
+  la palomita "Guardado ✓" salía junto al aviso de reintento — confirmado con
+  clics reales. El controller además revierte los campos al valor guardado en
+  cualquier envío fallido (`revertRemembered`), matando el "valor fantasma".
+- **Los avisos del panel viven FUERA de las ramas de estatus:** el bloque de
+  conflictos solo se pintaba en `completed` y una corrida parcial se lo
+  tragaba. Regla: un aviso que reporta daño se pinta termine como termine la
+  corrida.
+- **Un conteo que mezcla causas produce diagnósticos equivocados:** la
+  membresía de un capturista omitido por credencial caía en "sin proveedor ni
+  marca" y mandaba a corregir lo que no estaba roto. Cada causa, su aviso.
+- **`consider_all_requests_local = false` es gratis en esta app:** Rails
+  sigue mostrando la página de depuración a `request.local?` (el navegador de
+  la laptop), y la LAN ve las páginas de error en español.
+- **Flechas con paso decimal: aritmética en unidades enteras del paso** y
+  redondeo a sus decimales — la división flotante (0.3/0.1 = 2.9999…) atoraba
+  la flecha o dejaba `0.30000000000000004` visible.
+- **El 404 con mensaje de negocio necesita los dos lados:** la API responde
+  `{error, message}` y `ApiClient#get` extrae el `message` — sin eso el
+  operador leía "HTTP 404" y se iba a revisar la red por un typo de RUEDA_ID.
 
 ## 4ª auditoría (2026-08-11) — remediación
 
@@ -1189,6 +1251,9 @@ cada pantalla.
   `sync:down`. En dev: `db:reset` (crea server) + `sync:down` (puebla catálogo).
 - **Migración `users.prefix`** (`20260725073308`): guarda el prefijo del ERP
   (`cnf_persona.prefijo`, p.ej. "1A") que necesita el folio del sync-up.
+  (Superado: el folio lo resuelve `rueda-api` contra el ERP en vivo
+  —`prefijo_for`— y la app nunca lee la columna; su destino está en
+  `backlog.md`.)
 - **SKUs de proveedores fuera de la rueda:** se omiten (no hay proveedor local);
   el rake reporta el conteo. Con Oaxaca: 0 omitidos.
 - **`record_timestamps: true`** en `insert_all`/`upsert_all` para que Rails

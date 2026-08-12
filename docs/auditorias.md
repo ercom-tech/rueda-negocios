@@ -6,13 +6,15 @@ se publican aparte (ver "Historial" al final).
 
 ## El método en una frase
 
-**Cinco revisiones independientes en paralelo, una por dimensión, y después una
-segunda pasada donde cada hallazgo grave se reproduce contra el código en
-ejecución antes de publicarlo.**
+**Siete revisiones independientes en paralelo, una por dimensión, y después
+una pasada de verificación adversarial donde cada hallazgo grave se intenta
+REFUTAR contra el código en ejecución antes de publicarlo.**
 
-Esa segunda pasada es lo que separa un reporte útil de una lista de sospechas:
-en la 3ª auditoría varios "hallazgos" no la sobrevivieron. Un reporte corto y
-cierto vale más que uno largo y especulativo.
+Esa segunda pasada es lo que separa un reporte útil de una lista de sospechas,
+y su historial lo demuestra: en la 3ª varios "hallazgos" no la sobrevivieron;
+en la 4ª degradó 5 de 6 ALTA y refutó el sexto; en la 5ª degradó 6 MEDIA,
+retiró un hallazgo completo y les encontró agravantes a los confirmados. Un
+reporte corto y cierto vale más que uno largo y especulativo.
 
 ## Reglas que hacen que rinda
 
@@ -32,11 +34,16 @@ cierto vale más que uno largo y especulativo.
   de forma asíncrona).
 - **Verificar antes de publicar.** Reproducir en consola, en la BD o en el
   navegador. Lo que no se sostenga, va a una sección de "descartados" con una
-  línea — también es información.
+  línea — también es información. El verificador trabaja con mandato de
+  **refutar**, no de confirmar.
+- **Toda medición dice sobre qué RECORTE se hizo** (qué tabla, qué filtro, qué
+  rama del código). En la 4ª, un ALTA se refutó porque midió la rama de
+  *sucursal* del ERP cuando nuestros pedidos entran por la de *persona*; en la
+  5ª, validar el recorte antes que las cifras evitó repetir el error.
 - **Severidad honesta:** ALTA = corrompe datos, bloquea la operación sin salida
   o expone información. Si todo es alto, nada lo es.
 
-## Las cinco dimensiones
+## Las siete dimensiones
 
 ### 1. Seguridad
 Autorización y alcance por rol (que un capturista no llegue a datos ajenos ni
@@ -68,41 +75,30 @@ Adherencia a `docs/convenciones-visuales.md` y `docs/convenciones-codigo.md`,
 dos formas distintas de resolver lo mismo, idiomática Rails, nomenclatura,
 comentarios que ya no describen su código, y rubocop.
 
-## Dimensiones propuestas (aún no aplicadas)
-
-Fundadas en un dato incómodo del historial: **los defectos más caros del
-proyecto los encontró el usuario usando el sistema, no las auditorías.**
-
 ### 6. Fidelidad con el ERP
-La familia de bugs más costosa fue de contrato con el ERP y ninguna auditoría
-detectó uno: `renglones = 0` (los pedidos no se reflejaban en las pantallas del
-ERP), `hora_crea` con microsegundos, `id_proveedor = 0` sin `NULLIF` (se perdían
-las membresías solo-marca), el código a 6 dígitos, el empaque mínimo.
+Nació de un dato incómodo: la familia de bugs más costosa fue de contrato con
+el ERP y ninguna de las cinco dimensiones clásicas detectó uno (`renglones =
+0`, `hora_crea` con microsegundos, `id_proveedor = 0` sin `NULLIF`, el código
+a 6 dígitos, el empaque mínimo). Todos comparten forma: **escribimos o leemos
+algo que el ERP interpreta distinto, y nada revienta** — el dato simplemente
+queda mal, porque el código es coherente consigo mismo y con nuestra
+documentación; el desacuerdo está del otro lado del contrato.
 
-Todos comparten forma: **escribimos o leemos algo que el ERP interpreta
-distinto, y nada revienta** — el dato simplemente queda mal. Las cinco
-dimensiones actuales no lo ven, porque el código es coherente consigo mismo y
-con nuestra documentación; el desacuerdo está del otro lado del contrato.
-
-Método que sí funcionó: comparar nuestra fila contra una fila **nativa** del
-ERP columna por columna, y **medir la invariante contra el histórico real**
-(`SELECT count(*) … WHERE <invariante no se cumple>`) en vez de suponerla.
+Método: comparar nuestra fila contra una fila **nativa** del ERP columna por
+columna, y **medir la invariante contra el histórico real** (`SELECT count(*)
+… WHERE <invariante no se cumple>`) en vez de suponerla — siempre sobre el
+recorte por el que de verdad operamos (rama de persona,
+`id_sucursal_crea = 1`). Estrenada en la 4ª, produjo su único ALTA; en la 5ª,
+el hallazgo del redondeo del encabezado.
 
 ### 7. Operación y recuperación
 El sistema es *una laptop haciendo de servidor en un salón*: sus peores fallas
-son operativas. De ahí salieron el `SyncRun` huérfano que dejaba el panel
-girando para siempre, la carrera entre descargar y transmitir que perdía el
-folio del ERP, y el barrido de huérfanos que en producción mataría corridas
-vivas.
-
-Qué enumeraría: puntos donde el proceso puede morir (apagón, reinicio, cierre
-del servidor), concurrencia entre operaciones del panel, idempotencia de los
-reintentos, y **en qué estado queda el operador tras cada falla — incluida la
-pregunta de si le queda salida**.
-
-Con siete dimensiones el costo sube. Si hay que elegir, la 6 tiene el
-rendimiento histórico demostrado; la 7 gana urgencia conforme se acerca el
-evento real.
+son operativas. Enumera: puntos donde el proceso puede morir (apagón,
+reinicio, Ctrl-C, kill), concurrencia entre operaciones del panel y con la
+captura, idempotencia de los reintentos, y **en qué estado queda el operador
+tras cada falla — incluida la pregunta de si le queda salida y de si alguna
+pantalla se la dice**. Estrenada en la 4ª; en la 5ª produjo el único ALTA (el
+pedido duplicado en el ERP guiado por el propio mensaje de colisión).
 
 ## Historial
 
@@ -111,8 +107,14 @@ evento real.
   remediada al 100%; B23 y B24 quedaron como registro sin acción.
 - **3ª (2026-08-10)** — 3 ALTA · 11 MEDIA · 9 BAJA · 0 vulnerabilidades →
   remediada al 100% el mismo día.
+- **4ª (2026-08-11)** — primera con 7 dimensiones — 1 ALTA · 37 MEDIA ·
+  31 BAJA · 0 vulnerabilidades → remediada al 100% el mismo día.
+- **5ª (2026-08-12)** — proyecto completo, 7 dimensiones + verificación
+  adversarial ampliada a las MEDIA — 1 ALTA · 13 MEDIA · 43 BAJA · 1 retirado
+  (cifras ya verificadas). Patrón que dejó: los defectos ya no están en los
+  mecanismos sino en **qué le dice el sistema al operador cuando algo falla a
+  medias**.
 
 El detalle de las dos primeras está en `docs/auditorias-2026-07.md`; el de la
-tercera, en la sección "3ª auditoría — remediación" de `memory.md`. Los
-reportes completos se publicaron como artifacts (las URLs las tiene el
-usuario).
+3ª y la 4ª, en sus secciones de remediación de `memory.md`. Los reportes
+completos se publicaron como artifacts (las URLs las tiene el usuario).

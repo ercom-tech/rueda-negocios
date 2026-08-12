@@ -91,9 +91,10 @@ Modelo **una laptop = servidor LAN**:
   paso obligado para cargar otra rueda, y la única operación destructiva del
   panel.
 
-Las tres operaciones (obtener, transmitir, cerrar) se bloquean si queda algún
-pedido que solo viva en la laptop —borrador o capturado sin transmitir—, y
-mientras una corre, la captura se pausa.
+Obtener y cerrar se bloquean si queda algún pedido que solo viva en la laptop
+—borrador o capturado sin transmitir—; transmitir se bloquea solo por
+borradores (los capturados sin transmitir son justo lo que transmite).
+Mientras una operación corre, la captura se pausa.
 
 El transporte del sync es **agnóstico**: URL + credenciales configurables,
 para que funcione en LAN interna o vía internet sin cambiar código. El
