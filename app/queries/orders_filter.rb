@@ -67,8 +67,8 @@ class OrdersFilter
     scope = scope.joins(:client).where(clients: { salesperson_id: salesperson_id }) if salesperson_id
     scope = scope.where(created_at: day_start(from)..)      if from
     scope = scope.where(created_at: ...day_start(to + 1))   if to
-    if (productos = matching_products)
-      scope = scope.where(id: OrderItem.where(product_id: productos).select(:order_id))
+    if (products = matching_products)
+      scope = scope.where(id: OrderItem.where(product_id: products).select(:order_id))
     end
     scope
   end

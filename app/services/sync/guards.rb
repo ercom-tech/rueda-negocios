@@ -27,8 +27,8 @@ module Sync
       return if drafts.zero?
 
       raise error_class,
-            "Hay #{pedidos(drafts)} en borrador y no se #{drafts == 1 ? 'transmitiría' : 'transmitirían'}. " \
-            "Pide que #{lo(drafts)} terminen o #{lo(drafts)} descarten, y vuelve a intentar."
+            "Hay #{orders_label(drafts)} en borrador y no se #{drafts == 1 ? 'transmitiría' : 'transmitirían'}. " \
+            "Pide que #{them(drafts)} terminen o #{them(drafts)} descarten, y vuelve a intentar."
     end
 
     # Guarda de las operaciones que BORRAN los pedidos de la laptop: obtener la
@@ -43,40 +43,40 @@ module Sync
     # borradores tampoco se puede transmitir), así que el operador necesita ver
     # el camino completo desde el primer intento y no descubrirlo de mensaje en
     # mensaje.
-    def no_local_orders!(error_class, accion)
+    def no_local_orders!(error_class, action)
       drafts  = draft_count
       pending = untransmitted_count
       return if drafts.zero? && pending.zero?
 
-      raise error_class, local_orders_message(drafts, pending, accion)
+      raise error_class, local_orders_message(drafts, pending, action)
     end
 
-    def local_orders_message(drafts, pending, accion)
+    def local_orders_message(drafts, pending, action)
       if drafts.positive? && pending.positive?
-        "Hay #{pedidos(drafts)} en borrador y #{pending} sin transmitir; se perderían #{accion}. " \
+        "Hay #{orders_label(drafts)} en borrador y #{pending} sin transmitir; se perderían #{action}. " \
         "Pide que terminen o descarten los borradores, transmite los demás, y vuelve a intentar."
       elsif drafts.positive?
-        "Hay #{pedidos(drafts)} en borrador y se #{perderia(drafts)} #{accion}. " \
-        "Pide que #{lo(drafts)} terminen o #{lo(drafts)} descarten, y vuelve a intentar."
+        "Hay #{orders_label(drafts)} en borrador y se #{would_be_lost(drafts)} #{action}. " \
+        "Pide que #{them(drafts)} terminen o #{them(drafts)} descarten, y vuelve a intentar."
       else
-        "Hay #{pedidos(pending)} sin transmitir y se #{perderia(pending)} #{accion}. " \
-        "#{transmitelo(pending)} y vuelve a intentar."
+        "Hay #{orders_label(pending)} sin transmitir y se #{would_be_lost(pending)} #{action}. " \
+        "#{transmit_them(pending)} y vuelve a intentar."
       end
     end
 
-    def pedidos(count)
+    def orders_label(count)
       count == 1 ? "1 pedido" : "#{count} pedidos"
     end
 
-    def lo(count)
+    def them(count)
       count == 1 ? "lo" : "los"
     end
 
-    def perderia(count)
+    def would_be_lost(count)
       count == 1 ? "perdería" : "perderían"
     end
 
-    def transmitelo(count)
+    def transmit_them(count)
       count == 1 ? "Transmítelo" : "Transmítelos"
     end
   end

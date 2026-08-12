@@ -32,10 +32,10 @@ class OrderItemsLimitTest < ActionDispatch::IntegrationTest
 
   test "el POST de la partida excedente no crea el registro y avisa el motivo" do
     fill_order_to(Order::MAX_ITEMS)
-    producto = product!(950_001)
+    product = product!(950_001)
 
     assert_no_difference "OrderItem.count" do
-      post order_order_items_path(@order), params: { product_id: producto.id },
+      post order_order_items_path(@order), params: { product_id: product.id },
            headers: { "Accept" => "text/vnd.turbo-stream.html" }
     end
     assert_response :success
@@ -44,10 +44,10 @@ class OrderItemsLimitTest < ActionDispatch::IntegrationTest
 
   test "debajo del tope la partida sí se agrega" do
     fill_order_to(Order::MAX_ITEMS - 1)
-    producto = product!(950_002)
+    product = product!(950_002)
 
     assert_difference "OrderItem.count", 1 do
-      post order_order_items_path(@order), params: { product_id: producto.id },
+      post order_order_items_path(@order), params: { product_id: product.id },
            headers: { "Accept" => "text/vnd.turbo-stream.html" }
     end
   end
@@ -110,9 +110,9 @@ class OrderItemsLimitTest < ActionDispatch::IntegrationTest
   # notaba. El pedido llegaba al ERP con dos renglones iguales y se surte doble.
 
   test "el buscador marca el producto que ya está en el pedido y en qué partida" do
-    producto = product!(950_010)
+    product = product!(950_010)
     @order.order_items.create!(position: 1, quantity: 1, unit_price: 100, tax_rate: 16,
-                               discount_percent: 0, product: producto)
+                               discount_percent: 0, product: product)
 
     get product_options_order_path(@order), params: { q: "Producto 950010" }
 
@@ -132,11 +132,11 @@ class OrderItemsLimitTest < ActionDispatch::IntegrationTest
   # La lista se cierra al elegir, así que el aviso previo ya no está a la vista:
   # se repite al agregarlo.
   test "agregar un producto repetido avisa con las dos partidas" do
-    producto = product!(950_012)
+    product = product!(950_012)
     @order.order_items.create!(position: 1, quantity: 1, unit_price: 100, tax_rate: 16,
-                               discount_percent: 0, product: producto)
+                               discount_percent: 0, product: product)
 
-    post order_order_items_path(@order), params: { product_id: producto.id },
+    post order_order_items_path(@order), params: { product_id: product.id },
          headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
     assert_response :success
@@ -146,9 +146,9 @@ class OrderItemsLimitTest < ActionDispatch::IntegrationTest
   end
 
   test "agregar un producto nuevo no avisa de nada" do
-    producto = product!(950_013)
+    product = product!(950_013)
 
-    post order_order_items_path(@order), params: { product_id: producto.id },
+    post order_order_items_path(@order), params: { product_id: product.id },
          headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
     assert_no_match(/ya estaba en la partida/, response.body)
@@ -167,9 +167,9 @@ class OrderItemsLimitTest < ActionDispatch::IntegrationTest
   # Borrar una partida intermedia dejaba huecos en la columna Consecutivo.
   test "borrar una partida intermedia renumera el consecutivo" do
     fill_order_to(4)
-    intermedia = @order.order_items.find_by(position: 2)
+    middle_item = @order.order_items.find_by(position: 2)
 
-    delete order_order_item_path(@order, intermedia),
+    delete order_order_item_path(@order, middle_item),
            headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
     assert_response :success

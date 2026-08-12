@@ -63,8 +63,8 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal 2, filas
 
-    resumen = OrdersFilter.new(user_id: @beto.id).apply_without_status(Order.all).totals_by_status
-    assert_equal 2, resumen["captured"][:count], "el resumen se acota igual que la tabla"
+    summary = OrdersFilter.new(user_id: @beto.id).apply_without_status(Order.all).totals_by_status
+    assert_equal 2, summary["captured"][:count], "el resumen se acota igual que la tabla"
   end
 
   test "cliente y vendedor acotan el listado" do
@@ -174,9 +174,9 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
     order!(user: @beto, client: @c1, status: "draft")
     login("srv990")
 
-    resumen = OrdersFilter.new(user_id: @beto.id).apply_without_status(Order.all).totals_by_status
-    assert_equal 1, resumen["captured"][:count], "solo los de BETO"
-    assert_equal 1, resumen["draft"][:count]
+    summary = OrdersFilter.new(user_id: @beto.id).apply_without_status(Order.all).totals_by_status
+    assert_equal 1, summary["captured"][:count], "solo los de BETO"
+    assert_equal 1, summary["draft"][:count]
   end
 
   test "un estatus desconocido se ignora" do
@@ -254,10 +254,10 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
     assert_in_delta 348, o.total, 0.01, "el pedido completo son $348"
     login("srv990")
 
-    resumen = OrdersFilter.new(supplier_id: @makita.id)
+    summary = OrdersFilter.new(supplier_id: @makita.id)
                           .then { |f| f.apply_without_status(Order.all).totals_by_status(f.matching_products) }
-    assert_equal 1, resumen["captured"][:count]
-    assert_in_delta 116, resumen["captured"][:total], 0.01, "solo la partida MAKITA"
+    assert_equal 1, summary["captured"][:count]
+    assert_in_delta 116, summary["captured"][:total], 0.01, "solo la partida MAKITA"
 
     get captured_orders_report_path(supplier_id: @makita.id)
     assert_match(/\$116\.00/, response.body)

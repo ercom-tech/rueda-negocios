@@ -100,11 +100,11 @@ class OrderTest < ActiveSupport::TestCase
 
   test "renumerar respeta el orden actual y es idempotente" do
     order = order_with_items(3)
-    codigos = order.order_items.reload.map(&:id)
+    ids = order.order_items.reload.map(&:id)
 
     order.renumber_items!
 
-    assert_equal codigos, order.order_items.reload.map(&:id), "no debe reordenar las partidas"
+    assert_equal ids, order.order_items.reload.map(&:id), "no debe reordenar las partidas"
     assert_equal [ 1, 2, 3 ], order.order_items.map(&:position)
   end
 

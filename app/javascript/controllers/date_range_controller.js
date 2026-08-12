@@ -14,8 +14,8 @@ import { Controller } from "@hotwired/stimulus"
 //
 // Uso: data-controller="date-range" con targets button/label/panel/grid/title
 // y los hidden from/to; data-action="click@window->date-range#hide".
-const DIAS  = ["L", "M", "M", "J", "V", "S", "D"]
-const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+const DAY_LABELS  = ["L", "M", "M", "J", "V", "S", "D"]
+const MONTH_NAMES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
                "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
 
 export default class extends Controller {
@@ -190,9 +190,9 @@ export default class extends Controller {
   // del rango no se registraba.
 
   buildGrid() {
-    this.titleTarget.textContent = `${MESES[this.cursor.getMonth()]} ${this.cursor.getFullYear()}`
+    this.titleTarget.textContent = `${MONTH_NAMES[this.cursor.getMonth()]} ${this.cursor.getFullYear()}`
     this.gridTarget.innerHTML = ""
-    DIAS.forEach((d) => {
+    DAY_LABELS.forEach((d) => {
       const th = document.createElement("span")
       th.textContent = d
       th.className = "py-1 text-center text-xs font-semibold text-neutral-500"

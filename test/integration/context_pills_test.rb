@@ -44,22 +44,22 @@ class ContextPillsTest < ActionDispatch::IntegrationTest
   end
 
   test "varias marcas: selector, y el PATCH cambia la marca activa" do
-    otra = Brand.create!(erp_brand_id: 941, name: "MARCA 941")
+    another = Brand.create!(erp_brand_id: 941, name: "MARCA 941")
     membership!(position: 1, supplier: @sup, brand: @brand)
-    membership!(position: 2, brand: otra)
+    membership!(position: 2, brand: another)
 
     get root_path
     assert_select "form[action=?]", active_brand_path
 
-    patch active_brand_path, params: { brand_id: otra.id }
+    patch active_brand_path, params: { brand_id: another.id }
     follow_redirect!
     # La marca activa elegida persiste en la sesión y se refleja en el pill.
-    assert_select "input[name=brand_id][value=?]", otra.id.to_s
+    assert_select "input[name=brand_id][value=?]", another.id.to_s
 
     # Un id ajeno no se acepta (queda la elección previa).
     intrusa = Brand.create!(erp_brand_id: 999, name: "MARCA AJENA")
     patch active_brand_path, params: { brand_id: intrusa.id }
     follow_redirect!
-    assert_select "input[name=brand_id][value=?]", otra.id.to_s
+    assert_select "input[name=brand_id][value=?]", another.id.to_s
   end
 end

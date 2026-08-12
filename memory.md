@@ -125,6 +125,30 @@ los tres criterios que traía el reporte estaban enunciados sobre el recorte
 equivocado, y en ambos casos los números correctos se parecían lo bastante a
 los del reporte como para no notarlo sin volver a consultar.
 
+### El idioma del código, cerrado (BAJA)
+
+Los ~35 identificadores en español que sobrevivían: los helpers de concordancia
+de `Sync::Guards`, `productos`/`universo`/`mismo_sitio`, todos los locales del
+importe en letra del PDF, `EN_PROCESO`, `DIAS`/`MESES` del calendario y una
+docena en pruebas.
+
+**En `rueda-api` NO se renombró nada, y eso también es la regla.** Ahí
+`EMPRESA`, `prefijo`, `clave`, `id_rueda` y los alias de las CTE (`marcas`,
+`provs`) espejan el ERP a propósito: traducirlos dejaría el SQL mitad y mitad,
+que es peor que cualquiera de los dos idiomas completo. Quedó registrado como
+excepción junto con `dividir_facturas` y el rol `capturista`, y con la
+advertencia de que **las llaves del payload son el contrato de red**: un
+renombre "por consistencia" ahí rompe el sync-up y el síntoma es un 422 en
+pleno cierre de evento.
+
+**La trampa volvió a morder, en una variante nueva.** La convención ya avisaba
+de revisar el diff palabra por palabra, y yo protegí el texto entre comillas…
+pero el texto visible también vive dentro de **literales de expresión regular**:
+`assert_match(/Hay 1 pedido en borrador/, …)` se convirtió en "en draft" y solo
+lo cazaron tres pruebas al fallar. La comprobación que sí sirve —listar todo el
+texto en español que toca el diff, cadenas **y** regexes, y leerlo— quedó
+escrita en las convenciones.
+
 ### `fecha_crea` = la captura, no la transmisión (decisión de FECEGO)
 
 Era la única BAJA que dependía de una definición de negocio, y el usuario la

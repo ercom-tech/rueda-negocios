@@ -48,20 +48,20 @@ class CapturedOrdersReportTest < ActionDispatch::IntegrationTest
     get captured_orders_report_path
     assert_response :success
 
-    resumen = Order.totals_by_status
-    assert_equal 2, resumen["draft"][:count]
-    assert_equal 232, resumen["draft"][:total],    "2 pedidos × 1 partida de $116"
-    assert_equal 3, resumen["captured"][:count]
-    assert_equal 696, resumen["captured"][:total], "3 pedidos × 2 partidas de $116"
+    summary = Order.totals_by_status
+    assert_equal 2, summary["draft"][:count]
+    assert_equal 232, summary["draft"][:total],    "2 pedidos × 1 partida de $116"
+    assert_equal 3, summary["captured"][:count]
+    assert_equal 696, summary["captured"][:total], "3 pedidos × 2 partidas de $116"
   end
 
   test "el resumen incluye los tres estatus aunque vengan en cero" do
     order!(user: @cap, status: "captured")
 
-    resumen = Order.totals_by_status
-    assert_equal %w[draft captured transmitted].sort, resumen.keys.sort
-    assert_equal 0, resumen["transmitted"][:count]
-    assert_equal 0, resumen["transmitted"][:total]
+    summary = Order.totals_by_status
+    assert_equal %w[draft captured transmitted].sort, summary.keys.sort
+    assert_equal 0, summary["transmitted"][:count]
+    assert_equal 0, summary["transmitted"][:total]
   end
 
   test "el importe respeta descuento e IVA de cada partida" do

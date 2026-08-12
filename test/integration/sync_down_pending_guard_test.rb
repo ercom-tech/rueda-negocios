@@ -82,11 +82,11 @@ class SyncDownPendingGuardTest < ActionDispatch::IntegrationTest
   end
 
   test "tras transmitir el pedido pendiente la descarga ya procede" do
-    pendiente = captured_untransmitted!
+    pending_order = captured_untransmitted!
     post server_sync_down_path
     assert_equal 0, SyncRun.down.count
 
-    pendiente.update!(status: "transmitted", erp_folio: "1A0002", transmitted_at: Time.current)
+    pending_order.update!(status: "transmitted", erp_folio: "1A0002", transmitted_at: Time.current)
 
     post server_sync_down_path
     assert_match(/Obteniendo la información/, flash[:notice])

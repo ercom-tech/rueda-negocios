@@ -60,11 +60,11 @@ class SyncUpDraftsGuardTest < ActionDispatch::IntegrationTest
   end
 
   test "al finalizar el borrador la transmisión ya procede" do
-    borrador = draft!
+    draft = draft!
     post server_sync_up_path
     assert_equal 0, SyncRun.up.count
 
-    borrador.update!(status: "captured", local_folio: "RN-000961")
+    draft.update!(status: "captured", local_folio: "RN-000961")
 
     post server_sync_up_path
     assert_match(/Transmisión iniciada/, flash[:notice])

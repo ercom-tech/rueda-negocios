@@ -62,8 +62,8 @@ class SyncPanelDetailTest < ActionDispatch::IntegrationTest
 
   # Un tope silencioso se leería como "esos son todos".
   test "con muchos rechazos se listan los primeros y se dice cuántos faltan" do
-    fallidos = (1..7).map { |i| { local: format("RN-%06d", i), status: "422", error: "motivo #{i}" } }
-    up_run!(failed: fallidos)
+    failures = (1..7).map { |i| { local: format("RN-%06d", i), status: "422", error: "motivo #{i}" } }
+    up_run!(failed: failures)
 
     get root_path
 

@@ -264,10 +264,10 @@ module Sync
     end
 
     test "un borrador ya descartado deja de bloquear" do
-      borrador = draft!
+      draft = draft!
       assert_raises(Up::GuardError) { Up.guard! }
 
-      borrador.destroy
+      draft.destroy
       assert_nothing_raised { Up.guard! }
     end
   end

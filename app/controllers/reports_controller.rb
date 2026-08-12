@@ -46,8 +46,8 @@ class ReportsController < ApplicationController
   # capturista no se le ofrecen productos que jamás podrían aparecer en sus
   # pedidos.
   def product_options
-    universo = current_user.can_see_all_orders? ? Product.all : current_user.product_universe(active_round)
-    @products = params[:q].present? ? universo.search(params[:q]).includes(:price).limit(10) : Product.none
+    universe = current_user.can_see_all_orders? ? Product.all : current_user.product_universe(active_round)
+    @products = params[:q].present? ? universe.search(params[:q]).includes(:price).limit(10) : Product.none
     render partial: "product_options", locals: { products: @products }, layout: false
   end
 

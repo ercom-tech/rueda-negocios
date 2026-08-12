@@ -199,10 +199,10 @@ module Pdf
 
     def right_info
       vendor     = @order.client.salesperson
-      capturista = @order.user.full_name.presence || @order.user.username
+      captured_by = @order.user.full_name.presence || @order.user.username
       [
         "<b>#{esc(@order.business_round.name)}</b>",
-        "Capturado: #{stamp(@order.created_at)} — #{esc(capturista)}",
+        "Capturado: #{stamp(@order.created_at)} — #{esc(captured_by)}",
         ("Transmitido: #{stamp(@order.transmitted_at)}" if @order.transmitted? && @order.transmitted_at),
         ("Vendedor: #{esc([ vendor.erp_salesperson_id, vendor.name ].compact.join(' '))}" if vendor),
         "Estatus: #{@order.status_label.upcase}",
@@ -253,51 +253,51 @@ module Pdf
       # pedido viene a precisión completa y, sin redondear, 100.999 daría
       # "CIEN PESOS 100/100" en vez de "CIENTO UN PESOS 00/100".
       total    = (total || 0).round(2)
-      entero   = total.to_i
-      centavos = ((total - entero) * 100).round
+      whole = total.to_i
+      cents = ((total - whole) * 100).round
       # Apócope: "uno" → "un" antes de sustantivo ("ciento un pesos",
       # "veintiun mil") — cubre también "veintiuno" por terminar en "uno".
-      palabras = integer_to_words(entero).gsub(/uno(?= mil| millones|\z)/, "un")
+      words = integer_to_words(whole).gsub(/uno(?= mil| millones|\z)/, "un")
       # Concordancia: un total de $1.xx es "UN PESO", no "UN PESOS".
-      "#{palabras} #{entero == 1 ? 'peso' : 'pesos'} #{format('%02d', centavos)}/100 M.N.".upcase
+      "#{words} #{whole == 1 ? 'peso' : 'pesos'} #{format('%02d', cents)}/100 M.N.".upcase
     end
 
     def integer_to_words(n)
       return "cero" if n.zero?
 
-      millones = n / 1_000_000
-      miles    = (n % 1_000_000) / 1_000
-      cientos  = n % 1_000
+      millions = n / 1_000_000
+      thousands = (n % 1_000_000) / 1_000
+      rest      = n % 1_000
       out = []
       # Recursivo en millones: cubre también miles de millones (>10^9).
-      out << (millones == 1 ? "un millon" : "#{integer_to_words(millones)} millones") if millones.positive?
-      out << (miles == 1 ? "mil" : "#{hundreds_to_words(miles)} mil") if miles.positive?
-      out << hundreds_to_words(cientos) if cientos.positive?
+      out << (millions == 1 ? "un millon" : "#{integer_to_words(millions)} millones") if millions.positive?
+      out << (thousands == 1 ? "mil" : "#{hundreds_to_words(thousands)} mil") if thousands.positive?
+      out << hundreds_to_words(rest) if rest.positive?
       out.join(" ")
     end
 
     def hundreds_to_words(n)
       return "cien" if n == 100
 
-      centenas = [ "", "ciento", "doscientos", "trescientos", "cuatrocientos", "quinientos",
+      hundreds = [ "", "ciento", "doscientos", "trescientos", "cuatrocientos", "quinientos",
                   "seiscientos", "setecientos", "ochocientos", "novecientos" ]
       parts = []
-      parts << centenas[n / 100] if n >= 100
+      parts << hundreds[n / 100] if n >= 100
       parts << tens_to_words(n % 100) if (n % 100).positive?
       parts.join(" ")
     end
 
     def tens_to_words(n)
-      unidades = [ "", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve",
+      units = [ "", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve",
                   "diez", "once", "doce", "trece", "catorce", "quince", "dieciseis", "diecisiete",
                   "dieciocho", "diecinueve", "veinte", "veintiuno", "veintidos", "veintitres",
                   "veinticuatro", "veinticinco", "veintiseis", "veintisiete", "veintiocho", "veintinueve" ]
-      return unidades[n] if n <= 29
+      return units[n] if n <= 29
 
-      decenas = [ "", "", "", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa" ]
-      d = decenas[n / 10]
-      u = n % 10
-      u.zero? ? d : "#{d} y #{unidades[u]}"
+      tens = [ "", "", "", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa" ]
+      ten = tens[n / 10]
+      unit = n % 10
+      unit.zero? ? ten : "#{ten} y #{units[unit]}"
     end
   end
 end

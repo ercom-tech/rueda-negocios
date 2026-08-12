@@ -151,11 +151,11 @@ module Sync
       # problema operativo, no del sitio — los capturistas quedan idénticos
       # al export (cero). El server (seedeado) es infraestructura y sobrevive.
       server     = User.create!(erp_person_id: 0, username: "servidor", password: "x", role: "server")
-      capturista = User.create!(erp_person_id: 90092, username: "makita1", password: "x", role: "capturista")
+      user = User.create!(erp_person_id: 90092, username: "makita1", password: "x", role: "capturista")
 
       result = Down.new(export_data.merge("users" => [])).run!
 
-      assert_not User.exists?(capturista.id), "el replace deja los capturistas idénticos al export"
+      assert_not User.exists?(user.id), "el replace deja los capturistas idénticos al export"
       assert User.exists?(server.id), "el server seedeado debe sobrevivir siempre"
       assert_equal [ "makita1" ], result.summary[:removed_users]
       assert_equal 1, result.summary[:skipped_people],

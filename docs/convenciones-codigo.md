@@ -13,10 +13,29 @@ Es fácil de romper justo porque los comentarios van en español: al terminar de
 escribir uno, la variable siguiente sale en español sin pensarlo. Si el
 comentario dice "el empaque mínimo", la variable sigue siendo `package_size`.
 
-Excepción registrada: **`orders.dividir_facturas`** (columna, atributo y
-parámetro) está en español a propósito, para espejar literalmente
-`vta_pedido.dividir_facturas` del ERP y que el mapeo del sync sea evidente. Es
-la única; cualquier otra hay que justificarla igual de explícito.
+### Excepciones registradas
+
+Todas comparten justificación: **espejar el ERP hace evidente el mapeo**, y
+traducirlas lo escondería.
+
+1. **`orders.dividir_facturas`** (columna, atributo y parámetro): espeja
+   literalmente `vta_pedido.dividir_facturas`.
+2. **El rol `capturista`** (`users.role`): es el término con el que FECEGO
+   nombra ese puesto, y aparece en pantalla. Genera `User.capturista` y
+   `capturista?`.
+3. **En `rueda-api`, lo que espeja al ERP**: `EMPRESA`, `prefijo`/`prefijo_for`,
+   `clave`, `id_rueda`/`for_rueda`, los alias de las CTE (`marcas`, `provs`) y
+   **las llaves del payload** (`clave_cliente`, `fecha_pedido`,
+   `descto_porcentaje`…). Ese repo vive pegado al esquema del ERP: traducirlos
+   dejaría el SQL mitad y mitad, que es peor que cualquiera de los dos idiomas
+   completo. Cuidado especial con las llaves del payload — son el contrato de
+   red con `Sync::Up#build_payload`, así que un renombre "por consistencia"
+   rompe el sync-up y el síntoma es un 422 en pleno cierre de evento.
+
+Cualquier excepción nueva se registra aquí con su porqué. Lo que **no** es
+excepción: variables locales, métodos y constantes que no espejan nada del ERP
+—van en inglés aunque el comentario de arriba esté en español, que es
+justamente cuando se cuelan.
 
 ## Textos: `pluralize` es el inflector inglés
 
@@ -165,7 +184,12 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
   estilo Ruby (`\`) en JS rompe el controller entero sin que nada más avise.
 - **Renombres masivos con expresiones regulares: revisar el diff palabra por
   palabra.** Un `\bcoincide\b` pensado para una variable también reescribe el
-  texto visible ("Ningún pedido coincide") y los comentarios.
+  texto visible ("Ningún pedido coincide") y los comentarios. Proteger las
+  comillas **no basta**: el texto visible también vive dentro de literales de
+  expresión regular (`assert_match(/Hay 1 pedido en borrador/, …)`), y ahí un
+  `borrador → draft` pasa desapercibido hasta que falla la prueba. La
+  comprobación que sí sirve es listar todo el texto en español que toca el diff
+  —cadenas **y** regexes— y leerlo.
 - **Validación en navegador:** levantar un servidor efímero en otro puerto y en
   `127.0.0.1` (no `localhost`: las cookies ignoran el puerto y se pisaría la
   sesión del usuario). Usar datos efímeros propios y borrarlos al terminar;
