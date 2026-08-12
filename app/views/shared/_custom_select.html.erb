@@ -9,6 +9,12 @@
     include_blank — permite opción vacía (default true)
     button_class / panel_class — override de estilo (opcional)
     input_data  — data-attrs extra para el hidden input (ej form-submit)
+    label       — nombre accesible del combo (el rótulo visible que lleva al
+                  lado). Sin él, un lector de pantalla anuncia todos los combos
+                  igual —"— Selecciona —, listbox"— y el aviso "Faltan datos
+                  obligatorios: Uso de CFDI" no se puede emparejar con ninguno.
+                  El rótulo visible es un <span>, no un <label>: el control es
+                  un <button>, así que la asociación va por aria.
 %>
 <% placeholder   ||= "— Selecciona —" %>
 <% include_blank   = local_assigns.fetch(:include_blank, true) %>
@@ -19,6 +25,7 @@
                      "flex w-full items-center justify-between gap-2 rounded-full bg-black px-5 py-3 text-left text-white" %>
 <% btn_class += " ring-2 ring-red-500" if local_assigns[:invalid] %>
 <% sel_id = "sel-#{SecureRandom.hex(4)}" %>
+<% accessible_name = local_assigns[:label].presence || placeholder %>
 
 <div class="relative" data-controller="select"
      data-select-filterable-value="<%= filterable %>"
@@ -26,6 +33,7 @@
   <button type="button" data-select-target="button"
           data-action="select#toggle keydown->select#navigate"
           aria-haspopup="listbox" aria-expanded="false" aria-controls="<%= sel_id %>-list"
+          aria-label="<%= accessible_name %>"
           class="<%= btn_class %>">
     <span data-select-target="label" class="truncate <%= "opacity-60" if selected_label.nil? %>">
       <%= selected_label || placeholder %>
@@ -47,7 +55,7 @@
                class="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900 outline-none focus:border-brand-gold" />
       </div>
     <% end %>
-    <ul id="<%= sel_id %>-list" data-select-target="list" role="listbox" aria-label="<%= placeholder %>"
+    <ul id="<%= sel_id %>-list" data-select-target="list" role="listbox" aria-label="<%= accessible_name %>"
         class="py-1 text-neutral-900">
       <% if include_blank %>
         <li role="presentation">

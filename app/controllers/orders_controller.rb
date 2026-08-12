@@ -19,7 +19,7 @@ class OrdersController < ApplicationController
 
   # Sugerencias del autocompletado (clave o nombre).
   def client_options
-    @clients = params[:q].present? ? client_search(params[:q]) : Client.none
+    @clients = params[:q].present? ? Client.search(params[:q]).limit(10) : Client.none
     order = current_user.orders.find_by(id: params[:order_id])
     render partial: "client_options", locals: { clients: @clients, order: order }, layout: false
   end
@@ -138,30 +138,12 @@ class OrdersController < ApplicationController
 
   private
 
-  # Lectura (show/summary/pdf): el server puede abrir cualquier pedido — ya los
   # El buscador manda "CLAVE — Nombre comercial": se toma la clave y, si no
   # existe tal cual, se busca por texto (mismo criterio en el paso 1 y al
   # editar el encabezado).
   def client_from_key(value)
     key = value.to_s.strip.split(/\s[–-]\s/).first.to_s.strip
-    Client.find_by(erp_client_key: key) || client_search(key).first
-  end
-
-  def client_search(query)
-    q = ActiveRecord::Base.sanitize_sql_like(query.to_s.strip)
-    return Client.none if q.blank?
-
-    like   = "%#{q}%"
-    prefix = "#{q}%"
-    # Relevancia: primero los que EMPIEZAN con lo tecleado (en comercial o
-    # nombre), luego alfabético por comercial (o nombre si no hay comercial).
-    relevance = ActiveRecord::Base.sanitize_sql_array([
-      "CASE WHEN commercial_name ILIKE :p OR name ILIKE :p THEN 0 ELSE 1 END, " \
-      "COALESCE(NULLIF(commercial_name, ''), name)", { p: prefix }
-    ])
-    Client.includes(:salesperson)
-          .where("name ILIKE :q OR commercial_name ILIKE :q OR erp_client_key ILIKE :q", q: like)
-          .order(Arel.sql(relevance)).limit(10)
+    Client.find_by(erp_client_key: key) || Client.search(key).first
   end
 
   def apply_header_defaults

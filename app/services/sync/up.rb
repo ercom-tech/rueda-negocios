@@ -23,11 +23,11 @@ module Sync
       Guards.no_draft_orders!(GuardError)
     end
 
+    # El transporte va por `ApiClient`: normalización de la URL, timeouts y —el
+    # día que entren— tokens y TLS viven en UN solo lugar. Antes esta clase
+    # armaba su propio Net::HTTP y habría quedado fuera del endurecimiento.
     def initialize(api_base = ENV["RUEDA_API_URL"])
-      raise Sync::ApiClient::Error, "RUEDA_API_URL no configurada" if api_base.to_s.strip.empty?
-
-      root = api_base.end_with?("/") ? api_base : "#{api_base}/"
-      @endpoint = URI.join(root, "pedidos")
+      @api = ApiClient.new(api_base)
     end
 
     def run!
@@ -41,7 +41,7 @@ module Sync
         # Si se cuela, el ERP se queda con la versión vieja y la pantalla con
         # la nueva: sin esto, nadie se enteraba.
         stamp = order.updated_at
-        res = post(build_payload(order))
+        res = @api.post("pedidos", build_payload(order))
         if res.is_a?(Net::HTTPSuccess)
           folio = JSON.parse(res.body)["clave_pedido"]
           # Un 2xx sin folio es una respuesta rota: marcarlo transmitido con
@@ -134,15 +134,6 @@ module Sync
           }
         end
       }
-    end
-
-    def post(payload)
-      http = Net::HTTP.new(@endpoint.host, @endpoint.port)
-      http.open_timeout = ApiClient::OPEN_TIMEOUT
-      http.read_timeout = ApiClient::READ_TIMEOUT
-      req  = Net::HTTP::Post.new(@endpoint, "Content-Type" => "application/json")
-      req.body = payload.to_json
-      http.request(req)
     end
 
     def parse_error(res)

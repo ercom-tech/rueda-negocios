@@ -31,6 +31,24 @@ necesita concordar además en verbo o artículo— escribir la concordancia a ma
 como hace `Sync::Guards`. La regla de concordancia siempre está en
 `docs/convenciones-visuales.md`; esto es la trampa de la herramienta.
 
+## Dónde vive cada cosa
+
+- **Todo el HTTP hacia `rueda-api` pasa por `Sync::ApiClient`.** Es el punto
+  único donde viven la URL, los timeouts y —cuando entren— los tokens y el TLS.
+  Una clase que arme su propio `Net::HTTP` queda fuera del endurecimiento sin
+  que nada lo delate hasta el 401.
+- **Una consulta con criterio de negocio va al modelo, no al controlador.**
+  `Product.search` y `Client.search` son scopes porque su relevancia la reusan
+  varias pantallas; como método privado de un controlador, el siguiente que la
+  necesite la copia y el mismo concepto pasa a significar dos cosas.
+- **Un `yield` solo funciona en un partial renderizado con `layout:`.** En un
+  `render "x"` normal rinde vacío, sin error: el partial parece correcto y
+  produce una pantalla en blanco.
+- **El rótulo visible de un combo custom no es un `<label>`:** el control es un
+  `<button>`, así que la asociación va por `aria-label`. Sin él, todos los
+  combos se anuncian igual y los mensajes que nombran un campo no se pueden
+  emparejar con su control.
+
 ## Hotwire / Turbo
 
 - **Nunca `link_to` con `data: { turbo_method: … }`.** Turbo intercepta el clic

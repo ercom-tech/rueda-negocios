@@ -36,6 +36,22 @@ class UserMessagesTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # Sin nombre accesible, un lector de pantalla anuncia los cuatro combos del
+  # encabezado igual —"— Selecciona —, listbox"— y el aviso "Faltan datos
+  # obligatorios: Uso de CFDI" no se puede emparejar con ninguno.
+  test "los combos del encabezado se anuncian con su propio nombre" do
+    ClientTaxProfile.create!(client: @client, rfc: "AAA010101AAA", business_name: "CLIENTE 930 SA")
+    ClientBranch.create!(client: @client, erp_branch_id: 1, name: "MATRIZ")
+    CfdiUse.create!(code: "G01", description: "ADQUISICIÓN DE MERCANCÍAS")
+
+    get new_order_path(client_key: @client.erp_client_key)
+
+    assert_response :success
+    [ "Uso de CFDI", "Nombre o razón social (RFC)", "Dirección de entrega" ].each do |nombre|
+      assert_select "button[aria-label=?]", nombre
+    end
+  end
+
   # Las de Rails están en inglés, sin una sola liga y pidiendo "revisar los
   # logs". El botón Atrás tras descartar un pedido llega ahí, y sin internet no
   # hay a quién preguntarle ni la dirección del servidor a la mano.

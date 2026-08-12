@@ -28,13 +28,35 @@ module Sync
       get(URI.join(@root, "ruedas/#{round_erp_id}/export"))
     end
 
+    # Alta de un pedido en el ERP. Devuelve la respuesta cruda —a diferencia de
+    # `get`— porque el sync-up necesita el código y el cuerpo de CADA pedido
+    # para reportar por qué se rechazó, y un lote no se aborta por uno malo.
+    # Las excepciones de red se dejan pasar: `Sync::Up` las traduce a un motivo
+    # legible por pedido.
+    def post(path, payload)
+      uri = URI.join(@root, path)
+      request = Net::HTTP::Post.new(uri, "Content-Type" => "application/json")
+      request.body = payload.to_json
+      http(uri).request(request)
+    end
+
     private
 
+    # Punto ÚNICO de configuración del transporte. Importa para la fase de
+    # strengthening: el día que entren los tokens o el TLS, se agregan aquí y
+    # los cubren todas las llamadas. Antes el sync-up armaba su propio
+    # Net::HTTP y se habría quedado sin credenciales — justo la ruta de
+    # escritura al ERP, la de mayor riesgo, y el síntoma habría sido un 401 en
+    # plena oficina, no un error de compilación.
+    def http(uri)
+      client = Net::HTTP.new(uri.host, uri.port)
+      client.open_timeout = OPEN_TIMEOUT
+      client.read_timeout = READ_TIMEOUT
+      client
+    end
+
     def get(uri)
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.open_timeout = OPEN_TIMEOUT
-      http.read_timeout = READ_TIMEOUT
-      res = http.request(Net::HTTP::Get.new(uri))
+      res = http(uri).request(Net::HTTP::Get.new(uri))
       raise Error, "HTTP #{res.code} desde #{uri}" unless res.is_a?(Net::HTTPSuccess)
 
       JSON.parse(res.body)

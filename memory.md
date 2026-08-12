@@ -125,6 +125,39 @@ los tres criterios que traía el reporte estaban enunciados sobre el recorte
 equivocado, y en ambos casos los números correctos se parecían lo bastante a
 los del reporte como para no notarlo sin volver a consultar.
 
+### Deuda de convenciones (cerrada)
+
+Cuatro MEDIA que no producían un defecto hoy pero cuyo costo **crece**: cada
+una es una trampa para el siguiente cambio.
+
+- **`Sync::Up` reimplementaba la capa HTTP** en vez de usar `ApiClient`: dos
+  `Net::HTTP`, dos normalizaciones de URL, dos redacciones del mismo error.
+  Tenía fecha de cobro: el día que entren los tokens y el TLS de la fase de
+  strengthening, quien los agregue a `ApiClient` habría dejado el **sync-up**
+  —la ruta de escritura al ERP, la de mayor riesgo— hablando sin credenciales,
+  y el síntoma habría sido un 401 en plena oficina, no un error de compilación.
+  `ApiClient#post` devuelve la respuesta cruda a propósito: el sync-up necesita
+  el código y el cuerpo de CADA pedido para reportar por qué se rechazó.
+- **`client_search` vivía en el controlador** con SQL crudo, mientras el de
+  productos era un scope probado del modelo. "Buscar cliente" tiene relevancia
+  propia y otras pantallas la necesitan: como método privado, la siguiente lo
+  copia y a partir de ahí buscar un cliente significa dos cosas distintas según
+  dónde estés. Movido a `Client.search`, ahora con pruebas de modelo —incluida
+  la de que los comodines tecleados se escapan—.
+- **La tolerancia de un centavo** estaba declarada como constante y repetida
+  como literal en la comprobación de idempotencia de `rueda-api`. Al cambiar
+  `TOLERANCE`, esa comparación se habría quedado atrás y empezado a rechazar
+  reintentos legítimos con "colisión de idempotencia" — un mensaje que le pide
+  al operador RECAPTURAR el pedido.
+- **El partial `orders/_field` estaba muerto** y era una trampa: un `yield` en
+  un partial sin `layout:` rinde vacío, así que quien lo encontrara y lo usara
+  obtendría un campo en blanco. Borrado. Su duplicación real —las seis
+  etiquetas del encabezado— se resolvió por el lado que sí importaba: darle
+  **nombre accesible** al combo (`label:` → `aria-label`), porque el rótulo
+  visible es un `<span>` y el control un `<button>`, así que sin aria un lector
+  de pantalla anunciaba los cuatro igual y el aviso "Faltan datos obligatorios:
+  Uso de CFDI" no se podía emparejar con ninguno.
+
 ### Avisos y salidas (cerrado)
 
 Cinco hallazgos sobre lo mismo: que el usuario pueda **leer** lo que el sistema
