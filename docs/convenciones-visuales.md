@@ -77,7 +77,10 @@ Todo elemento deshabilitado o "próximamente" se ve al **60%**:
 - **Sin badge** (bloqueo por estado): `opacity-60` en el contenedor completo.
 - Cuando dentro del bloque hay información que el usuario necesita leer justo
   en ese momento (p. ej. el contador de partidas al llegar al tope), el 60% se
-  aplica solo al **control**, no al dato.
+  aplica solo al **control**, no al dato. Incluye el **placeholder** cuando al
+  deshabilitarse pasa a explicar *por qué* no se puede escribir: atenuarlo lo
+  dejaba en 2.21:1, y no se arregla oscureciéndolo — ni `neutral-900` al 60%
+  llega a 4.5.
 
 No usar `opacity-50` ni `disabled:opacity-*`. El atributo `disabled` del botón
 sí se conserva: es comportamiento, no estética.

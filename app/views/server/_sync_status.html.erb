@@ -11,9 +11,11 @@
 
   <% elsif run.running? %>
     <span class="inline-flex items-center gap-2 font-medium text-neutral-800">
-      <svg class="h-4 w-4 animate-spin text-neutral-700" viewBox="0 0 24 24" fill="none">
-        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+      <%# Heroicon outline `arrow-path` girando, en vez del spinner de dos capas
+          con trazo 4 y relleno: la iconografía del sitio es 100% Heroicons
+          outline a trazo 1.5, y este era el único con otro peso. %>
+      <svg class="h-4 w-4 animate-spin text-neutral-700" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992V4.356m0 4.992-3.181-3.183a8.25 8.25 0 0 0-13.803 3.7M4.031 9.865v4.992m0 0h4.99m-4.99 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7" />
       </svg>
       En progreso…
     </span>

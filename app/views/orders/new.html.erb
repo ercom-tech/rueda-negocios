@@ -170,7 +170,11 @@
           <% end %>
           <% end %>
         <% else %>
-          <p class="rounded-2xl bg-black/5 px-5 py-4 text-sm text-neutral-700">
+          <%# Crema con borde, como los otros dos avisos de esta misma card: el
+              `bg-black/5` era el único translúcido usado como superficie de
+              contenido en todo el proyecto, y dejaba tres avisos con tres
+              tratamientos distintos en la misma pantalla. %>
+          <p class="rounded-2xl border border-black/10 bg-brand-cream px-5 py-4 text-sm text-neutral-700">
             Busca al cliente por clave o nombre para comenzar.
           </p>
         <% end %>

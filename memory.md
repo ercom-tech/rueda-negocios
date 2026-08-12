@@ -125,6 +125,30 @@ los tres criterios que traía el reporte estaban enunciados sobre el recorte
 equivocado, y en ambos casos los números correctos se parecían lo bastante a
 los del reporte como para no notarlo sin volver a consultar.
 
+### El bloque visual, cerrado (BAJA)
+
+Seis desviaciones de las convenciones visuales. Cinco eran cosméticas; una
+tenía consecuencia y fue la que más enseñó.
+
+**El aviso del tope de partidas estaba en 2.21:1.** Al llegar a 45, el
+placeholder deja de ser una invitación a escribir y pasa a ser el mensaje que
+explica por qué no se puede — pero vivía dentro del bloque atenuado al 60%.
+Medí las salidas antes de elegir: `neutral-700` al 60% da 2.21, y **ni siquiera
+`neutral-900` alcanza (3.25)**. O sea que el arreglo no era oscurecer el texto
+sino **no atenuarlo**: el 60% quedó solo en el ícono, que es el control. Es la
+regla que el propio archivo ya enunciaba para el contador y que no se había
+aplicado al mensaje.
+
+Las otras cinco: los tres chevrons a trazo 2 y el spinner de dos capas con
+trazo 4 y relleno pasan a Heroicons outline a 1.5 (`arrow-path` girando), y el
+`&times;` tipográfico del flash a `x-mark` — los 21 SVG del proyecto quedan al
+mismo peso; el hover del hub de reportes baja de 1.03 a 1.015 como las otras
+ocho cards; el textarea de observaciones pasa a blanco, que es la señal de
+"esto se escribe" (en crema se veía idéntico al bloque de solo lectura de al
+lado, mismo color, radio y borde); y el `bg-black/5` —único translúcido usado
+como superficie de contenido— pasa a crema con borde, como los otros dos avisos
+de esa misma card.
+
 ### El idioma del código, cerrado (BAJA)
 
 Los ~35 identificadores en español que sobrevivían: los helpers de concordancia

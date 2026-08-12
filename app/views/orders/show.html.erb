@@ -133,10 +133,15 @@
                   class: "relative flex flex-1 flex-col" do %>
               <%# `uppercase` es solo presentación (se ve en mayúsculas al
                   teclear); el valor real lo normaliza el modelo (normalizes). %>
+              <%# Blanco, no crema: el blanco es la señal de "esto se escribe"
+                  (convenciones-visuales). En crema, el textarea editable se veía
+                  idéntico al bloque de solo lectura de abajo —mismo color, mismo
+                  radio, mismo borde— y el capturista no sabía si podía escribir
+                  hasta hacer clic. %>
               <%= text_area_tag :observations, @order.observations,
                     placeholder: "Observaciones", "aria-label": "Observaciones del pedido",
                     data: { action: "change->form-submit#submit" },
-                    class: "h-full min-h-32 w-full rounded-2xl border border-black/10 bg-brand-cream p-4 uppercase text-neutral-900 outline-none placeholder:normal-case placeholder:text-neutral-500 focus:border-brand-gold-dark" %>
+                    class: "h-full min-h-32 w-full rounded-2xl border border-black/10 bg-white p-4 uppercase text-neutral-900 outline-none placeholder:normal-case placeholder:text-neutral-500 focus:border-brand-gold-dark" %>
               <span data-form-submit-target="status" role="status"
                     class="pointer-events-none absolute bottom-3 right-4 text-sm font-semibold text-neutral-900 opacity-0 transition-opacity duration-300">
                 Guardado ✓
