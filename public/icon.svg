@@ -1,3 +1,23 @@
-<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="256" cy="256" r="256" fill="red"/>
+<!-- Favicon: tuerca hexagonal en negro sobre el dorado de marca (#edc94c).
+
+     Silueta SÓLIDA a propósito: la iconografía del sitio es Heroicons outline a
+     trazo 1.5, que a 16 px desaparece. El hexágono con barreno son dos figuras
+     geométricas y nada más, así que es lo que mejor sobrevive al reescalado —
+     a 16 px todavía se distingue la forma, no solo una mancha.
+
+     Negro sobre dorado y no al revés, por dos razones: el dorado de FONDO es lo
+     que hace que la pestaña del sitio se encuentre de un vistazo entre varias
+     abiertas (el color identifica antes que la forma), y una tuerca clara sobre
+     oscuro se parece demasiado al ícono de "ajustes" de otras aplicaciones.
+
+     Sin width/height: escala a cualquier tamaño. El PNG de al lado (512×512)
+     cubre a los clientes que no leen SVG y el apple-touch-icon.
+
+     Las esquinas se suavizan con un stroke del mismo color + linejoin round, en
+     vez de con un path de esquinas redondeadas: menos puntos que mantener. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#edc94c"/>
+  <path d="M54 32 L43 51.05 L21 51.05 L10 32 L21 12.95 L43 12.95 Z"
+        fill="#171717" stroke="#171717" stroke-width="5" stroke-linejoin="round"/>
+  <circle cx="32" cy="32" r="9.5" fill="#edc94c"/>
 </svg>

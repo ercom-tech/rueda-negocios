@@ -10,6 +10,10 @@
 
     <link rel="icon" href="/icon.png" type="image/png">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <%# Igual que el layout `application`: sin esto, un capturista que guardara
+        la pantalla de captura en la pantalla de inicio de su tablet obtenía el
+        ícono genérico del navegador. %>
+    <link rel="apple-touch-icon" href="/icon.png">
 
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
