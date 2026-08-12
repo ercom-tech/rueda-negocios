@@ -125,6 +125,30 @@ los tres criterios que traía el reporte estaban enunciados sobre el recorte
 equivocado, y en ambos casos los números correctos se parecían lo bastante a
 los del reporte como para no notarlo sin volver a consultar.
 
+### Favicon propio y fuera el andamiaje PWA (2026-08-11)
+
+El favicon era el de Rails: un círculo rojo. Se dibujaron tres opciones del
+sector ferretero y **el criterio que decidió no fue el gusto sino el tamaño**:
+un favicon se juzga a 16 px, no a 256.
+
+- **Silueta sólida, no el ícono del sitio en chiquito.** La iconografía es
+  Heroicons outline a trazo 1.5, que a 16 px simplemente desaparece.
+- **Ganó la tuerca hexagonal** porque son dos figuras geométricas y nada más:
+  a 16 px sigue reconociéndose. La llave española, que era mi recomendación
+  inicial, se convierte en una diagonal oscura — se distingue, pero ya no se
+  sabe qué es.
+- **Negro sobre dorado, no al revés.** La objeción de "parece ajustes" no venía
+  de la tuerca sino de la figura clara sobre fondo oscuro, que es como se ven
+  los íconos de configuración. Invertida deja de leerse así, y el dorado de
+  FONDO conserva lo que importa en una laptop con varias pestañas abiertas:
+  **el color identifica antes que la forma**.
+
+**Borrado `app/views/pwa/`** (manifest + service worker) y las dos líneas
+comentadas que lo enlazarían: sin rutas, sin enlace y sin razón de ser — el
+offline aquí se resuelve a nivel de red, no con una PWA instalable. Mismo
+criterio que el partial `orders/_field`: **el andamiaje sin usar es lo que
+después confunde**, porque quien lo encuentra asume que la capacidad existe.
+
 ### El bloque visual, cerrado (BAJA)
 
 Seis desviaciones de las convenciones visuales. Cinco eran cosméticas; una

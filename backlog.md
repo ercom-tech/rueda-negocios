@@ -9,6 +9,24 @@ aprendizajes de lo que ya se hizo.
 
 ## Prioridad alta
 
+### Desplegar lo remediado en la laptop y en la VM de testing
+
+La 4ª auditoría se remedió completa el 2026-08-11 y **nada de eso está
+desplegado todavía**. Al hacerlo:
+
+- **Orden: laptop primero, API después.** Al revés, la API nueva rechaza con
+  422 las remisiones que la laptop vieja aún no acompaña con destinatario, y
+  quedan transmisiones bloqueadas hasta actualizar. En el otro sentido no pasa
+  nada: la laptop nueva manda campos que la API vieja ignora.
+- No transmitir durante la ventana entre ambas.
+- `bin/rails tailwindcss:build` en la laptop: cambiaron vistas y la paleta.
+- **Dos cambios visibles** que conviene anunciar antes de que sorprendan: el
+  coral bajó a `#bd5343` (un tono más oscuro, por contraste) y el favicon
+  cambió a la tuerca.
+- Comprobar después: transmitir una remisión de un cliente CON perfil y
+  verificar en el ERP que `consec_remision ≠ 0`, `rfc = XAXX010101000`,
+  `c_UsoCFDI = S01` y `fecha_crea` = la de captura.
+
 ### El rol servidor debe poder descartar pedidos ajenos
 
 Desde el reporte "Pedidos capturados", donde ya los ve todos con dueño y
