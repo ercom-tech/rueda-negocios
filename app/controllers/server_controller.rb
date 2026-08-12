@@ -19,6 +19,11 @@ class ServerController < ApplicationController
     # operador se le da una guía accionable.
     Rails.logger.warn("rounds: #{e.message}")
     @rounds = []
+    # La vista distingue con esto el éxito-sin-ruedas (pide registrarlas en el
+    # ERP) del fallo de conexión: sin la bandera, el estado vacío decía "(o no
+    # se pudo contactar al servidor)" también en el caso bueno y mandaba a
+    # revisar la red sin necesidad.
+    @fetch_failed = true
     flash.now[:alert] = "No se pudo obtener la lista de ruedas. " \
                         "Verifica que el servidor rueda-api esté disponible e inténtalo de nuevo."
   end

@@ -18,5 +18,18 @@ module Sync
       error = assert_raises(ApiClient::Error) { ApiClient.new(API).list_rounds }
       assert_match(/HTTP 500/, error.message)
     end
+
+    test "un error con mensaje de negocio de la API llega con ese mensaje" do
+      # El 404 de rueda inexistente trae {error, message}: "HTTP 404" a secas
+      # mandaba al operador a revisar la red cuando lo roto era el número de
+      # rueda tecleado. (5ª auditoría.)
+      stub_request(:get, "#{API}/ruedas/99/export")
+        .to_return(status: 404,
+                   body: { error: "not_found",
+                           message: "No hay ninguna rueda 99 vigente en el ERP." }.to_json)
+
+      error = assert_raises(ApiClient::Error) { ApiClient.new(API).fetch_export(99) }
+      assert_match(/No hay ninguna rueda 99 vigente/, error.message)
+    end
   end
 end

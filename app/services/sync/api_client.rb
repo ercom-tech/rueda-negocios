@@ -57,7 +57,7 @@ module Sync
 
     def get(uri)
       res = http(uri).request(Net::HTTP::Get.new(uri))
-      raise Error, "HTTP #{res.code} desde #{uri}" unless res.is_a?(Net::HTTPSuccess)
+      raise Error, error_message(res, uri) unless res.is_a?(Net::HTTPSuccess)
 
       JSON.parse(res.body)
     rescue SystemCallError, SocketError, Timeout::Error, Net::ReadTimeout => e
@@ -66,6 +66,16 @@ module Sync
       # Respuesta 2xx con cuerpo no-JSON (proxy, HTML de error): error propio
       # para que el panel del server muestre el flash en vez de un 500 crudo.
       raise Error, "respuesta inválida de rueda-api (#{uri}): no es JSON"
+    end
+
+    # El mensaje de negocio de la API cuando lo trae ({error, message} — p.ej.
+    # el 404 de "no hay ninguna rueda N vigente"), o el código pelón: "HTTP
+    # 404" a secas no le dice al operador que lo roto es el número de rueda.
+    def error_message(res, uri)
+      message = JSON.parse(res.body)["message"]
+      message.presence || "HTTP #{res.code} desde #{uri}"
+    rescue JSON::ParserError, TypeError
+      "HTTP #{res.code} desde #{uri}"
     end
   end
 end

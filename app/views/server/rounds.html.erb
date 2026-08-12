@@ -25,7 +25,12 @@
           fondo con patrón, `bg-white/5` se lava y el bloque no se aprecia. %>
       <% if @rounds.blank? %>
         <p class="rounded-3xl border border-black/10 bg-brand-cream px-6 py-8 text-center text-neutral-700">
-          No hay ruedas disponibles (o no se pudo contactar al servidor).
+          <% if @fetch_failed %>
+            No se pudo obtener la lista de ruedas.
+          <% else %>
+            No hay ruedas dadas de alta en el ERP. Pide que las registren y
+            vuelve a entrar aquí.
+          <% end %>
         </p>
       <% end %>
 

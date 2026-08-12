@@ -7,7 +7,7 @@
 <% kind ||= run&.kind %>
 <div id="sync-<%= kind %>-status" class="mt-3 text-center text-sm">
   <% if run.nil? %>
-    <span class="text-neutral-800/50">Sin corridas todavía.</span>
+    <span class="text-neutral-800/75">Sin corridas todavía.</span>
 
   <% elsif run.running? %>
     <span class="inline-flex items-center gap-2 font-medium text-neutral-800">
@@ -27,18 +27,18 @@
         insertados en el ERP: con transmisión parcial el rótulo lo dice. %>
     <span class="font-semibold text-red-700">✗ <%= sent.positive? ? "Parcial" : "Falló" %></span>
     <% if failed.any? %>
-      <span class="text-neutral-800/70">
+      <span class="text-neutral-800/75">
         <% if sent.positive? %>· <%= pluralize(sent, "pedido") %> <%= "transmitido".pluralize(sent) %><% end %>
         · <%= failed.size %> sin transmitir
       </span>
       <%= render "server/sync_failures", failed: failed %>
     <% elsif run.message.present? %>
-      <span class="text-neutral-800/70"><%= run.message %></span>
+      <span class="text-neutral-800/75"><%= run.message %></span>
     <% end %>
 
   <% else # completed %>
     <span class="font-semibold text-emerald-800">✓ Listo</span>
-    <span class="text-neutral-800/70">
+    <span class="text-neutral-800/75">
       <% if run.kind == "down" %>
         <% e = run.summary["entities"] || {} %>
         · <%= number_with_delimiter(e["products"].to_i) %> productos
@@ -50,38 +50,72 @@
       <% end %>
       <% if run.finished_at %>· <%= run.finished_at.localtime.strftime("%d/%m %H:%M") %><% end %>
     </span>
+  <% end %>
 
-    <%# Pedidos que alguien editó mientras se transmitían: el ERP se quedó con
-        la versión anterior. La captura se pausa durante el sync, así que esto
-        solo aparece si algo se coló en la ventana — pero cuando aparece hay
-        que revisarlo contra el ERP, y en silencio no se enteraría nadie. %>
-    <% if run.kind == "up" && (conflicts = run.summary["conflicts"].to_a).any? %>
-      <div class="mt-3 rounded-2xl bg-brand-cream px-4 py-3 text-left text-sm leading-snug text-neutral-900">
-        <p class="font-semibold">Revisa <%= conflicts.size == 1 ? "este pedido" : "estos pedidos" %> contra el ERP</p>
-        <p class="mt-1">
-          Se <%= conflicts.size == 1 ? "editó" : "editaron" %> mientras se
-          <%= conflicts.size == 1 ? "transmitía" : "transmitían" %>, así que el ERP
-          <%= conflicts.size == 1 ? "guardó" : "guardó" %> la versión anterior:
-          <span class="font-semibold"><%= conflicts.map { |c| "#{c['local']} → #{c['erp']}" }.join(" · ") %></span>
-        </p>
-      </div>
-    <% end %>
+  <%# --- Avisos de la corrida: se pintan termine como termine --------------
+      Vivían solo en la rama `completed`, así que una corrida parcial (basta
+      un pedido fallido para marcar `failed`) se tragaba el aviso de
+      conflictos y el ERP se quedaba con la versión vieja sin que nadie lo
+      supiera (5ª auditoría). Una corrida `down` fallida no trae summary
+      (solo message), por eso el `to_h`. %>
+  <% summary = run && !run.running? ? run.summary.to_h : {} %>
 
-    <%# Capturistas que se quedaron sin universo de productos: el dato ya se
-        calculaba (`skipped_people`) y no se mostraba en ningún lado, así que
-        el defecto llegaba vivo al evento.
+  <%# Pedidos que alguien editó mientras se transmitían: el ERP se quedó con
+      la versión anterior. La captura se pausa durante el sync, así que esto
+      solo aparece si algo se coló en la ventana — pero cuando aparece hay
+      que revisarlo contra el ERP, y en silencio no se enteraría nadie. %>
+  <% if kind == "up" && (conflicts = summary["conflicts"].to_a).any? %>
+    <div class="mt-3 rounded-2xl bg-brand-cream px-4 py-3 text-left text-sm leading-snug text-neutral-900">
+      <p class="font-semibold">Revisa <%= conflicts.size == 1 ? "este pedido" : "estos pedidos" %> contra el ERP</p>
+      <p class="mt-1">
+        Se <%= conflicts.size == 1 ? "editó" : "editaron" %> mientras se
+        <%= conflicts.size == 1 ? "transmitía" : "transmitían" %>, así que el ERP
+        guardó la versión anterior:
+        <span class="font-semibold"><%= conflicts.map { |c| "#{c['local']} → #{c['erp']}" }.join(" · ") %></span>
+      </p>
+    </div>
+  <% end %>
 
-        Los pedidos que el reemplazo quitó NO se avisan aquí: el modal ya lo
-        advierte ANTES de confirmar, que es cuando sirve. %>
-    <% if run.kind == "down" && (skipped = run.summary["skipped_people"].to_i).positive? %>
-      <%# Concordancia a mano: `pluralize` usa el inflector INGLÉS y deja
-          "capturista" sin cambio (ver docs/convenciones-codigo.md). %>
-      <div class="mt-3 rounded-2xl bg-brand-cream px-4 py-3 text-left text-sm leading-snug text-neutral-900">
-        <span class="font-semibold"><%= skipped %> <%= skipped == 1 ? "capturista" : "capturistas" %></span>
-        sin proveedor ni marca asignados: no <%= skipped == 1 ? "va" : "van" %> a poder
-        agregar productos. Pide que <%= skipped == 1 ? "lo asignen" : "los asignen" %>
-        en el ERP y vuelve a obtener la información.
-      </div>
-    <% end %>
+  <%# Capturistas cuya contraseña vino ilegible del ERP: no van a poder
+      entrar, y descubrirlo en el evento no tiene arreglo (offline). El dato
+      siempre quedó guardado en la corrida; solo la tarea de consola lo
+      mostraba, y el panel es el camino del operador (5ª auditoría). %>
+  <% if kind == "down" && (skipped_users = summary["skipped_users"].to_a).any? %>
+    <%# Concordancia a mano: `pluralize` usa el inflector INGLÉS y deja
+        "capturista" sin cambio (ver docs/convenciones-codigo.md). %>
+    <div class="mt-3 rounded-2xl bg-brand-cream px-4 py-3 text-left text-sm leading-snug text-neutral-900">
+      <span class="font-semibold"><%= skipped_users.size %> <%= skipped_users.size == 1 ? "capturista" : "capturistas" %></span>
+      no <%= skipped_users.size == 1 ? "va" : "van" %> a poder entrar (su contraseña no sirve):
+      <span class="font-semibold"><%= skipped_users.join(", ") %></span>.
+      Pide que <%= skipped_users.size == 1 ? "le" : "les" %> restablezcan la contraseña
+      en el ERP y vuelve a obtener la información.
+    </div>
+  <% end %>
+
+  <%# Capturistas que se quedaron sin universo de productos: el dato ya se
+      calculaba (`skipped_people`) y no se mostraba en ningún lado, así que
+      el defecto llegaba vivo al evento.
+
+      Los pedidos que el reemplazo quitó NO se avisan aquí: el modal ya lo
+      advierte ANTES de confirmar, que es cuando sirve. %>
+  <% if kind == "down" && (skipped = summary["skipped_people"].to_i).positive? %>
+    <div class="mt-3 rounded-2xl bg-brand-cream px-4 py-3 text-left text-sm leading-snug text-neutral-900">
+      <span class="font-semibold"><%= skipped %> <%= skipped == 1 ? "capturista" : "capturistas" %></span>
+      sin proveedor ni marca asignados: no <%= skipped == 1 ? "va" : "van" %> a poder
+      agregar productos. Pide que <%= skipped == 1 ? "lo asignen" : "los asignen" %>
+      en el ERP y vuelve a obtener la información.
+    </div>
+  <% end %>
+
+  <%# Capturistas que el reemplazo quitó porque ya no vienen en la rueda: es
+      el resultado esperado del replace, pero sin el aviso el operador se
+      entera cuando alguien ya no puede entrar. %>
+  <% if kind == "down" && (removed = summary["removed_users"].to_a).any? %>
+    <div class="mt-3 rounded-2xl bg-brand-cream px-4 py-3 text-left text-sm leading-snug text-neutral-900">
+      Se <%= removed.size == 1 ? "quitó" : "quitaron" %>
+      <span class="font-semibold"><%= removed.size %> <%= removed.size == 1 ? "capturista" : "capturistas" %></span>
+      que ya no <%= removed.size == 1 ? "viene" : "vienen" %> en la información de la rueda:
+      <span class="font-semibold"><%= removed.join(", ") %></span>.
+    </div>
   <% end %>
 </div>

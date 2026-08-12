@@ -19,7 +19,7 @@ class SyncUpJob < ApplicationJob
     # El detalle técnico (clase, rutas internas, IPs de la red on-prem) va al
     # log; en el panel, guía accionable — mismo criterio que el resto del panel.
     Rails.logger.error(e.full_message)
-    run&.finish!(status: :failed, message: "No se pudo transmitir los pedidos. Revisa que el servidor esté disponible e inténtalo de nuevo.")
+    run&.finish!(status: :failed, message: "No se pudieron transmitir los pedidos. Revisa que el servidor esté disponible e inténtalo de nuevo.")
     raise
   end
 end

@@ -108,6 +108,46 @@ module Sync
       assert_equal 1, Product.count, "el replace procede con normalidad"
     end
 
+    test "un pedido finalizado en plena obtención deshace el reemplazo completo" do
+      # La carrera: un POST de "Finalizar" pasó la pausa antes del alta de la
+      # corrida y su commit aterriza entre la guarda y el purge. Con
+      # `Order.destroy_all` esa venta se perdía en silencio; el borrado
+      # acotado + la re-guarda dentro de la transacción lo deshacen todo —
+      # espejo de la prueba equivalente de CloseRound. (5ª auditoría.)
+      user   = User.create!(erp_person_id: 1, username: "u", password: "x", role: "capturista")
+      round  = BusinessRound.create!(erp_round_id: 1, name: "R")
+      client = Client.create!(erp_client_key: "C1", name: "C")
+      Order.create!(user: user, business_round: round, client: client, kind: "remission",
+                    status: "transmitted", erp_folio: "1A0001", local_folio: "RN-000002")
+      rezagado = Order.create!(user: user, business_round: round, client: client, kind: "remission",
+                               status: "transmitted", erp_folio: "1A0002", local_folio: "RN-000003")
+
+      # Se engancha al primer `Order.transmitted` (el conteo del purge), que
+      # ocurre después de la guarda. Módulo antepuesto que se desactiva solo:
+      # quitar el scope del singleton lo borraría para el resto del proceso.
+      colado = false
+      Order.singleton_class.prepend(Module.new do
+        define_method(:transmitted) do
+          unless colado
+            colado = true
+            rezagado.update_columns(status: "captured", erp_folio: nil)
+          end
+          super()
+        end
+      end)
+
+      # La transacción es la del job/rake: el servicio confía en ella.
+      assert_raises(Down::GuardError) do
+        ActiveRecord::Base.transaction { Down.new(export_data).run! }
+      end
+
+      # El rollback también deshace el flip simulado (aquí corre en la misma
+      # conexión; en la carrera real es otra), así que lo comprobable es lo
+      # esencial: la re-guarda abortó y ningún pedido se perdió.
+      assert_equal 2, Order.count, "no se pierde ningún pedido"
+      assert Order.exists?(rezagado.id), "la venta colada sobrevive"
+    end
+
     test "preserva el usuario server (no viene en el export) y limpia capturistas stale" do
       server = User.create!(erp_person_id: 0, username: "servidor", password: "x", role: "server")
       stale  = User.create!(erp_person_id: 88888, username: "viejo", password: "x", role: "capturista")
@@ -132,6 +172,24 @@ module Sync
       brand_only = memberships.last
       assert_nil brand_only.supplier_id
       assert_equal 1, brand_only.brand.erp_brand_id
+    end
+
+    test "capturista con contraseña ilegible se omite sin duplicar el diagnóstico" do
+      # Su membresía cae con él: si además se contara en `skipped_people`, el
+      # panel diría "sin proveedor ni marca — pide que lo asignen en el ERP",
+      # mandando a corregir lo que no está roto. El aviso correcto es el de la
+      # credencial, una sola vez. (5ª auditoría.)
+      users = [ { "erp_person_id" => 90092, "username" => "makita1",
+                  "password_hash" => "{SHA}abcdef", "name" => "M", "paternal_surname" => "P",
+                  "maternal_surname" => nil, "rfc" => nil, "prefijo" => "1A" } ]
+
+      result = Down.new(export_data.merge("users" => users)).run!
+
+      assert_equal [ "makita1" ], result.summary[:skipped_users]
+      assert_not User.exists?(username: "makita1")
+      assert_equal 0, result.summary[:skipped_people],
+                   "la membresía del omitido por credencial no se reporta aparte"
+      assert_equal 0, BusinessRoundPerson.count
     end
 
     test "membresía con referencia rota o sin proveedor ni marca se omite y se reporta" do

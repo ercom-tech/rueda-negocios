@@ -20,7 +20,11 @@
     <% shown.each do |item| %>
       <li class="text-sm leading-snug text-neutral-900">
         <span class="font-semibold"><%= item["local"].presence || "(sin folio)" %></span>
-        <span class="text-neutral-700">— <%= truncate(strip_tags(item["error"].to_s).squish, length: 140) %></span>
+        <%# El tope existe para el cuerpo crudo de una respuesta rota, no para
+            los mensajes propios: el 422 de colisión trae la instrucción completa
+            (comparar contra el ERP y cancelar allá) y cortarla dejaría al
+            operador con la mitad del camino. %>
+        <span class="text-neutral-700">— <%= truncate(strip_tags(item["error"].to_s).squish, length: 280) %></span>
       </li>
     <% end %>
   </ul>

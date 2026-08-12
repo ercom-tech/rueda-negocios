@@ -116,6 +116,26 @@ module Sync
       end
     end
 
+    # Las fallas que ocurren DESPUÉS de enviar el pedido advierten que pudo
+    # haber entrado al ERP y piden reintentar sin editar: editar antes del
+    # reintento lleva a la colisión del 422 y de ahí al pedido duplicado.
+    # Conexión rechazada y DNS fallan antes de enviar nada, así que no deben
+    # asustar con esa advertencia. (5ª auditoría, hallazgo ALTA.)
+    test "las fallas posteriores al envío advierten reintentar sin editar" do
+      up = Up.new(API)
+      warns = /pudo haber entrado al ERP.*sin editar el pedido/
+
+      [ Net::ReadTimeout.new, Errno::ECONNRESET.new,
+        JSON::ParserError.new("unexpected token") ].each do |error|
+        assert_match warns, up.send(:failure_reason, error), "#{error.class} sin advertencia"
+      end
+
+      [ Errno::ECONNREFUSED.new, SocketError.new("getaddrinfo") ].each do |error|
+        refute_match warns, up.send(:failure_reason, error),
+                     "#{error.class} ocurre antes de enviar: la advertencia sobra"
+      end
+    end
+
     test "un 200 con cuerpo no-JSON marca fallido ese pedido y sigue con el resto" do
       order2 = Order.new(user: @user, business_round: @round, client: @client,
                          kind: "remission", status: "captured", local_folio: "RN-000002")

@@ -147,18 +147,28 @@ module Sync
     # crudo de Ruby —"execution expired"— que no le dice nada a quien está en el
     # salón. El detalle técnico queda en el log, que es donde sirve.
     #
-    # El caso de ActiveRecord es el que más importa: si falla ahí, el pedido YA
-    # entró al ERP y lo que no se pudo guardar es el folio de vuelta.
+    # Los casos se parten por un criterio que no se ve a simple vista: si la
+    # falla ocurrió DESPUÉS de enviar el pedido, el ERP pudo haberlo insertado
+    # aunque aquí se vea "fallido". Reintentar sin editar es idempotente y
+    # seguro; editarlo antes de reintentar acaba en la colisión del 422 y, de
+    # ahí, en un pedido duplicado en el ERP. Por eso esos motivos piden
+    # explícitamente reintentar SIN editar. Conexión rechazada y DNS fallan
+    # antes de enviar nada, así que no llevan la advertencia.
     def failure_reason(error)
       case error
       when ActiveRecord::ActiveRecordError
         "el pedido entró al ERP pero no se pudo guardar su folio en esta laptop"
       when Timeout::Error, Net::ReadTimeout
-        "el servidor tardó demasiado en responder"
-      when SystemCallError, SocketError
+        "el servidor tardó demasiado en responder y el pedido pudo haber entrado al ERP: " \
+        "vuelve a transmitir sin editar el pedido"
+      when Errno::ECONNREFUSED, SocketError
         "no se pudo conectar con el servidor"
+      when SystemCallError
+        "se cortó la conexión con el servidor y el pedido pudo haber entrado al ERP: " \
+        "vuelve a transmitir sin editar el pedido"
       when JSON::ParserError
-        "el servidor respondió algo que no se entiende"
+        "el servidor respondió algo que no se entiende y el pedido pudo haber entrado al ERP: " \
+        "vuelve a transmitir sin editar el pedido"
       else
         error.message
       end

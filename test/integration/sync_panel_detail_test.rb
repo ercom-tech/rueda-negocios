@@ -94,6 +94,24 @@ class SyncPanelDetailTest < ActionDispatch::IntegrationTest
     assert_match(/RN-000001 → 1A0007/, response.body)
   end
 
+  # Basta un pedido fallido para que la corrida entera quede "Parcial", y el
+  # bloque de conflictos vivía solo en la rama `completed`: la combinación
+  # conflicto + fallo —la más probable, ambos delatan una sesión con
+  # problemas— se tragaba el aviso. (5ª auditoría.)
+  test "el aviso de editados durante la transmisión también sale en corrida parcial" do
+    SyncRun.create!(kind: "up", started_at: 1.minute.ago, finished_at: Time.current,
+                    status: "failed",
+                    summary: { transmitted: [ { local: "RN-000001", erp: "1A0007" } ],
+                               failed: [ { local: "RN-000002", status: "422", error: "rechazado" } ],
+                               conflicts: [ { local: "RN-000001", erp: "1A0007" } ] })
+
+    get root_path
+
+    assert_match(/Parcial/, response.body)
+    assert_match(/Revisa este pedido contra el ERP/, response.body)
+    assert_match(/RN-000001 → 1A0007/, response.body)
+  end
+
   # --- Sync-down: lo que la corrida hizo y no se veía ------------------------
 
   test "el panel avisa de los capturistas que quedaron sin proveedor ni marca" do
@@ -105,6 +123,30 @@ class SyncPanelDetailTest < ActionDispatch::IntegrationTest
     assert_match(/sin proveedor ni marca/, response.body)
   end
 
+  # El dato siempre quedó guardado en la corrida; solo la tarea de consola lo
+  # mostraba, y el operador trabaja con el panel: el capturista con contraseña
+  # ilegible llegaba invisible al evento, donde ya no tiene arreglo. (5ª aud.)
+  test "el panel avisa de los capturistas cuya contraseña no sirve" do
+    down_run!(skipped_users: [ "makita1" ])
+
+    get root_path
+
+    assert_match(/1 capturista/, response.body)
+    assert_match(/no va a poder entrar \(su contraseña no sirve\)/, response.body)
+    assert_match(/makita1/, response.body)
+    assert_match(/restablezcan la contraseña/, response.body)
+  end
+
+  test "el panel dice qué capturistas quitó el reemplazo" do
+    down_run!(removed_users: [ "cap1", "cap2" ])
+
+    get root_path
+
+    assert_match(/Se quitaron/, response.body)
+    assert_match(/2 capturistas/, response.body)
+    assert_match(/cap1, cap2/, response.body)
+  end
+
   # El aviso de lo que se quitó va en el modal, ANTES de confirmar, que es
   # cuando le sirve al operador — no en el resumen de lo ya hecho.
   test "el panel no informa de los pedidos que quitó el reemplazo" do
@@ -113,6 +155,20 @@ class SyncPanelDetailTest < ActionDispatch::IntegrationTest
     get root_path
 
     assert_no_match(/5 pedidos ya transmitidos/, response.body)
+  end
+
+  # La salida ante una corrida muerta ya no es reiniciar el servidor: al
+  # volver al menú, el barrido cierra lo que no tiene proceso vivo y el panel
+  # se desbloquea. (5ª auditoría.)
+  test "una corrida cuyo proceso murió se recupera al volver al menú" do
+    dead = Process.spawn("true")
+    Process.wait(dead)
+    run = SyncRun.create!(kind: "up", started_at: 1.minute.ago, pid: dead)
+
+    get root_path
+
+    assert run.reload.failed?
+    assert_match(/se quedó a medias/, run.message)
   end
 
   test "una corrida limpia no pinta el bloque de avisos" do

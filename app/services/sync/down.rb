@@ -38,6 +38,7 @@ module Sync
       @data = data
       @stats = {}
       @skipped_users = []
+      @skipped_user_ids = []
       @removed_users = []
       @skipped_skus = 0
       @skipped_people = 0
@@ -71,10 +72,16 @@ module Sync
 
     # Al llegar aquí la guarda ya garantizó que solo quedan TRANSMITIDOS: no
     # bloquean (viven en el ERP) pero sus FKs chocarían con el replace del
-    # catálogo, así que se purgan y se reporta cuántos.
+    # catálogo, así que se purgan y se reporta cuántos. El borrado se acota a
+    # lo que la guarda autorizó y se vuelve a comprobar después, dentro de la
+    # misma transacción: entre la guarda y el borrado otra conexión aún puede
+    # colar un pedido (un POST que pasó la pausa antes del alta de la
+    # corrida), y con `Order.destroy_all` esa venta se perdía en silencio —
+    # mismo patrón que CloseRound (ver docs/convenciones-codigo.md).
     def purge_local_orders!
-      @purged_orders = Order.count
-      Order.destroy_all if @purged_orders.positive?
+      @purged_orders = Order.transmitted.count
+      Order.transmitted.destroy_all if @purged_orders.positive?
+      Guards.no_local_orders!(GuardError, "al obtener la información")
     end
 
     # Borra el catálogo (hijos → padres) para repoblarlo idéntico al export.
@@ -167,6 +174,7 @@ module Sync
         # descubrirlo cuando el capturista no logra entrar en pleno evento.
         unless u["password_hash"].to_s.start_with?("$2")
           @skipped_users << (u["username"] || u["erp_person_id"])
+          @skipped_user_ids << u["erp_person_id"]
           next
         end
         rows << { erp_person_id: u["erp_person_id"], username: u["username"],
@@ -211,10 +219,15 @@ module Sync
         cid = client_by_key[c["erp_client_key"]]
         next unless cid
 
-        (c["tax_profiles"] || []).each_with_index do |t, i|
+        # Sin default inventado: el export ordena por RFC alfabético, y en los
+        # clientes multi-RFC nativos el primer RFC solo es el que se usa el 49%
+        # de las veces — el día que una pantalla preseleccionara "el default",
+        # la mitad saldría al RFC equivocado. Ninguna pantalla lo lee hoy; el
+        # de sucursal sí es dato real del ERP y ese se conserva.
+        (c["tax_profiles"] || []).each do |t|
           tax_rows << { client_id: cid, rfc: t["rfc"], business_name: t["business_name"],
                         default_cfdi_use_id: cfdi_by_code[t["default_cfdi_use"]],
-                        is_default: i.zero? }
+                        is_default: false }
         end
         (c["receipt_profiles"] || []).each_with_index do |r, i|
           receipt_rows << { client_id: cid, erp_receipt_profile_id: r["consecutive"],
@@ -295,8 +308,14 @@ module Sync
         sid = sup_ref && supplier_by_erp[sup_ref]
         bid = brand_ref && brand_by_erp[brand_ref]
         broken_ref = (sup_ref && sid.nil?) || (brand_ref && bid.nil?)
-        # Sin usuario local (capturista omitido por falta de contraseña), sin
-        # proveedor NI marca, o con referencia rota → se omite y se reporta.
+        # El dueño se omitió por credencial ilegible: ya se reportó en
+        # `skipped_users` y su membresía cae con él. Contarlo también aquí
+        # duplicaba el aviso con el diagnóstico equivocado ("sin proveedor ni
+        # marca"), que mandaba al operador a corregir lo que no está roto.
+        next if uid.nil? && @skipped_user_ids.include?(m["erp_person_id"])
+
+        # Sin usuario local (persona que no vino en el export de usuarios),
+        # sin proveedor NI marca, o con referencia rota → se omite y se reporta.
         if uid.nil? || broken_ref || (sup_ref.nil? && brand_ref.nil?)
           @skipped_people += 1
           next
