@@ -629,7 +629,8 @@ Ruby (`\`) se coló en JavaScript: **`node --check` existe en la máquina** aunq
 el proyecto no necesite Node en runtime — usarlo tras tocar los controllers.
 
 Suites tras la remediación: rueda-negocios **163/599**, rueda-api **27/79**,
-rubocop limpio en ambos.
+rubocop limpio en ambos. (Cifra de ese día; hoy son otras — no se actualiza
+porque envejece con cada commit y la suite ya es su propia fuente de verdad.)
 
 ## Decisiones tomadas
 
@@ -895,7 +896,9 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
     reutilizable.
   - **Los enlaces se arman con `request.query_parameters.merge`**, no solo con
     `page:`: así los filtros que vienen en el backlog sobrevivirán al paginar
-    sin tocar el partial.
+    sin tocar el partial. *(Superado: la 3ª auditoría lo cambió por
+    `base_params` —los filtros ya saneados—, porque el hash crudo de la
+    petición permitía inyectar un `?host=` en los enlaces del paginador.)*
   - **Resumen ARRIBA de la tabla, no dentro del paginador** (decisión
     discutida con el usuario): son dos trabajos distintos —el paginador dice
     dónde estás en el listado, el resumen cómo va el conjunto— y juntos se
@@ -1085,7 +1088,9 @@ cada pantalla.
 - **Llaves del JSON** (las que consumirá el sync-down): `round`, `cfdi_uses`,
   `users`, `salespeople`, `suppliers`, `brands`, `clients` (con `tax_profiles`/
   `receipt_profiles`/`branches` anidados vía `jsonb_agg`), `products` (con
-  `supplier_skus` y precio/IVA/tope embebidos).
+  `supplier_skus` y precio/IVA/tope embebidos). *(Después se sumaron `people`
+  —la membresía capturista↔proveedor/marca— y `divide_amounts`: hoy son **10**,
+  y el sync-down importa las 10.)*
 - **Scope de productos:** unión **marca ∪ proveedor** participante de la rueda
   (`p.id_marca IN marcas` OR `EXISTS com_proveedor_has_producto IN provs`).
 - **Scope de clientes:** solo los **registrados en la rueda**

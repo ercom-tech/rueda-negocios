@@ -86,6 +86,14 @@ Modelo **una laptop = servidor LAN**:
 - **Después / entre días (oficina):** la laptop transmite pedidos a
   `rueda-api` → inserción en ERP → devuelve folio ERP → se marca
   `transmitido`. Idempotente y reintentable.
+- **Al terminar el evento:** **cerrar rueda** elimina de la laptop los pedidos
+  ya transmitidos, borra el historial de corridas y libera la selección. Es el
+  paso obligado para cargar otra rueda, y la única operación destructiva del
+  panel.
+
+Las tres operaciones (obtener, transmitir, cerrar) se bloquean si queda algún
+pedido que solo viva en la laptop —borrador o capturado sin transmitir—, y
+mientras una corre, la captura se pausa.
 
 El transporte del sync es **agnóstico**: URL + credenciales configurables,
 para que funcione en LAN interna o vía internet sin cambiar código. El

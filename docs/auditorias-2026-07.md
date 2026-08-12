@@ -87,7 +87,7 @@ BAJA (por grupos temáticos; 14 hallazgos + login-throttling movido a strengthen
     muestra el error real en el flash. Tests de modelo. (rueda-negocios)
   - rueda-api: `POST /pedidos` con JSON inválido → 400 (antes 500); `/health`
     no filtra `e.message` al cliente. Tests rack-test (test/application_test.rb,
-    carga `app/application.rb` con LOGGER stub, sin config/application.rb).
+    carga `app/application.rb` de rueda-api con LOGGER stub, sin config/application.rb).
   Todo validado (suite + navegador para el flash de descuento).
 - [x] **Grupo C (UX/inclusividad):**
   - Touch targets ≥44px en `_item_row`: botón 🗑 (`h-11 w-11`) y campos

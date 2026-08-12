@@ -3,10 +3,12 @@ module Sync
   # `GET /ruedas/:id/export` de rueda-api). Es un **refresh pre-evento**:
   # deja el catálogo local idéntico al export (replace), no un merge.
   #
-  # Guarda: aborta solo si hay pedidos capturados SIN transmitir (ventas que
-  # se perderían). Los borradores (capturas incompletas) y los transmitidos
-  # (ya viven en el ERP) no bloquean: se purgan antes del replace — así el
-  # refresh entre días del evento es transmitir → obtener información.
+  # Guarda: aborta si hay CUALQUIER pedido que solo viva en la laptop —
+  # borradores (capturas en curso) o capturados sin transmitir (ventas reales
+  # que aún no llegan al ERP). Los transmitidos no bloquean: ya están en el ERP
+  # y se purgan antes del replace, cosa que el modal advierte con su número.
+  # Así el refresh entre días del evento es transmitir → obtener información.
+  # Misma regla y misma redacción que "Cerrar rueda" (Sync::Guards).
   #
   # Usuarios: mismo REPLACE que las demás tablas — los capturistas quedan
   # idénticos al export (upsert por `erp_person_id` + limpieza de los que no
@@ -14,7 +16,7 @@ module Sync
   # Única excepción: el usuario `server` (seedeado) sobrevive siempre — es
   # infraestructura de la app, no dato del ERP.
   #
-  # Alcance: las 9 entidades del export, incluida la membresía
+  # Alcance: las 10 entidades del export, incluida la membresía
   # capturista↔proveedor/marca (`people` → business_round_people), que define
   # el universo de productos de cada capturista. Las demás tablas de membresía
   # (brands_suppliers, business_round_*) siguen sin venir en el export; solo se
@@ -23,12 +25,11 @@ module Sync
     # Se levanta cuando la guarda impide correr el sync (hay pedidos).
     class GuardError < StandardError; end
 
-    # El replace borra todos los pedidos locales: los borradores (en captura) y
-    # los finalizados sin transmitir (ventas reales que aún no llegan al ERP)
-    # se perderían. Método de clase (no usa estado del objeto) para que el
-    # controlador pueda preguntarlo ANTES de crear el SyncRun — una condición
-    # previa no debe quedar registrada como una corrida fallida; `run!` lo
-    # repite para cubrir `rake sync:down` y el job.
+    # El replace borra todos los pedidos locales, así que un borrador o un
+    # capturado sin transmitir se perdería. Método de clase (no usa estado del
+    # objeto) para que el controlador pueda preguntarlo ANTES de crear el
+    # SyncRun — una condición previa no debe quedar registrada como una corrida
+    # fallida; `run!` lo repite para cubrir `rake sync:down` y el job.
     def self.guard!
       Guards.no_local_orders!(GuardError, "al obtener la información")
     end
@@ -68,8 +69,9 @@ module Sync
 
     private
 
-    # Borradores y transmitidos no bloquean el refresh, pero sus FKs chocarían
-    # con el replace del catálogo: se purgan (y se reporta cuántos).
+    # Al llegar aquí la guarda ya garantizó que solo quedan TRANSMITIDOS: no
+    # bloquean (viven en el ERP) pero sus FKs chocarían con el replace del
+    # catálogo, así que se purgan y se reporta cuántos.
     def purge_local_orders!
       @purged_orders = Order.count
       Order.destroy_all if @purged_orders.positive?

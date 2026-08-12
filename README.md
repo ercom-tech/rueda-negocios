@@ -45,9 +45,18 @@ Requiere `rueda-api` accesible; configúrala en `.env`
   `bin/rails sync:up`
 
 Ambos también se operan desde la UI: al entrar el usuario `server` ve un panel
-para **elegir rueda**, **obtener información** (sync-down) y **transmitir
-pedidos** (sync-up), que corren en background (Solid Queue) y reflejan su estado
-en vivo (Turbo Streams).
+para **elegir rueda**, **obtener información** (sync-down), **transmitir
+pedidos** (sync-up), consultar **reportes** y **cerrar rueda**. Los dos syncs
+corren en background (Solid Queue) y reflejan su estado en vivo (Turbo Streams).
+
+**Cerrar rueda** elimina los pedidos ya transmitidos de la laptop, borra el
+historial de corridas y libera la selección: es el paso obligado para cargar
+otra rueda, y la única operación destructiva del panel. Las tres —obtener,
+transmitir y cerrar— se bloquean si queda algún pedido que solo viva en la
+laptop (borradores o capturados sin transmitir).
+
+Mientras una corrida está viva, la captura se pausa: los capturistas ven un
+aviso en vez de escribir sobre un catálogo que se está reemplazando.
 
 ## Roles
 

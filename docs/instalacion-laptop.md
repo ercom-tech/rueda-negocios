@@ -204,8 +204,19 @@ journalctl -u rueda-negocios -f        # logs en vivo
 
 En *development* la app carga su `.env` sola (dotenv-rails), así que el unit no
 necesita `EnvironmentFile`. El `After=postgresql.service` espera al Postgres
-local, y el barrido de corridas de sync huérfanas corre en cada arranque del
-servicio: un apagón a media corrida se recupera solo.
+local.
+
+**El barrido de corridas huérfanas corre en cada arranque del servicio —
+mientras la app siga en modo development.** Un apagón a media corrida se
+recupera solo: al bootear, la corrida que quedó `running` se marca fallida y el
+panel se desbloquea. La condición no es un detalle: el barrido está atado a los
+adapters de jobs **en proceso** (`async`/`inline`/`test`), a propósito, porque
+solo ahí un `running` al arrancar es con certeza un huérfano. En producción el
+adapter es Solid Queue, que marca la ejecución huérfana como fallida **sin
+reintentarla**, así que el job nunca cierra su corrida y el panel se quedaría
+girando "en progreso" para siempre, con las tres operaciones bloqueadas y la
+consola como única salida. Al empacar en `RAILS_ENV=production` (ver
+`backlog.md`) hay que resolverlo antes.
 
 Antes de habilitarlo, verifica que no quede un `bin/dev` corriendo
 (`ss -tlnp | grep 3000`), o el servicio no podrá tomar el puerto.

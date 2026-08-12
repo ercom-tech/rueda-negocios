@@ -119,9 +119,15 @@ IP fija + hostname (mDNS `laptop.local`), router dedicado. Por definir.
 ### Membresías de rueda que el export no trae
 
 `business_round_people` **ya** se sincroniza (2026-07-26, es el universo de
-productos por capturista). Siguen sin venir en el export `brands_suppliers` y
-`business_round_{brands,suppliers,salespeople}` — el sync-down solo las vacía.
-Definir si alguna pantalla llega a necesitarlas.
+productos por capturista). Siguen sin venir en el export `brands_suppliers`,
+`business_round_{brands,suppliers,salespeople}` y **`business_round_clients`**
+— el sync-down solo las vacía. Definir si alguna pantalla llega a necesitarlas.
+
+Ojo con `business_round_clients`: tiene asociaciones vivas
+(`BusinessRound#clients`, `Client#business_rounds`), así que al construir la
+pantalla de **asistencia de clientes** es fácil usarlas dando por hecho que
+traen datos — y saldrían vacías en el evento, con el diagnóstico perdido
+buscando en el ERP.
 
 ## Operación y seguridad (fase de strengthening)
 

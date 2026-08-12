@@ -37,11 +37,17 @@
     <% if can_edit_order?(order) %>
       <%= form_with model: item, url: order_order_item_path(order, item), method: :patch,
             id: dom_id(item, :quantity_form), data: { controller: "form-submit" } do |f| %>
-        <%# Con package_size mínimo: el min del input ES el package_size (si no, la
-            flecha ↓ desde el package_size se sujetaba a 1 y desalineaba: 10→1→11)
-            y data-step-size hace que las flechas avancen alineadas a la
-            rejilla de múltiplos. Sin package_size: min 1 y paso de 1. %>
+        <%# Con empaque mínimo: el min del input ES el empaque (si no, la flecha
+            ↓ desde el empaque se sujetaba a 1 y desalineaba: 10→1→11) y
+            data-step-size hace que las flechas avancen alineadas a la rejilla
+            de múltiplos. Sin empaque: min 1 y paso de 1.
+
+            Se exige POSITIVO, igual que `OrderItemsController#create` y que
+            `OrderItem#quantity_in_package_multiples`: con `|| 1` a secas, un
+            empaque 0 del ERP daba min="0" y paso 0, así que la flecha ↓ bajaba
+            hasta 0 y el modelo lo rechazaba al salir del campo. %>
         <% package_size = item.product&.min_sale_quantity %>
+        <% package_size = nil unless package_size&.positive? %>
         <%= f.number_field :quantity, step: "any", id: dom_id(item, :quantity),
               min: number_with_precision(package_size || 1, strip_insignificant_zeros: true),
               value: number_with_precision(item.quantity, strip_insignificant_zeros: true),

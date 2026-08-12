@@ -6,7 +6,7 @@ para el **sync-up**: `rueda-negocios` transmite los pedidos capturados offline �
 
 Descubierto por inspección del ERP local de desarrollo (`psql -p 1702 -d fecego`,
 el mismo restore que usa el b2b) + el lado de LECTURA de api-v2
-(`app/queries/orders.rb`, modelos `Order`/`OrderItem`). Confirma también el
+(`fecego-b2b-api-v2/app/queries/orders.rb` — otro repo, no este). Confirma también el
 manejo fiscal/IVA que estaba pendiente.
 
 ## El ERP ya maneja pedidos "transmitidos" (ruta)
@@ -58,20 +58,29 @@ afuera y transmitidos (≈49% de los pedidos traen `clave_pedido_ruta`, vigente
 
 `rueda-api` lo genera al insertar, no la app ni antes:
 
-**`clave_pedido` = prefijo + consecutivo:**
-- **Prefijo** (2 letras) = `cnf_persona.prefijo` del **capturista** (ej. persona
-  262 ZABDIEL → `ZA`; sus pedidos son `ZA####`). Se resuelve por `id_persona`.
-- **Consecutivo** = parte numérica del **último `clave_pedido` con ese prefijo** + 1,
-  a 4 dígitos:
+**`clave_pedido` = prefijo + consecutivo, siempre 6 caracteres:**
+- **Prefijo** = `cnf_persona.prefijo` del **capturista** (`varchar(2)`; ej.
+  persona 262 ZABDIEL → `ZA`, sus pedidos son `ZA####`). Se resuelve por
+  `id_persona`.
+- **Consecutivo** = parte numérica del **último `clave_pedido` con ese prefijo**
+  + 1, rellenado hasta completar los 6 caracteres (`6 − len(prefijo)` dígitos).
 ```sql
+-- El filtro de sufijo numérico NO es opcional: hay folios cuya parte final no
+-- lo es, y sin él el ::int revienta con "invalid input syntax for integer".
+-- El LIKE hace la consulta sargable: sin él son ~135 ms por folio (1.2M de
+-- filas escaneadas); con él, ~27 ms.
 SELECT COALESCE(MAX(substring(clave_pedido FROM 3)::int), 0) + 1
 FROM fecego.vta_pedido
-WHERE substring(clave_pedido FROM 1 FOR 2) = :prefijo;
--- clave_pedido = :prefijo || lpad(consecutivo, 4, '0')
+WHERE id_empresa = 1
+  AND clave_pedido LIKE :prefijo || '%'
+  AND substring(clave_pedido FROM 1 FOR 2) = :prefijo
+  AND substring(clave_pedido FROM 3) ~ '^[0-9]+$';
+-- clave_pedido = :prefijo || lpad(consecutivo, 6 - length(:prefijo), '0')
 ```
-- Hacerlo con **lock / transacción** para evitar folios duplicados en
-  transmisiones concurrentes. La parte numérica es de 4 dígitos y el ERP reutiliza
-  folios de pedidos cancelados.
+- Va con **lock** (`pg_advisory_xact_lock` por prefijo, dentro de la
+  transacción) para evitar folios duplicados en transmisiones concurrentes.
+- **Si el consecutivo ya no cabe**, `rueda-api` responde 422 con un mensaje
+  accionable en vez de dejar que el INSERT reviente contra el `varchar(6)`.
 
 El `clave_pedido` resultante se devuelve y se guarda en nuestro `erp_folio`.
 

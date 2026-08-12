@@ -53,4 +53,22 @@ class OrderItemsQuantityTest < ActionDispatch::IntegrationTest
     assert_equal 1, @order.order_items.last.quantity
     assert_no_match(/cantidad debe ser mayor/, response.body)
   end
+  # El input debe usar el MISMO criterio que el controlador y el modelo: con
+  # empaque 0 en el ERP, `min="0"` y paso 0 dejaban que la flecha ↓ bajara hasta
+  # 0 y el modelo lo rechazara al salir del campo.
+  test "un empaque cero no se convierte en min 0 ni en paso 0" do
+    product = Product.create!(erp_product_id: 962_001, description: "Empaque cero",
+                              brand: @brand, unit: "PZA", max_discount: 0, min_sale_quantity: 0)
+    ProductSupplier.create!(product: product, supplier: @sup)
+    Price.create!(product: product, public_price: 100, tax_rate: 16)
+    item = @order.order_items.create!(product: product, position: 1, quantity: 1,
+                                      unit_price: 100, tax_rate: 16, discount_percent: 0)
+
+    get order_path(@order)
+
+    assert_select "input##{ActionView::RecordIdentifier.dom_id(item, :quantity)}" do |input|
+      assert_equal "1", input.first["min"], "sin empaque útil, el mínimo es 1"
+      assert_nil input.first["data-step-size"], "no debe fijar un paso de 0"
+    end
+  end
 end
