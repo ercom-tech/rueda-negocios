@@ -89,9 +89,24 @@ Desglose **por partida**: `iva_porcentaje` + `iva_monto`, `descto_porcentaje` +
   pedidos históricos SIEMPRE es el conteo del detalle — dejarlo en 0 hace que
   el ERP no refleje bien el pedido (bug encontrado 2026-07-30).
 - `id_sucursal_crea` = **1** (matriz), como todo pedido capturado en oficina.
-- **Horas sin microsegundos:** `hora_crea` (cabecera y detalle) va a segundo
-  (`localtime(0)`); el ERP no tolera micros en horas de captura. Excepción:
-  `hora_transmision` SÍ trae micros en el propio ERP y se deja igual.
+- **`fecha_crea`/`hora_crea` = el instante de la CAPTURA**, no el de la
+  transmisión (decisión de FECEGO, 2026-08-11). La rueda es offline y el sync
+  corre desde la oficina: una rueda del viernes transmitida el lunes dejaba
+  todos sus pedidos creados en lunes, y el ERP tiene un índice dedicado
+  (`vta_pedido_idx2` por `id_sucursal_crea, fecha_crea`), así que cualquier
+  corte de captura por día los agrupaba en el día de oficina. El momento de la
+  transmisión no se pierde: va en `fecha_transmision` / `hora_transmision`.
+  - **Matiz medido:** en el ERP, `fecha_crea = fecha_pedido` en el 99.69% de
+    los pedidos, pero `hora_crea = hora_pedido` solo en el 5%. En sus pedidos
+    nativos de rueda, `hora_crea` es **idéntica a `hora_transmision`** — porque
+    el ERP transmite el mismo día y ahí "crear" y "transmitir" coinciden. Ese
+    patrón no cubre nuestro caso; mezclar la fecha de captura con la hora de la
+    transmisión daría un sello incoherente (viernes + reloj del lunes), así que
+    las dos van del mismo instante.
+- **Horas sin microsegundos:** `hora_crea` (cabecera y detalle) va a segundo —
+  llega del payload como `"HH:MM:SS"`; el ERP no tolera micros en horas de
+  captura. Excepción: `hora_transmision` SÍ trae micros en el propio ERP y se
+  deja igual (`CURRENT_TIME`).
 - `observaciones` sin texto = **`' '`** (un espacio, la moda del ERP; `''`
   casi no existe en el histórico).
 - `id_vendedor` = **el vendedor del cliente** (`vta_cliente.id_vendedor`), no el

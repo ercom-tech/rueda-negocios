@@ -125,6 +125,27 @@ los tres criterios que traía el reporte estaban enunciados sobre el recorte
 equivocado, y en ambos casos los números correctos se parecían lo bastante a
 los del reporte como para no notarlo sin volver a consultar.
 
+### `fecha_crea` = la captura, no la transmisión (decisión de FECEGO)
+
+Era la única BAJA que dependía de una definición de negocio, y el usuario la
+resolvió (2026-08-11): **"la fecha_crea debe ser la real cuando se capturó"**.
+Antes registraba el momento del sync-up, así que una rueda del viernes
+transmitida el lunes dejaba todos sus pedidos creados en lunes — y el ERP tiene
+un índice dedicado por `fecha_crea`, o sea que cualquier corte de captura por
+día los agrupaba en el día de oficina.
+
+**Lo que la medición aportó a la decisión.** En el ERP `fecha_crea =
+fecha_pedido` en el 99.69%, pero `hora_crea = hora_pedido` solo en el **5%**: en
+sus pedidos nativos de rueda, `hora_crea` es idéntica a `hora_transmision`,
+porque ellos transmiten el mismo día y ahí "crear" y "transmitir" coinciden. Su
+patrón simplemente no cubre nuestro caso. Llevar solo la fecha habría dado un
+sello incoherente —viernes con el reloj del lunes—, así que las dos van del
+mismo instante. Vale la pena conservarlo: **cuando el histórico no cubre tu
+caso, copiar su moda produce un dato peor que decidir con criterio.**
+
+`TIME_TO_SECOND` desapareció: la hora de captura ya llega como `"HH:MM:SS"` en
+el payload, así que la regla de "sin micros" se cumple sola.
+
 ### Las dos últimas de usabilidad (cerradas)
 
 **Producto repetido sin aviso.** Agregar dos veces el mismo producto creaba dos
