@@ -71,5 +71,12 @@ class SessionsController < ApplicationController
   def log_attempt(user, username, success:)
     LoginEvent.create!(user: user, username: username, success: success,
                        ip: request.remote_ip, user_agent: request.user_agent)
+  rescue ActiveRecord::InvalidForeignKey
+    # El reemplazo de usuarios del sync-down puede borrar a `user` entre el
+    # find y este INSERT (el login no está en la pausa): la bitácora no debe
+    # tumbar la pantalla de entrada con un error del sistema. Se conserva el
+    # intento sin la referencia — igual que un usuario inexistente.
+    LoginEvent.create!(user: nil, username: username, success: success,
+                       ip: request.remote_ip, user_agent: request.user_agent)
   end
 end

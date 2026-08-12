@@ -97,7 +97,7 @@ class OrdersFilter
 
   # Parámetros vigentes, para que los enlaces (paginador, tarjetas de estatus)
   # conserven el filtro. `page` nunca viaja: cambiar un filtro debe regresar a
-  # la primera página o se cae en uma página que ya no existe.
+  # la primera página o se cae en una página que ya no existe.
   def to_params
     { user_id: user_id, client_id: client_id, salesperson_id: salesperson_id,
       from: from&.to_s, to: to&.to_s, status: status,

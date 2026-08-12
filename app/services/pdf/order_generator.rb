@@ -258,6 +258,9 @@ module Pdf
       # Apócope: "uno" → "un" antes de sustantivo ("ciento un pesos",
       # "veintiun mil") — cubre también "veintiuno" por terminar en "uno".
       words = integer_to_words(whole).gsub(/uno(?= mil| millones|\z)/, "un")
+      # "un millón DE pesos": la norma de cantidades en letra (facturas,
+      # bancos) exige el "de" cuando la cifra termina exactamente en millones.
+      words += " de" if whole.positive? && (whole % 1_000_000).zero?
       # Concordancia: un total de $1.xx es "UN PESO", no "UN PESOS".
       "#{words} #{whole == 1 ? 'peso' : 'pesos'} #{format('%02d', cents)}/100 M.N.".upcase
     end

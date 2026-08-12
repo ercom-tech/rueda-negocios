@@ -127,15 +127,6 @@ class OrdersController < ApplicationController
               filename: "pedido-#{@order.folio}.pdf", type: "application/pdf", disposition: "attachment"
   end
 
-  # (Diferido) envío por correo — offline no hay SMTP; se enviará al sincronizar.
-  def send_email
-    @order = current_user.orders.find(params[:id])
-    email = params[:email].presence || @order.client.email
-    redirect_to summary_order_path(@order),
-                notice: "Correo programado para #{email} (se enviará al sincronizar)."
-  end
-
-
   private
 
   # El buscador manda "CLAVE — Nombre comercial": se toma la clave y, si no

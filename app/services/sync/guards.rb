@@ -36,7 +36,7 @@ module Sync
     # borradores y los finalizados sin transmitir se perderían; los ya
     # transmitidos no, porque viven en el ERP.
     #
-    # `accion` completa la frase ("al obtener la información", "al cerrar la
+    # `action` completa la frase ("al obtener la información", "al cerrar la
     # rueda") — es lo único que cambia entre las dos.
     #
     # Avisa de ambos casos de una vez: el orden de solución está forzado (con

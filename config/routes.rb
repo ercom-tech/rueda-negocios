@@ -34,7 +34,6 @@ Rails.application.routes.draw do
       post  :capture                           # finaliza (folio) → resumen
       get   :summary                           # paso 3: resumen con opciones
       get   :pdf                               # descarga PDF del pedido
-      post  :send_email                        # (diferido) envío por correo
     end
     resources :order_items, only: %i[create update destroy] # partidas (Turbo)
   end

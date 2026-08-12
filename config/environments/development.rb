@@ -9,8 +9,13 @@ Rails.application.configure do
   # Do not eager load code on boot.
   config.eager_load = false
 
-  # Show full error reports.
-  config.consider_all_requests_local = true
+  # Reportes de error completos SOLO para peticiones locales (127.0.0.1): la
+  # laptop sirve a toda la LAN del evento en development, y con `true` un 500
+  # le mostraba código, backtrace, params y sesión a cualquier capturista. El
+  # navegador local (tu desarrollo diario) sigue viendo la página de
+  # depuración — Rails la muestra a `request.local?` aunque esto sea false —;
+  # la LAN ve las páginas de error en español de `public/`. (5ª auditoría.)
+  config.consider_all_requests_local = false
 
   # Enable server timing.
   config.server_timing = true

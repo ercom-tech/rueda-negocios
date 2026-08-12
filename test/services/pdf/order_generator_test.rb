@@ -18,7 +18,10 @@ module Pdf
     end
 
     test "miles de millones no truenan (recursión en millones)" do
-      assert_equal "MIL MILLONES PESOS 00/100 M.N.", words(BigDecimal("1000000000"))
+      # El "DE" ante millones redondos: la prueba consagraba la forma sin él
+      # ("MIL MILLONES PESOS"), que es la que va impresa al cliente. (5ª aud.)
+      assert_equal "MIL MILLONES DE PESOS 00/100 M.N.", words(BigDecimal("1000000000"))
+      assert_equal "UN MILLON DE PESOS 00/100 M.N.", words(BigDecimal("1000000"))
       assert_includes words(BigDecimal("2500000000.75")), "DOS MIL QUINIENTOS MILLONES"
     end
 
