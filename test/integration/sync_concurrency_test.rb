@@ -64,7 +64,9 @@ class SyncConcurrencyTest < ActionDispatch::IntegrationTest
   end
 
   test "con una corrida corriendo el menú bloquea obtener, transmitir y cerrar" do
-    SyncRun.create!(kind: "down", started_at: Time.current)
+    # Con dueño vivo (pid): el barrido que corre al cargar el menú respeta las
+    # corridas cuyo proceso existe y solo cierra las muertas.
+    SyncRun.create!(kind: "down", started_at: Time.current, pid: Process.pid)
 
     get root_path
     assert_response :success

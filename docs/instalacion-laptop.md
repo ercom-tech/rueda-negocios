@@ -206,17 +206,14 @@ En *development* la app carga su `.env` sola (dotenv-rails), así que el unit no
 necesita `EnvironmentFile`. El `After=postgresql.service` espera al Postgres
 local.
 
-**El barrido de corridas huérfanas corre en cada arranque del servicio —
-mientras la app siga en modo development.** Un apagón a media corrida se
-recupera solo: al bootear, la corrida que quedó `running` se marca fallida y el
-panel se desbloquea. La condición no es un detalle: el barrido está atado a los
-adapters de jobs **en proceso** (`async`/`inline`/`test`), a propósito, porque
-solo ahí un `running` al arrancar es con certeza un huérfano. En producción el
-adapter es Solid Queue, que marca la ejecución huérfana como fallida **sin
-reintentarla**, así que el job nunca cierra su corrida y el panel se quedaría
-girando "en progreso" para siempre, con las tres operaciones bloqueadas y la
-consola como única salida. Al empacar en `RAILS_ENV=production` (ver
-`backlog.md`) hay que resolverlo antes.
+**El barrido de corridas huérfanas corre en cada arranque del servicio y al
+volver al menú del servidor.** Un apagón, un Ctrl-C o un kill a media corrida
+se recupera solo: la corrida que quedó `running` sin proceso vivo se marca
+fallida y el panel se desbloquea — basta regresar al menú, sin reiniciar nada.
+Cada corrida registra el `pid` de su proceso dueño y el barrido lo comprueba
+antes de tocarla, así que una tarea `rake sync:*` corriendo en otra terminal
+(o un worker aparte, como Solid Queue en producción) **no** se marca
+"interrumpida" por error: el barrido es seguro con cualquier adapter de jobs.
 
 Antes de habilitarlo, verifica que no quede un `bin/dev` corriendo
 (`ss -tlnp | grep 3000`), o el servicio no podrá tomar el puerto.

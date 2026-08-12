@@ -46,25 +46,51 @@ class SyncRun < ApplicationRecord
     end
   end
 
-  # Crea la corrida solo si no hay ninguna viva; nil si ya había una.
+  # Crea la corrida solo si no hay ninguna viva; nil si ya había una. El `pid`
+  # identifica al proceso dueño: es lo que le permite al barrido de huérfanos
+  # distinguir una corrida muerta de una tarea rake que sigue viva en otra
+  # terminal.
   def self.start(kind)
     exclusively do
       next nil if running.exists?
 
-      create!(kind: kind, started_at: Time.current)
+      create!(kind: kind, started_at: Time.current, pid: Process.pid)
     end
   end
 
-  # Marca como fallidos los runs huérfanos: quedaron `running` porque el
-  # proceso murió a media corrida (apagón, cierre del server). Se invoca al
-  # bootear el servidor — con el adapter de jobs en proceso, ningún job
-  # sobrevive a un reinicio, así que un `running` en ese momento es siempre
-  # un huérfano. Sin esta barrida, el renglón congelado deja el panel girando
-  # "en progreso" para siempre y su guard bloquea nuevas corridas.
+  # Marca como fallidos los runs huérfanos: quedaron `running` porque su
+  # proceso murió a media corrida (apagón, kill, Ctrl-C a un rake). El dueño
+  # se identifica por su `pid`: si sigue vivo —una tarea rake corriendo en
+  # otra terminal, un worker aparte— la corrida se respeta, porque barrerla
+  # la marcaría "interrumpida" y liberaría la guarda de "una corrida a la
+  # vez" encima de un sync en curso. Sin esta barrida, el renglón congelado
+  # deja el panel girando "en progreso" para siempre, la captura pausada y
+  # "Cerrar rueda" bloqueado.
   def self.recover_orphaned!
     running.find_each do |run|
-      run.finish!(status: :failed, message: "Interrumpido: el servidor se reinició a media corrida")
+      next if run.owner_alive?
+
+      run.finish!(status: :failed, message: "Interrumpido: la corrida se quedó a medias. Vuelve a intentar.")
     end
+  end
+
+  # ¿El proceso que abrió la corrida sigue vivo? La señal 0 no manda nada:
+  # solo comprueba existencia. Una corrida sin pid (anterior a la columna) se
+  # trata como huérfana. EPERM sería "vivo pero de otro usuario" — en la
+  # laptop todo corre como el mismo usuario, y si pasara, tratarlo como vivo
+  # es el lado seguro. Borde conocido: un pid reciclado tras reiniciar el
+  # equipo puede hacerse pasar por el dueño; el barrido re-corre al volver al
+  # menú del servidor, así que la corrida se libera cuando ese proceso ajeno
+  # termina.
+  def owner_alive?
+    return false if pid.blank?
+
+    Process.kill(0, pid)
+    true
+  rescue Errno::ESRCH
+    false
+  rescue Errno::EPERM
+    true
   end
 
   def finish!(status:, summary: {}, message: nil)

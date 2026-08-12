@@ -1,16 +1,11 @@
 # El bloque `server` corre SOLO cuando bootea el servidor web (no en consola,
-# runner, rake ni tests): en esos otros procesos un run `running` puede ser
-# legítimo (el server sigue vivo ejecutando su job) y barrerlo sería incorrecto.
-# Además, solo con el adapter de jobs EN PROCESO (`async` en la laptop): ahí un
-# reinicio del servidor sí mata cualquier job en vuelo, así que un `running` es
-# siempre huérfano. Con un worker aparte (`solid_queue` en producción) la
-# corrida puede seguir viva: barrerla la marcaría "interrumpida" y de paso
-# liberaría la guarda de "una corrida a la vez", habilitando lanzar otra encima.
-IN_PROCESS = %i[async inline test].freeze
-
+# runner, rake ni tests). El barrido respeta cualquier corrida cuyo proceso
+# dueño siga vivo (`SyncRun#owner_alive?`, por pid) — una tarea rake en otra
+# terminal o un worker aparte no se marcan "interrumpidos" — así que es seguro
+# con cualquier adapter de jobs. También re-corre al cargar el menú del
+# servidor (HomeController), para que una corrida muerta se recupere sin
+# reiniciar el servicio.
 Rails.application.server do
-  next unless IN_PROCESS.include?(Rails.application.config.active_job.queue_adapter)
-
   SyncRun.recover_orphaned!
 rescue ActiveRecord::ActiveRecordError => e
   # BD aún no creada/migrada (primer arranque): no impedir el boot.

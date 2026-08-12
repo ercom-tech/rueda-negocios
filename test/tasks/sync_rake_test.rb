@@ -62,6 +62,27 @@ class SyncRakeTest < ActiveSupport::TestCase
     assert_equal 0, SyncRun.running.count, "no debe quedar ninguna viva"
   end
 
+  # Ctrl-C o kill no son StandardError: no pasan por los rescue de la tarea.
+  # Sin el `ensure`, la corrida quedaba `running` para siempre — captura
+  # pausada, panel girando y "Cerrar rueda" bloqueado hasta reiniciar el
+  # servidor. (5ª auditoría.)
+  test "una interrupción cierra la corrida en vez de dejarla running" do
+    user   = User.create!(erp_person_id: 9402, username: "cap_int", password: "x", role: "capturista")
+    round  = BusinessRound.create!(erp_round_id: 9402, name: "Rueda int", active: true)
+    client = Client.create!(erp_client_key: "RK02", name: "Cliente int")
+    Order.create!(user: user, business_round: round, client: client, kind: "remission",
+                  status: "captured", local_folio: "RN-000901")
+    stub_request(:post, "http://api.test/pedidos").to_raise(Interrupt)
+
+    assert_raises(Interrupt) do
+      with_env("RUEDA_API_URL" => "http://api.test") { run_task("up") }
+    end
+
+    run = SyncRun.latest("up")
+    assert run.failed?, "la corrida no debe quedar running"
+    assert_match(/se quedó a medias/, run.message)
+  end
+
   # Misma regla que el panel: la condición previa se valida ANTES de abrir la
   # corrida. Si se validara después, algo que nunca llegó a intentarse quedaría
   # registrado como corrida fallida y ensuciaría el historial.

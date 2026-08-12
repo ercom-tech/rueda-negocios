@@ -1,6 +1,3 @@
-require "net/http"
-require "json"
-
 namespace :sync do
   # Registra la corrida igual que los jobs del panel. Sin esto, un sync desde la
   # terminal era INVISIBLE para el panel: `SyncRun.running.exists?` daba falso,
@@ -42,16 +39,22 @@ namespace :sync do
       puts "[sync:down] descargado (#{data['products']&.size || 0} productos)"
 
       result = ActiveRecord::Base.transaction { Sync::Down.new(data).run! }
+      run.finish!(status: :completed, summary: result.summary)
     rescue Sync::ApiClient::Error, Sync::Down::GuardError => e
       run.finish!(status: :failed, message: e.message)
       abort "[sync:down] abortado: #{e.message}"
     rescue StandardError => e
       run.finish!(status: :failed, message: e.message)
       raise
+    ensure
+      # Ctrl-C, kill o cualquier excepción fuera de StandardError no pasan
+      # por los rescue de arriba: sin este cierre la corrida quedaba
+      # `running` para siempre — captura pausada, panel girando y "Cerrar
+      # rueda" bloqueado hasta reiniciar el servidor (5ª auditoría).
+      run.finish!(status: :failed, message: "Interrumpido: la corrida se quedó a medias. Vuelve a intentar.") if run.running?
     end
 
     s = result.summary
-    run.finish!(status: :completed, summary: s)
 
     puts "[sync:down] entidades:"
     s[:entities].each { |table, n| puts format("  %-24s %d", table, n) }
@@ -60,7 +63,7 @@ namespace :sync do
     puts "[sync:down] membresías omitidas (capturista sin proveedor ni marca): #{s[:skipped_people]}"
     puts "[sync:down] SKUs omitidos (proveedor fuera de la rueda): #{s[:skipped_skus]}"
     puts "[sync:down] pedidos locales purgados por el reemplazo: #{s[:purged_orders]}"
-    puts "[sync:down] listo."
+    puts "[sync:down] listo. Si el panel del servidor está abierto en un navegador, recárgalo para ver esta corrida."
   end
 
   desc "Transmite los pedidos capturados al ERP vía rueda-api (idempotente). ENV: RUEDA_API_URL"
@@ -73,21 +76,25 @@ namespace :sync do
     run = start_run.call("up", Sync::Up)
 
     r = begin
-      Sync::Up.new(base).run!
+      result = Sync::Up.new(base).run!
+      run.finish!(status: (result[:failed].any? ? :failed : :completed), summary: result)
+      result
     rescue Sync::Up::GuardError => e
       run.finish!(status: :failed, message: e.message)
       abort "[sync:up] abortado: #{e.message}"
     rescue StandardError => e
       run.finish!(status: :failed, message: e.message)
       raise
+    ensure
+      # Mismo cierre que sync:down: una muerte por señal no pasa por los
+      # rescue y dejaba la corrida `running` para siempre.
+      run.finish!(status: :failed, message: "Interrumpido: la corrida se quedó a medias. Vuelve a intentar.") if run.running?
     end
-
-    run.finish!(status: (r[:failed].any? ? :failed : :completed), summary: r)
 
     r[:transmitted].each { |t| puts "  ✓ #{t[:local]} → folio ERP #{t[:erp]}" }
     r[:failed].each      { |f| puts "  ✗ #{f[:local]} (HTTP #{f[:status]}): #{f[:error]}" }
     puts "[sync:up] transmitidos: #{r[:transmitted].size}, fallidos: #{r[:failed].size}"
     abort "[sync:up] hubo pedidos fallidos." if r[:failed].any?
-    puts "[sync:up] listo."
+    puts "[sync:up] listo. Si el panel del servidor está abierto en un navegador, recárgalo para ver esta corrida."
   end
 end

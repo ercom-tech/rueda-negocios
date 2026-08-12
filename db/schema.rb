@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_30_172059) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_12_081454) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -303,6 +303,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_30_172059) do
     t.datetime "finished_at"
     t.string "kind", null: false
     t.text "message"
+    t.integer "pid"
     t.datetime "started_at"
     t.string "status", default: "running", null: false
     t.jsonb "summary", default: {}, null: false
