@@ -52,6 +52,7 @@ module Sync
         body = JSON.parse(request.body)
         body["clave_cliente"] == "ABAISM" &&
           body["capturista_erp_person_id"] == 90092 &&
+          body["id_rueda"] == @round.erp_round_id &&
           body["id_vendedor"] == 168 &&
           body["items"].first["id_producto"] == 3 &&
           body["items"].first["cantidad"].to_d == 2

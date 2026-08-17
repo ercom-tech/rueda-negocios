@@ -94,6 +94,9 @@ module Sync
 
       {
         capturista_erp_person_id: order.user.erp_person_id,
+        # La rueda a la que pertenece el pedido (vta_pedido.id_rueda, columna
+        # nueva del ERP 2026-08-17). Los pedidos no-rueda del ERP viven en 0.
+        id_rueda:      order.business_round.erp_round_id,
         clave_cliente: order.client.erp_client_key,
         fecha_pedido:  captured.strftime("%Y-%m-%d"),
         hora_pedido:   captured.strftime("%H:%M:%S"),

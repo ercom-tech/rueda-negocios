@@ -181,6 +181,7 @@ Desglose **por partida**: `iva_porcentaje` + `iva_monto`, `descto_porcentaje` +
 | `client_receipt_profile.erp_receipt_profile_id` (solo Remisión) | `consec_remision` |
 | `client_branch` (sucursal) | `sucursal` |
 | `client.salesperson.erp_salesperson_id` | `id_vendedor` |
+| `business_round.erp_round_id` | `id_rueda` (columna nueva del ERP 2026-08-17; 0 = pedido sin rueda — todo el histórico está en 0) |
 | `observations` | `observaciones` (vacía → `' '`) |
 | `order_items.count` | `renglones` |
 | `dividir_facturas` (NUMERIC(18,6); importe máximo por factura al facturar, 0 = no dividir — se captura en el paso 1, solo Factura) | `dividir_facturas` |
