@@ -5,7 +5,7 @@ class RoundSelectionGuardTest < ActionDispatch::IntegrationTest
   setup do
     @server = User.create!(erp_person_id: 900, username: "srv", password: "secret123",
                            role: "server", active: true)
-    post login_path, params: { username: "srv", password: "secret123" }
+    login_as "srv"
     # La lista de ruedas llama a rueda-api; con webmock activo hay que
     # stubearla (si RUEDA_API_URL no está configurada, el rescue del
     # controller también termina en render normal con lista vacía).

@@ -60,7 +60,7 @@ namespace :sync do
     s[:entities].each { |table, n| puts format("  %-24s %d", table, n) }
     puts "[sync:down] usuarios omitidos (sin credencial): #{s[:skipped_users].size} #{s[:skipped_users].inspect if s[:skipped_users].any?}"
     puts "[sync:down] capturistas eliminados (fuera de la rueda): #{s[:removed_users].size} #{s[:removed_users].inspect if s[:removed_users].any?}"
-    puts "[sync:down] membresías omitidas (capturista sin proveedor ni marca): #{s[:skipped_people]}"
+    puts "[sync:down] capturistas con asignación incompleta (solo fuera de catálogo): #{s[:skipped_people].size} #{s[:skipped_people].inspect if s[:skipped_people].any?}"
     puts "[sync:down] SKUs omitidos (proveedor fuera de la rueda): #{s[:skipped_skus]}"
     puts "[sync:down] pedidos locales purgados por el reemplazo: #{s[:purged_orders]}"
     puts "[sync:down] listo. Si el panel del servidor está abierto en un navegador, recárgalo para ver esta corrida."

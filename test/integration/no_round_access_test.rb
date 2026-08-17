@@ -16,7 +16,7 @@ class NoRoundAccessTest < ActionDispatch::IntegrationTest
   end
 
   test "capturista no puede loguearse sin rueda cargada" do
-    post login_path, params: { username: "cap910", password: "secret123" }
+    login_as "cap910"
 
     assert_response :unprocessable_entity
     assert_match(/No hay rueda en curso/, flash[:alert])
@@ -27,12 +27,12 @@ class NoRoundAccessTest < ActionDispatch::IntegrationTest
   test "capturista entra normal con rueda cargada" do
     activate_round!
 
-    post login_path, params: { username: "cap910", password: "secret123" }
+    login_as "cap910"
     assert_redirected_to root_path
   end
 
   test "server entra aunque no haya rueda (es quien la carga)" do
-    post login_path, params: { username: "srv911", password: "secret123" }
+    login_as "srv911"
     assert_redirected_to root_path
     follow_redirect!
     assert_response :success
@@ -40,7 +40,7 @@ class NoRoundAccessTest < ActionDispatch::IntegrationTest
 
   test "capturista con sesión viva es expulsado cuando la rueda se cierra" do
     round = activate_round!
-    post login_path, params: { username: "cap910", password: "secret123" }
+    login_as "cap910"
 
     round.update!(active: false) # lo que hace Cerrar rueda
 
@@ -52,7 +52,7 @@ class NoRoundAccessTest < ActionDispatch::IntegrationTest
   end
 
   test "server sin rueda: transmitir, cerrar rueda y reportes bloqueados por URL directo" do
-    post login_path, params: { username: "srv911", password: "secret123" }
+    login_as "srv911"
 
     post server_sync_up_path
     assert_redirected_to root_path
@@ -72,7 +72,7 @@ class NoRoundAccessTest < ActionDispatch::IntegrationTest
 
   test "server con rueda seleccionada: reportes disponibles" do
     Setting.instance.update!(selected_round_erp_id: 910, selected_round_name: "Rueda 910")
-    post login_path, params: { username: "srv911", password: "secret123" }
+    login_as "srv911"
 
     get reports_path
     assert_response :success

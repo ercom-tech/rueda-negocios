@@ -16,7 +16,7 @@ class SyncDownPendingGuardTest < ActionDispatch::IntegrationTest
     @round  = BusinessRound.create!(erp_round_id: 970, name: "Rueda 970", active: true)
     @client = Client.create!(erp_client_key: "C970", name: "Cliente 970")
     Setting.instance.update!(selected_round_erp_id: 970, selected_round_name: "Rueda 970")
-    post login_path, params: { username: "srv970", password: "secret123" }
+    login_as "srv970"
   end
 
   def captured_untransmitted!

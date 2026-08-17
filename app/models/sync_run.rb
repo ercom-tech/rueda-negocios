@@ -76,14 +76,17 @@ class SyncRun < ApplicationRecord
 
   # ¿El proceso que abrió la corrida sigue vivo? La señal 0 no manda nada:
   # solo comprueba existencia. Una corrida sin pid (anterior a la columna) se
-  # trata como huérfana. EPERM sería "vivo pero de otro usuario" — en la
-  # laptop todo corre como el mismo usuario, y si pasara, tratarlo como vivo
-  # es el lado seguro. Borde conocido: un pid reciclado tras reiniciar el
-  # equipo puede hacerse pasar por el dueño; el barrido re-corre al volver al
-  # menú del servidor, así que la corrida se libera cuando ese proceso ajeno
-  # termina.
+  # trata como huérfana. EPERM sería "vivo pero de otro usuario" — tratarlo
+  # como vivo es el lado seguro para procesos NUESTROS; para los ajenos lo
+  # resuelve el corte por boot de abajo.
   def owner_alive?
     return false if pid.blank?
+    # Una corrida iniciada antes del boot actual tiene al dueño muerto por
+    # definición: ningún proceso sobrevive un reinicio. Cubre el pid
+    # reciclado por un daemon del arranque (a menudo de root → EPERM →
+    # "vivo"), que dejaba la corrida respetada indefinidamente con la
+    # captura pausada — el único caso donde reiniciar no curaba (6ª aud.).
+    return false if started_at && started_at < self.class.booted_at
 
     Process.kill(0, pid)
     true
@@ -91,6 +94,17 @@ class SyncRun < ApplicationRecord
     false
   rescue Errno::EPERM
     true
+  end
+
+  # Boot del sistema. Linux (la laptop): btime de /proc/stat; macOS (dev):
+  # sysctl. Memoizado: el boot no cambia dentro del proceso.
+  def self.booted_at
+    @booted_at ||=
+      if File.readable?("/proc/stat")
+        Time.at(File.read("/proc/stat")[/^btime (\d+)/, 1].to_i)
+      else
+        Time.at(`sysctl -n kern.boottime`[/sec = (\d+)/, 1].to_i)
+      end
   end
 
   def finish!(status:, summary: {}, message: nil)

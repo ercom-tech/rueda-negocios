@@ -9,23 +9,45 @@ aprendizajes de lo que ya se hizo.
 
 ## Prioridad alta
 
-### Desplegar lo remediado en la laptop y en la VM de testing
+### Desplegar lo remediado (4ª a 6ª) en la laptop y en la VM de testing
 
-La 4ª auditoría se remedió completa el 2026-08-11 y **nada de eso está
-desplegado todavía**. Al hacerlo:
+**Nada está desplegado desde antes de la 4ª** (la API de testing corre
+`b43495a`, del 30-jul: ni siquiera trae el arreglo de remisiones). Con el
+lote del 2026-08-17 (precio crédito, id_rueda, genérico 999999) el plan
+viejo quedó caduco — verificado en la 6ª auditoría:
 
-- **Orden: laptop primero, API después.** Al revés, la API nueva rechaza con
-  422 las remisiones que la laptop vieja aún no acompaña con destinatario, y
-  quedan transmisiones bloqueadas hasta actualizar. En el otro sentido no pasa
-  nada: la laptop nueva manda campos que la API vieja ignora.
-- No transmitir durante la ventana entre ambas.
-- `bin/rails tailwindcss:build` en la laptop: cambiaron vistas y la paleta.
-- **Dos cambios visibles** que conviene anunciar antes de que sorprendan: el
-  coral bajó a `#bd5343` (un tono más oscuro, por contraste) y el favicon
-  cambió a la tuerca.
-- Comprobar después: transmitir una remisión de un cliente CON perfil y
-  verificar en el ERP que `consec_remision ≠ 0`, `rfc = XAXX010101000`,
-  `c_UsoCFDI = S01` y `fecha_crea` = la de captura.
+- **Prerequisito ERP (antes de todo, en testing 10.1.3.43 y producción):**
+  columnas `vta_pedido.id_rueda` (default 0) y
+  `vta_pedido_detalle.nombre_capturado` (varchar 40), y el producto 999999
+  vivo (`baja=false`). Sin la columna, la API nueva da 500 en TODO pedido.
+- **Orden (invertido respecto al plan anterior): ERP migrado → rueda-api →
+  laptop.** API nueva + laptop vieja es el único par tolerante (`id_rueda ||
+  0`, `nombre_capturado` NULL; el 422 de remisiones es visible y se destraba
+  actualizando la laptop). Al revés, la API vieja descarta EN SILENCIO la
+  descripción del genérico y la rueda del pedido, y su export deja el
+  catálogo local entero sin precio con un sync "exitoso".
+- **Ventana: ni transmitir NI obtener información** hasta que ambos lados
+  estén parejos. Tras actualizar la laptop, re-correr sync-down contra la
+  API nueva antes de capturar.
+- **En la laptop:** `bin/rails db:migrate` (dos migraciones nuevas: pid y
+  credit_wholesale_price) + `bin/rails tailwindcss:build`.
+- **Checks post-deploy** (transmitir un pedido de prueba con una partida del
+  genérico): `id_rueda ≠ 0`, `nombre_capturado` poblado (≤40), precio de
+  partida = `cred_mayoreo_precio`, y los de remisión de siempre
+  (`consec_remision ≠ 0`, `rfc = XAXX010101000`, `c_UsoCFDI = S01`,
+  `fecha_crea` = captura).
+- **Cambios visibles** que anunciar: coral `#bd5343`, favicon de tuerca,
+  rojo de avisos más oscuro, mensajes nuevos del panel y del 422.
+- Candidato aparte: no existe handshake de versión laptop↔API (`/` y
+  `/health` no la exponen) — esta clase de desfase seguirá siendo invisible
+  hasta que exista.
+
+### Pasar a FECEGO la lista de productos con crédito mayoreo en $0 (antes del 27-ago)
+
+102 productos de la rueda 3 quedarán invendibles en la app (crédito $0); 25
+tienen ventas vivas 2025-26 (684 partidas, vendidas debajo del público — el
+$0 es omisión de captura del catálogo). El top-10 está en el reporte de la
+6ª auditoría; re-medir contra el ERP de producción antes de actuar.
 
 ### El rol servidor debe poder descartar pedidos ajenos
 

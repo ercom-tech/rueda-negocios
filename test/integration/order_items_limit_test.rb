@@ -13,7 +13,7 @@ class OrderItemsLimitTest < ActionDispatch::IntegrationTest
     BusinessRoundPerson.create!(business_round: @round, user: @user, position: 1, supplier: @sup)
     @client = Client.create!(erp_client_key: "C950", name: "Cliente 950")
     @order  = Order.create!(user: @user, business_round: @round, client: @client, kind: "remission")
-    post login_path, params: { username: "cap950", password: "secret123" }
+    login_as "cap950"
   end
 
   # Producto dentro del universo del capturista (proveedor de su membresía),

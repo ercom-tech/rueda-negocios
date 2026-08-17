@@ -41,7 +41,8 @@ module Sync
       @skipped_user_ids = []
       @removed_users = []
       @skipped_skus = 0
-      @skipped_people = 0
+      # Set: se reporta por persona, no por renglón de membresía.
+      @skipped_people = Set.new
       @purged_orders = 0
     end
 
@@ -65,7 +66,11 @@ module Sync
     def summary
       { entities: @stats, skipped_users: @skipped_users,
         removed_users: @removed_users, skipped_skus: @skipped_skus,
-        skipped_people: @skipped_people, purged_orders: @purged_orders }
+        skipped_people: @skipped_people.to_a, purged_orders: @purged_orders,
+        # La captura fuera de catálogo depende de que el genérico venga en el
+        # dataset (export viejo o baja en el ERP lo dejan fuera): sin este
+        # aviso, la UI lo prometía en bucle sin que nada lo delatara (6ª aud.).
+        missing_generic: !Product.exists?(erp_product_id: Product::GENERIC_ERP_ID) }
     end
 
     private
@@ -300,6 +305,10 @@ module Sync
       supplier_by_erp = Supplier.pluck(:erp_supplier_id, :id).to_h
       brand_by_erp    = Brand.pluck(:erp_brand_id, :id).to_h
 
+      # Para nombrar a los afectados en el aviso del panel: sin nombres,
+      # "pide que los asignen" no era accionable (6ª auditoría).
+      username_by_erp = User.pluck(:erp_person_id, :username).to_h
+
       rows = []
       Array(@data["people"]).each do |m|
         uid = user_by_erp[m["erp_person_id"]]
@@ -317,9 +326,11 @@ module Sync
         next if uid.nil? && @skipped_user_ids.include?(m["erp_person_id"])
 
         # Sin usuario local (persona que no vino en el export de usuarios),
-        # sin proveedor NI marca, o con referencia rota → se omite y se reporta.
+        # sin proveedor NI marca, o con referencia rota → la membresía se
+        # omite y se reporta POR PERSONA (contar renglones inflaba el aviso:
+        # un capturista con 3 renglones rotos salía como "3 capturistas").
         if uid.nil? || broken_ref || (sup_ref.nil? && brand_ref.nil?)
-          @skipped_people += 1
+          @skipped_people << (username_by_erp[m["erp_person_id"]] || "persona #{m['erp_person_id']}")
           next
         end
         rows << { business_round_id: round.id, user_id: uid, supplier_id: sid,

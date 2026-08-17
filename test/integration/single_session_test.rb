@@ -31,7 +31,7 @@ class SingleSessionTest < ActionDispatch::IntegrationTest
   end
 
   test "la propia sesión sigue viva entre requests" do
-    post login_path, params: { username: "cap930", password: "secret123" }
+    login_as "cap930"
 
     get root_path
     assert_response :success

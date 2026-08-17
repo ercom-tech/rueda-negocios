@@ -140,12 +140,17 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
 
 ## Jobs y estado de corridas
 
-- Un registro de corrida (`SyncRun`) nace `running` y **solo el job lo cierra**:
-  si el proceso muere a media corrida, queda `running` para siempre y bloquea
-  las siguientes. El barrido de huérfanos va en
-  `Rails.application.server { }` — ese hook corre **solo al bootear el
-  servidor web**, no en consola, rake ni tests, donde un `running` puede ser
-  legítimo porque el server sigue vivo.
+- Un registro de corrida (`SyncRun`) nace `running` con el **pid de su
+  proceso dueño**, y solo su dueño la cierra (los rake con `ensure`, que sí
+  corre ante Ctrl-C/kill). El barrido de huérfanos (`recover_orphaned!`) es
+  seguro **por pid, no por contexto**: respeta corridas cuyo proceso vive
+  (un rake en otra terminal, un worker aparte) y cierra las muertas —
+  incluida la del pid reciclado tras un reinicio, porque una corrida
+  iniciada antes del boot actual tiene al dueño muerto por definición. Por
+  eso corre al bootear el server Y al cargar el menú del servidor: nada
+  queda `running` para siempre. Una escritura nueva de corridas debe
+  registrar a su dueño real (si un job pasara a un worker, actualizar
+  `run.pid` en `perform`).
 - Las condiciones previas se validan **antes de crear la corrida** —en el
   controlador y en el rake—: si se validan dentro del job, una condición que
   nunca llegó a intentarse queda registrada como corrida *fallida*. El job

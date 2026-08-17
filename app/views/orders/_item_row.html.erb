@@ -53,7 +53,7 @@
       <%= item.description %>
     <% end %>
   </td>
-  <td class="hidden px-3 py-2 lg:table-cell">
+  <td class="<%= order.order_items.any?(&:generic?) ? "px-3 py-2" : "hidden px-3 py-2 lg:table-cell" %>">
     <% if can_edit_order?(order) && item.generic? %>
       <%= form_with model: item, url: order_order_item_path(order, item), method: :patch,
             id: dom_id(item, :part_number_form),
@@ -111,7 +111,7 @@
         <%= f.number_field :unit_price, step: "any", min: "0.01", id: dom_id(item, :unit_price),
               value: number_with_precision(item.unit_price, precision: 4, strip_insignificant_zeros: true),
               "aria-label": "Precio unitario — #{item.description}",
-              data: { action: "focus->form-submit#remember blur->form-submit#submitIfChanged" },
+              data: { action: "focus->form-submit#remember keydown->form-submit#stepWithArrows blur->form-submit#submitIfChanged" },
               class: "h-11 w-24 rounded-lg border border-neutral-300 bg-white px-2 text-right outline-none focus:border-brand-gold" %>
       <% end %>
     <% else %>

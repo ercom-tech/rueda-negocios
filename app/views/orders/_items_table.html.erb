@@ -10,7 +10,11 @@
         <th class="px-3 py-3 font-semibold"><span class="lg:hidden">#</span><span class="hidden lg:inline">Consecutivo</span></th>
         <th class="px-3 py-3 font-semibold">Código</th>
         <th class="px-3 py-3 text-left font-semibold">Descripción</th>
-        <th class="hidden px-3 py-3 font-semibold lg:table-cell">No. de parte</th>
+        <%# Con partidas del genérico, el No. de parte es dato CAPTURADO y en
+            tablet vertical quedaba invisible e incorregible (la ocultación
+            era razonable cuando la columna era snapshot de solo lectura).
+            La fila usa la misma condición. %>
+        <th class="<%= order.order_items.any?(&:generic?) ? "px-3 py-3 font-semibold" : "hidden px-3 py-3 font-semibold lg:table-cell" %>">No. de parte</th>
         <th class="px-3 py-3 font-semibold">Cantidad</th>
         <th class="hidden px-3 py-3 font-semibold lg:table-cell">Unidad</th>
         <th class="px-3 py-3 font-semibold">Precio unitario</th>

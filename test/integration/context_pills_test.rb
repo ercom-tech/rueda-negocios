@@ -10,7 +10,7 @@ class ContextPillsTest < ActionDispatch::IntegrationTest
     @round = BusinessRound.create!(erp_round_id: 940, name: "Rueda 940", active: true)
     @sup   = Supplier.create!(erp_supplier_id: 940, name: "PROVEEDOR 940")
     @brand = Brand.create!(erp_brand_id: 940, name: "MARCA 940")
-    post login_path, params: { username: "cap940", password: "secret123" }
+    login_as "cap940"
   end
 
   def membership!(position:, supplier: nil, brand: nil)

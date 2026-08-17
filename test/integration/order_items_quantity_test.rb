@@ -16,7 +16,7 @@ class OrderItemsQuantityTest < ActionDispatch::IntegrationTest
     BusinessRoundPerson.create!(business_round: @round, user: @cap, position: 1, supplier: @sup)
     @client = Client.create!(erp_client_key: "C1010", name: "Cliente 1010")
     @order  = Order.create!(user: @cap, business_round: @round, client: @client, kind: "remission")
-    post login_path, params: { username: "cap1011", password: "secret123" }
+    login_as "cap1011"
   end
 
   def product!(code, package)

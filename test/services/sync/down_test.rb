@@ -72,6 +72,24 @@ module Sync
                    result.summary[:entities].slice("products", "clients", "users"))
     end
 
+    # El buscador promete el 999999; si el dataset no lo trajo (servidor
+    # viejo o baja en el ERP), el summary lo delata para que el panel avise
+    # en vez de dejar la promesa en bucle (6ª auditoría).
+    test "el summary delata cuando el dataset no trae el genérico" do
+      assert Down.new(export_data).run!.summary[:missing_generic],
+             "el export mínimo no trae el 999999"
+
+      with_generic = export_data
+      with_generic["products"] << { "erp_product_id" => Product::GENERIC_ERP_ID,
+                                    "description" => "AJUSTE DE MERCANCIA", "part_number" => nil,
+                                    "model" => nil, "erp_brand_id" => nil, "stock" => "0", "unit" => "PZA",
+                                    "public_price" => "5.25", "wholesale_price" => "4.54",
+                                    "credit_wholesale_price" => "4.78", "tax_rate" => "16.0",
+                                    "max_discount" => "9.0", "min_sale_quantity" => nil,
+                                    "supplier_ids" => [], "supplier_skus" => [] }
+      assert_not Down.new(with_generic).run!.summary[:missing_generic]
+    end
+
     test "guarda: aborta solo con pedidos capturados sin transmitir" do
       user   = User.create!(erp_person_id: 1, username: "u", password: "x", role: "capturista")
       round  = BusinessRound.create!(erp_round_id: 1, name: "R")
@@ -190,7 +208,7 @@ module Sync
 
       assert_equal [ "makita1" ], result.summary[:skipped_users]
       assert_not User.exists?(username: "makita1")
-      assert_equal 0, result.summary[:skipped_people],
+      assert_empty result.summary[:skipped_people],
                    "la membresía del omitido por credencial no se reporta aparte"
       assert_equal 0, BusinessRoundPerson.count
     end
@@ -204,7 +222,7 @@ module Sync
       result = Down.new(export_data.merge("people" => people)).run!
 
       assert_equal 0, BusinessRoundPerson.count
-      assert_equal 2, result.summary[:skipped_people]
+      assert_equal [ "makita1" ], result.summary[:skipped_people], "por persona, no por renglón (2 membresías rotas = 1 capturista)"
     end
 
     test "un export sin usuarios SÍ limpia a los capturistas (replace pleno) pero preserva al server" do
@@ -219,7 +237,7 @@ module Sync
       assert_not User.exists?(user.id), "el replace deja los capturistas idénticos al export"
       assert User.exists?(server.id), "el server seedeado debe sobrevivir siempre"
       assert_equal [ "makita1" ], result.summary[:removed_users]
-      assert_equal 1, result.summary[:skipped_people],
+      assert_equal 1, result.summary[:skipped_people].size,
                    "la membresía de un usuario inexistente se omite y se reporta"
     end
   end

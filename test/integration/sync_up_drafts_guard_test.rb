@@ -16,7 +16,7 @@ class SyncUpDraftsGuardTest < ActionDispatch::IntegrationTest
     @round  = BusinessRound.create!(erp_round_id: 960, name: "Rueda 960", active: true)
     @client = Client.create!(erp_client_key: "C960", name: "Cliente 960")
     Setting.instance.update!(selected_round_erp_id: 960, selected_round_name: "Rueda 960")
-    post login_path, params: { username: "srv960", password: "secret123" }
+    login_as "srv960"
   end
 
   def draft!

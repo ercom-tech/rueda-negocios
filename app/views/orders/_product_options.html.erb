@@ -60,7 +60,12 @@
     <% end %>
   </ul>
 <% else %>
+  <%# El caso real detrás de un "sin resultados" en el evento es un producto
+      que no está en el catálogo de la rueda: sin enunciar el camino del
+      genérico, la función dependía de recordar un código de la capacitación
+      (6ª auditoría). %>
   <div class="rounded-2xl border border-black/10 bg-brand-cream px-5 py-3 text-sm text-neutral-600 shadow-xl">
-    Sin resultados.
+    Sin resultados. Si el producto no está en el catálogo, captúralo fuera de
+    catálogo: busca <span class="font-semibold text-neutral-900">999999</span>.
   </div>
 <% end %>

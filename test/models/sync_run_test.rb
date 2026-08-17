@@ -47,6 +47,22 @@ class SyncRunTest < ActiveSupport::TestCase
     assert alive.reload.running?, "una corrida con proceso vivo no se barre"
   end
 
+  # El pid reciclado tras un reinicio (a menudo por un daemon de root → EPERM
+  # → "vivo") dejaba la corrida respetada indefinidamente — el único caso
+  # donde reiniciar no curaba (6ª auditoría). Una corrida iniciada antes del
+  # boot actual tiene al dueño muerto por definición.
+  test "recover_orphaned! cierra una corrida anterior al boot aunque su pid parezca vivo" do
+    orphan = SyncRun.create!(kind: "up", started_at: Time.current, pid: 1)
+
+    # Sin minitest/mock (fuera de minitest 6): se fija el memo directamente.
+    SyncRun.instance_variable_set(:@booted_at, 1.minute.from_now)
+    SyncRun.recover_orphaned!
+  ensure
+    SyncRun.instance_variable_set(:@booted_at, nil)
+
+    assert orphan.reload.failed?
+  end
+
   test "recover_orphaned! cierra la corrida de un proceso muerto" do
     dead_pid = Process.spawn("true")
     Process.wait(dead_pid)

@@ -178,8 +178,9 @@ capturista define su universo **duro** de productos vendibles en la rueda.
   `supplier_ids` por producto desde `has_producto`, y `ProductSupplier` local
   guarda la unión (con `supplier_sku` NULL cuando el vínculo no trae SKU).
 - **Universo** = productos de TODOS sus proveedores (`ProductSupplier`) ∪ los
-  de sus marcas (`products.brand_id`). Sin membresía → vacío (que el ERP no
-  asigne proveedor/marca al capturista es problema operativo, no del sitio).
+  de sus marcas (`products.brand_id`) ∪ el genérico 999999 (de todos, sin
+  membresía — decisión FECEGO 2026-08-17). Sin membresía → solo el genérico
+  (que el ERP no asigne proveedor/marca sigue siendo problema operativo).
 
 ## Nota de índices (perf del export)
 

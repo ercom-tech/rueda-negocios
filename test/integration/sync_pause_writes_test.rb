@@ -23,7 +23,7 @@ class SyncPauseWritesTest < ActionDispatch::IntegrationTest
     @order    = Order.create!(user: @user, business_round: @round, client: @client, kind: "remission")
     @item     = @order.order_items.create!(position: 1, quantity: 1, unit_price: 100,
                                            tax_rate: 16, discount_percent: 0)
-    post login_path, params: { username: "cap950s", password: "secret123" }
+    login_as "cap950s"
   end
 
   def sync_running!(kind = "down")

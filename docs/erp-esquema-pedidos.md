@@ -149,8 +149,11 @@ Desglose **por partida**: `iva_porcentaje` + `iva_monto`, `descto_porcentaje` +
 - **`total` se redondea a 2 decimales; los demás importes NO.** El ERP redondea
   `total` en cabecera y detalle (7 de 1,245,383 y 10 de 8,694,854 escapan),
   pero deja `subtotal`, `descto_monto` e `iva_monto` con más decimales (1.16M
-  de cabeceras los tienen). El redondeo se aplica **al escribir**, no en la
-  app: así el encabezado sigue cuadrando con sus partidas al centavo.
+  de cabeceras los tienen). **El `total` de la cabecera es la SUMA de los
+  totales de partida ya redondeados** (`written_total`, invariante nativa:
+  99.3% de 110k pedidos de la rama persona) — no el redondeo de la suma
+  exacta, que divergía de sus propias partidas en ~47% de los pedidos (5ª
+  auditoría). La idempotencia compara contra esa misma derivación.
 - **Ocho columnas van como cadena vacía, no NULL:** `clave_pedido_ruta`,
   `clave_cotizacion`, `coordenadas`, `latitud`, `longitud`, `factura`,
   `remision_nombre`, `remision_correo`. Son las que el ERP nunca deja nulas (0
@@ -206,12 +209,16 @@ ERP espera el entero `com_producto.id_producto`, que es
 - **Idempotencia** al reintentar la transmisión: `OrderCreate.find_existing`
   busca por la PK de negocio `(id_empresa, clave_cliente, fecha_pedido,
   hora_pedido)` y devuelve el folio con `idempotent: true` sin reinsertar.
-- **Colisión de la llave de idempotencia** (2ª auditoría): la PK de negocio va
-  a granularidad de **segundo** — dos pedidos distintos del mismo cliente
-  capturados en el mismo segundo harían match. `find_existing` trae además
-  `total` y # de partidas: si el contenido del pedido existente **difiere**
-  (total > $0.01 o distinto # de partidas), la API responde **422 "colisión de
-  idempotencia"** en vez de regalar el folio ajeno; el sync-up lo marca fallido
-  y visible (remedio: recapturar). Restricción confirmada por el usuario:
+- **Colisión de la llave de idempotencia** (2ª auditoría; endurecida en 5ª/6ª):
+  la PK de negocio va a granularidad de **segundo**. `find_existing` trae
+  `total`, `baja` y # de partidas, y `same_content?` compara las partidas una
+  a una (producto, cantidad, precio, descuento, `nombre_capturado`). Si el
+  contenido difiere → **422** con el camino completo: comparar contra el ERP,
+  cancelar allá si es el mismo pedido, **descartar el pedido en la laptop** y
+  capturarlo de nuevo (recapturar a secas duplicaba la venta — 5ª; y el
+  atorado sin descartar bloqueaba obtener/cerrar para siempre — 6ª). Un
+  empate contra un pedido **cancelado** (`baja=true`; el ERP cancela solo el
+  encabezado y el detalle queda vivo) también es 422, no éxito idempotente.
+  Restricción confirmada por el usuario:
   **el ERP de FECEGO NO tolera microsegundos en `hora_pedido`** — por eso la
   solución es detección, no mayor granularidad.

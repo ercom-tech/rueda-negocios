@@ -92,18 +92,33 @@
     </div>
   <% end %>
 
-  <%# Capturistas que se quedaron sin universo de productos: el dato ya se
-      calculaba (`skipped_people`) y no se mostraba en ningún lado, así que
-      el defecto llegaba vivo al evento.
+  <%# Capturistas cuya asignación de proveedor/marca no vino completa. Con
+      nombres (sin ellos, "pide que los asignen" no era accionable), contados
+      POR PERSONA, y sin mentir: desde el genérico 999999 sí pueden capturar
+      fuera de catálogo — el texto viejo ("no van a poder agregar productos")
+      contradecía al buscador (6ª auditoría).
 
       Los pedidos que el reemplazo quitó NO se avisan aquí: el modal ya lo
       advierte ANTES de confirmar, que es cuando sirve. %>
-  <% if kind == "down" && (skipped = summary["skipped_people"].to_i).positive? %>
+  <% if kind == "down" && (skipped_people = summary["skipped_people"].to_a).any? %>
+    <% n = skipped_people.size %>
     <div class="mt-3 rounded-2xl bg-brand-cream px-4 py-3 text-left text-sm leading-snug text-neutral-900">
-      <span class="font-semibold"><%= skipped %> <%= skipped == 1 ? "capturista" : "capturistas" %></span>
-      sin proveedor ni marca asignados: no <%= skipped == 1 ? "va" : "van" %> a poder
-      agregar productos. Pide que <%= skipped == 1 ? "lo asignen" : "los asignen" %>
-      en el ERP y vuelve a obtener la información.
+      La asignación de proveedor/marca de
+      <span class="font-semibold"><%= n %> <%= n == 1 ? "capturista" : "capturistas" %></span>
+      no vino completa: <span class="font-semibold"><%= skipped_people.join(", ") %></span>.
+      Mientras tanto solo <%= n == 1 ? "podrá" : "podrán" %> capturar productos fuera de
+      catálogo (999999). Pide que la corrijan en el ERP y vuelve a obtener la información.
+    </div>
+  <% end %>
+
+  <%# El genérico 999999 no vino en el dataset (servidor desactualizado o dado
+      de baja en el ERP): sin este aviso, el buscador lo prometía en bucle. %>
+  <% if kind == "down" && summary["missing_generic"] %>
+    <div class="mt-3 rounded-2xl bg-brand-cream px-4 py-3 text-left text-sm leading-snug text-neutral-900">
+      La información no incluyó el producto fuera de catálogo
+      (<span class="font-semibold">999999</span>): nadie podrá capturar productos fuera
+      de catálogo. Revisa que el servidor esté actualizado y que el 999999 esté vigente
+      en el ERP, y vuelve a obtener la información.
     </div>
   <% end %>
 

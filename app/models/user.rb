@@ -56,8 +56,9 @@ class User < ApplicationRecord
 
   # Universo de productos que el capturista puede vender en la rueda: los de
   # TODOS sus proveedores asignados ∪ los de sus marcas (regla del usuario,
-  # 2026-07-26). Sin membresía → vacío: asignar capturistas a proveedor/marca
-  # es responsabilidad operativa del ERP.
+  # 2026-07-26) ∪ el genérico 999999, que es de todos. Sin membresía → solo
+  # el genérico: asignar capturistas a proveedor/marca sigue siendo
+  # responsabilidad operativa del ERP.
   def product_universe(round)
     return Product.none unless round
 

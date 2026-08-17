@@ -9,7 +9,7 @@ class SyncConcurrencyTest < ActionDispatch::IntegrationTest
     User.create!(erp_person_id: 920, username: "srv920", password: "secret123",
                  role: "server", active: true)
     Setting.instance.update!(selected_round_erp_id: 920, selected_round_name: "Rueda 920")
-    post login_path, params: { username: "srv920", password: "secret123" }
+    login_as "srv920"
   end
 
   test "con una transmisión corriendo no se puede lanzar una descarga" do

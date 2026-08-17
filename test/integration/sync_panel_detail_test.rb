@@ -10,7 +10,7 @@ class SyncPanelDetailTest < ActionDispatch::IntegrationTest
     User.create!(erp_person_id: 980, username: "srv980", password: "secret123",
                  role: "server", active: true)
     Setting.instance.update!(selected_round_erp_id: 980, selected_round_name: "Rueda 980")
-    post login_path, params: { username: "srv980", password: "secret123" }
+    login_as "srv980"
   end
 
   def up_run!(transmitted: [], failed: [])
@@ -114,13 +114,28 @@ class SyncPanelDetailTest < ActionDispatch::IntegrationTest
 
   # --- Sync-down: lo que la corrida hizo y no se veía ------------------------
 
-  test "el panel avisa de los capturistas que quedaron sin proveedor ni marca" do
-    down_run!(skipped_people: 2)
+  # Con nombres y por persona; y sin mentir: desde el genérico 999999 sí
+  # pueden capturar fuera de catálogo (6ª auditoría).
+  test "el panel nombra a los capturistas con asignación incompleta y dice su camino" do
+    down_run!(skipped_people: [ "makita1", "trupp2" ])
 
     get root_path
 
     assert_match(/2 capturistas/, response.body)
-    assert_match(/sin proveedor ni marca/, response.body)
+    assert_match(/makita1, trupp2/, response.body)
+    assert_match(/solo podrán capturar productos fuera de\s+catálogo \(999999\)/, response.body)
+    assert_no_match(/no van a poder agregar productos/, response.body)
+  end
+
+  # El buscador promete el 999999: si el dataset no lo trajo (servidor viejo o
+  # baja en el ERP), el panel lo delata en vez de dejar la promesa en bucle.
+  test "el panel avisa si el dataset no trajo el producto fuera de catálogo" do
+    down_run!(missing_generic: true)
+
+    get root_path
+
+    assert_match(/no incluyó el producto fuera de catálogo/, response.body)
+    assert_match(/999999/, response.body)
   end
 
   # El dato siempre quedó guardado en la corrida; solo la tarea de consola lo
@@ -172,11 +187,11 @@ class SyncPanelDetailTest < ActionDispatch::IntegrationTest
   end
 
   test "una corrida limpia no pinta el bloque de avisos" do
-    down_run!(skipped_people: 0, purged_orders: 0)
+    down_run!(skipped_people: [], purged_orders: 0)
 
     get root_path
 
-    assert_no_match(/sin proveedor ni marca/, response.body)
+    assert_no_match(/asignación de proveedor\/marca/, response.body)
   end
 
   # --- El modal de confirmación dice qué se va a borrar ----------------------

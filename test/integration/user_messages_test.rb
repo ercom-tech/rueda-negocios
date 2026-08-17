@@ -11,7 +11,7 @@ class UserMessagesTest < ActionDispatch::IntegrationTest
                            role: "capturista", active: true)
     @round  = BusinessRound.create!(erp_round_id: 930_001, name: "Rueda 930", active: true)
     @client = Client.create!(erp_client_key: "C930", name: "Cliente 930")
-    post login_path, params: { username: "cap930", password: "secret123" }
+    login_as "cap930"
   end
 
   # Por el flash viajan las instrucciones de dos pasos de las guardas del sync

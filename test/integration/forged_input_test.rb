@@ -14,7 +14,7 @@ class ForgedInputTest < ActionDispatch::IntegrationTest
     @round  = BusinessRound.create!(erp_round_id: 960_001, name: "Rueda 960", active: true)
     @client = Client.create!(erp_client_key: "C960", name: "Cliente 960")
     @other  = Client.create!(erp_client_key: "C961", name: "Cliente 961")
-    post login_path, params: { username: "cap960", password: "secret123" }
+    login_as "cap960"
   end
 
   def header_params(extra = {})
