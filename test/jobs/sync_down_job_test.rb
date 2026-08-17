@@ -51,12 +51,4 @@ class SyncDownJobTest < ActiveJob::TestCase
       "products" => [], "people" => []
     }
   end
-
-  def with_env(vars)
-    previous = vars.keys.index_with { |k| ENV[k] }
-    vars.each { |k, v| ENV[k] = v }
-    yield
-  ensure
-    previous.each { |k, v| ENV[k] = v }
-  end
 end

@@ -21,6 +21,16 @@ class SessionsController < ApplicationController
     username = params[:username].to_s.strip
     user     = User.find_by(username: username)
 
+    # Un usuario desactivado con contraseña CORRECTA leía "Usuario o
+    # contraseña incorrectos" y la retecleaba en bucle. En una LAN de evento
+    # el argumento anti-enumeración pesa poco; la salida real es el server.
+    # (Solo alcanzable hoy por intervención manual en la BD — 6ª auditoría.)
+    if user && !user.active? && authenticates?(user, params[:password].to_s)
+      log_attempt(user, username, success: false)
+      flash.now[:alert] = "Tu usuario está desactivado en esta laptop; avisa al equipo del servidor."
+      return render :new, status: :unprocessable_entity
+    end
+
     if user&.active? && authenticates?(user, params[:password].to_s)
       # Sin rueda cargada un capturista no tiene nada que operar: se bloquea
       # en la puerta. El rol server sí entra siempre — es quien la carga.

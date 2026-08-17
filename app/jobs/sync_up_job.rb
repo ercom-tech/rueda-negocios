@@ -5,7 +5,15 @@ class SyncUpJob < ApplicationJob
   # Si algún pedido falla, el run queda `failed` (transmisión parcial) con el
   # detalle en el resumen para reintentar.
   def perform(sync_run_id)
-    run    = SyncRun.find(sync_run_id)
+    run = SyncRun.find(sync_run_id)
+    # El barrido pudo cerrarla entre el encolado y este arranque (p. ej. el
+    # web se reinició en medio): no correr sobre una corrida ya cerrada.
+    return unless run.running?
+
+    # El dueño real es quien ejecuta: con un worker aparte (Solid Queue en
+    # production.rb), el pid del web moría con un restart de puma y el
+    # barrido marcaba fallida una corrida viva (6ª auditoría).
+    run.update!(pid: Process.pid)
     result = Sync::Up.new.run!
     status = result[:failed].any? ? :failed : :completed
 
@@ -21,5 +29,10 @@ class SyncUpJob < ApplicationJob
     Rails.logger.error(e.full_message)
     run&.finish!(status: :failed, message: "No se pudieron transmitir los pedidos. Revisa que el servidor esté disponible e inténtalo de nuevo.")
     raise
+  ensure
+    # Espejo del rake: una excepción fuera de StandardError en el hilo del
+    # job (NoMemoryError, SystemStackError) dejaba la corrida running con
+    # dueño vivo — el barrido no la tocaba hasta reiniciar (6ª auditoría).
+    run.finish_interrupted! if run&.running?
   end
 end

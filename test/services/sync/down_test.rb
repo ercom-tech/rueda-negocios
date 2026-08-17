@@ -140,7 +140,7 @@ module Sync
       client = Client.create!(erp_client_key: "C1", name: "C")
       Order.create!(user: user, business_round: round, client: client, kind: "remission",
                     status: "transmitted", erp_folio: "1A0001", local_folio: "RN-000002")
-      rezagado = Order.create!(user: user, business_round: round, client: client, kind: "remission",
+      late_order = Order.create!(user: user, business_round: round, client: client, kind: "remission",
                                status: "transmitted", erp_folio: "1A0002", local_folio: "RN-000003")
 
       # Se engancha al primer `Order.transmitted` (el conteo del purge), que
@@ -151,7 +151,7 @@ module Sync
         define_method(:transmitted) do
           unless colado
             colado = true
-            rezagado.update_columns(status: "captured", erp_folio: nil)
+            late_order.update_columns(status: "captured", erp_folio: nil)
           end
           super()
         end
@@ -166,7 +166,7 @@ module Sync
       # conexión; en la carrera real es otra), así que lo comprobable es lo
       # esencial: la re-guarda abortó y ningún pedido se perdió.
       assert_equal 2, Order.count, "no se pierde ningún pedido"
-      assert Order.exists?(rezagado.id), "la venta colada sobrevive"
+      assert Order.exists?(late_order.id), "la venta colada sobrevive"
     end
 
     test "preserva el usuario server (no viene en el export) y limpia capturistas stale" do

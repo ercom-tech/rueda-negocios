@@ -164,7 +164,10 @@ module Pdf
         tax      = round2(item.tax_amount)
         subtotal = amount - discount
 
-        { code: item.code, description: item.description, unit: item.unit,
+        # El genérico imprime lo MISMO que viaja al ERP (descripción + parte):
+        # el papel del cliente y surtido deben decir lo mismo (6ª auditoría).
+        { code: item.code, description: (item.generic? ? item.erp_captured_name : item.description),
+          unit: item.unit,
           quantity: item.quantity, unit_price: item.unit_price,
           discount_percent: item.discount_percent, tax_rate: item.tax_rate,
           amount: amount, discount: discount, tax: tax,

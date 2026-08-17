@@ -70,8 +70,17 @@ class SyncRun < ApplicationRecord
     running.find_each do |run|
       next if run.owner_alive?
 
-      run.finish!(status: :failed, message: "Interrumpido: la corrida se quedó a medias. Vuelve a intentar.")
+      run.finish_interrupted!
     end
+  end
+
+  # Cierre de una corrida cuyo proceso murió. En un sync-up, la advertencia
+  # que todos los caminos de falla post-envío ya dan: sin ella, editar antes
+  # del reintento llevaba a la colisión del 422 (6ª auditoría).
+  def finish_interrupted!
+    msg = "Interrumpido: la corrida se quedó a medias. Vuelve a intentar."
+    msg += " Los pedidos pudieron haber entrado al ERP: vuelve a transmitir sin editarlos." if up?
+    finish!(status: :failed, message: msg)
   end
 
   # ¿El proceso que abrió la corrida sigue vivo? La señal 0 no manda nada:

@@ -111,9 +111,17 @@ pedido duplicado en el ERP guiado por el propio mensaje de colisión).
   31 BAJA · 0 vulnerabilidades → remediada al 100% el mismo día.
 - **5ª (2026-08-12)** — proyecto completo, 7 dimensiones + verificación
   adversarial ampliada a las MEDIA — 1 ALTA · 13 MEDIA · 43 BAJA · 1 retirado
-  (cifras ya verificadas). Patrón que dejó: los defectos ya no están en los
-  mecanismos sino en **qué le dice el sistema al operador cuando algo falla a
-  medias**.
+  → **remediada al 100% el mismo día** (detalle en la sección "5ª auditoría —
+  remediación" de `memory.md`). Patrón que dejó: los defectos ya no están en
+  los mecanismos sino en **qué le dice el sistema al operador cuando algo
+  falla a medias**.
+- **6ª (2026-08-19)** — lo nuevo desde la 5ª, con la 8ª dimensión (**Textos de
+  los caminos de falla**, que encontró los 2 ALTA en su estreno y queda fija)
+  y verificación con clics reales — 2 ALTA (consolidados) · 12 MEDIA ·
+  30 BAJA · 1 degradado → **remediada al 100% el mismo ciclo** (detalle en
+  "6ª auditoría — remediación" de `memory.md`). Patrón que dejó: los defectos
+  viven en las **costuras** — la pieza nueva y el panel que la hospeda, las
+  versiones en la ventana de despliegue, el estado del pedido y sus textos.
 
 El detalle de las dos primeras está en `docs/auditorias-2026-07.md`; el de la
 3ª y la 4ª, en sus secciones de remediación de `memory.md`. Los reportes

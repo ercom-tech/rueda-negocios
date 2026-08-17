@@ -14,7 +14,10 @@ class OrderItemsController < ApplicationController
     # propios: el primer POST (el clic en la opción del buscador, sin datos)
     # responde el mini-formulario en el panel de resultados; el segundo, ya
     # con `:generic`, crea la partida.
-    if product.generic? && params[:generic].blank?
+    # respond_to?(:permit) y no blank?: un `generic` forjado escalar ("1")
+    # pasaba el blank? y reventaba en el permit con un 500 sin mensaje —
+    # tratarlo como ausente lo manda al mini-formulario (6ª auditoría).
+    if product.generic? && !params[:generic].respond_to?(:permit)
       return render turbo_stream: turbo_stream.update(
         "product-search-results", partial: "orders/generic_item_form",
         locals: { order: @order, product: product, item: nil }

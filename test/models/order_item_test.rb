@@ -64,7 +64,7 @@ class OrderItemTest < ActiveSupport::TestCase
   test "el genérico exige precio capturado y con tope de columna" do
     oi = generic_item(unit_price: nil)
     assert_not oi.valid?
-    assert_includes oi.errors.full_messages, "Escribe el precio unitario."
+    assert_includes oi.errors.full_messages, "Escribe el precio unitario (mayor a cero)."
 
     assert_not generic_item(unit_price: OrderItem::MAX_UNIT_PRICE).valid?
   end
@@ -153,7 +153,8 @@ class OrderItemTest < ActiveSupport::TestCase
     oi = item(unit_price: 0, discount_percent: 0)
     assert_not oi.valid?
     assert_includes oi.errors.full_messages,
-                    "El producto no tiene precio de rueda; no se puede agregar al pedido."
+                    "El producto no tiene precio de rueda; no se puede agregar del catálogo. " \
+                    "Captúralo fuera de catálogo (999999) con su precio, o avisa al equipo del servidor."
   end
 
   # --- Tope de partidas (Order::MAX_ITEMS) --------------------------------

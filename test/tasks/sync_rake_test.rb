@@ -98,14 +98,4 @@ class SyncRakeTest < ActiveSupport::TestCase
 
     assert_equal 0, SyncRun.count, "una condición previa no debe dejar corrida"
   end
-
-  private
-
-  def with_env(vars)
-    previous = vars.keys.index_with { |k| ENV[k] }
-    vars.each { |k, v| ENV[k] = v }
-    yield
-  ensure
-    previous.each { |k, v| ENV[k] = v }
-  end
 end

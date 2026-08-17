@@ -19,12 +19,24 @@ export default class extends Controller {
   // el foco (el cursor "brincaba"). Se recuerda el valor al ENTRAR al campo y
   // se envía SOLO al salir, si cambió. Uso:
   //   data-action="focus->form-submit#remember blur->form-submit#submitIfChanged"
+  // El valor recordado vive en el controller (Map por id), NO solo en el
+  // data-attribute: un morph que repinta la fila ~60 ms después del blur
+  // reescribe los atributos con el HTML del servidor y se lo quitaba al
+  // campo enfocado — el revert de la pausa no revertía y submitIfChanged
+  // reenviaba sin cambio (6ª auditoría). El atributo se conserva como
+  // respaldo visible/depurable.
   remember(event) {
+    ;(this._initial ||= new Map()).set(event.target.id || event.target.name, event.target.value)
     event.target.dataset.initialValue = event.target.value
   }
 
+  rememberedValue(field) {
+    const stored = this._initial?.get(field.id || field.name)
+    return stored !== undefined ? stored : field.dataset.initialValue
+  }
+
   submitIfChanged(event) {
-    if (event.target.value === event.target.dataset.initialValue) return
+    if (event.target.value === this.rememberedValue(event.target)) return
 
     this.element.requestSubmit()
   }
@@ -84,8 +96,9 @@ export default class extends Controller {
   }
 
   revertRemembered() {
-    this.element.querySelectorAll("[data-initial-value]").forEach((field) => {
-      field.value = field.dataset.initialValue
+    this.element.querySelectorAll("input, textarea").forEach((field) => {
+      const initial = this.rememberedValue(field)
+      if (initial !== undefined) field.value = initial
     })
   }
 

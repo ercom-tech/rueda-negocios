@@ -134,7 +134,7 @@ class SyncPanelDetailTest < ActionDispatch::IntegrationTest
 
     get root_path
 
-    assert_match(/no incluyó el producto fuera de catálogo/, response.body)
+    assert_match(/no incluyó \(o vino incompleto\) el producto fuera de catálogo/, response.body)
     assert_match(/999999/, response.body)
   end
 

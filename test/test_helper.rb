@@ -11,6 +11,15 @@ module ActiveSupport
     fixtures :all
 
     # Add more helper methods to be used by all tests here...
+
+    # Compartido (vivía copiado en el rake test y el job test — 6ª auditoría).
+    def with_env(vars)
+      previous = vars.keys.index_with { |k| ENV[k] }
+      vars.each { |k, v| ENV[k] = v }
+      yield
+    ensure
+      previous.each { |k, v| ENV[k] = v }
+    end
   end
 end
 

@@ -16,7 +16,7 @@
       ping-pong con el mensaje de validación. %>
   <p class="mt-1 text-xs text-neutral-600">
     La descripción y el número de parte viajan juntos al ERP:
-    máximo <%= OrderItem::ERP_CAPTURED_NAME_LIMIT %> caracteres entre ambos.
+    máximo <%= OrderItem::ERP_CAPTURED_NAME_LIMIT %> caracteres entre ambos (el espacio que los separa cuenta).
   </p>
 
   <%= form_with url: order_order_items_path(order), method: :post,
@@ -28,7 +28,7 @@
       <%= text_field_tag "generic[description]", item&.description,
             id: "generic_description", maxlength: OrderItem::ERP_CAPTURED_NAME_LIMIT,
             autocomplete: "off",
-            class: "mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 uppercase text-neutral-900 outline-none focus:border-brand-gold" %>
+            class: "mt-1 h-11 w-full rounded-lg border border-neutral-300 bg-white px-3 uppercase text-neutral-900 outline-none focus:border-brand-gold" %>
     </div>
 
     <div class="flex gap-3">
@@ -37,16 +37,16 @@
         <%= text_field_tag "generic[part_number]", item&.part_number,
               id: "generic_part_number", maxlength: OrderItem::ERP_CAPTURED_NAME_LIMIT,
               autocomplete: "off",
-              class: "mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 uppercase text-neutral-900 outline-none focus:border-brand-gold" %>
+              class: "mt-1 h-11 w-full rounded-lg border border-neutral-300 bg-white px-3 uppercase text-neutral-900 outline-none focus:border-brand-gold" %>
       </div>
       <div class="w-36">
         <label for="generic_unit_price" class="block text-xs font-semibold uppercase tracking-wide text-neutral-700">Precio unitario</label>
         <%# stepWithArrows: con step="any" Chrome manda ↑/↓ al scroll — la
             trampa documentada quedaba abierta en el campo nuevo (6ª aud.). %>
         <%= number_field_tag "generic[unit_price]", item&.unit_price,
-              id: "generic_unit_price", step: "any", min: "0.01",
+              id: "generic_unit_price", step: "0.01", min: "0.01",
               data: { action: "keydown->form-submit#stepWithArrows" },
-              class: "mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-right text-neutral-900 outline-none focus:border-brand-gold" %>
+              class: "mt-1 h-11 w-full rounded-lg border border-neutral-300 bg-white px-3 text-right text-neutral-900 outline-none focus:border-brand-gold" %>
       </div>
     </div>
 

@@ -9,5 +9,19 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   connect() {
     this.element.querySelector("input[type='text']")?.focus()
+    // ARIA honesto mientras el formulario vive en el panel del combobox: un
+    // listbox solo admite opciones (el lector anunciaba "cuadro de lista"
+    // con un formulario adentro) y aria-expanded se quedaba en false.
+    this._panel = this.element.closest("[role]")
+    this._prevRole = this._panel?.getAttribute("role")
+    this._panel?.setAttribute("role", "dialog")
+    this._panel?.setAttribute("aria-label", "Producto fuera de catálogo")
+    this._combo = document.querySelector('[aria-controls="product-search-results"]')
+    this._combo?.setAttribute("aria-expanded", "true")
+  }
+
+  disconnect() {
+    if (this._panel && this._prevRole) this._panel.setAttribute("role", this._prevRole)
+    this._combo?.setAttribute("aria-expanded", "false")
   }
 }

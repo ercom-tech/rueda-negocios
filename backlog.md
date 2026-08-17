@@ -95,10 +95,10 @@ datos reales (hostname, usuario, IP del ERP, puerto final) y ejecutarla.
 ### Pruebas de sistema: ampliar la cobertura del JavaScript
 
 **Arranque hecho (2026-08-11):** existe `test/system/` con
-`ApplicationSystemTestCase` (Chrome headless) y tres archivos:
+`ApplicationSystemTestCase` (Chrome headless) y cuatro archivos:
 `order_items_test.rb` (nació para cazar el modal de quitar partida que se
-cerraba solo), `order_header_test.rb` (anillos rojos del paso 1) y
-`sync_pause_feedback_test.rb` (la pausa durante un sync, 5ª auditoría). Se
+cerraba solo), `order_header_test.rb` (anillos rojos del paso 1),
+`sync_pause_feedback_test.rb` (la pausa durante un sync, 5ª auditoría) y `generic_item_flow_test.rb` (el fuera de catálogo, punta a punta). Se
 corren con `bin/rails test:system`, aparte de la suite normal.
 
 **Lo que falta cubrir**, por orden de dolor si se rompe:

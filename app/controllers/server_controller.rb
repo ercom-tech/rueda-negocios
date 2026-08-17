@@ -24,8 +24,10 @@ class ServerController < ApplicationController
     # se pudo contactar al servidor)" también en el caso bueno y mandaba a
     # revisar la red sin necesidad.
     @fetch_failed = true
+    # "el servidor" a secas, como sus hermanos de los jobs: "rueda-api" es
+    # nombre de repo y el flash es instrucción, no diagnóstico (6ª auditoría).
     flash.now[:alert] = "No se pudo obtener la lista de ruedas. " \
-                        "Verifica que el servidor rueda-api esté disponible e inténtalo de nuevo."
+                        "Verifica que el servidor esté disponible e inténtalo de nuevo."
   end
 
   # Guardar la rueda seleccionada.
@@ -95,8 +97,11 @@ class ServerController < ApplicationController
     end
 
     removed = Sync::CloseRound.run!
+    # Concordancia a mano: el verbo también cuenta ("Se eliminaron 1 pedido"
+    # delataba justo en la única operación destructiva — 6ª auditoría).
     redirect_to root_path,
-                notice: "Rueda cerrada. Se eliminaron #{helpers.pluralize(removed, 'pedido')} de esta laptop. " \
+                notice: "Rueda cerrada. Se #{removed == 1 ? 'eliminó' : 'eliminaron'} " \
+                        "#{helpers.pluralize(removed, 'pedido')} de esta laptop. " \
                         "Elige la siguiente rueda y obtén su información."
   rescue Sync::CloseRound::PendingOrdersError, Sync::CloseRound::SyncInProgressError => e
     redirect_to root_path, alert: e.message

@@ -40,14 +40,12 @@
       son snapshot del ERP y se muestran como texto. %>
   <td class="px-3 py-2 text-left">
     <% if can_edit_order?(order) && item.generic? %>
-      <%= form_with model: item, url: order_order_item_path(order, item), method: :patch,
-            id: dom_id(item, :description_form),
-            data: { controller: "form-submit", action: "turbo:submit-end->form-submit#flashStatus" } do |f| %>
+      <%= item_field_form(order, item, :description) do |f| %>
         <%= f.text_field :description, id: dom_id(item, :description),
               maxlength: OrderItem::ERP_CAPTURED_NAME_LIMIT,
-              "aria-label": "Descripción — partida #{item.position}",
+              "aria-label": "Descripción — partida #{item.position}", title: item.description,
               data: { action: "focus->form-submit#remember blur->form-submit#submitIfChanged" },
-              class: "h-11 w-full min-w-40 rounded-lg border border-neutral-300 bg-white px-2 uppercase outline-none focus:border-brand-gold" %>
+              class: "h-11 w-full min-w-48 rounded-lg border border-neutral-300 bg-white px-2 uppercase outline-none focus:border-brand-gold" %>
       <% end %>
     <% else %>
       <%= item.description %>
@@ -55,9 +53,7 @@
   </td>
   <td class="<%= order.order_items.any?(&:generic?) ? "px-3 py-2" : "hidden px-3 py-2 lg:table-cell" %>">
     <% if can_edit_order?(order) && item.generic? %>
-      <%= form_with model: item, url: order_order_item_path(order, item), method: :patch,
-            id: dom_id(item, :part_number_form),
-            data: { controller: "form-submit", action: "turbo:submit-end->form-submit#flashStatus" } do |f| %>
+      <%= item_field_form(order, item, :part_number) do |f| %>
         <%= f.text_field :part_number, id: dom_id(item, :part_number),
               maxlength: OrderItem::ERP_CAPTURED_NAME_LIMIT,
               "aria-label": "No. de parte — #{item.description}",
@@ -75,9 +71,7 @@
           falló (la pausa de sync responde 422): sin eso, el input se quedaba
           con lo tecleado, el total sin recalcular, y el siguiente blur ya no
           reenviaba porque el valor "no cambió". %>
-      <%= form_with model: item, url: order_order_item_path(order, item), method: :patch,
-            id: dom_id(item, :quantity_form),
-            data: { controller: "form-submit", action: "turbo:submit-end->form-submit#flashStatus" } do |f| %>
+      <%= item_field_form(order, item, :quantity) do |f| %>
         <%# Con empaque mínimo: el min del input ES el empaque (si no, la flecha
             ↓ desde el empaque se sujetaba a 1 y desalineaba: 10→1→11) y
             data-step-size hace que las flechas avancen alineadas a la rejilla
@@ -105,10 +99,8 @@
   <td class="hidden px-3 py-2 lg:table-cell"><%= item.unit %></td>
   <td class="px-3 py-2">
     <% if can_edit_order?(order) && item.generic? %>
-      <%= form_with model: item, url: order_order_item_path(order, item), method: :patch,
-            id: dom_id(item, :unit_price_form),
-            data: { controller: "form-submit", action: "turbo:submit-end->form-submit#flashStatus" } do |f| %>
-        <%= f.number_field :unit_price, step: "any", min: "0.01", id: dom_id(item, :unit_price),
+      <%= item_field_form(order, item, :unit_price) do |f| %>
+        <%= f.number_field :unit_price, step: "0.01", min: "0.01", id: dom_id(item, :unit_price),
               value: number_with_precision(item.unit_price, precision: 4, strip_insignificant_zeros: true),
               "aria-label": "Precio unitario — #{item.description}",
               data: { action: "focus->form-submit#remember keydown->form-submit#stepWithArrows blur->form-submit#submitIfChanged" },
@@ -121,9 +113,7 @@
 
   <td class="px-3 py-2">
     <% if can_edit_order?(order) %>
-      <%= form_with model: item, url: order_order_item_path(order, item), method: :patch,
-            id: dom_id(item, :discount_form),
-            data: { controller: "form-submit", action: "turbo:submit-end->form-submit#flashStatus" } do |f| %>
+      <%= item_field_form(order, item, :discount) do |f| %>
         <div class="flex items-center justify-center gap-1">
           <%= f.number_field :discount_percent, min: 0, max: 100, step: "any", id: dom_id(item, :discount),
                 value: number_with_precision(item.discount_percent, strip_insignificant_zeros: true),

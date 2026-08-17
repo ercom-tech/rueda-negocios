@@ -105,7 +105,7 @@ para una **fase posterior de strengthening**.
 
 Ruby 3.3.7. Rails 8 + Hotwire + Tailwind (app); Sinatra 4 + Sequel + pg
 (API); Rake + Sequel para procesos de sync (patrón sync-v2/upload-v2);
-Postgres 16; bcrypt.
+Postgres (17 en desarrollo; el ERP corre 16); bcrypt.
 
 ## Infraestructura
 

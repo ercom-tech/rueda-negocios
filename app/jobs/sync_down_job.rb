@@ -5,6 +5,11 @@ class SyncDownJob < ApplicationJob
   # (replace). Reporta el avance en el SyncRun asociado.
   def perform(sync_run_id)
     run = SyncRun.find(sync_run_id)
+    # Mismas dos guardas que SyncUpJob (6ª auditoría): no correr sobre una
+    # corrida que el barrido ya cerró, y registrar al ejecutor como dueño.
+    return unless run.running?
+
+    run.update!(pid: Process.pid)
     round_id = Setting.instance.selected_round_erp_id
     raise Sync::ApiClient::Error, "no hay una rueda seleccionada" if round_id.blank?
 
@@ -20,5 +25,9 @@ class SyncDownJob < ApplicationJob
     Rails.logger.error(e.full_message)
     run&.finish!(status: :failed, message: "No se pudo obtener la información. Revisa que el servidor esté disponible e inténtalo de nuevo.")
     raise
+  ensure
+    # Espejo del rake (6ª auditoría): las excepciones fuera de StandardError
+    # dejaban la corrida running con dueño vivo hasta reiniciar el servicio.
+    run.finish_interrupted! if run&.running?
   end
 end

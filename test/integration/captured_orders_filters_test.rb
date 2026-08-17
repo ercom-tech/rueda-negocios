@@ -80,8 +80,8 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
   test "el rango de fechas usa el día LOCAL que muestra la pantalla" do
     # 19:00 local del día 10 se guarda como 01:00 UTC del 11: filtrar en UTC
     # dejaría fuera al pedido que la columna Fecha muestra como día 10.
-    tarde = ::Time.new(2026, 8, 10, 19, 0, 0)
-    order!(user: @ana, client: @c1, created_at: tarde)
+    late_time = ::Time.new(2026, 8, 10, 19, 0, 0)
+    order!(user: @ana, client: @c1, created_at: late_time)
     order!(user: @ana, client: @c1, created_at: ::Time.new(2026, 8, 12, 9, 0, 0))
     login_as("srv990")
 

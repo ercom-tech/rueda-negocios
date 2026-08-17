@@ -70,7 +70,8 @@ module Sync
         # La captura fuera de catálogo depende de que el genérico venga en el
         # dataset (export viejo o baja en el ERP lo dejan fuera): sin este
         # aviso, la UI lo prometía en bucle sin que nada lo delatara (6ª aud.).
-        missing_generic: !Product.exists?(erp_product_id: Product::GENERIC_ERP_ID) }
+        missing_generic: !Product.joins(:price).where(erp_product_id: Product::GENERIC_ERP_ID)
+                                 .where.not(prices: { tax_rate: nil }).exists? }
     end
 
     private

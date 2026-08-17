@@ -51,7 +51,7 @@ namespace :sync do
       # por los rescue de arriba: sin este cierre la corrida quedaba
       # `running` para siempre — captura pausada, panel girando y "Cerrar
       # rueda" bloqueado hasta reiniciar el servidor (5ª auditoría).
-      run.finish!(status: :failed, message: "Interrumpido: la corrida se quedó a medias. Vuelve a intentar.") if run.running?
+      run.finish_interrupted! if run.running?
     end
 
     s = result.summary
@@ -88,7 +88,7 @@ namespace :sync do
     ensure
       # Mismo cierre que sync:down: una muerte por señal no pasa por los
       # rescue y dejaba la corrida `running` para siempre.
-      run.finish!(status: :failed, message: "Interrumpido: la corrida se quedó a medias. Vuelve a intentar.") if run.running?
+      run.finish_interrupted! if run.running?
     end
 
     r[:transmitted].each { |t| puts "  ✓ #{t[:local]} → folio ERP #{t[:erp]}" }

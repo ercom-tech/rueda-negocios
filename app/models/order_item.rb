@@ -59,8 +59,12 @@ class OrderItem < ApplicationRecord
   # En el genérico el precio es capturado: el mensaje pide escribirlo.
   def unit_price_positive
     unless unit_price.present? && unit_price.positive?
-      return errors.add(:base, generic? ? "Escribe el precio unitario." :
-                                          "El producto no tiene precio de rueda; no se puede agregar al pedido.")
+      # Ambos mensajes dicen la salida: al genérico, que el precio debe ser
+      # mayor a cero (un 0 tecleado leía "escríbelo" — ya lo había escrito);
+      # al catálogo, los dos caminos que sí existen (6ª auditoría).
+      return errors.add(:base, generic? ? "Escribe el precio unitario (mayor a cero)." :
+                                          "El producto no tiene precio de rueda; no se puede agregar del catálogo. " \
+                                          "Captúralo fuera de catálogo (999999) con su precio, o avisa al equipo del servidor.")
     end
 
     errors.add(:base, "El precio es demasiado grande.") if unit_price >= MAX_UNIT_PRICE
@@ -76,10 +80,12 @@ class OrderItem < ApplicationRecord
 
     if discount_percent.negative?
       errors.add(:base, "El descuento no puede ser negativo.")
+    elsif !generic? && discount_percent > (cap = product&.max_discount || 0)
+      # El tope del producto va primero: con 150 tecleado, "no puede exceder
+      # 100%" escondía el tope real hasta el segundo intento (6ª auditoría).
+      errors.add(:base, "El descuento no puede exceder el máximo del producto (#{cap.to_i}%).")
     elsif discount_percent > 100
       errors.add(:base, "El descuento no puede exceder 100%.")
-    elsif !generic? && discount_percent > (cap = product&.max_discount || 0)
-      errors.add(:base, "El descuento no puede exceder el máximo del producto (#{cap.to_i}%).")
     end
   end
 
@@ -100,10 +106,15 @@ class OrderItem < ApplicationRecord
     [ description, part_number.presence ].compact.join(" ")
   end
 
-  # Mayúsculas como el resto del catálogo (y como los nativos del ERP).
+  # Mayúsculas como el resto del catálogo (y como los nativos del ERP). Los
+  # caracteres de control (saltos, tabs, escapes — solo alcanzables por
+  # payload forjado) se colapsan a espacio: viajaban crudos al ERP y al PDF.
+  # El precio se fija a 2 decimales: el papel imprime a 2 y con 4 el renglón
+  # no cuadraba con su Monto para un cliente con calculadora (6ª auditoría).
   def normalize_generic_fields
-    self.description = description.to_s.strip.upcase
-    self.part_number = part_number.to_s.strip.upcase.presence
+    self.description = description.to_s.gsub(/[[:cntrl:]]/, " ").squish.upcase
+    self.part_number = part_number.to_s.gsub(/[[:cntrl:]]/, " ").squish.upcase.presence
+    self.unit_price  = unit_price.round(2) if unit_price
   end
 
   def generic_description_fits_erp

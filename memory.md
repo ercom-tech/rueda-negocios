@@ -31,6 +31,48 @@ Si es **algo por hacer**, va al backlog.
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
 
+## 6ª auditoría (2026-08-19) — remediación
+
+Artifact: https://claude.ai/code/artifact/ef320711-a03f-4db0-a399-313f9089ff5b
+(2 ALTA consolidados · 12 MEDIA · 30 BAJA · 1 degradado, con la 8ª dimensión
+—Textos de los caminos de falla— estrenada y fija). Remediada completa en el
+mismo ciclo. Aprendizajes que trascienden su arreglo:
+
+- **Un formulario que vive en un panel desechable hereda su destructividad.**
+  El mini-formulario del genérico se perdía por 4 rutas (clic fuera, tecla
+  con foco fantasma, pausa, error de red). La regla que quedó: con captura a
+  medias (`data-autocomplete-keep` + campos no vacíos), NINGUNA ruta
+  implícita limpia el panel — solo el Cancelar explícito; el foco se da en
+  `connect()` (el `autofocus` streameado perdía SIEMPRE contra el `reset()`
+  del autocompletado, confirmado con clics reales).
+- **El desenlace del pedido atorado quedó cerrado en sus tres tramos:** el
+  `destroy` de un transmitido avisa en vez de confirmar un no-op; el 422 de
+  colisión enuncia el paso que saca del bucle (DESCARTAR en la laptop —
+  cancelar en el ERP no libera: las partidas del cancelado siguen vivas); y
+  empatar contra un pedido cancelado (`find_existing` ahora trae `ped.baja`)
+  es 422 con salida, no éxito idempotente. Las guardas ofrecen la
+  alternativa de descartar.
+- **El barrido de huérfanos corta por boot:** una corrida iniciada antes del
+  boot actual tiene al dueño muerto por definición — cierra el pid reciclado
+  por daemons de root (EPERM → "vivo"), el único caso donde reiniciar no
+  curaba. Los jobs registran su pid en `perform`, verifican `running?` al
+  arrancar y cierran con `finish_interrupted!` en `ensure` (las excepciones
+  fuera de StandardError dejaban la corrida viva).
+- **La idempotencia acepta ambas derivaciones del total** (written_total y
+  el redondeo de la suma exacta de la API anterior): un pedido insertado por
+  la versión vieja y reintentado con la nueva daba colisión falsa.
+- **La ventana de despliegue se documentó con el orden INVERTIDO** (ERP
+  migrado → API → laptop) tras verificar que "la API vieja ignora los campos"
+  ahora significa perder la descripción del genérico en silencio y dejar el
+  catálogo sin precio. La API desplegada real es `b43495a` (pre-4ª).
+- Higiene menor que quedó de paso: control chars colapsados en la captura
+  del genérico, precio del genérico a 2 decimales (el PDF imprime a 2 y el
+  renglón no cuadraba), el PDF del genérico imprime lo MISMO que viaja al
+  ERP (descripción + parte), receta única `item_field_form` para los 5
+  forms de la fila, `with_env`/`login_as` compartidos, consulta de ruedas
+  unificada en la API, y el usuario desactivado con contraseña correcta ya
+  no lee "usuario o contraseña incorrectos".
+
 ## Producto fuera de catálogo (2026-08-17) — genérico 999999
 
 Requerimiento FECEGO: el proveedor puede vender productos que no están en el
@@ -43,7 +85,7 @@ descripción y parte.
 
 - **El mecanismo es el nativo del ERP, medido:** sus propios pedidos con
   999999 llevan precio libre y el texto en
-  `vta_pedido_detalle.nombre_capturado` (varchar 40) — vacío/NULL en 1.35M
+  `vta_pedido_detalle.nombre_capturado` (varchar 40) — vacío/NULL en 8.7M
   de partidas normales, lleno solo en las del genérico. No inventamos
   contrato: lo replicamos.
 - **El tope de 40 es del ERP, no nuestro:** se valida en el modelo (con
