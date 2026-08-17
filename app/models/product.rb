@@ -60,7 +60,11 @@ class Product < ApplicationRecord
       description: description,
       part_number: part_number,
       unit:        unit,
-      unit_price:  price&.public_price || 0,
+      # Crédito mayoreo (decisión FECEGO 2026-08-17): el nivel al que vende
+      # la rueda. Un producto con crédito mayoreo en $0 en el ERP queda
+      # invendible con aviso ("producto sin precio") — el dato se corrige
+      # allá, que es su dueño; no hay fallback a otro nivel.
+      unit_price:  price&.credit_wholesale_price || 0,
       tax_rate:    price&.tax_rate || 0
     }
   end

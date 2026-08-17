@@ -113,16 +113,6 @@ como copia de respaldo por si el folio se llegara a armar del lado de la app.
 - Asistencia de clientes.
 - Cotización.
 
-### Precios / beneficios especiales de la rueda
-
-Hallazgo ya resuelto: el ERP **no** tiene precios ligados a `id_rueda` — viven
-en el catálogo general `com_producto_has_precio` (niveles mayoreo / público /
-intermedio / crédito + `factor_descto1..5`).
-
-El "precio especial por rueda" es un **concepto a definir en la app**: modelo
-propio con FK `id_rueda` + `id_producto`, o reúso del catálogo. Decisión
-diferida.
-
 ### Regalos por promoción
 
 Mencionado por el usuario (2026-08-10) al fijar el tope de 45 partidas: los
@@ -138,6 +128,9 @@ sube `Order::MAX_ITEMS`.
 `id_negociaciontipo`, `id_enviotipo`. Hoy son fijos en
 `OrderCreate::HEADER_DEFAULTS` (la moda del ERP). Confirmar cuáles son
 correctos para una rueda y si alguno debe salir del cliente en vez de ser fijo.
+`tipo_precio = 'MA'` ya quedó consistente con la decisión de precio (la rueda
+vende a crédito mayoreo, la modalidad a crédito del mayoreo — 2026-08-17);
+faltan los demás.
 
 ### LAN del evento
 

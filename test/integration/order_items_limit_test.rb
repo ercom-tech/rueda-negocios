@@ -22,7 +22,7 @@ class OrderItemsLimitTest < ActionDispatch::IntegrationTest
     p = Product.create!(erp_product_id: code, description: "Producto #{code}",
                         brand: @brand, unit: "PZA", max_discount: 0)
     ProductSupplier.create!(product: p, supplier: @sup)
-    Price.create!(product: p, public_price: 100, tax_rate: 16)
+    Price.create!(product: p, public_price: 100, credit_wholesale_price: 100, tax_rate: 16)
     p
   end
 

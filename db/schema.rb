@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_12_081454) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_17_061125) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -230,6 +230,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_12_081454) do
 
   create_table "prices", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.decimal "credit_wholesale_price", precision: 14, scale: 4
     t.bigint "product_id", null: false
     t.decimal "public_price", precision: 14, scale: 4
     t.decimal "tax_rate", precision: 5, scale: 2

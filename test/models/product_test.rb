@@ -38,4 +38,23 @@ class ProductTest < ActiveSupport::TestCase
   test "el snapshot de partida guarda el código a 6 dígitos" do
     assert_equal "017768", @product.to_order_item_attributes[:code]
   end
+
+  # El nivel que vende la rueda es CRÉDITO MAYOREO (decisión FECEGO
+  # 2026-08-17), no el público — que solo queda de referencia.
+  test "el snapshot de partida cobra el precio crédito mayoreo" do
+    Price.create!(product: @product, public_price: 471.08, wholesale_price: 407.82,
+                  credit_wholesale_price: 429.44, tax_rate: 16)
+
+    assert_equal 429.44, @product.to_order_item_attributes[:unit_price]
+  end
+
+  # Sin fallback a otro nivel: un crédito mayoreo en $0 en el ERP deja el
+  # producto invendible con aviso ("producto sin precio") — el dato se
+  # corrige allá, que es su dueño.
+  test "sin precio crédito mayoreo el snapshot queda en cero (invendible)" do
+    Price.create!(product: @product, public_price: 471.08, wholesale_price: 407.82,
+                  credit_wholesale_price: 0, tax_rate: 16)
+
+    assert_equal 0, @product.to_order_item_attributes[:unit_price]
+  end
 end

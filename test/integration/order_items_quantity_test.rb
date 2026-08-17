@@ -23,7 +23,7 @@ class OrderItemsQuantityTest < ActionDispatch::IntegrationTest
     p = Product.create!(erp_product_id: code, description: "Producto #{code}", brand: @brand,
                         unit: "PZA", max_discount: 0, min_sale_quantity: package)
     ProductSupplier.create!(product: p, supplier: @sup)
-    Price.create!(product: p, public_price: 100, tax_rate: 16)
+    Price.create!(product: p, public_price: 100, credit_wholesale_price: 100, tax_rate: 16)
     p
   end
 
@@ -60,7 +60,7 @@ class OrderItemsQuantityTest < ActionDispatch::IntegrationTest
     product = Product.create!(erp_product_id: 962_001, description: "Empaque cero",
                               brand: @brand, unit: "PZA", max_discount: 0, min_sale_quantity: 0)
     ProductSupplier.create!(product: product, supplier: @sup)
-    Price.create!(product: product, public_price: 100, tax_rate: 16)
+    Price.create!(product: product, public_price: 100, credit_wholesale_price: 100, tax_rate: 16)
     item = @order.order_items.create!(product: product, position: 1, quantity: 1,
                                       unit_price: 100, tax_rate: 16, discount_percent: 0)
 

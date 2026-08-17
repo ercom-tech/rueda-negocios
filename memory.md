@@ -31,6 +31,27 @@ Si es **algo por hacer**, va al backlog.
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
 
+## Precio de la rueda (2026-08-17) — crédito mayoreo
+
+**La rueda vende al precio crédito mayoreo** (decisión del usuario;
+`com_producto_has_precio.cred_mayoreo_precio`). Cierra el renglón "precios
+especiales de la rueda" del backlog: no hay modelo propio por rueda — se
+cobra un nivel del catálogo general del ERP.
+
+- Cadena: export (`credit_wholesale_price`) → `prices.credit_wholesale_price`
+  local → snapshot de la partida (`Product#to_order_item_attributes`).
+  Público y mayoreo siguen viajando de referencia.
+- **Sin fallback:** un crédito mayoreo en $0 (6.5% del catálogo al decidirlo:
+  3,656 de 55,949) deja el producto invendible con el aviso de "producto sin
+  precio" — el dato se corrige en el ERP, que es su dueño. Decisión explícita
+  del usuario entre las tres opciones.
+- Contexto medido: crédito mayoreo ≈ mayoreo × 1.05 y ≈ 88% del público;
+  nunca por debajo del mayoreo. `tipo_precio = 'MA'` del encabezado queda
+  consistente (es la modalidad a crédito del mayoreo, y el campo es
+  declarativo — 5ª auditoría).
+- Los pedidos capturados ANTES del cambio conservan su snapshot al precio
+  público: el snapshot es inmutable por diseño.
+
 ## 5ª auditoría (2026-08-12) — remediación
 
 Artifact: https://claude.ai/code/artifact/a354356c-0f4b-4ce8-a62e-06656c5ba144

@@ -268,7 +268,9 @@ module Sync
         next unless pid
 
         price_rows << { product_id: pid, public_price: p["public_price"],
-                        wholesale_price: p["wholesale_price"], tax_rate: p["tax_rate"] }
+                        wholesale_price: p["wholesale_price"],
+                        credit_wholesale_price: p["credit_wholesale_price"],
+                        tax_rate: p["tax_rate"] }
 
         # Vínculo producto↔proveedor = `supplier_ids` (com_proveedor_has_producto,
         # la relación real que define el universo por proveedor) ∪ los SKUs

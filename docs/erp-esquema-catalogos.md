@@ -73,6 +73,10 @@ respaldo con 3 ruedas cargadas (Veracruz / Chiapas / Oaxaca 2026).
   `publico_precio`, `intermedio_precio`, `internet_precio`, versiones
   `_con_iva` y `_redondeo`, precios de crédito (`cred_*`), `id_moneda`, `iva`,
   `igi`, factores de descuento `factor_descto1..5`. Filtrar `baja = false`.
+  **El nivel que cobra la rueda es `cred_mayoreo_precio`** (decisión FECEGO
+  2026-08-17); el export lo manda como `credit_wholesale_price` junto a
+  público y mayoreo, que quedan de referencia. Un producto con crédito
+  mayoreo en $0 queda invendible en la app (sin fallback a otro nivel).
 
 ## Relaciones producto ↔ marca ↔ proveedor
 
@@ -97,7 +101,11 @@ arranca `(id_empresa, id_rueda, …)`. Joins e integridad verificados con datos
 | `cnf_rueda_negocios_cliente` | `(…, id_vendedor, clave_cliente)` | Clientes registrados **con flujo de aprobación** ventas/crédito: `aprobado_ventas`, `aprobado_credito`, `id_usuario_aprueba_*`, `motivo_rechazo_credito`, crédito autorizado (`limite_credito_autorizado`, `saldo_facturas_autorizado`, `disponible_autorizado`, `por_facturar_autorizado`). `clave_cliente` → `vta_cliente`. |
 | `cnf_rueda_negocios_persona` | `(…, id_persona, consecutivo)` | Personas de contacto/expositores por proveedor-marca. `id_persona` → `cnf_persona`, con `id_proveedor` e `id_marca` — ambos usan `0` como "ninguno": un renglón "solo proveedor" trae `id_marca = 0` y uno "solo marca" trae `id_proveedor = 0`. El export hace `NULLIF(…, 0)` a los dos y la membresía local acepta proveedor nulo (validando que venga al menos uno). |
 
-## Precios especiales por rueda — hueco pendiente
+## Precios especiales por rueda — resuelto sin tabla propia
+
+(Resuelto 2026-08-17: la rueda vende al nivel **crédito mayoreo** del
+catálogo general — no hay modelo de precio por rueda. Se conserva el
+hallazgo original:)
 
 **No existe** en el esquema del ERP una tabla de precio ligada a `id_rueda`.
 Los precios provienen del catálogo general `com_producto_has_precio` (con sus
