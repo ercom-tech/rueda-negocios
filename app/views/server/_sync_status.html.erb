@@ -100,7 +100,13 @@
 
       Los pedidos que el reemplazo quitó NO se avisan aquí: el modal ya lo
       advierte ANTES de confirmar, que es cuando sirve. %>
-  <% if kind == "down" && (skipped_people = summary["skipped_people"].to_a).any? %>
+  <%# Compat: las corridas guardadas ANTES del cambio traen skipped_people
+      como número (sin nombres). Se ignoran — su aviso viejo ya se mostró, y
+      el siguiente sync-down escribe el formato nuevo. Sin esto, el menú del
+      servidor tronaba con NoMethodError al primer arranque post-deploy. %>
+  <% skipped_people = summary["skipped_people"] %>
+  <% skipped_people = [] unless skipped_people.is_a?(Array) %>
+  <% if kind == "down" && skipped_people.any? %>
     <% n = skipped_people.size %>
     <div class="mt-3 rounded-2xl bg-brand-cream px-4 py-3 text-left text-sm leading-snug text-neutral-900">
       La asignación de proveedor/marca de

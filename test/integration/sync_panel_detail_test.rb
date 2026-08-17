@@ -127,6 +127,17 @@ class SyncPanelDetailTest < ActionDispatch::IntegrationTest
     assert_no_match(/no van a poder agregar productos/, response.body)
   end
 
+  # Una corrida guardada ANTES del cambio trae skipped_people como número:
+  # el menú no debe tronar con ella (pasó en el deploy real del 17-ago).
+  test "una corrida con el formato viejo de skipped_people no tumba el menú" do
+    down_run!(skipped_people: 2)
+
+    get root_path
+
+    assert_response :success
+    assert_no_match(/asignación de proveedor\/marca/, response.body)
+  end
+
   # El buscador promete el 999999: si el dataset no lo trajo (servidor viejo o
   # baja en el ERP), el panel lo delata en vez de dejar la promesa en bucle.
   test "el panel avisa si el dataset no trajo el producto fuera de catálogo" do
