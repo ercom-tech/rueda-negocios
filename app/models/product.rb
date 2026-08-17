@@ -5,6 +5,17 @@ class Product < ApplicationRecord
 
   has_one :price, dependent: :destroy
 
+  # Código FECEGO del producto "fuera de catálogo" ("AJUSTE DE MERCANCIA" en
+  # el ERP): cualquier capturista puede usarlo, sin membresía de proveedor ni
+  # marca, capturando descripción, no. de parte y precio a mano (decisión
+  # FECEGO 2026-08-17). El ERP nativo lo maneja igual: precio libre y el
+  # texto en vta_pedido_detalle.nombre_capturado.
+  GENERIC_ERP_ID = 999_999
+
+  def generic?
+    erp_product_id == GENERIC_ERP_ID
+  end
+
   has_many :product_suppliers, dependent: :destroy
   has_many :suppliers, through: :product_suppliers
 

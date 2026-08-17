@@ -64,9 +64,15 @@ class User < ApplicationRecord
     memberships  = business_round_people.where(business_round_id: round.id)
     supplier_ids = memberships.pluck(:supplier_id).compact.uniq
     brand_ids    = memberships.pluck(:brand_id).compact.uniq
-    return Product.none if supplier_ids.empty? && brand_ids.empty?
+
+    # El genérico 999999 ("fuera de catálogo") es de todos: no exige
+    # membresía — incluso un capturista sin proveedor ni marca puede capturar
+    # con él (decisión FECEGO 2026-08-17).
+    generic = Product.where(erp_product_id: Product::GENERIC_ERP_ID)
+    return generic if supplier_ids.empty? && brand_ids.empty?
 
     Product.where(id: ProductSupplier.where(supplier_id: supplier_ids).select(:product_id))
            .or(Product.where(brand_id: brand_ids))
+           .or(generic)
   end
 end

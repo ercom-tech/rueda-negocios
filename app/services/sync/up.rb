@@ -126,6 +126,10 @@ module Sync
           {
             consecutivo:       i,
             id_producto:       it.product&.erp_product_id,
+            # Solo el genérico (fuera de catálogo) viaja con su descripción
+            # capturada; en el resto va nil → NULL, la forma nativa del ERP
+            # (8.4M de partidas normales lo llevan NULL).
+            nombre_capturado:  (it.erp_captured_name if it.generic?),
             cantidad:          it.quantity,
             precio:            it.unit_price,
             subtotal:          it.line_total,

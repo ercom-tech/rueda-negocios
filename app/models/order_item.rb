@@ -8,12 +8,14 @@ class OrderItem < ApplicationRecord
   # antes de validar — la columna es NOT NULL (borrar + tab tronaba con
   # PG::NotNullViolation) y los cálculos dividen sobre el valor.
   before_validation { self.discount_percent = 0 if discount_percent.blank? }
+  before_validation :normalize_generic_fields, if: :generic?
 
   validates :tax_rate, numericality: { greater_than_or_equal_to: 0 }
   validate :quantity_positive
   validate :quantity_in_package_multiples
   validate :unit_price_positive
   validate :discount_within_limits
+  validate :generic_description_fits_erp, if: :generic?
   # Solo al agregar: un pedido que YA rebasa el tope (p.ej. si la regla baja
   # después) debe seguir siendo editable — corregir cantidades y quitar
   # renglones — en vez de quedar atorado sin poder guardar nada.
@@ -46,25 +48,73 @@ class OrderItem < ApplicationRecord
                       "(empaque mínimo de venta).")
   end
 
+  # Tope de la columna (`numeric(14,4)`): un precio tecleado de más en el
+  # genérico saldría como ActiveRecord::RangeError, que ningún rescue atrapa,
+  # y en una respuesta Turbo Stream el capturista solo vería que "no pasó
+  # nada" (misma trampa que la cantidad).
+  MAX_UNIT_PRICE = 10**10
+
   # Un producto sin precio (sync sin renglón de precio → snapshot 0) no debe
   # venderse: transmitiría una partida en $0 al ERP sin que nadie lo note.
+  # En el genérico el precio es capturado: el mensaje pide escribirlo.
   def unit_price_positive
-    return if unit_price.present? && unit_price.positive?
+    unless unit_price.present? && unit_price.positive?
+      return errors.add(:base, generic? ? "Escribe el precio unitario." :
+                                          "El producto no tiene precio de rueda; no se puede agregar al pedido.")
+    end
 
-    errors.add(:base, "El producto no tiene precio de rueda; no se puede agregar al pedido.")
+    errors.add(:base, "El precio es demasiado grande.") if unit_price >= MAX_UNIT_PRICE
   end
 
   # El descuento no puede exceder el máximo del producto (`max_discount`, %
   # sincronizado del ERP). Sin dato (nil, o partida sin producto) se trata
   # como 0: no aplica descuentos (decisión del usuario, 2ª auditoría B1).
+  # En el genérico el descuento es libre (decisión FECEGO 2026-08-17): solo
+  # lo acotan el 0 y el 100.
   def discount_within_limits
     return if discount_percent.blank?
 
     if discount_percent.negative?
       errors.add(:base, "El descuento no puede ser negativo.")
-    elsif discount_percent > (cap = product&.max_discount || 0)
+    elsif discount_percent > 100
+      errors.add(:base, "El descuento no puede exceder 100%.")
+    elsif !generic? && discount_percent > (cap = product&.max_discount || 0)
       errors.add(:base, "El descuento no puede exceder el máximo del producto (#{cap.to_i}%).")
     end
+  end
+
+  # --- Producto fuera de catálogo (genérico 999999) ----------------------
+  # Su partida captura descripción, no. de parte y precio a mano; en el
+  # resto de los productos esos campos son snapshot del ERP.
+
+  ERP_CAPTURED_NAME_LIMIT = 40
+
+  def generic?
+    product&.generic? || false
+  end
+
+  # Lo que viaja al ERP en `vta_pedido_detalle.nombre_capturado`
+  # (varchar 40): descripción y no. de parte juntos, como lo captura el
+  # propio ERP en sus pedidos nativos con el genérico.
+  def erp_captured_name
+    [ description, part_number.presence ].compact.join(" ")
+  end
+
+  # Mayúsculas como el resto del catálogo (y como los nativos del ERP).
+  def normalize_generic_fields
+    self.description = description.to_s.strip.upcase
+    self.part_number = part_number.to_s.strip.upcase.presence
+  end
+
+  def generic_description_fits_erp
+    return errors.add(:base, "Escribe la descripción del producto.") if description.blank?
+
+    over = erp_captured_name.length - ERP_CAPTURED_NAME_LIMIT
+    return unless over.positive?
+
+    errors.add(:base, "La descripción y el número de parte viajan juntos al ERP y no caben: " \
+                      "#{over == 1 ? 'sobra 1 carácter' : "sobran #{over} caracteres"} " \
+                      "(máximo #{ERP_CAPTURED_NAME_LIMIT} entre ambos).")
   end
 
   # Tope de partidas del pedido (Order::MAX_ITEMS). Va en el modelo y no solo

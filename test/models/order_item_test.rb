@@ -28,6 +28,60 @@ class OrderItemTest < ActiveSupport::TestCase
     assert item(product: product(5), discount_percent: 5).valid?
   end
 
+  # --- Producto fuera de catálogo (genérico 999999) ----------------------
+
+  def generic_product
+    @generic_product ||= Product.create!(erp_product_id: Product::GENERIC_ERP_ID,
+                                         description: "AJUSTE DE MERCANCIA",
+                                         unit: "PZA", max_discount: 9)
+  end
+
+  def generic_item(attrs = {})
+    item({ product: generic_product, description: "CESPOL DE HULE P/LAVABO",
+           unit_price: 226.94 }.merge(attrs))
+  end
+
+  test "el genérico exige descripción" do
+    oi = generic_item(description: "")
+    assert_not oi.valid?
+    assert_includes oi.errors.full_messages, "Escribe la descripción del producto."
+  end
+
+  test "descripción y parte del genérico deben caber juntos en los 40 del ERP" do
+    # 30 + espacio + 15 = 46 → sobran 6 del varchar(40) de nombre_capturado.
+    oi = generic_item(description: "A" * 30, part_number: "B" * 15)
+    assert_not oi.valid?
+    assert oi.errors.full_messages.any? { |m| m.include?("sobran 6 caracteres") }, oi.errors.full_messages.inspect
+  end
+
+  test "el genérico admite descuento libre por encima del tope del producto" do
+    # max_discount 9 (el del ERP): en el genérico no aplica — decisión FECEGO
+    # 2026-08-17. Solo lo acotan 0 y 100.
+    assert generic_item(discount_percent: 50).valid?
+    assert_not generic_item(discount_percent: 101).valid?
+  end
+
+  test "el genérico exige precio capturado y con tope de columna" do
+    oi = generic_item(unit_price: nil)
+    assert_not oi.valid?
+    assert_includes oi.errors.full_messages, "Escribe el precio unitario."
+
+    assert_not generic_item(unit_price: OrderItem::MAX_UNIT_PRICE).valid?
+  end
+
+  test "el genérico normaliza a mayúsculas y arma el nombre que viaja al ERP" do
+    oi = generic_item(description: "  cespol de hule ", part_number: " abc-1 ")
+    assert oi.valid?, oi.errors.full_messages.inspect
+    assert_equal "CESPOL DE HULE", oi.description
+    assert_equal "CESPOL DE HULE ABC-1", oi.erp_captured_name
+  end
+
+  test "un producto de catálogo no es genérico y conserva sus reglas" do
+    oi = item(product: product(5), discount_percent: 3)
+    assert_not oi.generic?
+    assert oi.valid?
+  end
+
   test "borrar el descuento (campo vacío) significa 0 y se guarda sin tronar" do
     oi = item(product: product(5), discount_percent: 5)
     oi.save!

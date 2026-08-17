@@ -48,6 +48,11 @@ class ProductTest < ActiveSupport::TestCase
     assert_equal 429.44, @product.to_order_item_attributes[:unit_price]
   end
 
+  test "generic? distingue al 999999 del resto" do
+    assert Product.new(erp_product_id: Product::GENERIC_ERP_ID).generic?
+    assert_not @product.generic?
+  end
+
   # Sin fallback a otro nivel: un crédito mayoreo en $0 en el ERP deja el
   # producto invendible con aviso ("producto sin precio") — el dato se
   # corrige allá, que es su dueño.

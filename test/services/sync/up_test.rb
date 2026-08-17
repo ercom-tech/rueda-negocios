@@ -101,6 +101,24 @@ module Sync
       assert_match(/tardó demasiado en responder/, result[:failed].first[:error])
     end
 
+    test "la partida del genérico viaja con su descripción capturada" do
+      generic = Product.create!(erp_product_id: Product::GENERIC_ERP_ID, description: "AJUSTE DE MERCANCIA")
+      @order.order_items.create!(product: generic, position: 2, quantity: 1, unit_price: 226.94,
+                                 discount_percent: 0, tax_rate: 16, code: "999999",
+                                 description: "CESPOL DE HULE", part_number: "ABC-1", unit: "PZA")
+
+      req = stub_request(:post, "#{API}/pedidos").with do |request|
+        items = JSON.parse(request.body)["items"]
+        # La normal va con nil → NULL (la forma nativa del ERP); solo el
+        # genérico lleva texto: descripción y parte juntos.
+        items.first["nombre_capturado"].nil? &&
+          items.last["nombre_capturado"] == "CESPOL DE HULE ABC-1"
+      end.to_return(status: 201, body: { clave_pedido: "1A0007" }.to_json)
+
+      Up.new(API).run!
+      assert_requested req
+    end
+
     # Cada falla de red se traduce a algo que el operador pueda leer. El caso
     # de ActiveRecord es el que más importa: si falla ahí, el pedido YA está en
     # el ERP y lo único que no se guardó es el folio de vuelta.

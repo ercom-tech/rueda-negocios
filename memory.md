@@ -31,6 +31,40 @@ Si es **algo por hacer**, va al backlog.
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
 
+## Producto fuera de catálogo (2026-08-17) — genérico 999999
+
+Requerimiento FECEGO: el proveedor puede vender productos que no están en el
+catálogo usando el código **999999** ("AJUSTE DE MERCANCIA" en el ERP), con
+descripción, no. de parte, cantidad, precio y descuento capturados a mano.
+Decisiones del usuario: **es de todos** (sin membresía de proveedor/marca —
+un capturista sin membresías captura solo con él), **descuento libre**
+(0–100, ignora el `descto_tope`), y **tope duro de 40 caracteres** entre
+descripción y parte.
+
+- **El mecanismo es el nativo del ERP, medido:** sus propios pedidos con
+  999999 llevan precio libre y el texto en
+  `vta_pedido_detalle.nombre_capturado` (varchar 40) — vacío/NULL en 1.35M
+  de partidas normales, lleno solo en las del genérico. No inventamos
+  contrato: lo replicamos.
+- **El tope de 40 es del ERP, no nuestro:** se valida en el modelo (con
+  cuántos caracteres sobran), se anuncia en el mini-formulario, y la API lo
+  rechaza con mensaje de negocio (truncar en silencio dejaría a surtido
+  leyendo otra cosa que el papel del cliente).
+- **UX sin JavaScript nuevo:** la opción del buscador ya hace POST, así que
+  el primer POST del genérico responde el mini-formulario en el panel de
+  resultados y el segundo crea la partida. La fila queda editable en
+  descripción/parte/precio con el mismo patrón de la cantidad (guardar al
+  salir, revertir si falla).
+- **Candados:** los tres campos solo se aceptan en partidas del genérico
+  (`item_params_for` / `generic_overrides`) — en el resto son snapshot del
+  ERP y un PATCH forjado no los toca. El aviso de duplicado se apaga para el
+  genérico (varias partidas fuera de catálogo son el uso normal), y
+  `nombre_capturado` entra a la llave de idempotencia (editar el texto es
+  contenido distinto).
+- De pasada se corrigió un desfase del cambio de precio: el panel de
+  sugerencias seguía mostrando el precio público; ahora muestra el crédito
+  mayoreo (el que se cobra).
+
 ## Precio de la rueda (2026-08-17) — crédito mayoreo
 
 **La rueda vende al precio crédito mayoreo** (decisión del usuario;

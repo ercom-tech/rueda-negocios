@@ -1,9 +1,15 @@
 <%# Sugerencias del buscador de producto, acotadas al universo del capturista.
-    Locals: order, products, no_membership (sin proveedores/marcas asignados). %>
-<% if local_assigns[:no_membership] %>
-  <div role="alert" class="rounded-2xl border border-black/10 bg-brand-cream px-5 py-3 text-sm text-red-600 shadow-xl">
-    No tienes proveedores o marcas asignados en esta rueda; no puedes agregar
-    productos. Pide al equipo del servidor actualizar la información.
+    Locals: order, products, no_membership (sin proveedores/marcas asignados).
+
+    Sin membresías el universo ya no está vacío: trae el genérico 999999
+    ("fuera de catálogo", de todos) — el aviso solo aparece si la búsqueda no
+    encontró nada, y dice el camino que sí existe. %>
+<% if local_assigns[:no_membership] && products.none? %>
+  <div role="alert" class="rounded-2xl border border-black/10 bg-brand-cream px-5 py-3 text-sm text-red-700 shadow-xl">
+    No tienes proveedores o marcas asignados en esta rueda; solo puedes
+    capturar productos fuera de catálogo con el código
+    <span class="font-semibold">999999</span>. Para el resto, pide al equipo
+    del servidor actualizar la información.
   </div>
 <% elsif products.any? %>
   <%# Qué producto ya está en el pedido, y en qué partida. Sin esto, la
@@ -23,22 +29,31 @@
             <span class="font-semibold text-neutral-900"><%= product.description %></span>
             <%# Solo los datos que existen: modelo/N.P vacíos no dejan rótulos
                 huérfanos ("Modelo ·"). %>
+            <%# El precio mostrado es el que se cobra: crédito mayoreo (la
+                rueda vende a ese nivel desde 2026-08-17 — mostrar el público
+                aquí era un desfase de ese cambio). El genérico no tiene
+                precio de lista: se captura a mano. %>
             <span class="block text-xs text-neutral-600">
               <%= safe_join([
                     "Código #{product.erp_code}",
                     product.model.presence && "Modelo #{product.model}",
                     product.part_number.presence && "N/P #{product.part_number}",
-                    number_to_currency(product.price&.public_price)
+                    product.generic? ? "Fuera de catálogo — descripción y precio se capturan a mano"
+                                     : number_to_currency(product.price&.credit_wholesale_price)
                   ].compact, " · ") %>
             </span>
-            <% if existing_position %>
+            <%# El genérico no marca repetido: varias partidas "fuera de
+                catálogo" son el uso normal, no un descuido. %>
+            <% if existing_position && !product.generic? %>
               <span class="mt-1 block text-xs font-semibold text-brand-coral-dark">
                 Ya está en el pedido, partida <%= existing_position %>
               </span>
             <% end %>
           </span>
           <span class="shrink-0 rounded-full bg-black px-3 py-1 text-xs font-semibold text-white">
-            <%= existing_position ? "Agregar otra vez" : "Agregar" %>
+            <%= if product.generic? then "Capturar"
+                elsif existing_position then "Agregar otra vez"
+                else "Agregar" end %>
           </span>
         <% end %>
       </li>
