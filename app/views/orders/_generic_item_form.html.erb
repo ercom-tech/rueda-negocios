@@ -4,7 +4,12 @@
     cierra igual: clic fuera o seguir tecleando). Reaparece con lo tecleado
     si la validación rechaza (local `item` presente).
     Locals: order, product, item (OrderItem inválido o nil). %>
-<div class="rounded-2xl border border-black/10 bg-brand-cream p-5 shadow-xl">
+<%# data-autocomplete-keep: con captura a medias, el panel del buscador NO se
+    limpia por rutas implícitas (clic fuera, teclear, reset del submit) — solo
+    el botón Cancelar descarta (6ª auditoría, ALTA). El controller
+    generic-form da el foco a Descripción en connect(). %>
+<div data-controller="generic-form" data-autocomplete-keep
+     class="rounded-2xl border border-black/10 bg-brand-cream p-5 shadow-xl">
   <p class="text-sm font-bold text-neutral-900">Producto fuera de catálogo (999999)</p>
   <%# El tope no es nuestro: descripción y parte viajan juntos al ERP en un
       campo de 40 caracteres (nombre_capturado). Decirlo aquí evita el
@@ -22,7 +27,7 @@
       <label for="generic_description" class="block text-xs font-semibold uppercase tracking-wide text-neutral-700">Descripción</label>
       <%= text_field_tag "generic[description]", item&.description,
             id: "generic_description", maxlength: OrderItem::ERP_CAPTURED_NAME_LIMIT,
-            autofocus: true, autocomplete: "off",
+            autocomplete: "off",
             class: "mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 uppercase text-neutral-900 outline-none focus:border-brand-gold" %>
     </div>
 
@@ -42,7 +47,11 @@
       </div>
     </div>
 
-    <div class="flex justify-end">
+    <div class="flex justify-end gap-3">
+      <button type="button" data-action="autocomplete#cancelGenericForm"
+              class="cursor-pointer rounded-full bg-neutral-700 px-6 py-2.5 font-bold text-white transition-colors hover:bg-neutral-600">
+        Cancelar
+      </button>
       <button type="submit"
               class="cursor-pointer rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white transition-colors hover:bg-brand-coral-dark">
         Agregar al pedido

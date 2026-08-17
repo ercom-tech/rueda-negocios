@@ -24,8 +24,24 @@ export default class extends Controller {
     if (this.autofocusValue) this.inputTarget.focus()
   }
 
+  // El panel puede hospedar el mini-formulario del genérico (fuera de
+  // catálogo). Con captura a medias (algún campo con texto), NINGUNA ruta
+  // implícita debe destruirlo: ni el clic fuera, ni el reset tras un submit,
+  // ni una búsqueda nueva, ni Escape — la 6ª auditoría confirmó con clics
+  // reales que las cuatro perdían lo tecleado sin aviso. Vacío, el panel
+  // vuelve a ser desechable. La única salida destructiva es el botón
+  // Cancelar del propio formulario (cancelGenericForm).
+  get protectedForm() {
+    const form = this.resultsTarget.querySelector("[data-autocomplete-keep]")
+    if (!form) return false
+    return Array.from(form.querySelectorAll("input")).some(
+      (i) => i.type !== "hidden" && i.value.trim() !== ""
+    )
+  }
+
   search() {
     clearTimeout(this._timer)
+    if (this.protectedForm) return
     const q = this.inputTarget.value.trim()
     if (q.length < 2) {
       this.clear()
@@ -118,6 +134,11 @@ export default class extends Controller {
   }
 
   clear() {
+    if (this.protectedForm) return
+    this.forceClear()
+  }
+
+  forceClear() {
     this.resultsTarget.innerHTML = ""
     this.index = -1
     this.setExpanded(false)
@@ -125,10 +146,20 @@ export default class extends Controller {
   }
 
   // Tras agregar (submit del resultado), limpia el input y los resultados y
-  // reenfoca para encadenar una nueva búsqueda.
+  // reenfoca para encadenar una nueva búsqueda. Con el mini-formulario en
+  // captura (p.ej. la pausa por sync respondió 422 solo-flash), no: robaría
+  // el foco y, sin la guarda de clear, lo tecleado.
   reset() {
+    if (this.protectedForm) return
     this.inputTarget.value = ""
-    this.clear()
+    this.forceClear()
+    this.inputTarget.focus()
+  }
+
+  // Cancelar explícito del mini-formulario: la única ruta que descarta la
+  // captura a medias, a propósito.
+  cancelGenericForm() {
+    this.forceClear()
     this.inputTarget.focus()
   }
 

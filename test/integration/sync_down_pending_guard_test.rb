@@ -31,7 +31,9 @@ class SyncDownPendingGuardTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to root_path
     assert_match(/Hay 1 pedido sin transmitir y se perdería al obtener la información\./, flash[:alert])
-    assert_match(/Transmítelo y vuelve a intentar/, flash[:alert])
+    # La alternativa de descartar existe porque un pedido atorado en la
+    # colisión del 422 jamás va a transmitirse (6ª auditoría).
+    assert_match(/Transmítelo \(o pide a su capturista que lo descarte\) y vuelve a intentar/, flash[:alert])
     assert_equal 0, SyncRun.down.count, "una condición previa no debe dejar una corrida fallida"
   end
 

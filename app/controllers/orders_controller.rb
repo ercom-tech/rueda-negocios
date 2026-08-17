@@ -43,7 +43,16 @@ class OrdersController < ApplicationController
   # Cancelar la captura: descarta el pedido (solo si aún es editable).
   def destroy
     order = current_user.orders.find(params[:id])
-    order.destroy if order.editable?
+    # La pantalla vieja de un pedido ya transmitido conserva el botón: sin
+    # esta rama, el destroy se omitía en silencio y el flash confirmaba un
+    # descarte que no ocurrió — el capturista creía cancelada una venta que
+    # el ERP va a surtir (6ª auditoría, ALTA).
+    unless order.editable?
+      return redirect_to order_path(order),
+                         alert: "Este pedido ya se transmitió al ERP y no se puede descartar aquí."
+    end
+
+    order.destroy
     redirect_to root_path, notice: "Pedido descartado."
   end
 

@@ -17,6 +17,40 @@ class GenericItemFlowTest < ApplicationSystemTestCase
                     description: "AJUSTE DE MERCANCIA", unit: "PZA")
   end
 
+  # Las rutas de pérdida que la 6ª auditoría confirmó con clics reales: clic
+  # fuera, teclear con el foco fantasma en el buscador. Con captura a medias
+  # el panel queda protegido; solo Cancelar descarta.
+  test "el mini-formulario no se pierde por rutas implícitas y Cancelar sí lo cierra" do
+    sign_in @user
+    visit order_path(@order)
+
+    fill_in "Busca por código, nombre, modelo o No. de parte", with: "999999"
+    click_button "Capturar"
+
+    # El foco aterriza en Descripción (connect del controller), no en el
+    # buscador — antes, la primera tecla caía al buscador y destruía el
+    # formulario.
+    assert_selector "#generic_description"
+    assert_equal "generic_description", page.evaluate_script("document.activeElement.id")
+
+    fill_in "Descripción", with: "TALADRO ESPECIAL"
+    fill_in "Precio unitario", with: "150.50"
+
+    # Clic fuera: el panel NO se limpia.
+    find("body").click
+    assert_field "Descripción", with: "TALADRO ESPECIAL"
+
+    # Teclear en el buscador tampoco lo destruye.
+    find("[aria-label='Buscar producto']").click
+    find("[aria-label='Buscar producto']").send_keys("t")
+    assert_field "Descripción", with: "TALADRO ESPECIAL"
+
+    # Cancelar sí lo descarta, a propósito, y devuelve el foco al buscador.
+    click_button "Cancelar"
+    assert_no_selector "#generic_description"
+    assert_equal 0, @order.order_items.count
+  end
+
   test "capturar y editar un producto fuera de catálogo de punta a punta" do
     sign_in @user
     visit order_path(@order)

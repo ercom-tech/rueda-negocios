@@ -59,8 +59,11 @@ module Sync
         "Hay #{orders_label(drafts)} en borrador y se #{would_be_lost(drafts)} #{action}. " \
         "Pide que #{them(drafts)} terminen o #{them(drafts)} descarten, y vuelve a intentar."
       else
+        # La alternativa de descartar no es adorno: un pedido atorado en la
+        # colisión del 422 jamás va a transmitirse — sin ella, esta guarda
+        # ordenaba lo imposible y bloqueaba cerrar la rueda (6ª auditoría).
         "Hay #{orders_label(pending)} sin transmitir y se #{would_be_lost(pending)} #{action}. " \
-        "#{transmit_them(pending)} y vuelve a intentar."
+        "#{transmit_them(pending)} (o pide a su capturista que #{them(pending)} descarte) y vuelve a intentar."
       end
     end
 
