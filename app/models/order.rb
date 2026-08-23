@@ -86,15 +86,57 @@ class Order < ApplicationRecord
     end
   end
 
-  # Partidas que cuentan contra MAX_ITEMS. Punto ÚNICO de la regla (lo usan la
-  # validación de OrderItem y el contador de la vista): cuando lleguen los
-  # regalos por promoción, aquí se decide si se excluyen del conteo.
+  # Partidas que cuentan contra MAX_ITEMS. Punto ÚNICO de la regla (lo usan
+  # la validación de OrderItem y el contador de la vista). Los regalos de
+  # promoción quedan fuera: el capturista no los pidió y no debe perder un
+  # renglón propio por ellos (decisión FECEGO 2026-08-22).
+  # En SQL y no sobre la colección cargada: se pregunta durante la validación
+  # de una partida que todavía no existe, y la asociación en memoria ya trae
+  # la que se está construyendo — contarla adelantaba el tope en uno.
   def items_count_for_limit
-    order_items.count
+    order_items.where(gift: false).count
   end
 
   def items_limit_reached?
     items_count_for_limit >= MAX_ITEMS
+  end
+
+  # --- Promociones -------------------------------------------------------
+
+  # Fecha contra la que se mide la vigencia de una promoción: la de captura
+  # del pedido (decisión del usuario 2026-08-22). `created_at` es UTC y la
+  # laptop trabaja en hora local — sin `localtime`, un pedido capturado en la
+  # noche del último día de vigencia perdía sus promociones.
+  def captured_on
+    created_at&.localtime&.to_date || Date.current
+  end
+
+  # La promoción aplicada que incluye este producto, si la hay. Es lo que
+  # impide agregar un producto a un grupo ya congelado.
+  def applied_promotion_for(product)
+    return nil if product.nil?
+
+    applied_promotion_ids = order_items.filter_map(&:promotion_id).uniq
+    return nil if applied_promotion_ids.empty?
+
+    Promotion.where(id: applied_promotion_ids).joins(:promotion_products)
+             .find_by(promotion_products: { product_id: product.id })
+  end
+
+  # { product_id => nombre de la promoción } para los productos que una
+  # promoción YA aplicada bloquea. Lo usa el buscador para avisar antes del
+  # toque, en vez de dejar que el capturista lo descubra al intentar agregarlo.
+  def promotions_blocking(products)
+    applied_ids = order_items.filter_map(&:promotion_id).uniq
+    return {} if applied_ids.empty? || products.blank?
+
+    PromotionProduct.where(promotion_id: applied_ids, product_id: products.map(&:id))
+                    .joins(:promotion).pluck(:product_id, "promotions.name").to_h
+  end
+
+  # Las promociones que tocan este pedido, aplicadas o no.
+  def promotion_groups
+    Promotions::Group.for_order(self)
   end
 
   # Finaliza la captura: asigna folio local y marca el pedido como capturado.

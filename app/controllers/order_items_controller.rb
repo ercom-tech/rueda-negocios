@@ -85,7 +85,17 @@ class OrderItemsController < ApplicationController
   end
 
   def destroy
-    @order.order_items.find(params[:id]).destroy
+    item = @order.order_items.find(params[:id])
+    # Una partida congelada por una promoción no se quita: el modelo lo aborta
+    # y aquí se dice por qué. Sin el mensaje, el bote de una pestaña rezagada
+    # "no hacía nada" y el capturista lo picaba otra vez.
+    unless item.destroy
+      return render turbo_stream: [
+        *detail_streams,
+        turbo_stream.replace("flash", partial: "shared/flash",
+                                      locals: { alert: item.errors.full_messages.to_sentence })
+      ]
+    end
     # Quitar una partida intermedia dejaba huecos en el consecutivo.
     @order.renumber_items!
     # El botón que abrió el modal se fue con su fila, así que el foco caía al

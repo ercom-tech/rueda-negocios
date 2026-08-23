@@ -44,6 +44,10 @@ viejo quedó caduco — verificado en la 6ª auditoría:
 
 ### Pasar a FECEGO la lista de productos con crédito mayoreo en $0 (antes del 27-ago)
 
+**Son 414, no 102** (7ª auditoría: 302 con precio 0 y 112 sin renglón de precio
+vivo; el 102 de la 6ª no se reproduce con ningún recorte). Ninguno está en el
+universo de una promoción, así que no afectan descuentos ni regalos.
+
 102 productos de la rueda 3 quedarán invendibles en la app (crédito $0); 25
 tienen ventas vivas 2025-26 (684 partidas, vendidas debajo del público — el
 $0 es omisión de captura del catálogo). El top-10 está en el reporte de la
@@ -135,14 +139,36 @@ como copia de respaldo por si el folio se llegara a armar del lado de la app.
 - Asistencia de clientes.
 - Cotización.
 
-### Regalos por promoción
-
-Mencionado por el usuario (2026-08-10) al fijar el tope de 45 partidas: los
-regalos pueden hacer que un pedido rebase el tope. Al implementarlos hay que
-decidir en `Order#items_count_for_limit` si se excluyen del conteo o si solo
-sube `Order::MAX_ITEMS`.
 
 ## Definiciones con FECEGO
+
+### Cuántos regalos entrega un escalón con varios (antes del 27-ago)
+
+`vta_promocion_detalle.regalos_permitir` viene en **0** y `regalos_todo` en
+**false** en las 38 promociones de la rueda, y FLEXIMATIC (3036) tiene **dos**
+productos de regalo en cada uno de sus dos escalones (exhibidores 31245 y
+34317).
+
+Lo que dicen los datos del ERP (7ª auditoría), no lo que suponíamos: en los
+escalones con regalo configurado solo existen dos combinaciones — `(N≥1,
+true)` en 442 y `(0, false)` en 7. **La forma "elige N" no aparece en ninguna
+fila**, así que el par nunca se usó para expresar eso. Y de los regalos
+efectivamente emitidos en pedidos, el **100%** salió de escalones `(N, true)`:
+con `(0, false)` el ERP **nunca ha emitido un regalo**. Los 7 escalones así son
+los 4 de esta rueda y 3 de CALIDRA (canal POS).
+
+La pregunta para FECEGO, entonces, no es "¿elige uno o se lleva todos?" sino:
+**¿qué significa `(0, false)`, y están bien capturados esos 4 escalones?**
+Compararlos con las 442 configuraciones que sí han entregado regalos.
+
+Por ahora la app **entrega todos** los del escalón (decisión del usuario
+2026-08-22): es lo que el proveedor prometió, y quedarse corto es peor que
+pasarse. Si FECEGO confirma que se elige uno, hay que agregar la elección al
+modal de la promoción — hoy no hay pantalla para eso.
+
+Las otras dos promociones con regalo (FANDELI, ITW POLIMEX) traen uno solo,
+así que el caso ambiguo es únicamente FLEXIMATIC.
+
 
 ### Defaults de configuración de la cabecera del pedido
 

@@ -16,6 +16,9 @@ import { Controller } from "@hotwired/stimulus"
 // serviría para levantar el teclado del tablet.
 const MIN_OPTIONS_TO_FOCUS_FILTER = 8
 
+// Aire entre el panel y el borde que lo recorta, para que no quede pegado.
+const EDGE_MARGIN = 8
+
 export default class extends Controller {
   static targets = ["button", "label", "input", "panel", "filter", "list"]
   static values = { filterable: Boolean }
@@ -31,6 +34,7 @@ export default class extends Controller {
 
   open() {
     this.panelTarget.hidden = false
+    this.position()
     this.index = -1
     this.buttonTarget.setAttribute("aria-expanded", "true")
     if (this.filterableValue && this.hasFilterTarget) {
@@ -48,6 +52,61 @@ export default class extends Controller {
     this.index = -1
     this.buttonTarget.setAttribute("aria-expanded", "false")
     this.focusHost.removeAttribute("aria-activedescendant")
+  }
+
+  // Decide si el panel se abre hacia abajo o hacia arriba, y lo acota al
+  // espacio que realmente hay.
+  //
+  // Hace falta porque el panel es `absolute`: no ocupa lugar en el flujo, así
+  // que la página no crece para hacerle sitio, y el shell del sitio tiene
+  // `overflow-hidden` (contiene el patrón de herramientas). El combo de
+  // "Dividir facturas" es el último campo del paso 1 y su panel terminaba
+  // 90 px por debajo del borde del shell: los dos montos más altos quedaban
+  // cortados, sin scroll con el que llegar a ellos.
+  //
+  // Se resuelve aquí y no quitando el `overflow-hidden` porque esto sirve para
+  // CUALQUIER combo que quede bajo en la pantalla — en una tablet apaisada,
+  // eso incluye a casi todos.
+  position() {
+    const panel = this.panelTarget
+    panel.classList.remove("bottom-full", "mb-1")
+    panel.classList.add("top-full", "mt-1")
+    panel.style.maxHeight = ""
+
+    const button = this.buttonTarget.getBoundingClientRect()
+    const limit  = this.clippingBounds
+    const below  = limit.bottom - button.bottom - EDGE_MARGIN
+    const above  = button.top - limit.top - EDGE_MARGIN
+    const needed = panel.scrollHeight
+
+    // Solo se voltea si arriba hay MÁS espacio, no apenas con que abajo falte:
+    // en una pantalla muy baja ninguna dirección alcanza y abrir hacia arriba
+    // tapaba el campo que se estaba llenando.
+    const flip = needed > below && above > below
+    if (flip) {
+      panel.classList.remove("top-full", "mt-1")
+      panel.classList.add("bottom-full", "mb-1")
+    }
+
+    // El tope inline solo se pone cuando el espacio es MENOR que el contenido;
+    // si no, mandaría sobre el `max-h-72` de la clase y agrandaría el panel.
+    const space = flip ? above : below
+    if (needed > space) panel.style.maxHeight = `${Math.max(space, 0)}px`
+  }
+
+  // El borde real contra el que se recorta el panel: el primer ancestro que
+  // no deja desbordar, o el viewport si no hay ninguno.
+  get clippingBounds() {
+    let node = this.panelTarget.parentElement
+    while (node && node !== document.body) {
+      const style = getComputedStyle(node)
+      if (style.overflow !== "visible" || style.overflowY !== "visible") {
+        const rect = node.getBoundingClientRect()
+        return { top: Math.max(rect.top, 0), bottom: Math.min(rect.bottom, window.innerHeight) }
+      }
+      node = node.parentElement
+    }
+    return { top: 0, bottom: window.innerHeight }
   }
 
   choose(event) {

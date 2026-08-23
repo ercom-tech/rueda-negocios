@@ -44,6 +44,9 @@ module Sync
       # Set: se reporta por persona, no por renglón de membresía.
       @skipped_people = Set.new
       @purged_orders = 0
+      @skipped_promotion_products = 0
+      # Set: se reporta por producto, no por renglón.
+      @shared_promotion_products = Set.new
     end
 
     def run!
@@ -60,6 +63,7 @@ module Sync
       import_clients
       import_products
       import_people
+      import_promotions
       self
     end
 
@@ -67,6 +71,8 @@ module Sync
       { entities: @stats, skipped_users: @skipped_users,
         removed_users: @removed_users, skipped_skus: @skipped_skus,
         skipped_people: @skipped_people.to_a, purged_orders: @purged_orders,
+        skipped_promotion_products: @skipped_promotion_products,
+        shared_promotion_products: @shared_promotion_products.to_a,
         # La captura fuera de catálogo depende de que el genérico venga en el
         # dataset (export viejo o baja en el ERP lo dejan fuera): sin este
         # aviso, la UI lo prometía en bucle sin que nada lo delatara (6ª aud.).
@@ -94,7 +100,10 @@ module Sync
     # Las tablas de membresía se vacían primero: cuelgan de brands/suppliers/
     # salespeople/clients/rounds y bloquearían el delete por FK.
     def clear_catalog!
-      [ BusinessRoundPerson, BusinessRoundClient ].each(&:delete_all)
+      # Las promociones cuelgan de products: van antes que el bloque que lo
+      # borra, o el delete choca por FK.
+      [ PromotionGift, PromotionProduct, PromotionTier, Promotion,
+       BusinessRoundPerson, BusinessRoundClient ].each(&:delete_all)
       exec_delete("business_round_brands")
       exec_delete("business_round_suppliers")
       exec_delete("business_round_salespeople")
@@ -338,6 +347,96 @@ module Sync
                   brand_id: bid, position: m["position"] || 1 }
       end
       insert BusinessRoundPerson, rows
+    end
+
+    # --- Promociones de la rueda ------------------------------------------
+
+    # Espejo de vta_promocion y sus tres tablas hijas. `Array()` por
+    # compatibilidad con exports viejos: una API sin promociones deja la
+    # rueda sin ellas, no revienta el sync.
+    def import_promotions
+      promos = Array(@data["promotions"])
+      rows = promos.map do |p|
+        { erp_promotion_id: p["erp_promotion_id"], code: p["code"], name: p["name"],
+          starts_on: p["starts_on"], ends_on: p["ends_on"] }
+      end
+      insert Promotion, rows
+      return if rows.empty?
+
+      promo_by_erp   = Promotion.pluck(:erp_promotion_id, :id).to_h
+      product_by_erp = Product.pluck(:erp_product_id, :id).to_h
+
+      import_promotion_tiers(promos, promo_by_erp, product_by_erp)
+      import_promotion_products(promos, promo_by_erp, product_by_erp)
+    end
+
+    def import_promotion_tiers(promos, promo_by_erp, product_by_erp)
+      tier_rows = []
+      promos.each do |p|
+        pid = promo_by_erp[p["erp_promotion_id"]]
+        Array(p["tiers"]).each do |t|
+          tier_rows << { promotion_id: pid, erp_consecutive: t["erp_consecutive"],
+                         condition_kind: t["condition_kind"], unit: t["unit"],
+                         quantity_from: t["quantity_from"], quantity_to: t["quantity_to"],
+                         discount_percent: t["discount_percent"] }
+        end
+      end
+      insert PromotionTier, tier_rows
+      return if tier_rows.empty?
+
+      # Los regalos cuelgan del escalón: hace falta su id local, y el par
+      # (promoción, consecutivo) es la llave que los empareja.
+      tier_by_key = PromotionTier.pluck(:promotion_id, :erp_consecutive, :id)
+                                 .to_h { |promo_id, consec, id| [ [ promo_id, consec ], id ] }
+      gift_rows = []
+      promos.each do |p|
+        pid = promo_by_erp[p["erp_promotion_id"]]
+        Array(p["tiers"]).each do |t|
+          tier_id = tier_by_key[[ pid, t["erp_consecutive"] ]]
+          Array(t["gifts"]).each do |g|
+            product_id = product_by_erp[g["erp_product_id"]]
+            # Un regalo cuyo producto no llegó al catálogo no se puede
+            # materializar. El export ya los incluye a propósito (el esmeril
+            # de FANDELI no es de ninguna marca ni proveedor de la rueda);
+            # si aun así falta, se omite y se cuenta.
+            if tier_id.nil? || product_id.nil?
+              @skipped_promotion_products += 1
+              next
+            end
+            gift_rows << { promotion_tier_id: tier_id, product_id: product_id,
+                           quantity: g["quantity"] }
+          end
+        end
+      end
+      insert PromotionGift, gift_rows
+    end
+
+    def import_promotion_products(promos, promo_by_erp, product_by_erp)
+      code_rows = []
+      # Un producto en dos promociones rompe la regla "una partida participa
+      # en una sola promoción": hoy no pasa (los 6,046 de la rueda están cada
+      # uno en una), pero es dato del ERP y puede cambiar sin avisar. Se
+      # conserva la primera y se reporta, en vez de dejar que la pantalla
+      # elija en silencio cuál descuento ofrece.
+      seen = Set.new
+      promos.each do |p|
+        pid = promo_by_erp[p["erp_promotion_id"]]
+        Array(p["products"]).each do |c|
+          product_id = product_by_erp[c["erp_product_id"]]
+          if product_id.nil?
+            @skipped_promotion_products += 1
+            next
+          end
+          if seen.include?(product_id)
+            @shared_promotion_products << c["erp_product_id"]
+            next
+          end
+          seen << product_id
+          code_rows << { promotion_id: pid, product_id: product_id,
+                         discount_percent: c["discount_percent"] }
+        end
+      end
+      insert PromotionProduct, code_rows
     end
 
     # --- Helper ------------------------------------------------------------

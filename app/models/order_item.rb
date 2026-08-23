@@ -1,8 +1,21 @@
 class OrderItem < ApplicationRecord
   # Partida del pedido (snapshot de los datos del producto).
 
-  belongs_to :order
+  # `touch: true`: el sync-up detecta "editado mientras se transmitía"
+  # comparando `order.updated_at`. Aplicar una promoción cambia el descuento de
+  # todo el grupo y agrega un renglón sin tocar el pedido, así que ese aviso
+  # —construido en la 5ª auditoría— nunca se disparaba (7ª auditoría).
+  belongs_to :order, touch: true
   belongs_to :product, optional: true
+  belongs_to :promotion,      optional: true
+  belongs_to :promotion_tier, optional: true
+
+  # Bandera de "este cambio lo está haciendo el sistema, no el capturista":
+  # la pone `Promotions::Group` al aplicar y al quitar una promoción. Sin
+  # ella, el candado de abajo bloquearía a la propia rutina que aplica el
+  # descuento. No es un atributo de la tabla y no se puede llegar a ella
+  # desde `params`, así que un PATCH forjado nunca la activa.
+  attr_accessor :promotion_managed
 
   # Borrar el campo de descuento significa "sin descuento": normalizar a 0
   # antes de validar — la columna es NOT NULL (borrar + tab tronaba con
@@ -20,6 +33,14 @@ class OrderItem < ApplicationRecord
   # después) debe seguir siendo editable — corregir cantidades y quitar
   # renglones — en vez de quedar atorado sin poder guardar nada.
   validate :order_items_within_limit, on: :create
+  validate :promotion_not_applied_to_product, on: :create
+  validate :not_locked_by_promotion, on: :update
+  # El candado de edición es `on: :update` y NO cubría el borrado: la pantalla
+  # esconde el bote de basura en una fila congelada, pero el endpoint seguía
+  # vivo — una pestaña rezagada o un DELETE forjado alcanzaban la partida. Y
+  # borrar PARTE de un grupo no recalcula el escalón: el resto conservaba un
+  # descuento que ya no se gana y se transmitía al ERP (7ª auditoría).
+  before_destroy :block_destroy_when_locked
 
   # Mensajes en `:base` (sin default_locale :es, que alteraría formatos de
   # moneda/fecha en toda la UI): así `full_messages` los muestra tal cual, en
@@ -39,6 +60,12 @@ class OrderItem < ApplicationRecord
   # Empaque mínimo de venta (com_producto_has_empaque): el producto solo se
   # vende en múltiplos de min_sale_quantity. Sin dato (nil) no hay regla.
   def quantity_in_package_multiples
+    # El regalo queda fuera: su cantidad la dicta el ERP en
+    # `vta_promocion_regalo`, no el capturista, y si no cuadra con el empaque
+    # no hay nada que corregir desde aquí — solo dejaría la promoción
+    # inaplicable en pleno evento (7ª auditoría).
+    return if gift?
+
     min = product&.min_sale_quantity
     return if min.blank? || min <= 0 || quantity.blank? || quantity <= 0
     return if (quantity % min).zero?
@@ -80,6 +107,15 @@ class OrderItem < ApplicationRecord
 
     if discount_percent.negative?
       errors.add(:base, "El descuento no puede ser negativo.")
+    # El tope del producto NO limita a una promoción: es la brida del
+    # descuento que teclea el capturista. En el ERP, de las 66,304 partidas
+    # históricas donde la promoción rebasaba el tope del producto, en 66,300
+    # ganó la promoción completa. Y en la rueda el choque sería masivo: los
+    # topes de los 6,046 productos en promoción son de 3% a 9% contra
+    # descuentos de hasta 23%, así que con el tope encima casi ninguna
+    # promoción se podría aplicar.
+    elsif promotion_id.present?
+      errors.add(:base, "El descuento no puede exceder 100%.") if discount_percent > 100
     elsif !generic? && discount_percent > (cap = product&.max_discount || 0)
       # El tope del producto va primero: con 150 tecleado, "no puede exceder
       # 100%" escondía el tope real hasta el segundo intento (6ª auditoría).
@@ -132,9 +168,79 @@ class OrderItem < ApplicationRecord
   # en el controlador: cubre cualquier ruta futura y un POST forjado por igual.
   # El controlador ya muestra estos mensajes en el flash cuando `save` falla.
   def order_items_within_limit
-    return if order.blank? || !order.items_limit_reached?
+    # Los regalos no cuentan contra el tope (decisión FECEGO 2026-08-22): el
+    # capturista no los pidió y no debe perder un renglón propio por ellos.
+    # El ERP aguanta de sobra — su histórico llega a 287 partidas.
+    return if gift? || order.blank? || !order.items_limit_reached?
 
     errors.add(:base, "Un pedido no puede tener más de #{Order::MAX_ITEMS} partidas.")
+  end
+
+  # --- Promociones -------------------------------------------------------
+
+  # La promoción de la rueda a la que pertenece este producto en una fecha,
+  # esté aplicada o no. Es lo que enciende la flama de la fila.
+  def promotion_on(date)
+    return nil if gift?
+
+    Promotion.for_product(product, on: date)
+  end
+
+  # Congelada por una promoción aplicada: ni se edita ni se quita hasta que
+  # la promoción se retire (decisión FECEGO 2026-08-22). Los regalos lo están
+  # siempre — los pone y los quita el sistema.
+  def locked_by_promotion?
+    gift? || promotion_id.present?
+  end
+
+  # Campos que el candado protege. Es la lista de lo que el capturista puede
+  # tocar de una partida; `position` no está porque la renumeración es del
+  # sistema y corre justo al quitar los regalos.
+  LOCKED_FIELDS = %w[quantity unit_price discount_percent description part_number].freeze
+
+  def not_locked_by_promotion
+    return if promotion_managed
+    # El valor ANTERIOR, no el nuevo: al quitar la promoción `promotion_id`
+    # ya viene en nil y el candado se abriría justo cuando debe cerrarse.
+    return unless gift? || promotion_id_was.present?
+    return if (changed & LOCKED_FIELDS).empty?
+
+    errors.add(:base, gift? ?
+      "Esta partida es un regalo de la promoción y la pone el sistema. " \
+      "Quita la promoción si necesitas cambiarla." :
+      "Esta partida tiene la promoción \"#{promotion&.name || promotion_was_name}\" aplicada. " \
+      "Quita la promoción para editarla, y vuelve a aplicarla al terminar.")
+  end
+
+  # Un producto de una promoción YA aplicada no se puede agregar: cambiaría
+  # el acumulado del grupo, pero sus partidas están congeladas y el descuento
+  # se quedaría calculado sobre una suma vieja (decisión del usuario
+  # 2026-08-22, opción 1 de las tres que se plantearon). El camino es el
+  # mismo que para editar: quitar, agregar y volver a aplicar.
+  def promotion_not_applied_to_product
+    return if gift? || order.blank? || product.blank?
+
+    applied = order.applied_promotion_for(product)
+    return if applied.nil?
+
+    errors.add(:base, "Este producto es de la promoción \"#{applied.name}\", que ya está aplicada. " \
+                      "Quita la promoción para agregarlo, y vuelve a aplicarla al terminar.")
+  end
+
+  def promotion_was_name
+    Promotion.find_by(id: promotion_id_was)&.name
+  end
+
+  # `throw :abort` y no una validación: `destroy` no corre validaciones.
+  def block_destroy_when_locked
+    return if promotion_managed || !locked_by_promotion?
+
+    errors.add(:base, gift? ?
+      "Esta partida es un regalo de la promoción y la pone el sistema. " \
+      "Quita la promoción si necesitas cambiarla." :
+      "Esta partida tiene la promoción \"#{promotion&.name}\" aplicada. " \
+      "Quita la promoción para quitarla del pedido.")
+    throw :abort
   end
 
   # Total de la partida = cantidad × precio (el descuento y el IVA se aplican

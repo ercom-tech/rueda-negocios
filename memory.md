@@ -73,6 +73,226 @@ mismo ciclo. Aprendizajes que trascienden su arreglo:
   unificada en la API, y el usuario desactivado con contraseña correcta ya
   no lee "usuario o contraseña incorrectos".
 
+## 7ª auditoría (2026-08-22) — remediación
+
+Reporte: https://claude.ai/code/artifact/dbf4c8bc-85c8-437e-a9b0-2e3fa81db0af
+Alcance: la funcionalidad de promociones (~1,900 líneas nuevas). **2 ALTA · 12
+MEDIA · 21 BAJA · 1 refutado · 2 no alcanzables.**
+
+### Lo que la pasada adversarial cambió
+
+De nueve hallazgos graves: uno refutado, dos no alcanzables, cuatro degradados.
+Y encontró por su cuenta el peor del ciclo. Vale la pena el detalle porque
+enseña a leer los reportes:
+
+- **REFUTADO — "la columna de promoción queda fuera de pantalla en tablet".**
+  El desborde existe (40 px a 768) pero la página nunca desborda, el swipe
+  táctil alcanza la flama, `overflow-x-auto` es preexistente, y —lo decisivo—
+  **con la promoción aplicada la tabla se angosta y `maxScroll = 0`**: el
+  estado que se describía como catastrófico es justo el que deja la flama a la
+  vista.
+- **NO ALCANZABLE — el override invertido y el regalo sin precio.** El primero
+  porque en la rueda 3 override>0 y escalón>0 nunca coexisten; el segundo
+  porque 0 de los 6,046 productos del universo tiene precio 0.
+- **Tres cifras estaban mal por el RECORTE, no por la consulta**: 350 casos de
+  override (eran 231, por pares duplicados y un join sin `consec_promo`),
+  61,128 códigos (eran 6,046) y 102 productos en $0 (eran 414).
+
+### Los dos ALTA: el modal contra el layout
+
+Los dos salen de lo mismo — el modal de promoción es la primera capa flotante
+que **carga su contenido después de abrirse**:
+
+1. **El header se pintaba encima.** El diálogo es `z-50` pero vivía dentro de
+   un wrapper `z-10`, hermano del header `z-20`. Un toque cerca del borde
+   superior del modal caía en "Cerrar sesión". La regla de wrappers hermanos
+   ya estaba escrita desde una auditoría anterior — y aun así se pisó, porque
+   el caso nuevo (dos regiones hermanas, cada una con modal) no se parecía al
+   viejo. **La salida no es dar z-20 a la otra: es que ninguna lleve z-index**
+   y los diálogos compitan en el contexto raíz.
+2. **El foco nunca entraba.** `focusables()[0]` corría con el placeholder, que
+   no tiene ninguno. Tab paseaba por los controles de atrás: tres tabuladores
+   y una tecla cambiaban la cantidad de una partida a ciegas. Lo que de verdad
+   lo cierra es que **"Cerrar" viva en el cascarón** (hay un enfocable desde el
+   primer instante); `focusInside` y el trap endurecido son redundancia.
+
+### MEDIA remediadas
+
+- **Borrar una partida congelada** no estaba bloqueado (`on: :update` no cubre
+  `destroy`) y, peor, borrar PARTE del grupo no recalculaba el escalón: $140 de
+  sobre-descuento rumbo al ERP. Ahora `before_destroy` con `throw :abort`.
+- **El % que se anuncia** sale de `Group#percents_for`, no del escalón: con
+  varios overrides dice "10% y 20% … según el producto".
+- **`unapply!` sin `applied?`**: quitar dos veces borraba el descuento
+  tecleado. Ahora devuelve false y el flash lo dice.
+- **`belongs_to :order, touch: true`**: sin él, el detector de "editado durante
+  la transmisión" era ciego a las promociones. Lo delataba la propia prueba,
+  que escribía el `updated_at` del padre a mano.
+- **N+1**: de 56 a 15 consultas por repintado (`Promotion.index_by_product`).
+- **`blocked_reason`** pasó de una frase a tres ramas: con $14,999.48 recitaba
+  que el mínimo eran $10,000, cinco mil por debajo de lo que ya llevaba.
+- **Empaque mínimo**: no aplica a los regalos (la cantidad la dicta el ERP), y
+  `apply!` va con rescate.
+- **El buscador avisa antes del toque** cuando una promoción bloquea el
+  producto, y **la fila congelada lleva badge** con el motivo.
+- **El panel avisa** si la rueda quedó sin promociones, si faltaron productos
+  de promoción y si alguno viene en dos.
+
+### Documentación: cuatro afirmaciones falsas, tres mías de este ciclo
+
+"Las columnas son NOT NULL" (son nullable, y el razonamiento encima era doble
+falso), la semántica de `regalos_permitir` (la forma "elige N" no existe en
+ningún dato), el desglose de topes (recorte equivocado; oculta que 1,480
+productos llegan con tope 0) y los 102 productos en $0 (son 414, heredado de la
+6ª y repetido como firme).
+
+**La lección:** cualquier cifra que se escriba en `docs/` lleva su consulta al
+lado, y toda medición declara su recorte — es la tercera auditoría seguida en
+que el recorte, no la consulta, es lo que falla.
+
+## Promociones de la rueda (2026-08-22)
+
+Requerimiento: aplicar a los pedidos las promociones que el ERP configura para
+la rueda (`vta_promocion` con `canal_venta = 'RUN'`). El esquema completo, con
+las mediciones que lo respaldan, vive en `docs/erp-esquema-promociones.md`;
+aquí van las decisiones y por qué se tomaron así.
+
+### Lo que definió FECEGO
+
+1. **Sugerido, no automático.** Cada fila cuyo producto está en promoción
+   muestra una flama; el modal explica la promoción en formato de venta y
+   ahí se aplica. Nada se aplica solo.
+2. **La promoción pisa el descuento manual**, y al quitarla se devuelve el
+   que el capturista tenía tecleado.
+3. **Los regalos entran en esta vuelta** y pueden hacer que el pedido rebase
+   las 45 partidas.
+4. **Al aplicar, las partidas se congelan.** Para editarlas hay que quitar la
+   promoción, corregir y volver a aplicarla si sigue calificando.
+5. **Vigencia contra la fecha de captura del pedido.**
+6. **Un pedido puede aplicar varias promociones; una partida, una sola.**
+
+### Por qué el congelamiento simplificó todo
+
+La propuesta inicial mantenía la promoción "viva": al cambiar cantidades, el
+escalón subía o bajaba solo. El congelamiento que pidió el usuario elimina de
+raíz el caso feo — un descuento que se evapora sin que nadie lo pidiera — y
+deja una sola regla que explicar: *si quieres tocarla, quítala primero*.
+
+De ahí salió el candado al **agregar**: un producto de una promoción ya
+aplicada cambiaría el acumulado del grupo, pero las partidas están congeladas
+y el descuento se quedaría calculado sobre una suma vieja. Se bloquea el alta
+con el camino explícito, que es la misma frase que ya se usa para editar. Se
+descartó "agregar y desaplicar sola": hace desaparecer descuentos que el
+capturista no pidió quitar.
+
+### El tope del producto NO topa a la promoción
+
+Lo más contraintuitivo del cambio. `products.max_discount` (=
+`com_producto_has_precio.descto_tope`) es la brida del descuento **manual**.
+En el ERP, de 66,304 partidas donde la promoción rebasaba el tope, en 66,300
+ganó la promoción. Y en la rueda los topes van de 3% a 9% contra descuentos de
+hasta 23%: con el tope encima, **casi ninguna promoción se podría aplicar**.
+`OrderItem#discount_within_limits` lo saltea cuando hay `promotion_id`.
+
+### Decisiones de implementación
+
+- **El universo (`promotion_products`) es autoritativo; el criterio no se
+  re-evalúa.** El ERP ya deja la lista curada (MAKITA: 2,134 de 2,209
+  productos de su proveedor). `clave_criterio`, `id_proveedor` e `id_familia`
+  ni siquiera se bajan. Si algún día hicieran falta, ojo: con criterio `FAM`,
+  `id_familia` apunta a `com_familia2`, no a `com_familia`.
+- **El escalón se elige por `quantity_from` más alto que se cumpla**, no por
+  consecutivo: FANDELI trae `≥15,000 → 9%` y `≥20,000 → 9% + regalo`
+  traslapados, y con "el primero que empata" el pedido grande pierde el
+  regalo.
+- **`consec_origen_promo` se deriva al transmitir, no se guarda.** La
+  renumeración del pedido mueve los consecutivos, y una referencia guardada
+  apuntaría a la partida equivocada sin que nada lo delatara.
+- **`manual_discount_percent` es memoria de la laptop y no viaja al ERP.** Hay
+  una prueba que lo verifica sobre el cuerpo del POST: es la garantía de que
+  restaurar el descuento previo no ensucia el pedido transmitido.
+- **El export suma los productos de regalo al catálogo** aunque no sean de la
+  rueda: el esmeril SKIL de FANDELI no está en ningún universo RUN, y sin eso
+  el regalo era inmaterializable.
+- **Un producto en dos promociones rompería "una partida, una promoción".**
+  Hoy no pasa (los 6,046 están cada uno en una), pero es dato del ERP: el
+  sync-down conserva la primera y reporta el resto en
+  `shared_promotion_products`, en vez de dejar que la pantalla elija en
+  silencio cuál descuento ofrece.
+
+### El modal: dos trampas de Hotwire, en tensión
+
+El diálogo vive dentro de `#order-detail`, que se repinta con morph. Eso pide
+`data-turbo-permanent` — sin él, abrir el modal desde un campo con un cambio
+pendiente lo cerraba solo (el clic dispara el blur, el blur el guardado, y el
+repintado llega con el modal ya abierto). Pero `data-turbo-permanent`
+**conserva el subárbol entero**, así que el contenido se congelaba: tras
+aplicar, el modal seguía ofreciendo "Aplicar promoción" y el acumulado viejo.
+
+La salida fue partirlo: **cascarón permanente + contenido en un turbo-frame
+que el controller recarga en cada apertura** (`data-modal-refresh`). El
+cascarón sobrevive al morph; el contenido siempre habla del pedido de ahora.
+Y los formularios cierran el modal al terminar
+(`turbo:submit-end->modal#close`): dejarlo abierto tapaba justo la tabla que
+el capturista quiere revisar, y su fondo se comía el siguiente clic.
+
+Los dos defectos los encontró la **prueba de sistema**, no la de integración
+— ninguno es visible sin navegador.
+
+`modal_controller` pasó a soportar varios diálogos por contenedor
+(`data-modal-dialog-param`). Es lo que permite tener **un modal por
+promoción** en vez de uno por fila: con 45 renglones de MAKITA serían 45
+copias idénticas repintándose en cada tecla.
+
+### El regalo va en cero, no en centavos
+
+Primero se imitó al ERP, que factura sus regalos a precio de lista con un
+descuento que deja el **total de la partida** en $0.25 + IVA = $0.29 (sus 459
+partidas de regalo, con cualquier cantidad, y todas con `promo_porcentaje =
+100`: dictó "entero", aplicó el 99.9x).
+
+**No funcionó, y lo delató el PDF.** El ERP clava el centavo desde el *monto*
+del descuento; la app lo deriva del *porcentaje*, que la columna limita a dos
+decimales. El neto salía aproximado —entre $0.25 y ~$0.31 según el precio— y,
+peor, **el papel del cliente cobraba centavos por algo que se le prometió
+regalado**. Ponerlo en $0.00 solo en el PDF tampoco servía: los totales del
+PDF se calculan de los mismos importes que imprime (para que cuadre con
+calculadora), así que el papel habría dejado de coincidir con lo que factura
+el ERP.
+
+Decisión del usuario (2026-08-22): **100% de descuento**, cero de punta a
+punta. No es ajeno al ERP —ya tiene 729 partidas con `descto_porcentaje = 100`
+y total $0.00 en 459 pedidos— y su validación de montos es por fórmula, así
+que descuento = subtotal, IVA = 0 y total = 0 cuadran solos. El precio de
+lista sí viaja: precio y descuento son columnas distintas, y una partida en
+precio 0 no diría cuánto valía lo regalado.
+
+La lección general: **una diferencia de centavos deja de ser cosmética en
+cuanto llega a un papel que ve el cliente.**
+
+### Colores: el dorado no servía de trazo
+
+La flama "disponible" tenía que ser la más llamativa, y el dorado sobre el
+crema de la tabla da **1.56:1**: habría sido la más invisible. Va de
+**superficie** —píldora dorada con el ícono en negro—, que además es el rol
+que el manual le da al dorado. La flama aplicada es coral sólido (4.04:1,
+cómodo sobre el 3:1 que pide AA para gráficos) y la que aún no alcanza es
+`neutral-600`, el tono que la 4ª auditoría ya había validado sobre crema.
+
+### Trampas que costaron una vuelta
+
+- `Order#items_count_for_limit` pasó a excluir regalos. Hacerlo sobre la
+  colección cargada rompió dos pruebas: se pregunta durante la validación de
+  una partida que aún no existe, y la asociación en memoria ya trae la que se
+  está construyendo. Va en SQL (`where(gift: false).count`).
+- Una prueba del candado pasaba **por el camino equivocado**: el producto
+  tenía `max_discount` bajo, así que quien rechazaba la escritura era
+  `discount_within_limits` y no el candado. Se detectó con la comprobación de
+  fail-first, no leyendo el código.
+- Otra prueba de sistema "verificaba" que el modal sobrevive al morph
+  haciendo focus/blur sin cambiar el valor — y `submitIfChanged` no envía
+  nada, así que ningún morph ocurría. Pasaba con y sin `data-turbo-permanent`.
+
 ## Producto fuera de catálogo (2026-08-17) — genérico 999999
 
 Requerimiento FECEGO: el proveedor puede vender productos que no están en el

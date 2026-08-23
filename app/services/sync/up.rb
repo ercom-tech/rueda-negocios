@@ -88,9 +88,21 @@ module Sync
                      :client_receipt_profile, :client_branch, client: :salesperson)
     end
 
+    # Consecutivo de la primera partida de cada promoción en el pedido, que
+    # es a la que apuntan sus regalos (`consec_origen_promo`). Se calcula una
+    # vez por pedido: buscarla dentro del map sería un barrido por regalo.
+    def gift_origins(order)
+      order.order_items.each_with_index.each_with_object({}) do |(item, index), origins|
+        next if item.gift? || item.promotion_id.nil?
+
+        origins[item.promotion_id] ||= index + 1
+      end
+    end
+
     def build_payload(order)
       # Hora local de captura (el ERP maneja horas locales; created_at es UTC).
       captured = order.created_at.localtime
+      gift_origins = gift_origins(order)
 
       {
         capturista_erp_person_id: order.user.erp_person_id,
@@ -125,6 +137,20 @@ module Sync
         items: order.order_items.map.with_index(1) do |it, i|
           {
             consecutivo:       i,
+            # Promoción aplicada. `promo_porcentaje` es el que dictó la
+            # promoción y `descto_porcentaje` el efectivamente aplicado: el
+            # ERP los guarda por separado y hoy salen iguales, pero mandar
+            # uno solo en los dos campos sería inventar un dato.
+            # `manual_discount_percent` NO viaja: es la memoria local del
+            # descuento que la promoción pisó, para devolverlo al quitarla.
+            id_promocion:      it.promotion&.erp_promotion_id,
+            consec_promo:      it.promotion_tier&.erp_consecutive,
+            promo_porcentaje:  it.promotion_discount_percent,
+            # En una partida de regalo, el consecutivo de la que lo detonó.
+            # Se deriva al transmitir en vez de guardarse: la renumeración
+            # del pedido mueve los consecutivos, y una referencia guardada
+            # apuntaría a la partida equivocada sin que nada lo delatara.
+            consec_origen_promo: (gift_origins[it.promotion_id] if it.gift?),
             id_producto:       it.product&.erp_product_id,
             # Solo el genérico (fuera de catálogo) viaja con su descripción
             # capturada; en el resto va nil → NULL, la forma nativa del ERP

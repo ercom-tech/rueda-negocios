@@ -32,6 +32,13 @@ desde `CLAUDE.md`. El relato de cómo se llegó a cada una vive en `memory.md`.
 | Emerald | **Solo** feedback global (flash, "✓ Listo" del sync) |
 | Blanco | **Solo** campos de entrada — es la señal de "esto se escribe" |
 
+**El umbral depende de si el elemento es texto o gráfico, y es fácil aplicar el
+equivocado.** AA pide 4.5:1 para texto normal y 3:1 para gráficos y texto
+grande (≥18.66 px, o ≥14 px en negrita solo si además es grande). El coral
+#bd5343 sobre crema da 4.04:1: alcanza para un ícono, **no** para un porcentaje
+a 14 px — ahí va `brand-coral-dark` (5.06:1). Medir antes, y decir contra qué
+vara (7ª auditoría).
+
 El coral es **#bd5343**, no el #ce6150 original: con blanco encima daba 3.85:1,
 debajo del 4.5 que pide AA para texto normal — y ahí viven los botones de
 confirmación de todos los modales y los avisos de error del paso 1, los que
@@ -41,6 +48,13 @@ Cualquier tono nuevo que lleve texto blanco encima se mide antes de usarse.
 
 Grises del manual de identidad: `neutral-400` para el fondo de controles
 grises (buscador de producto), con texto e íconos `neutral-700/900`.
+
+**El dorado no sirve de trazo sobre el crema: da 1.56:1.** Cuando un ícono
+dorado tenga que llamar la atención dentro de una card, va de **superficie**
+—píldora dorada con el contenido en negro—, no de color de trazo. Es además el
+rol que el manual le da al dorado. El coral sólido sobre crema sí funciona
+(4.04:1, sobre el 3:1 que AA pide para gráficos), y para un ícono en reposo el
+tono ya validado es `neutral-600`.
 
 **Nada de paneles translúcidos** (`bg-white/5`, `bg-white/10`) como superficie
 de contenido: sobre el shell negro con patrón se lavan y el bloque "no se
@@ -76,6 +90,41 @@ renderizándolo a 16 px, no a 256.
   modal. El wrapper que contiene un modal va **`z-20`**.
 - Las cards bloqueadas **no** escalan (llevan `opacity-60` en su lugar). Pills
   y botones chicos usan hover de color, no de escala.
+
+## Validar la UI es ejercitar la TRANSICIÓN, no mirar el estado final
+
+Una captura de pantalla dice que el estado A y el estado B se ven bien; los
+defectos viven en el camino entre los dos, y en los bordes del layout. En este
+proyecto los encontró el usuario, no las pruebas ni la revisión visual:
+
+- Un botón que cambia de forma y de color a la vez parpadeaba y dejaba un
+  cuadro, porque `transition-colors` anima el color pero **no** el
+  `border-radius`, y `animate-pulse` deja la opacidad a media animación al
+  quitarse. Solo se ve durante los ~150 ms del cambio.
+- Un dropdown se cortaba **solo en el último campo del formulario**, donde ya
+  no hay página que crecer debajo.
+- Una columna nueva rompía el ancho **solo en tablet vertical y con una partida
+  del genérico**, que fuerza otra columna visible.
+
+Por eso, al terminar una pantalla: recorrer los cambios de estado con el
+elemento a la vista, abrir las capas flotantes en el **último** campo y con la
+lista más larga, y mirarlo a 768 px además de en la laptop.
+
+## Bloqueado por regla de negocio ≠ deshabilitado
+
+Una fila que una regla congela (hoy: partida con promoción aplicada) no usa
+`disabled` ni el 60%: **sustituye sus campos por texto**, como una fila ya
+transmitida, y se tiñe con `bg-black/[0.04]`. Ese tinte da 1.10:1 sobre crema
+— es un matiz, no una señal —, así que el motivo va escrito en un **badge en la
+fila** (`neutral-700`, junto a la descripción). El texto largo que explica la
+regla vive en su modal, pero el capturista que va a corregir una cantidad
+necesita el motivo donde choca con el problema (7ª auditoría).
+
+## Los importes van a la derecha
+
+En toda tabla: precio unitario y total alineados a la derecha con
+`tabular-nums`, para que las comas decimales queden en columna entre renglones.
+Cantidad y descuento van centrados — no son importes. Es lo que el PDF ya hacía.
 
 ## Deshabilitado = 60%
 

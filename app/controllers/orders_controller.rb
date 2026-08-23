@@ -100,7 +100,8 @@ class OrdersController < ApplicationController
     @products = params[:q].present? ? universe.search(params[:q]).includes(:price).limit(10) : Product.none
     no_membership = current_user.business_round_people.where(business_round: active_round).none?
     render partial: "product_options",
-           locals: { order: @order, products: @products, no_membership: no_membership }, layout: false
+           locals: { order: @order, products: @products, no_membership: no_membership,
+                     blocked_by: @order.promotions_blocking(@products) }, layout: false
   end
 
   # Guarda observaciones (auto-save silencioso).

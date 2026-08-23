@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_17_061125) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_22_191413) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -187,10 +187,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_061125) do
     t.datetime "created_at", null: false
     t.string "description"
     t.decimal "discount_percent", precision: 5, scale: 2, default: "0.0", null: false
+    t.boolean "gift", default: false, null: false
+    t.decimal "manual_discount_percent", precision: 5, scale: 2
     t.bigint "order_id", null: false
     t.string "part_number"
     t.integer "position", default: 1, null: false
     t.bigint "product_id"
+    t.decimal "promotion_discount_percent", precision: 5, scale: 2
+    t.bigint "promotion_id"
+    t.bigint "promotion_tier_id"
     t.decimal "quantity", precision: 14, scale: 3, default: "1.0", null: false
     t.decimal "tax_rate", precision: 5, scale: 2, default: "0.0", null: false
     t.string "unit"
@@ -199,6 +204,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_061125) do
     t.index ["order_id", "position"], name: "index_order_items_on_order_id_and_position"
     t.index ["order_id"], name: "index_order_items_on_order_id"
     t.index ["product_id"], name: "index_order_items_on_product_id"
+    t.index ["promotion_id"], name: "index_order_items_on_promotion_id"
+    t.index ["promotion_tier_id"], name: "index_order_items_on_promotion_tier_id"
   end
 
   create_table "orders", force: :cascade do |t|
@@ -270,6 +277,52 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_061125) do
     t.index ["erp_product_id"], name: "index_products_on_erp_product_id", unique: true
     t.index ["model"], name: "index_products_on_model_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["part_number"], name: "index_products_on_part_number_trgm", opclass: :gin_trgm_ops, using: :gin
+  end
+
+  create_table "promotion_gifts", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "product_id", null: false
+    t.bigint "promotion_tier_id", null: false
+    t.decimal "quantity", precision: 18, scale: 6, default: "1.0", null: false
+    t.datetime "updated_at", null: false
+    t.index ["product_id"], name: "index_promotion_gifts_on_product_id"
+    t.index ["promotion_tier_id"], name: "index_promotion_gifts_on_promotion_tier_id"
+  end
+
+  create_table "promotion_products", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.decimal "discount_percent", precision: 5, scale: 2, default: "0.0", null: false
+    t.bigint "product_id", null: false
+    t.bigint "promotion_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["product_id"], name: "index_promotion_products_on_product_id"
+    t.index ["promotion_id", "product_id"], name: "index_promotion_products_on_promotion_id_and_product_id", unique: true
+    t.index ["promotion_id"], name: "index_promotion_products_on_promotion_id"
+  end
+
+  create_table "promotion_tiers", force: :cascade do |t|
+    t.string "condition_kind"
+    t.datetime "created_at", null: false
+    t.decimal "discount_percent", precision: 5, scale: 2, default: "0.0", null: false
+    t.integer "erp_consecutive", null: false
+    t.bigint "promotion_id", null: false
+    t.decimal "quantity_from", precision: 18, scale: 6, default: "0.0", null: false
+    t.decimal "quantity_to", precision: 18, scale: 6, default: "0.0", null: false
+    t.string "unit"
+    t.datetime "updated_at", null: false
+    t.index ["promotion_id", "erp_consecutive"], name: "index_promotion_tiers_on_promotion_id_and_erp_consecutive", unique: true
+    t.index ["promotion_id"], name: "index_promotion_tiers_on_promotion_id"
+  end
+
+  create_table "promotions", force: :cascade do |t|
+    t.string "code"
+    t.datetime "created_at", null: false
+    t.date "ends_on"
+    t.integer "erp_promotion_id", null: false
+    t.string "name"
+    t.date "starts_on"
+    t.datetime "updated_at", null: false
+    t.index ["erp_promotion_id"], name: "index_promotions_on_erp_promotion_id", unique: true
   end
 
   create_table "salespeople", force: :cascade do |t|
@@ -354,6 +407,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_061125) do
   add_foreign_key "login_events", "users", on_delete: :nullify
   add_foreign_key "order_items", "orders"
   add_foreign_key "order_items", "products"
+  add_foreign_key "order_items", "promotion_tiers"
+  add_foreign_key "order_items", "promotions"
   add_foreign_key "orders", "business_rounds"
   add_foreign_key "orders", "cfdi_uses"
   add_foreign_key "orders", "client_branches"
@@ -365,4 +420,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_061125) do
   add_foreign_key "product_suppliers", "products"
   add_foreign_key "product_suppliers", "suppliers"
   add_foreign_key "products", "brands"
+  add_foreign_key "promotion_gifts", "products"
+  add_foreign_key "promotion_gifts", "promotion_tiers"
+  add_foreign_key "promotion_products", "products"
+  add_foreign_key "promotion_products", "promotions"
+  add_foreign_key "promotion_tiers", "promotions"
 end

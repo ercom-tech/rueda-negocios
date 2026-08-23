@@ -36,6 +36,10 @@ Rails.application.routes.draw do
       get   :pdf                               # descarga PDF del pedido
     end
     resources :order_items, only: %i[create update destroy] # partidas (Turbo)
+    # Aplicar (create) y quitar (destroy) una promoción de la rueda. El id es
+    # el de la promoción, no el de un registro intermedio: una promoción está
+    # aplicada o no lo está, no hay nada más que guardar.
+    resources :promotions, only: %i[show create destroy]
   end
 
   # Menú principal (destino post-login).

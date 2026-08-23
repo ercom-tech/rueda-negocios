@@ -1,10 +1,17 @@
-<%# Fila de partida. Locals: order, item.
+<%# Fila de partida. Locals: order, item, group (Promotions::Group o nil —
+    la promoción del producto de esta fila dentro de este pedido).
     Ids únicos por fila (tr, forms e inputs): el update repinta con morph, y
     idiomorph solo conserva el foco si empareja los nodos por id — con ids
     duplicados entre filas el foco moría y las flechas scrolleaban al inicio. %>
-<tr id="<%= dom_id(item) %>" class="border-t border-black/10 text-center">
+<%# Con una promoción aplicada la partida queda congelada: para editarla hay
+    que quitarla, corregir y volver a aplicarla (decisión FECEGO 2026-08-22).
+    Un solo cálculo aquí y todos los campos lo respetan — repartir la
+    condición campo por campo es como se cuela el que sí quedó editable. %>
+<% editable = can_edit_order?(order) && !item.locked_by_promotion? %>
+<tr id="<%= dom_id(item) %>"
+    class="border-t border-black/10 text-center <%= "bg-black/[0.04]" if item.locked_by_promotion? %>">
   <td class="px-2 py-2">
-    <% if can_edit_order?(order) %>
+    <% if editable %>
       <div data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
         <%# neutral-600 en reposo: el 400 daba 2.2:1 sobre crema y el realce
             rojo es hover-only — en tablet siempre se veía en su versión más
@@ -39,7 +46,32 @@
       guardar al salir si cambió, y revertir si el envío falla. En el resto
       son snapshot del ERP y se muestran como texto. %>
   <td class="px-3 py-2 text-left">
-    <% if can_edit_order?(order) && item.generic? %>
+    <%# El regalo se marca como regalo, no como una partida en $0.00 sin
+        explicación (decisión FECEGO 2026-08-22). El PDF lleva el mismo dato
+        con el rótulo "REGALO — ": es lo que el cliente pregunta al ver el
+        papel. (El reporte no lista partidas, así que ahí no aplica.) %>
+    <% if item.gift? %>
+      <span class="mr-1.5 inline-flex items-center gap-1 rounded-full bg-black px-2 py-0.5 align-middle text-[11px] font-bold uppercase tracking-wide text-brand-gold">
+        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 11.25v8.25a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 1 0 9.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1 1 14.625 7.5H12m0 0V21m-8.625-9.75h18.75a.75.75 0 0 0 .75-.75V8.25a.75.75 0 0 0-.75-.75H3.375a.75.75 0 0 0-.75.75v2.25c0 .414.336.75.75.75Z" />
+        </svg>
+        Regalo
+      </span>
+    <% end %>
+    <%# Bloqueada por promoción: el motivo va en la fila, donde el ojo choca con
+        el problema. El único texto que lo explicaba vivía detrás de un clic en
+        la flama, y el capturista que va a corregir una cantidad no encuentra
+        input, ni aviso, ni error — el candado es `on: :update` y desde la
+        pantalla nunca llega un update (7ª auditoría). %>
+    <% if item.promotion_id.present? && !item.gift? %>
+      <span class="mr-1.5 inline-flex items-center gap-1 rounded-full bg-neutral-700 px-2 py-0.5 align-middle text-[11px] font-bold uppercase tracking-wide text-white">
+        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+        </svg>
+        Promoción
+      </span>
+    <% end %>
+    <% if editable && item.generic? %>
       <%= item_field_form(order, item, :description) do |f| %>
         <%= f.text_field :description, id: dom_id(item, :description),
               maxlength: OrderItem::ERP_CAPTURED_NAME_LIMIT,
@@ -52,7 +84,7 @@
     <% end %>
   </td>
   <td class="<%= order.order_items.any?(&:generic?) ? "px-3 py-2" : "hidden px-3 py-2 lg:table-cell" %>">
-    <% if can_edit_order?(order) && item.generic? %>
+    <% if editable && item.generic? %>
       <%= item_field_form(order, item, :part_number) do |f| %>
         <%= f.text_field :part_number, id: dom_id(item, :part_number),
               maxlength: OrderItem::ERP_CAPTURED_NAME_LIMIT,
@@ -66,7 +98,7 @@
   </td>
 
   <td class="px-3 py-2">
-    <% if can_edit_order?(order) %>
+    <% if editable %>
       <%# `turbo:submit-end` revierte el campo al valor guardado si el envío
           falló (la pausa de sync responde 422): sin eso, el input se quedaba
           con lo tecleado, el total sin recalcular, y el siguiente blur ya no
@@ -97,8 +129,8 @@
   </td>
 
   <td class="hidden px-3 py-2 lg:table-cell"><%= item.unit %></td>
-  <td class="px-3 py-2">
-    <% if can_edit_order?(order) && item.generic? %>
+  <td class="px-3 py-2 text-right tabular-nums">
+    <% if editable && item.generic? %>
       <%= item_field_form(order, item, :unit_price) do |f| %>
         <%= f.number_field :unit_price, step: "0.01", min: "0.01", id: dom_id(item, :unit_price),
               value: number_with_precision(item.unit_price, precision: 4, strip_insignificant_zeros: true),
@@ -112,7 +144,7 @@
   </td>
 
   <td class="px-3 py-2">
-    <% if can_edit_order?(order) %>
+    <% if editable %>
       <%= item_field_form(order, item, :discount) do |f| %>
         <div class="flex items-center justify-center gap-1">
           <%= f.number_field :discount_percent, min: 0, max: 100, step: "any", id: dom_id(item, :discount),
@@ -130,5 +162,15 @@
 
   <%# Total de la partida CON descuento e IVA (item.total, como la columna
       Total del PDF) — line_total es solo cantidad × precio. %>
-  <td class="px-3 py-2 font-semibold"><%= number_to_currency(item.total) %></td>
+  <td class="px-3 py-2 text-right font-semibold tabular-nums"><%= number_to_currency(item.total) %></td>
+
+  <%# La promoción del producto, al final del renglón: es donde el ojo termina
+      de leer la línea y ve de dónde salió (o de dónde podría salir) el
+      descuento. Los regalos no la llevan: son consecuencia de la promoción,
+      no una partida que pueda entrar a otra. %>
+  <td class="px-2 py-2">
+    <% if group && !item.gift? %>
+      <%= render "orders/promotion_flame", group: group %>
+    <% end %>
+  </td>
 </tr>

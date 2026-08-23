@@ -38,6 +38,73 @@ module Sync
       assert_requested req
     end
 
+    # --- Promociones -------------------------------------------------------
+
+    def promotion_setup!
+      promo = Promotion.create!(erp_promotion_id: 3039, code: "MAKR20", name: "MAKITA",
+                                starts_on: 1.week.ago.to_date, ends_on: 1.week.from_now.to_date)
+      promo.promotion_tiers.create!(erp_consecutive: 2, condition_kind: "CM", unit: "MXN",
+                                    quantity_from: 100, quantity_to: 0, discount_percent: 10)
+      promo.promotion_products.create!(product: @product, discount_percent: 0)
+      # Tope holgado: el descuento manual de una de las pruebas es 5%.
+      @product.update!(max_discount: 9)
+      Price.create!(product: @product, credit_wholesale_price: 100, tax_rate: 16)
+      promo
+    end
+
+    test "el payload lleva la promocion, el escalon y el porcentaje que dicto" do
+      promo = promotion_setup!
+      Promotions::Group.new(@order, promo).apply!
+
+      req = stub_request(:post, "#{API}/pedidos").with do |request|
+        item = JSON.parse(request.body)["items"].first
+        item["id_promocion"] == 3039 && item["consec_promo"] == 2 &&
+          item["promo_porcentaje"].to_d == 10 && item["descto_porcentaje"].to_d == 10
+      end.to_return(status: 201, body: { clave_pedido: "1A0007" }.to_json)
+
+      Up.new(API).run!
+
+      assert_requested req
+    end
+
+    # `manual_discount_percent` es memoria de la laptop para devolverle al
+    # capturista lo que la promocion piso. Si viajara, el ERP guardaria un
+    # descuento que el pedido no tiene.
+    test "el descuento que la promocion piso no viaja al ERP" do
+      promo = promotion_setup!
+      @order.order_items.first.update!(discount_percent: 5)
+      Promotions::Group.new(@order.reload, promo).apply!
+
+      req = stub_request(:post, "#{API}/pedidos").with do |request|
+        body = request.body
+        !body.include?("manual_discount") && JSON.parse(body)["items"].first["descto_porcentaje"].to_d == 10
+      end.to_return(status: 201, body: { clave_pedido: "1A0007" }.to_json)
+
+      Up.new(API).run!
+
+      assert_requested req
+    end
+
+    test "la partida de regalo apunta al consecutivo de la que la detono" do
+      promo = promotion_setup!
+      gift_product = Product.create!(erp_product_id: 14_594, description: "SOLDADURA")
+      Price.create!(product: gift_product, credit_wholesale_price: 68, tax_rate: 16)
+      promo.promotion_tiers.first.promotion_gifts.create!(product: gift_product, quantity: 8)
+      Promotions::Group.new(@order, promo).apply!
+
+      req = stub_request(:post, "#{API}/pedidos").with do |request|
+        items = JSON.parse(request.body)["items"]
+        gift = items.find { |i| i["id_producto"] == 14_594 }
+        # Apunta a la PARTIDA que la detono, no a si misma.
+        gift["consec_origen_promo"] == 1 && gift["consecutivo"] == 2 &&
+          items.first["consec_origen_promo"].nil?
+      end.to_return(status: 201, body: { clave_pedido: "1A0007" }.to_json)
+
+      Up.new(API).run!
+
+      assert_requested req
+    end
+
     test "idempotencia: no re-transmite pedidos que ya tienen folio" do
       @order.update!(erp_folio: "1A0001", transmitted_at: Time.current, status: "transmitted")
 

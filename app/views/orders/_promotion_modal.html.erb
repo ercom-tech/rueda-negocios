@@ -1,0 +1,54 @@
+<%#
+  Cascarón del modal de una promoción. Uno por promoción, fuera de las filas.
+
+  El contenido NO se renderiza aquí: viaja en un turbo-frame que se recarga
+  cada vez que el modal se abre. Es la única forma de tener las dos cosas a
+  la vez:
+
+    - `data-turbo-permanent` para que el modal sobreviva al morph. El estado
+      "abierto" vive en un `style` en línea, y morph reescribe los atributos
+      con los del HTML nuevo: sin esto el modal se cerraba solo. Pasa justo
+      al abrirlo desde un campo con un cambio pendiente — el clic en la flama
+      dispara el blur, el blur dispara el guardado, y el repintado llega
+      cuando el modal ya está abierto.
+    - Contenido FRESCO. Turbo conserva el subárbol permanente entero, así que
+      el modal renderizado aquí se quedaría congelado: tras aplicar seguiría
+      ofreciendo "Aplicar promoción" y mostrando el acumulado viejo.
+
+  Locals: order, group (Promotions::Group).
+%>
+<% promotion = group.promotion %>
+<% dialog_id = promotion_dialog_id(promotion) %>
+<%# `tabindex="-1"`: el foco tiene que poder aterrizar aquí mientras el frame
+    todavía no trae ningún control (ver modal#focusInside). %>
+<div id="<%= dialog_id %>" data-modal-target="dialog" style="display:none" data-turbo-permanent
+     tabindex="-1" role="dialog" aria-modal="true" aria-label="Promoción <%= promotion.name %>"
+     data-action="turbo:fetch-request-error->modal#loadFailed"
+     class="fixed inset-0 z-50 items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/50" data-action="click->modal#close"></div>
+
+  <div class="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-brand-gold p-2 shadow-2xl">
+    <%# `loading="lazy"`: dentro de un contenedor oculto no pide nada; carga
+        al abrirse por primera vez y el controller lo recarga en las
+        siguientes. El texto de respaldo es lo que se ve ese instante. %>
+    <turbo-frame id="promotion-frame-<%= promotion.id %>" data-modal-refresh
+                 src="<%= order_promotion_path(order, promotion) %>" loading="lazy">
+      <div class="rounded-2xl bg-brand-cream px-5 py-10 text-center text-neutral-700"
+           role="status" data-modal-target="loading">
+        Cargando la promoción…
+      </div>
+    </turbo-frame>
+
+    <%# Cerrar vive FUERA del turbo-frame: si la carga falla, el contenido —y
+        con él el botón Cerrar del detalle— nunca llega, y el diálogo se
+        quedaba a pantalla completa sin un solo control. En tablet no hay tecla
+        Esc y la franja de arriba del fondo queda bajo la barra superior, así
+        que era un callejón (7ª auditoría). %>
+    <div class="px-2 pb-1 pt-2 text-center">
+      <button type="button" data-action="modal#close"
+              class="rounded-full bg-neutral-700 px-6 py-2.5 font-bold text-white transition-colors hover:bg-neutral-600">
+        Cerrar
+      </button>
+    </div>
+  </div>
+</div>

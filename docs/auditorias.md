@@ -123,6 +123,18 @@ pedido duplicado en el ERP guiado por el propio mensaje de colisión).
   viven en las **costuras** — la pieza nueva y el panel que la hospeda, las
   versiones en la ventana de despliegue, el estado del pedido y sus textos.
 
+- **7ª (2026-08-22)** — la funcionalidad de promociones (~1,900 líneas nuevas),
+  8 dimensiones + verificación adversarial en tres frentes — **2 ALTA · 12
+  MEDIA · 21 BAJA · 1 refutado · 2 no alcanzables** → **remediada al 100% el
+  mismo ciclo** (detalle en "7ª auditoría — remediación" de `memory.md`). Los
+  dos ALTA salieron de la misma raíz: el modal que carga su contenido después
+  de abrirse rompió el apilamiento y el foco, y **ninguno era visible leyendo
+  código** — hicieron falta clics reales y `elementFromPoint`. Patrón que dejó:
+  los defectos migraron de las costuras (6ª) a las **capas**. Y por tercera
+  auditoría seguida, lo que falló en las mediciones fue el **recorte**, no la
+  consulta: tres cifras muy citadas estaban mal, dos de ellas ya escritas en
+  `docs/` como dato firme.
+
 El detalle de las dos primeras está en `docs/auditorias-2026-07.md`; el de la
 3ª y la 4ª, en sus secciones de remediación de `memory.md`. Los reportes
 completos se publicaron como artifacts (las URLs las tiene el usuario).

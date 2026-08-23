@@ -56,6 +56,12 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
   único donde viven la URL, los timeouts y —cuando entren— los tokens y el TLS.
   Una clase que arme su propio `Net::HTTP` queda fuera del endurecimiento sin
   que nada lo delate hasta el 401.
+- **Un porcentaje (o cualquier cifra) que ve el usuario se le pide al objeto
+  que lo aplica, nunca a la regla de la que sale.** La vista leía
+  `tier.discount_percent` y el flash tomaba el de la primera partida; con
+  override por producto —FANAL: escalón 0%, códigos al 10% y 20%— la pantalla
+  anunciaba "0% de descuento" sobre partidas al 10 y al 20, y el flash mentía
+  en las dos direcciones según el orden de captura (7ª auditoría).
 - **Una consulta con criterio de negocio va al modelo, no al controlador.**
   `Product.search` y `Client.search` son scopes porque su relevancia la reusan
   varias pantallas; como método privado de un controlador, el siguiente que la
@@ -63,6 +69,14 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
 - **Un `yield` solo funciona en un partial renderizado con `layout:`.** En un
   `render "x"` normal rinde vacío, sin error: el partial parece correcto y
   produce una pantalla en blanco.
+- **Un panel absoluto no hace crecer la página, y el shell lo recorta.** El
+  shell del sitio lleva `overflow-hidden` (contiene el patrón de
+  herramientas), así que un dropdown abierto cerca del borde inferior se corta
+  y no queda scroll con el que llegar a lo que falta — el combo de "Dividir
+  facturas", último campo del paso 1, mostraba 3 de sus 6 montos. Cualquier
+  capa flotante nueva que se despliegue hacia abajo tiene que medir el espacio
+  y voltearse o acotarse (ver `select#position`), no confiar en que la página
+  crezca. En pantalla baja aplica a casi todos los combos, no solo al último.
 - **El rótulo visible de un combo custom no es un `<label>`:** el control es un
   `<button>`, así que la asociación va por `aria-label`. Sin él, todos los
   combos se anuncian igual y los mensajes que nombran un campo no se pueden
@@ -93,6 +107,34 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
   pareja de acciones más común de la captura. El id tiene que venir del
   registro (`dom_id(item, :remove_dialog)`), nunca de un aleatorio: Turbo
   empareja por id para saber qué conservar.
+- **Un `z-index` sobre un wrapper crea contexto de apilamiento y encierra a los
+  modales que contenga.** Es la otra mitad de la regla de los wrappers
+  hermanos: si DOS regiones hermanas contienen modales, no basta con darle
+  z-20 a una — la otra queda encerrada y su `z-50` deja de contar contra la
+  página. La salida es que **ninguna de las dos lleve z-index**, y que los
+  diálogos `fixed z-50` compitan en el contexto raíz. El síntoma es sutil: la
+  barra superior se pinta sobre el modal y un toque cerca de su borde acciona
+  un botón del header — en `orders/show` eso era "Cerrar sesión" a media
+  captura (7ª auditoría).
+- **En un diálogo que carga su contenido después de abrirse, el foco hay que
+  reintentarlo.** `focusables()[0]` al abrir encuentra el placeholder, que no
+  tiene ninguno, y el foco se queda fuera para siempre: el focus-trap no
+  atrapa (compara contra el primero y el último del diálogo, y el activo no es
+  ninguno) y Tab pasea por los controles de atrás, bajo el overlay, donde una
+  tecla los edita a ciegas. Además, **un control de escape (Cerrar) tiene que
+  vivir FUERA del frame**: si la carga falla, dentro no queda nada.
+- **`data-turbo-permanent` conserva el subárbol ENTERO, así que congela el
+  contenido.** Es la otra cara de lo anterior: protege el estado "abierto",
+  pero un diálogo que también tiene que mostrar datos frescos no puede
+  renderizarse de fábrica — se queda en el estado que tenía al pintarse la
+  región. La salida es partirlo: cascarón permanente + contenido en un
+  `turbo-frame` que se recarga al abrir (ver `orders/_promotion_modal` y
+  `modal#refresh`). El síntoma sin esto es un modal que sigue ofreciendo la
+  acción que ya se ejecutó.
+- **Un modal que actúa debe cerrarse al terminar**
+  (`turbo:submit-end->modal#close`). Si se queda abierto tapa justo lo que el
+  usuario quiere revisar, y su fondo (`bg-black/50`) se come el siguiente
+  clic: el segundo defecto no se ve, solo se siente como "el botón no sirve".
 - **No reconstruyas DOM que está recibiendo eventos de puntero.** Stimulus
   enlaza las acciones de los nodos nuevos de forma asíncrona
   (MutationObserver): si un `mousedown`/`mouseenter` regenera los elementos, el
@@ -160,6 +202,15 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
   siguen disponibles. Una acción nueva que escriba tiene que sumarse a esa
   lista, o reabre el hueco — el sync-down vacía el catálogo dentro de su
   transacción y un INSERT concurrente revienta con violación de llave foránea.
+- **Todo dato nuevo del `summary` de un sync tiene que aterrizar en el panel
+  del servidor Y en la tarea rake.** Calcularlo y guardarlo no es reportarlo:
+  ya pasó en la 5ª (`skipped_users`) y volvió a pasar en la 7ª
+  (`skipped_promotion_products`, `shared_promotion_products`). El panel es el
+  camino del operador; el rake, el de consola.
+- **Una validación `on: :update` NO cubre `destroy`.** Un candado de negocio
+  que impide editar tiene que impedir borrar con un `before_destroy` que haga
+  `throw :abort` — `destroy` no corre validaciones. Esconder el control en la
+  vista no basta: el endpoint sigue vivo para una pestaña rezagada.
 - **Toda ruta que sincroniza abre su `SyncRun`, incluidas las tareas rake.** El
   lock y las guardas del panel se apoyan en `SyncRun.running.exists?`: una
   corrida que no se registra es invisible, y entonces "Cerrar rueda" se
@@ -187,6 +238,14 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
   no necesita Node en runtime (importmap), pero está instalado y es lo único
   que caza un error de sintaxis antes del navegador — una continuación de línea
   estilo Ruby (`\`) en JS rompe el controller entero sin que nada más avise.
+- **Una prueba que pasa puede estar pasando por el camino equivocado.** No es
+  exclusivo de las pruebas de sistema: en un modelo con varias validaciones,
+  la que rechaza el guardado puede no ser la que se quería probar (un
+  `max_discount` bajo hacía que fallara `discount_within_limits` en vez del
+  candado de promoción, y la prueba salía verde con y sin el arreglo). La
+  comprobación que sirve es **romper a propósito el código que se está
+  probando y ver que la prueba falle** — leer el código no la caza. Vale para
+  toda prueba nueva, no solo para las de sistema.
 - **Renombres masivos con expresiones regulares: revisar el diff palabra por
   palabra.** Un `\bcoincide\b` pensado para una variable también reescribe el
   texto visible ("Ningún pedido coincide") y los comentarios. Proteger las

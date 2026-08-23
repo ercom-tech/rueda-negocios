@@ -1,5 +1,21 @@
-<%# Tabla de partidas. Locals: order. Id "order-detail" para el Turbo replace. %>
-<div id="order-detail" class="overflow-x-auto rounded-3xl border border-black/10 bg-brand-cream text-neutral-900">
+<%# Tabla de partidas. Locals: order. Id "order-detail" para el Turbo replace.
+
+    Los grupos de promoción se calculan UNA vez por repintado y se pasan a las
+    filas: cada `Promotions::Group` consulta el universo de su promoción, y
+    resolverlo dentro de la fila eran 45 rondas del mismo trabajo en cada
+    cambio de cantidad, desde una tablet.
+
+    El `data-controller="modal"` envuelve tabla y diálogos: los botones de
+    flama viven en las filas y los diálogos al final, uno por promoción. Los
+    modales de "quitar partida" siguen teniendo el suyo propio dentro de cada
+    fila — Stimulus resuelve cada acción contra el controller más cercano, y
+    sus diálogos no se cuelan en los `dialogTargets` de este. %>
+<% promotion_groups = order.promotion_groups %>
+<% groups_by_product = promotion_groups.index_by { |group| group.promotion.id }
+     .then { |by_promo| Promotions::Group.index_by_product(order)
+                                         .transform_values { |promo| by_promo[promo.id] } } %>
+<div id="order-detail" data-controller="modal" data-action="keydown@window->modal#closeOnEsc"
+     class="overflow-x-auto rounded-3xl border border-black/10 bg-brand-cream text-neutral-900">
   <table class="w-full text-sm">
     <thead class="bg-black text-white">
       <%# En tablet angosta se ocultan las columnas secundarias (no. de parte,
@@ -17,22 +33,33 @@
         <th class="<%= order.order_items.any?(&:generic?) ? "px-3 py-3 font-semibold" : "hidden px-3 py-3 font-semibold lg:table-cell" %>">No. de parte</th>
         <th class="px-3 py-3 font-semibold">Cantidad</th>
         <th class="hidden px-3 py-3 font-semibold lg:table-cell">Unidad</th>
-        <th class="px-3 py-3 font-semibold">Precio unitario</th>
+        <%# Los importes van a la derecha, como en el PDF: es donde se leen las
+            cifras de dinero, y así los pesos y los centavos quedan en columna
+            entre renglones. Cantidad y Descuento siguen centrados — no son
+            importes. %>
+        <th class="px-3 py-3 text-right font-semibold">Precio unitario</th>
         <th class="px-3 py-3 font-semibold">Descuento</th>
-        <th class="px-3 py-3 font-semibold">Total</th>
+        <th class="px-3 py-3 text-right font-semibold">Total</th>
+        <th class="px-3 py-3"><span class="sr-only">Promoción</span></th>
       </tr>
     </thead>
     <tbody>
       <% order.order_items.each do |item| %>
-        <%= render "orders/item_row", order: order, item: item %>
+        <%= render "orders/item_row", order: order, item: item,
+                                      group: groups_by_product[item.product_id] %>
       <% end %>
       <% if order.order_items.empty? %>
         <tr>
-          <td colspan="10" class="px-4 py-10 text-center text-neutral-600">
+          <td colspan="11" class="px-4 py-10 text-center text-neutral-600">
             Agrega productos con el buscador de arriba.
           </td>
         </tr>
       <% end %>
     </tbody>
   </table>
+
+  <%# Un diálogo por promoción, no por fila. %>
+  <% promotion_groups.each do |group| %>
+    <%= render "orders/promotion_modal", order: order, group: group %>
+  <% end %>
 </div>

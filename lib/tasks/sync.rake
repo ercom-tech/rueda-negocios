@@ -62,6 +62,8 @@ namespace :sync do
     puts "[sync:down] capturistas eliminados (fuera de la rueda): #{s[:removed_users].size} #{s[:removed_users].inspect if s[:removed_users].any?}"
     puts "[sync:down] capturistas con asignación incompleta (solo fuera de catálogo): #{s[:skipped_people].size} #{s[:skipped_people].inspect if s[:skipped_people].any?}"
     puts "[sync:down] SKUs omitidos (proveedor fuera de la rueda): #{s[:skipped_skus]}"
+    puts "[sync:down] productos de promoción que no llegaron al catálogo: #{s[:skipped_promotion_products]}"
+    puts "[sync:down] productos en más de una promoción (solo se ofrece una): #{s[:shared_promotion_products].size} #{s[:shared_promotion_products].inspect if s[:shared_promotion_products].any?}"
     puts "[sync:down] pedidos locales purgados por el reemplazo: #{s[:purged_orders]}"
     puts "[sync:down] listo. Si el panel del servidor está abierto en un navegador, recárgalo para ver esta corrida."
   end

@@ -166,7 +166,13 @@ module Pdf
 
         # El genérico imprime lo MISMO que viaja al ERP (descripción + parte):
         # el papel del cliente y surtido deben decir lo mismo (6ª auditoría).
-        { code: item.code, description: (item.generic? ? item.erp_captured_name : item.description),
+        printed = item.generic? ? item.erp_captured_name : item.description
+        # El regalo se marca como regalo (decisión FECEGO 2026-08-22): en el
+        # papel es un renglón en $0.00 que el cliente va a preguntar, y "va
+        # incluido" tiene que leerse en la línea, no explicarse aparte.
+        printed = "REGALO — #{printed}" if item.gift?
+
+        { code: item.code, description: printed,
           unit: item.unit,
           quantity: item.quantity, unit_price: item.unit_price,
           discount_percent: item.discount_percent, tax_rate: item.tax_rate,

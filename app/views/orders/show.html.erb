@@ -5,9 +5,18 @@
   <div class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.18]"
        style="background-image: url('<%= image_path "tools_pattern_white.svg" %>');"></div>
 
-  <%# z-20 (no z-10): hermano del contenido (z-10) y contiene el modal de
-      cerrar sesión — con el mismo z, el contenido lo taparía. %>
-  <div class="relative z-20 px-6 pt-6 sm:px-10 lg:px-[5%] lg:pt-8">
+  <%# Ni este wrapper ni el del contenido llevan z-index, A PROPÓSITO: los dos
+      contienen modales (cerrar sesión aquí, promociones abajo) y un z-index
+      sobre un `relative` crea contexto de apilamiento — el `z-50` del diálogo
+      deja de contar contra el resto de la página y solo compite dentro de su
+      wrapper. Así estaba antes (header z-20, contenido z-10) y el header se
+      pintaba ENCIMA del modal de promoción: un toque cerca del borde superior
+      del modal caía en "Cerrar sesión" y sacaba al capturista a media captura
+      (7ª auditoría).
+      Sin z-index, los dos siguen tapando al patrón de fondo —van después en el
+      DOM y el patrón no está posicionado por encima— y los diálogos `fixed
+      z-50` compiten en el contexto raíz, que es donde deben ganar. %>
+  <div class="relative px-6 pt-6 sm:px-10 lg:px-[5%] lg:pt-8">
     <%= render "shared/top_bar" %>
     <%# El regreso va en la fila del título, como en el resto del sitio, y es
         UNO solo: al reporte si se llegó desde ahí (conservando sus filtros, su
@@ -26,7 +35,8 @@
 
   <%# ── Card dorada única (misma gramática que los pasos 1 y 3): barra negra
       de título, contenido adentro y botones al pie ── %>
-  <div class="relative z-10 w-full px-6 py-8 lg:px-[5%]">
+  <%# Sin z-index: ver la nota del wrapper de arriba. %>
+  <div class="relative w-full px-6 py-8 lg:px-[5%]">
     <section class="rounded-3xl bg-brand-gold p-2">
       <%# Barra de título: folio + estatus a la izquierda, acciones a la derecha %>
       <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-black px-6 py-3">

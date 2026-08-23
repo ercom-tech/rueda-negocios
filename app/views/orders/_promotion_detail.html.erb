@@ -1,0 +1,156 @@
+<%#
+  Contenido del modal de una promoción: la escalera completa, dónde va el
+  pedido, qué falta para el siguiente escalón, el regalo, y el botón de
+  aplicar o quitar. Se recarga cada vez que el modal se abre (ver
+  `_promotion_modal`), así que siempre habla del estado actual del pedido.
+
+  Locals: order, group (Promotions::Group).
+%>
+<% promotion = group.promotion %>
+<% tier = group.tier %>
+<turbo-frame id="promotion-frame-<%= promotion.id %>">
+  <%# Gramática de card: marco dorado delgado (el del cascarón) + barra negra
+      de título + cuerpo crema. %>
+  <div class="rounded-2xl bg-black px-5 py-4 text-center">
+    <p class="text-xs font-bold uppercase tracking-widest text-brand-gold">Promoción de la rueda</p>
+    <h3 class="mt-1 text-xl font-extrabold text-white"><%= promotion.name %></h3>
+    <% if promotion.starts_on && promotion.ends_on %>
+      <p class="mt-1 text-xs text-white/70">
+        Vigente del <%= l(promotion.starts_on, format: "%d/%m/%Y") %>
+        al <%= l(promotion.ends_on, format: "%d/%m/%Y") %>
+      </p>
+    <% end %>
+  </div>
+
+  <div class="mt-2 rounded-2xl bg-brand-cream p-5 text-neutral-900">
+    <%# --- Dónde va el pedido -------------------------------------------- %>
+    <div class="text-center">
+      <p class="text-sm text-neutral-700">
+        Llevas <span class="font-extrabold"><%= group.formatted_accumulated %></span>
+        en <%= pluralize(group.items.size, "producto") %> de esta promoción
+      </p>
+      <%# El porcentaje sale de lo que se APLICA (que incluye el override por
+          producto), no del escalón: con FANAL el escalón va en 0% y sus
+          códigos al 10% y 20%, y aquí se leía "0% de descuento". %>
+      <% if tier %>
+        <% applied_percents = group.percents_for(tier) %>
+        <p class="mt-2 text-3xl font-extrabold text-brand-coral">
+          <%= promotion_percents(applied_percents) %> de descuento
+        </p>
+        <% if applied_percents.many? %>
+          <p class="text-sm text-neutral-700">según el producto</p>
+        <% end %>
+      <% end %>
+    </div>
+
+    <%# --- El gancho: cuánto falta para el siguiente escalón -------------- %>
+    <% if group.next_tier %>
+      <div class="mt-4 rounded-2xl border-2 border-dashed border-brand-coral/50 px-4 py-3 text-center">
+        <p class="text-sm">
+          Con <span class="font-extrabold"><%= group.tier_amount(group.missing_for_next_tier) %></span> más
+          <%= tier ? "subes" : "llegas" %> a
+          <span class="font-extrabold text-brand-coral-dark"><%= promotion_percents(group.percents_for(group.next_tier)) %></span>
+          <% if (teaser = promotion_gifts_teaser(group.next_tier)) %>
+            y te llevas <span class="font-extrabold"><%= teaser %></span>
+          <% end %>
+        </p>
+      </div>
+    <% end %>
+
+    <%# --- La escalera completa ------------------------------------------
+        Cada escalón nombra SUS regalos, esté alcanzado o no. Antes solo el
+        alcanzado los detallaba (en un bloque aparte) y los demás llevaban un
+        ícono: se veía que había premio, pero no cuál — justo al revés de lo
+        que necesita quien todavía no llega y está decidiendo si sube. %>
+    <ul class="mt-4 space-y-1.5">
+      <% group.ladder.each do |step| %>
+        <% reached = tier && step.id == tier.id %>
+        <li class="rounded-xl px-3 py-2 text-sm
+                   <%= reached ? 'bg-brand-coral font-bold text-white' : 'bg-white/60' %>">
+          <div class="flex items-center justify-between gap-3">
+            <span><%= step.condition_label %></span>
+            <span class="shrink-0 font-extrabold"><%= promotion_percents(group.percents_for(step)) %></span>
+          </div>
+          <% if step.gifts? %>
+            <%# Blanco pleno, no /90: a 12px es texto normal y la vara es 4.5:1
+                (el 90% daba 4.11). Igual el gancho, en coral oscuro. %>
+            <ul class="mt-1 space-y-0.5 <%= reached ? "text-white" : "text-neutral-700" %>">
+              <% step.promotion_gifts.includes(:product).each do |gift| %>
+                <li class="flex items-start gap-1.5 text-xs">
+                  <%# Heroicon outline `gift`. %>
+                  <svg class="mt-px h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+                    <title>Regalo</title>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 11.25v8.25a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 1 0 9.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1 1 14.625 7.5H12m0 0V21m-8.625-9.75h18.75a.75.75 0 0 0 .75-.75V8.25a.75.75 0 0 0-.75-.75H3.375a.75.75 0 0 0-.75.75v2.25c0 .414.336.75.75.75Z" />
+                  </svg>
+                  <span><%= promotion_gift_label(gift) %></span>
+                </li>
+              <% end %>
+            </ul>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+
+    <%# --- Lo que hay que decir antes de que le den clic ------------------ %>
+    <% if group.applied? %>
+      <p class="mt-4 text-sm text-neutral-700">
+        Mientras esté aplicada,
+        <%= group.items.size == 1 ? "la partida" : "las partidas" %>
+        <span class="font-semibold"><%= group.items.map(&:position).join(", ") %></span>
+        no se <%= group.items.size == 1 ? "puede" : "pueden" %> editar ni quitar,
+        y no se pueden agregar más productos de esta promoción.
+        Quita la promoción para cambiar algo y vuelve a aplicarla al terminar.
+      </p>
+    <% else %>
+      <% with_manual_discount = group.items.select { |i| i.discount_percent.to_d.positive? } %>
+      <div class="mt-4 space-y-2 text-sm text-neutral-700">
+        <% if group.items.any? %>
+          <p>
+            <%# La promoción es del grupo, no de la fila desde la que se abrió
+                el modal: sin decirlo, el capturista ve cambiar renglones que
+                no tocó. %>
+            Se aplica a <%= pluralize(group.items.size, "partida") %> de este pedido:
+            <span class="font-semibold"><%= group.items.map(&:position).join(", ") %></span>.
+            <%= group.items.size == 1 ? "Quedará bloqueada" : "Quedarán bloqueadas" %>
+            mientras la promoción esté aplicada.
+          </p>
+        <% end %>
+        <% if with_manual_discount.any? %>
+          <p class="font-semibold text-neutral-900">
+            Reemplaza el descuento que ya
+            <%= with_manual_discount.size == 1 ? "tiene la partida" : "tienen las partidas" %>
+            <%= with_manual_discount.map(&:position).join(", ") %>.
+            Si quitas la promoción, se
+            <%= with_manual_discount.size == 1 ? "devuelve" : "devuelven" %>.
+          </p>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%# --- Acciones -------------------------------------------------------
+        `turbo:submit-end->modal#close`: al terminar, el modal se cierra solo.
+        El resultado se ve en la tabla (que se repinta detrás) y en el flash;
+        dejarlo abierto tapaba justo lo que el capturista quiere revisar, y su
+        fondo se comía el siguiente clic. %>
+    <% close_on_submit = { data: { action: "turbo:submit-end->modal#close" } } %>
+    <%# "Cerrar" NO va aquí: vive en el cascarón del modal, fuera del
+        turbo-frame, para que exista aunque la carga falle. Y la acción que
+        muta va en coral, no en el mismo pill neutral que la de escape —
+        pegados e idénticos, un mis-tap quitaba la promoción. %>
+    <div class="mt-6 flex flex-wrap justify-center gap-3">
+      <% if !can_edit_order?(order) %>
+        <%# Pedido ya transmitido: se ve el detalle, no se toca. %>
+      <% elsif group.applied? %>
+        <%= button_to "Quitar promoción", order_promotion_path(order, promotion), method: :delete,
+              form: close_on_submit,
+              class: "rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
+      <% elsif group.applicable? %>
+        <%= button_to "Aplicar promoción", order_promotions_path(order),
+              params: { promotion_id: promotion.id }, form: close_on_submit,
+              class: "rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
+      <% else %>
+        <p class="w-full text-center text-sm font-semibold text-neutral-700"><%= group.blocked_reason %></p>
+      <% end %>
+    </div>
+  </div>
+</turbo-frame>
