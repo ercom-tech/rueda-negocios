@@ -49,12 +49,21 @@ Cualquier tono nuevo que lleve texto blanco encima se mide antes de usarse.
 Grises del manual de identidad: `neutral-400` para el fondo de controles
 grises (buscador de producto), con texto e íconos `neutral-700/900`.
 
-**El dorado no sirve de trazo sobre el crema: da 1.56:1.** Cuando un ícono
-dorado tenga que llamar la atención dentro de una card, va de **superficie**
-—píldora dorada con el contenido en negro—, no de color de trazo. Es además el
-rol que el manual le da al dorado. El coral sólido sobre crema sí funciona
-(4.04:1, sobre el 3:1 que AA pide para gráficos), y para un ícono en reposo el
-tono ya validado es `neutral-600`.
+**El dorado no sirve de trazo sobre el crema: da 1.39:1.** Si un ícono dorado
+tuviera que llamar la atención dentro de una card, tendría que ir de
+superficie, no de trazo.
+
+En la práctica no hizo falta: el ícono que más debe llamar la atención de la
+tabla —la flama de promoción "disponible"— va en **coral de superficie**
+(píldora rellena, ícono blanco), el mismo tono del botón primario y del
+renglón Total, que es lo que el ojo ya busca en esa pantalla. Blanco sobre
+coral da 4.69:1 y coral sobre crema 4.04:1.
+
+**Un estado no se distingue solo por el matiz.** Los tres de la flama se
+separan por FORMA: píldora rellena (disponible) · trazo coral (aplicada) ·
+trazo `neutral-600` (en reposo, el tono ya validado sobre crema). Con solo
+color, "aplicada" y "en reposo" compartían silueta y su contraste entre sí era
+de 1.67:1 — y en deuteranopia el coral cae a 2.31:1.
 
 **Nada de paneles translúcidos** (`bg-white/5`, `bg-white/10`) como superficie
 de contenido: sobre el shell negro con patrón se lavan y el bloque "no se

@@ -1,7 +1,14 @@
-<%# Totales del pedido. Locals: order. Id "order-totals" para el Turbo replace. %>
+<%# Totales del pedido. Locals: order. Id "order-totals" para el Turbo replace.
+
+    El coral resalta el SUBTOTAL, no el Total (decisión del usuario
+    2026-08-24): es la cifra sobre la que aplican las promociones —el acumulado
+    que elige el escalón es el importe bruto—, así que es la que el capturista
+    vigila mientras arma el pedido y la que le canta al cliente para llegar al
+    siguiente descuento. El Total se queda en negritas y con una línea que lo
+    separa: sigue siendo el cierre de la columna, sin competir por la mirada. %>
 <div id="order-totals" class="w-full overflow-hidden rounded-2xl border border-black/10 bg-brand-cream text-sm text-neutral-900 lg:w-80">
-  <div class="flex justify-between px-5 py-2"><span>Subtotal</span><span><%= number_to_currency(order.subtotal) %></span></div>
+  <div class="flex justify-between bg-brand-coral px-5 py-3 font-bold text-white"><span>Subtotal</span><span><%= number_to_currency(order.subtotal) %></span></div>
   <div class="flex justify-between px-5 py-2"><span>Descuento</span><span><%= number_to_currency(order.discount_total) %></span></div>
   <div class="flex justify-between px-5 py-2"><span>IVA</span><span><%= number_to_currency(order.tax_total) %></span></div>
-  <div class="flex justify-between bg-brand-coral px-5 py-3 font-bold text-white"><span>Total</span><span><%= number_to_currency(order.total) %></span></div>
+  <div class="flex justify-between border-t border-black/15 px-5 py-3 text-base font-bold"><span>Total</span><span><%= number_to_currency(order.total) %></span></div>
 </div>

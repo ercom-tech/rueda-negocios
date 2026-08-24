@@ -169,7 +169,11 @@ por algo prometido regalado. Con 100% el regalo vale cero en pantalla, en el
 PDF y en el ERP, y el total del pedido no arrastra centavos de nadie.
 
 El 100% no es ajeno al ERP: ya tiene **729 partidas con `descto_porcentaje =
-100` y total $0.00**, repartidas en 459 pedidos. Y su validación de montos es
+100` y total $0.00**, repartidas en 459 pedidos, y **605 conceptos de CFDI así
+llegaron a timbrarse** (`pac_ok = true` con UUID del SAT; tasa de fallo 1.14%
+contra 19.84% del total de facturas). Queda pendiente confirmarlo con un
+timbrado real en testing — ver `backlog.md`, "Timbrar una factura con una
+partida de regalo al 100%". Y su validación de montos es
 por fórmula, así que descuento = subtotal, IVA = 0 y total = 0 cuadran solos.
 El **precio de lista sí viaja**: el ERP guarda precio y descuento en columnas
 distintas, y una partida en precio 0 no diría cuánto valía lo que se regaló.

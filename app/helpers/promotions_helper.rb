@@ -16,21 +16,31 @@ module PromotionsHelper
     :offered
   end
 
-  # El dorado NO va de trazo aquí: sobre el crema de la tabla da 1.56:1 y la
-  # flama que más debe llamar la atención sería la más invisible. Va de
-  # SUPERFICIE — píldora dorada con el ícono en negro—, que además es lo que
-  # el manual reserva para el dorado (acciones) y llama mucho más que un
-  # ícono suelto. El coral sólido sobre crema da 4.04:1, cómodo sobre el 3:1
-  # que pide AA para gráficos.
+  # Coral en los dos estados encendidos, el mismo del botón "Guardar" y del
+  # Total (decisión del usuario 2026-08-24): es el color con el que este
+  # proyecto marca la acción primaria y la culminación, y es lo que el ojo del
+  # capturista ya busca en esa pantalla.
+  #
+  # Lo que los separa es la FORMA, no el tono — que además es lo que pedía la
+  # 7ª auditoría (los tres estados se distinguían solo por color, y "aplicada"
+  # y "no alcanzada" compartían silueta):
+  #
+  #   available  píldora coral rellena, con pulso   → invita
+  #   applied    flama coral de trazo, sin fondo    → informa
+  #   offered    trazo neutral-600                  → está ahí, aún no alcanza
+  #
+  # Blanco sobre coral da 4.69:1 y el coral sobre crema 4.04:1: los dos por
+  # encima de lo que piden. El dorado se descartó de trazo (1.39:1 sobre
+  # crema) y como superficie ya no hace falta.
   #
   # Solo el COLOR cambia entre estados. La forma (`rounded-full`) vive en la
   # base aunque el estado no tenga fondo: `transition-colors` anima el color
   # pero NO el `border-radius`, así que con la forma en el estado el botón se
-  # volvía cuadrado de golpe mientras su fondo dorado seguía desvaneciéndose
-  # — un cuadro amarillo apagándose al bajar la cantidad y perder el escalón.
+  # volvía cuadrado de golpe mientras su fondo seguía desvaneciéndose — un
+  # cuadro apagándose al bajar la cantidad y perder el escalón.
   FLAME_CLASSES = {
     applied:   "text-brand-coral",
-    available: "text-neutral-900",
+    available: "text-white",
     offered:   "text-neutral-600 hover:text-brand-coral"
   }.freeze
 
@@ -39,14 +49,20 @@ module PromotionsHelper
       "transition-colors #{FLAME_CLASSES.fetch(state)}"
   end
 
-  # El fondo dorado que late, como capa aparte y solo en `available`.
+  # El fondo coral que late, como capa aparte y solo en `available`.
+  #
+  # `animate-pulse` de Tailwind va de opacidad 1 a .5, así que la píldora se
+  # ve rosa pálida a mitad del ciclo — el latido se nota mucho, a cambio de que
+  # el coral y el blanco del ícono se laven durante ese medio segundo.
+  # Decisión del usuario (2026-08-24) tras probar una variante más discreta
+  # (1 → .85): se queda el .5. Si alguien lo cambia, que sea por lo mismo.
   #
   # `animate-pulse` anima la opacidad del elemento que la lleva: puesta en el
   # botón, al quitarse la clase la opacidad saltaba de ~0.5 a 1 de un frame al
   # otro — un destello justo antes de apagarse. En una capa propia no queda
   # residuo: el nodo entero desaparece con la clase.
   def promotion_flame_backdrop_class
-    "absolute inset-0 rounded-full bg-brand-gold shadow-sm " \
+    "absolute inset-0 rounded-full bg-brand-coral shadow-sm " \
       "animate-pulse motion-reduce:animate-none"
   end
 

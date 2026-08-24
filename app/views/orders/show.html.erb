@@ -67,15 +67,26 @@
             </div>
             <% if @order.draft? %>
               <%# button_to (form real) y no link con turbo_method: el intercept
-                  del link fallaba en silencio (no emitía el POST). %>
-              <%= button_to "Finalizar pedido", capture_order_path(@order),
+                  del link fallaba en silencio (no emitía el POST).
+                  Dice "Guardar" y no "Finalizar pedido" (decisión del usuario
+                  2026-08-24): el capturista piensa en guardar su pedido, no en
+                  finalizarlo. Lo que el botón HACE sigue siendo capturarlo —
+                  asigna folio y lo saca de borrador—, y esa distinción, que
+                  importa porque un borrador bloquea transmitir y cerrar rueda,
+                  la sigue dando el badge de estatus junto al título. %>
+              <%= button_to "Guardar", capture_order_path(@order),
                     form_class: "inline-block",
                     class: "cursor-pointer rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
             <% else %>
               <%# Ya está capturado: el coral lleva al resumen (ahí vive el
                   PDF), no a "finalizarlo" otra vez — con ese rótulo, llegar
-                  al PDF del cliente exigía tocar un botón que mentía. %>
-              <%= link_to "Ir al resumen", summary_order_path(@order),
+                  al PDF del cliente exigía tocar un botón que mentía.
+                  Dice "Guardar" (decisión del usuario 2026-08-24) porque es lo
+                  que el capturista cree que está haciendo al terminar de
+                  editar. Ojo si algún día se toca: la edición se guarda sola
+                  campo por campo, así que el botón NO guarda nada — solo
+                  navega. Nadie pierde trabajo por salirse sin tocarlo. %>
+              <%= link_to "Guardar", summary_order_path(@order),
                     class: "inline-block rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
             <% end %>
           <% else %>

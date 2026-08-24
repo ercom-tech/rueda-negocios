@@ -142,6 +142,42 @@ como copia de respaldo por si el folio se llegara a armar del lado de la app.
 
 ## Definiciones con FECEGO
 
+### Timbrar una factura con una partida de regalo al 100% (antes del 27-ago)
+
+Las partidas de regalo viajan al ERP con **precio de lista, 100% de descuento
+y total $0.00**. Falta la única comprobación que no se puede hacer desde la
+base: **que el PAC timbre un CFDI que las contenga.**
+
+Lo que ya está verificado contra el ERP de desarrollo (2026-08-24):
+
+- Existen **612 conceptos de CFDI con `descto_porcentaje = 100`**, y **605 en
+  facturas con `pac_ok = true` y UUID del SAT** (597 vigentes + 8 canceladas
+  después, por otra razón). Con precios reales: uno de $235.95 y otro de
+  $277.83, ambos timbrados y sellados.
+- Su tasa de fallo es **1.14%**, contra **19.84%** de todas las facturas del
+  ERP: los conceptos al 100% timbran MEJOR que el promedio.
+- Un concepto en cero dentro de un CFDI timbrado es rutina aquí: **5.36M
+  conceptos con total $0.00** en 467,095 facturas.
+
+Lo que NO se pudo cerrar desde la base: de los 7 que no timbraron, dos traen
+**CFDI33147 — "El valor del campo ValorUnitario debe ser mayor que cero"**.
+Esa regla del SAT habla del *precio unitario*, no del importe, y esos dos
+tenían el precio en 0 — un caso distinto al nuestro, que manda el precio de
+lista. Pero los otros cinco dicen solo *"Error en la estructura del XML
+respecto al ANEXO 20"* (tres con `pac_error_code = 0` y descripción `?`), así
+que no se puede afirmar que ninguno venga del importe en cero.
+
+**Cómo se cierra:** transmitir a testing un pedido con regalo (receta en la
+guía de despliegue: FANDELI, 3 piezas del 027049 = $27,950 → 9% + esmeril
+SKIL) y pedirle a FECEGO que lo **facture**. Si el CFDI timbra con `pac_ok =
+true`, el tema queda cerrado. Si CFDI33147 aparece, la salida es imitar al ERP
+en sus regalos de promoción: dejar el neto en $0.25 + IVA en vez de en cero
+(ver `docs/erp-esquema-promociones.md`, sección Regalos) — es un cambio de una
+constante en `Promotions::Group`.
+
+Ojo con el orden: esto se valida DESPUÉS de desplegar y transmitir el pedido
+de prueba, así que va en el mismo viaje que el paso 4 de la guía.
+
 ### Cuántos regalos entrega un escalón con varios (antes del 27-ago)
 
 `vta_promocion_detalle.regalos_permitir` viene en **0** y `regalos_todo` en

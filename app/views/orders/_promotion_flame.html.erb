@@ -10,7 +10,7 @@
         data-modal-dialog-param="<%= promotion_dialog_id(group.promotion) %>"
         aria-label="<%= promotion_flame_label(group, state) %>"
         class="<%= promotion_flame_class(state) %>">
-  <%# El fondo dorado va en su propia capa, no en el botón: así el latido no
+  <%# El fondo coral va en su propia capa, no en el botón: así el latido no
       deja residuo de opacidad al apagarse. Ver promotion_flame_backdrop_class. %>
   <% if state == :available %>
     <span class="<%= promotion_flame_backdrop_class %>" aria-hidden="true"></span>
