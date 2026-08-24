@@ -47,8 +47,12 @@ class ReportsController < ApplicationController
   # pedidos.
   def product_options
     universe = current_user.can_see_all_orders? ? Product.all : current_user.product_universe(active_round)
-    @products = params[:q].present? ? universe.search(params[:q]).includes(:price).limit(10) : Product.none
-    render partial: "product_options", locals: { products: @products }, layout: false
+    found = params[:q].present? ?
+      universe.search(params[:q]).includes(:price).limit(Product::SEARCH_LIMIT + 1).to_a : []
+    truncated = found.size > Product::SEARCH_LIMIT
+    @products = found.first(Product::SEARCH_LIMIT)
+    render partial: "product_options",
+           locals: { products: @products, truncated: truncated }, layout: false
   end
 
   private

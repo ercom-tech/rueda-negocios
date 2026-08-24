@@ -19,7 +19,11 @@ class OrdersController < ApplicationController
 
   # Sugerencias del autocompletado (clave o nombre).
   def client_options
-    @clients = params[:q].present? ? Client.search(params[:q]).limit(10) : Client.none
+    # Uno de más que el tope: si viene, es que hay corte. Es la forma barata de
+    # saberlo sin un COUNT sobre el catálogo entero en cada tecla.
+    found     = params[:q].present? ? Client.search(params[:q]).limit(Client::SEARCH_LIMIT + 1).to_a : []
+    @truncated = found.size > Client::SEARCH_LIMIT
+    @clients   = found.first(Client::SEARCH_LIMIT)
     order = current_user.orders.find_by(id: params[:order_id])
     render partial: "client_options", locals: { clients: @clients, order: order }, layout: false
   end
@@ -97,10 +101,14 @@ class OrdersController < ApplicationController
   def product_options
     @order = current_user.orders.find(params[:id])
     universe = current_user.product_universe(active_round)
-    @products = params[:q].present? ? universe.search(params[:q]).includes(:price).limit(10) : Product.none
+    found = params[:q].present? ?
+      universe.search(params[:q]).includes(:price).limit(Product::SEARCH_LIMIT + 1).to_a : []
+    truncated = found.size > Product::SEARCH_LIMIT
+    @products = found.first(Product::SEARCH_LIMIT)
     no_membership = current_user.business_round_people.where(business_round: active_round).none?
     render partial: "product_options",
            locals: { order: @order, products: @products, no_membership: no_membership,
+                     truncated: truncated,
                      blocked_by: @order.promotions_blocking(@products) }, layout: false
   end
 

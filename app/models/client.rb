@@ -21,6 +21,9 @@ class Client < ApplicationRecord
   #
   # Relevancia: primero los que EMPIEZAN con lo tecleado (en comercial o
   # nombre), luego alfabético por comercial (o nombre si no hay comercial).
+  # Mismo criterio que Product::SEARCH_LIMIT.
+  SEARCH_LIMIT = 50
+
   scope :search, ->(query) {
     q = sanitize_sql_like(query.to_s.strip)
     next none if q.blank?

@@ -72,6 +72,18 @@
       </li>
     <% end %>
   </ul>
+  <%# El corte no puede ser silencioso: con Product::SEARCH_LIMIT sugerencias y
+      sin aviso, "no está" y "quedó en el puesto siguiente" se ven igual, y el
+      capturista no sabe si refinar la búsqueda o capturarlo fuera de catálogo.
+      FUERA del <ul>: el contenedor es un `role="listbox"` y sus opciones las
+      marca el JS sobre `a, button` — un <li> que no es opción sería ruido
+      para el lector de pantalla. Y aquí queda SIEMPRE a la vista, en vez de
+      al final de un área con scroll. %>
+  <% if local_assigns[:truncated] %>
+    <p role="status" class="mt-1 rounded-xl border border-black/10 bg-brand-cream px-5 py-2 text-xs font-semibold text-neutral-700 shadow-xl">
+      Se muestran las primeras <%= Product::SEARCH_LIMIT %> coincidencias. Si no ves la que buscas, escribe más letras.
+    </p>
+  <% end %>
 <% else %>
   <%# El caso real detrás de un "sin resultados" en el evento es un producto
       que no está en el catálogo de la rueda: sin enunciar el camino del

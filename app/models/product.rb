@@ -39,6 +39,16 @@ class Product < ApplicationRecord
   # 017768 y "0177" a los 0177xx. Normalizar quitando ceros ("000081"→"81")
   # resultó engañoso: "81" está contenido en 003381, 004817, etc. El índice
   # trigram de expresión sobre el LPAD mantiene la rama indexada.
+  # Cuántas sugerencias devuelve el buscador. Era 10 y se quedaba corto en casi
+  # todo: sobre el catálogo real de la rueda, "LIJA" da 256 coincidencias,
+  # "TORNILLO" 228, "LLAVE" 178 y "CABLE" 113 — 9 de cada 10 búsquedas por
+  # palabra completa se cortaban, y en silencio. El costo del tope es
+  # irrelevante (0.8 ms con 10, 2.1 ms con 50: la consulta ya recorre todo y el
+  # límite solo corta la salida), así que lo que manda es cuánto se puede
+  # recorrer en una tablet. Ningún tope razonable cubre "LIJA": lo que saca del
+  # apuro es el aviso de que hay más (ver `_product_options`).
+  SEARCH_LIMIT = 50
+
   scope :search, ->(query) {
     q    = sanitize_sql_like(query.to_s.strip)
     like = "%#{q}%"
