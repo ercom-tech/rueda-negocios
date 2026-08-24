@@ -135,5 +135,86 @@ module Pdf
 
       assert_includes pdf_text, "ENTREGAR ANTES DE <5 DIAS>"
     end
+
+    # El monto de división es una instrucción de facturación y el papel es lo
+    # que llega a quien factura: sin él en el PDF, el dato solo vivía en la
+    # pantalla y en el ERP.
+    test "el monto de división de facturas se imprime" do
+      DivideAmount.create!(erp_consecutive: 1, amount: 5000)
+      @order.update!(dividir_facturas: 5000)
+      item!(quantity: 1, price: 100)
+
+      assert_includes pdf_text, "Dividir facturas cada"
+      assert_includes pdf_text, "$5,000.00"
+    end
+
+    # Aplica a los DOS tipos: el ERP tiene 6,128 remisiones nativas con monto.
+    # El pedido del setup es remisión, así que la prueba de arriba ya cubre ese
+    # caso; esta fija que en factura también salga.
+    test "también se imprime en una factura" do
+      DivideAmount.create!(erp_consecutive: 1, amount: 2000)
+      tax = @client.tax_profiles.create!(rfc: "XAXX010101000", business_name: "PUBLICO")
+      cfdi = CfdiUse.create!(code: "G01", description: "Adquisición")
+      @order.update!(kind: "invoice", client_tax_profile: tax, cfdi_use: cfdi,
+                     client_receipt_profile: nil, dividir_facturas: 2000)
+      item!(quantity: 1, price: 100)
+
+      assert_includes pdf_text, "Dividir facturas cada"
+      assert_includes pdf_text, "$2,000.00"
+    end
+
+    # 0 = "no dividir": imprimirlo sería una instrucción que no instruye nada.
+    test "sin monto no se imprime la línea" do
+      item!(quantity: 1, price: 100)
+
+      assert_not_includes pdf_text, "Dividir facturas"
+    end
+
+    # Extraer el texto del stream NO basta para saber si se VE: la tabla de
+    # partidas se dibuja después, y lo que quede bajo su borde superior queda
+    # tapado aunque esté escrito. Lo que hay que medir es cuánto espacio
+    # RESERVA `render_info` frente a lo que el bloque ocupa.
+    def espacio_reservado_y_ocupado(order)
+      gen = OrderGenerator.new(order)
+      pdf = Prawn::Document.new(page_size: "LETTER", page_layout: :landscape, margin: [ 36, 36, 54, 36 ])
+      pdf.font "Helvetica"
+      top = pdf.cursor
+      gen.send(:render_info, pdf)
+      reservado = top - pdf.cursor
+      ocupado   = gen.send(:text_height, pdf, gen.send(:left_info), 470)
+      [ reservado, ocupado ]
+    end
+
+    # El caso que lo destapó: una factura con dirección larga suma RFC/Razón
+    # Social y Uso CFDI, y su última línea —el monto de división— caía debajo
+    # del inicio de la tabla, que la tapaba.
+    test "la tabla no tapa el bloque de datos en el caso mas largo" do
+      DivideAmount.create!(erp_consecutive: 1, amount: 5000)
+      tax  = @client.tax_profiles.create!(rfc: "XAXX010101000",
+                                          business_name: "PUBLICO EN GENERAL S.A. DE C.V.")
+      cfdi = CfdiUse.create!(code: "G01", description: "Adquisición de mercancías")
+      branch = @client.branches.create!(erp_branch_id: 1, name: "MATRIZ",
+        address: "CRUCERO DE AYUTLA — CRUCERO DE AYUTLA S/N, COL. TIERRA COLORADA " \
+                 "CENTRO, CP 39940, JUAN R. ESCUDERO, GUERRERO")
+      @order.update!(kind: "invoice", client_tax_profile: tax, cfdi_use: cfdi,
+                     client_receipt_profile: nil, client_branch: branch, dividir_facturas: 5000)
+
+      reservado, ocupado = espacio_reservado_y_ocupado(@order)
+
+      assert_operator ocupado, :>, OrderGenerator::INFO_MIN_HEIGHT,
+                      "si este caso no rebasa el mínimo, la prueba no está midiendo el caso largo"
+      assert_operator reservado, :>=, ocupado + OrderGenerator::INFO_GAP,
+                      "la tabla arrancaría encima del bloque y taparía sus últimas líneas"
+    end
+
+    # Un pedido corto no debe encoger el bloque: el aire de siempre se conserva.
+    test "un pedido corto conserva el espacio minimo" do
+      item!(quantity: 1, price: 100)
+
+      reservado, ocupado = espacio_reservado_y_ocupado(@order)
+
+      assert_operator ocupado, :<, OrderGenerator::INFO_MIN_HEIGHT
+      assert_equal OrderGenerator::INFO_MIN_HEIGHT + OrderGenerator::INFO_GAP, reservado
+    end
   end
 end

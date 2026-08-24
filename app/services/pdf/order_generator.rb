@@ -64,12 +64,42 @@ module Pdf
       pdf.move_down 8
     end
 
+    # El alto del bloque se MIDE, no se supone. Era un `top - 70` fijo y la
+    # tabla de partidas se dibuja justo ahí: con una dirección larga el bloque
+    # ya se pasaba (71.6 pt en remisión) y en factura —que suma RFC/Razón
+    # Social y Uso CFDI— llegaba a 84.3 pt, así que la tabla TAPABA la última
+    # línea. El texto sí se escribía en el PDF, por eso extraerlo del stream no
+    # lo delataba: tapado e impreso se leen igual (2026-08-24).
+    INFO_MIN_HEIGHT = 70
+    # Aire entre el bloque de datos y la tabla de partidas.
+    INFO_GAP = 4
+
     def render_info(pdf)
       top = pdf.cursor
-      pdf.text_box left_info,  at: [ 0, top ],   width: 470, size: 9, inline_format: true, leading: 2
-      pdf.text_box right_info, at: [ 480, top ], width: pdf.bounds.width - 480, size: 9, inline_format: true, leading: 2
-      pdf.move_cursor_to top - 70
-      pdf.move_down 4
+      left_width  = 470
+      right_width = pdf.bounds.width - 480
+
+      pdf.text_box left_info,  at: [ 0, top ],   width: left_width,  size: 9, inline_format: true, leading: 2
+      pdf.text_box right_info, at: [ 480, top ], width: right_width, size: 9, inline_format: true, leading: 2
+
+      # El mínimo conserva el aire de siempre cuando el bloque es corto.
+      used = [ text_height(pdf, left_info, left_width),
+               text_height(pdf, right_info, right_width),
+               INFO_MIN_HEIGHT ].max
+      pdf.move_cursor_to top - used
+      pdf.move_down INFO_GAP
+    end
+
+    # Cuánto alto ocupa un texto con formato en un ancho dado. `text_box` no lo
+    # devuelve (su `dry_run` da el texto que NO cupo), así que se arma el mismo
+    # box y se le pregunta tras renderizarlo en seco.
+    def text_height(pdf, content, width)
+      box = Prawn::Text::Formatted::Box.new(
+        Prawn::Text::Formatted::Parser.format(content),
+        at: [ 0, pdf.cursor ], width: width, size: 9, leading: 2, document: pdf
+      )
+      box.render(dry_run: true)
+      box.height
     end
 
     def render_items_table(pdf)
@@ -203,6 +233,12 @@ module Pdf
       lines << "<b>Sucursal:</b>  #{esc(@order.client_branch&.name)}"
       lines << "<b>Dirección:</b>  #{esc(@order.client_branch&.address)}" if @order.client_branch&.address.present?
       lines << "<b>Uso CFDI:</b>  #{esc(@order.cfdi_use.code)} #{esc(@order.cfdi_use.description)}" if @order.invoice? && @order.cfdi_use
+      # Instrucción de facturación, junto a los demás datos fiscales. Va en los
+      # DOS tipos —el ERP tiene 6,128 remisiones con monto— y solo cuando hay
+      # monto: 0 significa "no dividir", y ponerlo en el papel sería ruido.
+      if @order.dividir_facturas.to_d.positive?
+        lines << "<b>Dividir facturas cada:</b>  #{number_to_currency(@order.dividir_facturas)}"
+      end
       lines.join("\n")
     end
 
