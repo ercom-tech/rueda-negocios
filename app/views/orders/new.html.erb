@@ -158,13 +158,18 @@
                     options: @client.branches.map { |b| [b.label, b.id] }, selected: @order.client_branch_id %>
             </div>
 
-            <%# Solo Factura: monto de división de facturas — combo del
-                catálogo vta_pedido_monto_divide (media columna, como Tipo /
-                Uso de CFDI). El pedido guarda el MONTO elegido, no una FK.
-                Sin catálogo sincronizado, el campo no se muestra (queda 0). %>
-            <% if has_invoice && (divide_amounts = DivideAmount.ordered).any? %>
-            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2"
-                 <%= %(data-order-kind-target="invoice").html_safe if both_kinds %>>
+            <%# Monto de división de facturas — combo del catálogo
+                vta_pedido_monto_divide (media columna, como Tipo / Uso de
+                CFDI). El pedido guarda el MONTO elegido, no una FK. Sin
+                catálogo sincronizado, el campo no se muestra (queda 0).
+
+                Aplica a los DOS tipos, no solo a factura (corrección
+                2026-08-24): el ERP tiene 6,128 remisiones nativas con monto de
+                división, y de forma sostenida — 773 en lo que va de 2026,
+                1,201 en 2025, 1,195 en 2024. Tratarlo como campo exclusivo de
+                factura era una suposición nuestra, no la forma del ERP. %>
+            <% if (divide_amounts = DivideAmount.ordered).any? %>
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
               <div>
                 <span class="mb-1 block text-sm font-semibold text-neutral-900">Dividir facturas cada ($)</span>
                 <%= render "shared/custom_select", name: "order[dividir_facturas]", label: "Dividir facturas cada ($)", include_blank: false,

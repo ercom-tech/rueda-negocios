@@ -13,7 +13,7 @@ module Sync
       @product = Product.create!(erp_product_id: 3, description: "Rotomartillo")
 
       # Remisión: el cliente no tiene perfiles, así que no exige encabezado.
-      # `dividir_facturas` es campo de factura y en una remisión queda en 0.
+      # `dividir_facturas` aplica a los dos tipos; el setup lo deja en 0.
       @order = Order.new(user: @user, business_round: @round, client: @client,
                          kind: "remission", status: "captured", local_folio: "RN-000001")
       @order.order_items.build(product: @product, quantity: 2, unit_price: 100,
@@ -317,13 +317,15 @@ module Sync
       assert_requested req
     end
 
-    test "una remisión no transmite monto de división de facturas" do
-      # El pedido del setup es remisión y se creó con dividir_facturas 5000
-      # (fila anterior a la limpieza del encabezado): no debe viajar.
+    # El monto de división viaja en los DOS tipos: el ERP tiene 6,128
+    # remisiones nativas con monto (773 en 2026, 1,201 en 2025). Antes se
+    # forzaba a 0 en remisión, tratándolo como campo de factura — era una
+    # suposición nuestra, no la forma del ERP.
+    test "una remisión sí transmite su monto de división" do
       @order.update_column(:dividir_facturas, 5000)
 
       req = stub_request(:post, "#{API}/pedidos").with do |request|
-        JSON.parse(request.body)["dividir_facturas"].to_d.zero?
+        JSON.parse(request.body)["dividir_facturas"].to_d == 5000
       end.to_return(status: 201, body: { clave_pedido: "1A0007" }.to_json)
 
       Up.new(API).run!

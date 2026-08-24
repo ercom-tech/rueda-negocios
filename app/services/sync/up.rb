@@ -126,10 +126,10 @@ module Sync
         sucursal:      order.client_branch&.erp_branch_id,
         id_vendedor:   order.client.salesperson&.erp_salesperson_id,
         observaciones: order.observations,
-        # Como consec_remision, atado al tipo y no solo al dato guardado: es
-        # campo de factura, y los pedidos capturados antes de que el encabezado
-        # limpiara su rama inactiva pueden traer un monto que ya no se muestra.
-        dividir_facturas: (order.dividir_facturas if order.invoice?) || 0,
+        # Viaja tal cual en los dos tipos: el ERP acepta remisiones con monto
+        # de división y de hecho tiene 6,128 (corrección 2026-08-24; antes se
+        # forzaba a 0 en remisión). La columna es NOT NULL, de ahí el `|| 0`.
+        dividir_facturas: order.dividir_facturas || 0,
         subtotal:      order.subtotal,
         descto_monto:  order.discount_total,
         iva_monto:     order.tax_total,

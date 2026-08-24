@@ -131,7 +131,7 @@
           <div>
             <span class="block text-xs text-white/50">Dividir facturas</span>
             <span class="font-semibold">
-              <%= @order.invoice? ? (@order.dividir_facturas.positive? ? "cada #{number_to_currency(@order.dividir_facturas)}" : "No dividir") : "—" %>
+              <%= @order.dividir_facturas.positive? ? "cada #{number_to_currency(@order.dividir_facturas)}" : "No dividir" %>
             </span>
           </div>
           <div>

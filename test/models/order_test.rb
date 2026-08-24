@@ -134,7 +134,11 @@ class OrderTest < ActiveSupport::TestCase
     assert_equal receipt.id, order.client_receipt_profile_id
   end
 
-  test "cambiar a remisión también suelta el monto de división de facturas" do
+  # El monto de división NO es campo de factura: el ERP tiene 6,128 remisiones
+  # nativas con monto, sostenidas en el tiempo (773 en 2026, 1,201 en 2025).
+  # Se limpiaba al cambiar de tipo solo porque la pantalla lo escondía en
+  # remisión; ahora se muestra en los dos y el valor se conserva.
+  test "el monto de división sobrevive al cambio de tipo" do
     client, tax, receipt, cfdi = profiles_client
     order = Order.create!(user: @user, business_round: @round, client: client, kind: "invoice",
                           client_tax_profile: tax, cfdi_use: cfdi,
@@ -142,8 +146,8 @@ class OrderTest < ActiveSupport::TestCase
 
     assert order.update(kind: "remission", client_receipt_profile: receipt)
 
-    assert_equal 0, order.reload.dividir_facturas,
-                 "el campo se oculta en remisión: si sobrevive, nadie puede corregirlo"
+    assert_equal 2000, order.reload.dividir_facturas.to_i,
+                 "aplica a los dos tipos: el capturista lo ve y lo corrige en ambos"
   end
 
   test "una factura no conserva el perfil de remisión" do

@@ -144,8 +144,13 @@ Desglose **por partida**: `iva_porcentaje` + `iva_monto`, `descto_porcentaje` +
   discrimina factura de remisión, y `rueda-api` lo impone por si la app lo
   dejara escapar.
 - En una **factura**, `consec_remision` va en 0 (243,318 de 243,334).
-- `dividir_facturas` es **campo de factura**: en remisión va en 0 por decisión
-  nuestra, no del ERP (él sí acepta remisiones con monto: 3,079 de 110,577).
+- `dividir_facturas` **aplica a los dos tipos**, no solo a factura. El ERP
+  tiene **6,128 remisiones nativas con monto** de división —y de forma
+  sostenida: 773 en lo que va de 2026, 1,201 en 2025, 1,195 en 2024—, con los
+  montos del propio catálogo ($5,000: 2,708 · $2,000: 2,631 · $10,000: 576).
+  *(Hasta el 2026-08-24 la app lo trataba como campo de factura y lo forzaba a
+  0 en remisión; era una suposición nuestra. El "3,079 de 110,577" que citaba
+  esta línea salía de un recorte más chico.)*
 - **`total` se redondea a 2 decimales; los demás importes NO.** El ERP redondea
   `total` en cabecera y detalle (7 de 1,245,383 y 10 de 8,694,854 escapan),
   pero deja `subtotal`, `descto_monto` e `iva_monto` con más decimales (1.16M
@@ -187,7 +192,7 @@ Desglose **por partida**: `iva_porcentaje` + `iva_monto`, `descto_porcentaje` +
 | `business_round.erp_round_id` | `id_rueda` (columna nueva del ERP 2026-08-17; 0 = pedido sin rueda — todo el histórico está en 0) |
 | `observations` | `observaciones` (vacía → `' '`) |
 | `order_items.count` | `renglones` |
-| `dividir_facturas` (NUMERIC(18,6); importe máximo por factura al facturar, 0 = no dividir — se captura en el paso 1, solo Factura) | `dividir_facturas` |
+| `dividir_facturas` (NUMERIC(18,6); importe máximo por factura al facturar, 0 = no dividir — se captura en el paso 1, en factura Y en remisión) | `dividir_facturas` |
 | totales | `subtotal`/`descto_monto`/`iva_monto`/`total` |
 | item: `product.erp_product_id`/`quantity`/`unit_price`/`discount_%`/`tax_%` (+ montos) | `id_producto`/`cantidad`/`precio`/`descto_porcentaje`/`iva_porcentaje` (+ `descto_monto`/`iva_monto`/`subtotal`/`total`) |
 | item genérico (999999): `erp_captured_name` (descripción + parte, ≤ 40) | `nombre_capturado` (varchar 40; el resto de las partidas va NULL, la forma nativa — 8.4M la llevan NULL y solo el genérico trae texto) |

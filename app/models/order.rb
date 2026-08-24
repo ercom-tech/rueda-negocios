@@ -10,8 +10,9 @@ class Order < ApplicationRecord
   normalizes :observations, with: ->(text) { text.upcase }
 
   # Importe máximo por factura al facturar el pedido (vta_pedido.
-  # dividir_facturas); 0 = no dividir. Solo tiene sentido en facturas, pero
-  # se guarda siempre (0) para transmitir el encabezado completo.
+  # dividir_facturas); 0 = no dividir. Aplica a facturas Y a remisiones —una
+  # remisión también se factura después—, tal como lo hace el ERP en sus 6,128
+  # remisiones nativas con monto.
   #
   # Acotado al catálogo del ERP: el combo lo ofrece de ahí, pero el valor viaja
   # en un campo oculto y solo se validaba `>= 0`. Un 0.01 forjado se guardaba y
@@ -229,16 +230,16 @@ class Order < ApplicationRecord
   # oculta con CSS los de la rama inactiva, así que se envían igual: un pedido
   # que empezó como factura y terminó como remisión llegaba al ERP con el RFC
   # real del cliente, forma que no existe en ninguna de sus 212,860 remisiones.
-  # `dividir_facturas` entra aquí porque la pantalla lo rotula como campo de
-  # factura y lo oculta en remisión: si sobrevive al cambio de tipo, el
-  # capturista no puede verlo ni corregirlo. El ERP sí tolera remisiones con
-  # monto de división (3,079 de 110,577), así que esto es regla de negocio
-  # nuestra, no forma del ERP — la columna es NOT NULL, va a 0 y no a nil.
+  # `dividir_facturas` NO entra aquí: aplica a los dos tipos. Estuvo en esta
+  # lista mientras la pantalla lo ocultaba en remisión —si sobrevivía al cambio
+  # de tipo, nadie podía corregirlo—, pero esa era una regla nuestra derivada
+  # de esconderlo. El ERP tiene 6,128 remisiones con monto de división, así que
+  # ahora el campo se muestra en ambos y el valor se conserva
+  # (corrección 2026-08-24).
   def clear_inactive_header_branch
     if remission?
       self.client_tax_profile_id = nil
       self.cfdi_use_id           = nil
-      self.dividir_facturas      = 0
     elsif invoice?
       self.client_receipt_profile_id = nil
     end
