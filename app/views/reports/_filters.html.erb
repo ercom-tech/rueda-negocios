@@ -74,12 +74,16 @@
           <svg class="h-5 w-5 shrink-0 text-white/60" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
           <%= text_field_tag :product_q, filter.product_q, "aria-label": "Producto",
                 placeholder: "Producto: código, nombre o No. de parte", autocomplete: "off",
-                role: "combobox", aria: { autocomplete: "list", expanded: "false", controls: "product-filter-results" },
+                role: "combobox", aria: { autocomplete: "list", expanded: "false", controls: "product-filter-listbox" },
                 class: "w-full bg-transparent outline-none placeholder:text-white/60",
                 data: { autocomplete_target: "input", product_filter_target: "input",
                         action: "input->autocomplete#search keydown->autocomplete#navigate change->form-submit#submit" } %>
         </div>
-        <div id="product-filter-results" role="listbox" aria-label="Resultados de producto"
+        <%# Sin `role="listbox"`: el partial ENTERO se inyecta aquí dentro, y un
+        listbox solo admite hijos option/group — el aviso de corte y los
+        mensajes de estado quedaban dentro. El role vive en el <ul> de
+        sugerencias, que sí contiene solo opciones (8ª auditoría). %>
+        <div id="product-filter-results"
              data-autocomplete-target="results" class="absolute inset-x-0 top-full z-30 mt-1"></div>
       </div>
 

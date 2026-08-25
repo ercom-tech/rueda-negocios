@@ -22,10 +22,14 @@ class OrdersController < ApplicationController
     # Uno de más que el tope: si viene, es que hay corte. Es la forma barata de
     # saberlo sin un COUNT sobre el catálogo entero en cada tecla.
     found     = params[:q].present? ? Client.search(params[:q]).limit(Client::SEARCH_LIMIT + 1).to_a : []
-    @truncated = found.size > Client::SEARCH_LIMIT
-    @clients   = found.first(Client::SEARCH_LIMIT)
+    truncated = found.size > Client::SEARCH_LIMIT
+    clients   = found.first(Client::SEARCH_LIMIT)
     order = current_user.orders.find_by(id: params[:order_id])
-    render partial: "client_options", locals: { clients: @clients, order: order }, layout: false
+    # `truncated` va en los locals, no como ivar: el partial lo lee con
+    # `local_assigns`, así que una ivar no le llega y el aviso no se pinta
+    # nunca — el corte volvía a ser silencioso sin que nada fallara (8ª aud.).
+    render partial: "client_options",
+           locals: { clients: clients, order: order, truncated: truncated }, layout: false
   end
 
   def create
@@ -129,7 +133,10 @@ class OrdersController < ApplicationController
     if @order.capture!
       redirect_to summary_order_path(@order)
     else
-      redirect_to @order, alert: "Agrega al menos un producto antes de finalizar."
+      # "guardar el pedido" y no "finalizar": ningún control de la pantalla
+      # dice "finalizar" desde que el botón pasó a "Guardar", y un mensaje que
+      # nombra una acción que no está a la vista no se puede seguir (8ª aud.).
+      redirect_to @order, alert: "Agrega al menos un producto antes de guardar el pedido."
     end
   end
 

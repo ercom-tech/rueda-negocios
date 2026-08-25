@@ -128,7 +128,12 @@ module Sync
         observaciones: order.observations,
         # Viaja tal cual en los dos tipos: el ERP acepta remisiones con monto
         # de división y de hecho tiene 6,128 (corrección 2026-08-24; antes se
-        # forzaba a 0 en remisión). La columna es NOT NULL, de ahí el `|| 0`.
+        # forzaba a 0 en remisión).
+        #
+        # El `|| 0` es red redundante, no necesidad: la columna local es NOT
+        # NULL con default 0 (`db/schema.rb`), así que nunca llega nil. Y la
+        # del ERP —al revés de lo que decía esta nota— sí es nullable. Se
+        # conserva por si el default cambiara, no porque hoy haga falta.
         dividir_facturas: order.dividir_facturas || 0,
         subtotal:      order.subtotal,
         descto_monto:  order.discount_total,

@@ -21,7 +21,8 @@
       doble. No se bloquea (un mismo producto con distinto descuento es
       legítimo); se avisa antes, y el controlador lo repite después. %>
   <% already_in = order.order_items.where.not(product_id: nil).pluck(:product_id, :position).to_h %>
-  <ul class="max-h-80 overflow-auto rounded-2xl border border-black/10 bg-brand-cream shadow-xl">
+  <ul id="product-search-listbox" role="listbox" aria-label="Resultados de producto"
+      class="max-h-80 overflow-auto rounded-2xl border border-black/10 bg-brand-cream shadow-xl">
     <% products.each do |product| %>
       <% existing_position = already_in[product.id] %>
       <li>
@@ -75,10 +76,12 @@
   <%# El corte no puede ser silencioso: con Product::SEARCH_LIMIT sugerencias y
       sin aviso, "no está" y "quedó en el puesto siguiente" se ven igual, y el
       capturista no sabe si refinar la búsqueda o capturarlo fuera de catálogo.
-      FUERA del <ul>: el contenedor es un `role="listbox"` y sus opciones las
-      marca el JS sobre `a, button` — un <li> que no es opción sería ruido
-      para el lector de pantalla. Y aquí queda SIEMPRE a la vista, en vez de
-      al final de un área con scroll. %>
+      Va FUERA del listbox —que es el <ul> de arriba, no el contenedor— porque
+      `listbox` solo admite hijos `option`/`group`: un <p> dentro lo filtran
+      varios lectores de pantalla, que es justo el ruido que se quería evitar.
+      Antes el role vivía en el div contenedor y el partial ENTERO se inyecta
+      ahí, así que el aviso caía dentro sin que se notara (8ª auditoría).
+      Y aquí queda siempre a la vista, debajo del área con scroll. %>
   <% if local_assigns[:truncated] %>
     <p role="status" class="mt-1 rounded-xl border border-black/10 bg-brand-cream px-5 py-2 text-xs font-semibold text-neutral-700 shadow-xl">
       Se muestran las primeras <%= Product::SEARCH_LIMIT %> coincidencias. Si no ves la que buscas, escribe más letras.

@@ -21,7 +21,9 @@ class Client < ApplicationRecord
   #
   # Relevancia: primero los que EMPIEZAN con lo tecleado (en comercial o
   # nombre), luego alfabético por comercial (o nombre si no hay comercial).
-  # Mismo criterio que Product::SEARCH_LIMIT.
+
+  # Mismo tope que el buscador de producto: los dos se recorren igual, y que
+  # diverjan en silencio deja una pantalla avisando del corte y la otra no.
   SEARCH_LIMIT = 50
 
   scope :search, ->(query) {

@@ -65,11 +65,20 @@ module Pdf
     end
 
     # El alto del bloque se MIDE, no se supone. Era un `top - 70` fijo y la
-    # tabla de partidas se dibuja justo ahí: con una dirección larga el bloque
-    # ya se pasaba (71.6 pt en remisión) y en factura —que suma RFC/Razón
-    # Social y Uso CFDI— llegaba a 84.3 pt, así que la tabla TAPABA la última
-    # línea. El texto sí se escribía en el PDF, por eso extraerlo del stream no
-    # lo delataba: tapado e impreso se leen igual (2026-08-24).
+    # tabla de partidas se dibuja justo ahí, así que lo que se pasara quedaba
+    # TAPADO. El texto sí se escribía en el PDF, por eso extraerlo del stream
+    # no lo delataba: tapado e impreso se leen igual (2026-08-24).
+    #
+    # Medido sobre las 153 sucursales reales del catálogo, el peor caso de cada
+    # tipo, ANTES de que existiera la línea "Dividir facturas cada":
+    #
+    #   factura   83.97 pt  → ya se pasaba: ~14 pt tapados. Preexistente.
+    #   remisión  58.86 pt  → cabía de sobra.
+    #
+    # Con la línea nueva la remisión sube a 71.6 y la factura a 84.3. O sea que
+    # en factura el defecto ya estaba y en remisión lo INTRODUJO esa línea —
+    # esta nota decía "preexistente" a secas, que era cierto solo para una de
+    # las dos ramas (corregido en la 8ª auditoría).
     INFO_MIN_HEIGHT = 70
     # Aire entre el bloque de datos y la tabla de partidas.
     INFO_GAP = 4
@@ -129,10 +138,35 @@ module Pdf
       pdf.move_down 12
     end
 
+    # El pie se dibuja donde la tabla de partidas dejó el cursor, y su
+    # `bounding_box` sin `height` hereda como alto lo que sobre de la hoja.
+    # Cuando la tabla termina cerca del margen inferior, prawn-table pagina el
+    # pie RENGLÓN POR RENGLÓN —una hoja por renglón—, y si la tabla cuadró
+    # exacta con la hoja no cabe ni uno: los cuatro totales y el importe en
+    # letra no se escriben a ningún stream. El pedido se imprime sin totales,
+    # con hojas en blanco detrás, y `render` no levanta nada — el papel se
+    # entrega y se firma así.
+    #
+    # No es un conteo de partidas concreto: la franja se repite cerca de CADA
+    # salto de página (~19-23, ~32-34, ~52-55…) y se mueve con el alto de la
+    # tabla, así que la dispara igual una descripción que se parte en dos
+    # líneas. Los regalos la vuelven mucho más probable: el prefijo
+    # "REGALO — " deja la mayoría de los renglones a doble alto.
+    #
+    # Por eso el alto del pie se MIDE y se salta de hoja antes de dibujarlo.
+    # `make_table` construye la tabla sin dibujarla, que es la única forma de
+    # preguntarle su alto (8ª auditoría).
     def render_footer(pdf)
+      totals = totals_table(pdf)
+      needed = [ totals.height, left_footer_height(pdf) ].max
+      # La segunda condición evita una hoja en blanco cuando el pie no cabe ni
+      # en una página vacía (unas observaciones larguísimas): ahí partirlo es
+      # lo menos malo, y saltar no arregla nada.
+      pdf.start_new_page if pdf.cursor < needed && needed <= pdf.bounds.height
+
       y = pdf.cursor
       # Importe en letra + observaciones (izquierda, en flujo)
-      pdf.bounding_box([ 0, y + 4 ], width: 440) do
+      pdf.bounding_box([ 0, y + 4 ], width: FOOTER_LEFT_WIDTH) do
         pdf.text amount_in_words(printed_total(:total)), size: 9, style: :bold
         if @order.observations.present?
           pdf.move_down 6
@@ -140,28 +174,52 @@ module Pdf
         end
       end
 
-      # Totales (derecha) — de los mismos importes que imprime la tabla.
+      # Flush a la derecha contra el borde de la tabla de partidas: la columna
+      # de montos sin padding derecho, para que los números terminen exactamente
+      # en bounds.right (el mismo borde derecho de la tabla).
+      pdf.bounding_box([ pdf.bounds.right - FOOTER_TOTALS_WIDTH, y ], width: FOOTER_TOTALS_WIDTH) do
+        totals.draw
+      end
+    end
+
+    FOOTER_LEFT_WIDTH   = 440
+    FOOTER_TOTALS_WIDTH = 230
+
+    # Totales (derecha) — de los mismos importes que imprime la tabla.
+    # `make_table` en vez de `table`: se construye una sola vez, se le pregunta
+    # el alto para decidir el salto de hoja y se dibuja después con `draw`.
+    def totals_table(pdf)
       rows = [
         [ "Subtotal",  number_to_currency(printed_total(:amount)) ],
         [ "Descuento", number_to_currency(printed_total(:discount)) ],
         [ "IVA",       number_to_currency(printed_total(:tax)) ],
         [ "Total",     number_to_currency(printed_total(:total)) ]
       ]
-      # Flush a la derecha contra el borde de la tabla de partidas: la columna
-      # de montos sin padding derecho, para que los números terminen exactamente
-      # en bounds.right (el mismo borde derecho de la tabla).
-      pdf.bounding_box([ pdf.bounds.right - 230, y ], width: 230) do
-        pdf.table(rows, column_widths: [ 130, 100 ],
-                        cell_style: { borders: [], padding: [ 1, 0, 1, 6 ], size: 10 }) do
-          column(0).font_style = :bold
-          column(1).align      = :right
-          column(1).font_style = :bold
-          row(-1).borders          = [ :top ]
-          row(-1).border_top_width = 0.5
-          row(-1).size             = 12
-          row(-1).padding          = [ 4, 0, 1, 6 ]
-        end
+      pdf.make_table(rows, column_widths: [ 130, 100 ],
+                           cell_style: { borders: [], padding: [ 1, 0, 1, 6 ], size: 10 }) do
+        column(0).font_style = :bold
+        column(1).align      = :right
+        column(1).font_style = :bold
+        row(-1).borders          = [ :top ]
+        row(-1).border_top_width = 0.5
+        row(-1).size             = 12
+        row(-1).padding          = [ 4, 0, 1, 6 ]
       end
+    end
+
+    # Alto del bloque izquierdo del pie. El `+ 4` no compensa nada: el bloque
+    # abre 4 pt ARRIBA del cursor, así que necesita 4 menos — se suman como
+    # margen para no quedar al filo por un redondeo.
+    def left_footer_height(pdf)
+      height = pdf.height_of(amount_in_words(printed_total(:total)),
+                             size: 9, style: :bold, width: FOOTER_LEFT_WIDTH)
+      if @order.observations.present?
+        formatted = Prawn::Text::Formatted::Parser.format(
+          "<b>Observaciones:</b>  #{esc(@order.observations)}"
+        )
+        height += 6 + pdf.height_of_formatted(formatted, size: 9, width: FOOTER_LEFT_WIDTH)
+      end
+      height + 4
     end
 
     # El folio y el número de página van al pie de CADA hoja. Un pedido de 45

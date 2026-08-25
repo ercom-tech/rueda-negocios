@@ -9,7 +9,7 @@ aprendizajes de lo que ya se hizo.
 
 ## Prioridad alta
 
-### Desplegar lo remediado (4ª a 6ª) en la laptop y en la VM de testing
+### Desplegar lo remediado (4ª a 8ª) en la laptop y en la VM de testing
 
 **Nada está desplegado desde antes de la 4ª** (la API de testing corre
 `b43495a`, del 30-jul: ni siquiera trae el arreglo de remisiones). Con el
@@ -29,15 +29,25 @@ viejo quedó caduco — verificado en la 6ª auditoría:
 - **Ventana: ni transmitir NI obtener información** hasta que ambos lados
   estén parejos. Tras actualizar la laptop, re-correr sync-down contra la
   API nueva antes de capturar.
-- **En la laptop:** `bin/rails db:migrate` (dos migraciones nuevas: pid y
-  credit_wholesale_price) + `bin/rails tailwindcss:build`.
+- **En la laptop:** `bin/rails db:migrate` (migraciones de pid,
+  credit_wholesale_price y las de promociones) + `bin/rails
+  tailwindcss:build` (obligatorio: hay clases nuevas en cada lote).
 - **Checks post-deploy** (transmitir un pedido de prueba con una partida del
   genérico): `id_rueda ≠ 0`, `nombre_capturado` poblado (≤40), precio de
   partida = `cred_mayoreo_precio`, y los de remisión de siempre
   (`consec_remision ≠ 0`, `rfc = XAXX010101000`, `c_UsoCFDI = S01`,
-  `fecha_crea` = captura).
+  `fecha_crea` = captura). **Y uno que faltaba:** transmitir una REMISIÓN con
+  monto de división y comprobar `dividir_facturas ≠ 0` — es lo único que
+  comprueba la corrección del 2026-08-24 contra el ERP.
+- **Imprimir el PDF de un pedido de ~20 partidas** y verificar que trae los
+  cuatro totales y el importe en letra en la misma hoja. Es el check de la 8ª
+  auditoría: en esa franja el papel salía sin totales y con hojas en blanco.
 - **Cambios visibles** que anunciar: coral `#bd5343`, favicon de tuerca,
-  rojo de avisos más oscuro, mensajes nuevos del panel y del 422.
+  rojo de avisos más oscuro, mensajes nuevos del panel y del 422; y del lote
+  de promociones: la flama de promoción, el coral movido al **Subtotal**, el
+  botón que ahora dice **"Guardar"**, el aviso "Se muestran las primeras 50
+  coincidencias" en los buscadores, y la línea "Dividir facturas cada" en el
+  PDF.
 - Candidato aparte: no existe handshake de versión laptop↔API (`/` y
   `/health` no la exponen) — esta clase de desfase seguirá siendo invisible
   hasta que exista.
@@ -140,6 +150,35 @@ como copia de respaldo por si el folio se llegara a armar del lado de la app.
 - Cotización.
 
 
+### Mostrar el monto de división que el cliente ya tiene configurado (BAJA)
+
+`vta_cliente.dividir_facturas` existe en el ERP (201 de 42,472 clientes) y no
+se exporta, así que el combo del paso 1 siempre arranca en 0. De los 112
+clientes de la rueda 3, **tres** lo tienen: CONDAV $25,000, MASAAA $5,000,
+SARUCA $2,000.
+
+**Lo que NO hay que hacer es precargarlo.** La verificación adversarial de la
+8ª auditoría mostró que el ERP tampoco lo prefilla —la coincidencia
+cliente↔pedido va de 50.5% a 99.5% *según quién captura*, y sobre el mismo
+cliente un capturista coincide 0% y otro 93.8%: se teclea a mano— y que el 0
+se elige a propósito el 12% de las veces sobre clientes que sí tienen tope
+(1,096 de esos 1,490 pedidos superaban el tope y aun así se capturaron en 0).
+Precargarlo rompería paridad con el ERP y con la práctica real.
+
+Lo defendible es **exportarlo y mostrarlo como dato informativo** junto al
+combo ("este cliente suele dividir cada $25,000"), dejando la decisión al
+capturista. Sin daño observable en 2.5 años: los pedidos del escenario temido
+cancelan menos que el promedio (0.56% vs 0.75%) y se pagan al 100%.
+
+### Montos de división fuera del catálogo (BAJA, asimetría)
+
+El ERP tiene pedidos con montos que no están en `vta_pedido_monto_divide`
+(7,000, 20,000, 40,000, 43,500, 160,000, 300,000 — uno cada uno, legacy).
+Nuestro `Order#dividir_facturas_in_catalog` los rechazaría, mientras que
+`rueda-api/app/queries/order_create.rb` los acepta sin validar contra el
+catálogo. No es defecto activo —el combo solo ofrece los del catálogo—, pero
+las dos puntas no coinciden en qué consideran válido.
+
 ## Definiciones con FECEGO
 
 ### Timbrar una factura con una partida de regalo al 100% (antes del 27-ago)
@@ -152,20 +191,28 @@ Lo que ya está verificado contra el ERP de desarrollo (2026-08-24):
 
 - Existen **612 conceptos de CFDI con `descto_porcentaje = 100`**, y **605 en
   facturas con `pac_ok = true` y UUID del SAT** (597 vigentes + 8 canceladas
-  después, por otra razón). Con precios reales: uno de $235.95 y otro de
-  $277.83, ambos timbrados y sellados.
-- Su tasa de fallo es **1.14%**, contra **19.84%** de todas las facturas del
-  ERP: los conceptos al 100% timbran MEJOR que el promedio.
-- Un concepto en cero dentro de un CFDI timbrado es rutina aquí: **5.36M
-  conceptos con total $0.00** en 467,095 facturas.
+  después, por otra razón). Con precios reales: **4 conceptos de $235.95 y 14
+  de $277.83**, todos timbrados y sellados.
+- Su tasa de fallo es **0.82%** (5 de 609 conceptos al 100% dentro de
+  comprobantes tipo I), contra **13.91%** de todos los conceptos de facturas
+  del ERP: los conceptos al 100% timbran MEJOR que el promedio.
+  *(La versión anterior comparaba 1.14% por concepto contra 19.84% por
+  comprobante, y ese 19.84% incluía notas de crédito y pagos —1.23M de filas
+  que casi nunca fallan—. Facturas de verdad fallan 37.73%. Corregido en la
+  8ª auditoría: mismas unidades a los dos lados, y la conclusión se refuerza.)*
+- Un concepto en cero dentro de un CFDI timbrado es rutina aquí: **5.05M
+  conceptos con total $0.00 en 466,373 CFDI timbrados** (con `pac_ok` y UUID;
+  sin filtrar por timbrado son 5.36M en 467,095).
 
 Lo que NO se pudo cerrar desde la base: de los 7 que no timbraron, dos traen
 **CFDI33147 — "El valor del campo ValorUnitario debe ser mayor que cero"**.
 Esa regla del SAT habla del *precio unitario*, no del importe, y esos dos
 tenían el precio en 0 — un caso distinto al nuestro, que manda el precio de
 lista. Pero los otros cinco dicen solo *"Error en la estructura del XML
-respecto al ANEXO 20"* (tres con `pac_error_code = 0` y descripción `?`), así
-que no se puede afirmar que ninguno venga del importe en cero.
+respecto al ANEXO 20"*: 3 con `pac_error_code = 0` —dos con descripción `?` y
+una con el texto del ANEXO 20— y 2 con código 8100. Así que no se puede
+afirmar que ninguno venga del importe en cero. Dato que acota el pendiente:
+**2 de los 7 no son facturas sino notas de crédito** (tipo E).
 
 **Cómo se cierra:** transmitir a testing un pedido con regalo (receta en la
 guía de despliegue: FANDELI, 3 piezas del 027049 = $27,950 → 9% + esmeril

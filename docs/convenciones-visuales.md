@@ -26,7 +26,7 @@ desde `CLAUDE.md`. El relato de cómo se llegó a cada una vive en `memory.md`.
 | Dorado | Navegación y acciones (cards de menú, botones, badge Capturado) |
 | Crema | **Toda** superficie de contenido, fija o flotante (tablas, forms, totales, dropdowns, avisos) |
 | Negro | Controles de captura (buscadores, selects, `thead`) y barras de título |
-| Coral | Acción primaria o culminación (Finalizar, Total, badge Transmitido) |
+| Coral | Acción primaria o culminación (Guardar, Subtotal, flama disponible, badge Transmitido) |
 | Rojo | **Solo** error: flash de alerta (`red-700`), anillos de campo faltante, motivos de falla del panel |
 | Neutral-700 | Acción secundaria o destructiva-con-modal (Editar, Descartar, Cancelar, Cerrar rueda) |
 | Emerald | **Solo** feedback global (flash, "✓ Listo" del sync) |
@@ -56,14 +56,18 @@ superficie, no de trazo.
 En la práctica no hizo falta: el ícono que más debe llamar la atención de la
 tabla —la flama de promoción "disponible"— va en **coral de superficie**
 (píldora rellena, ícono blanco), el mismo tono del botón primario y del
-renglón Total, que es lo que el ojo ya busca en esa pantalla. Blanco sobre
+renglón Subtotal, que es lo que el ojo ya busca en esa pantalla. Blanco sobre
 coral da 4.69:1 y coral sobre crema 4.04:1.
 
 **Un estado no se distingue solo por el matiz.** Los tres de la flama se
 separan por FORMA: píldora rellena (disponible) · trazo coral (aplicada) ·
 trazo `neutral-600` (en reposo, el tono ya validado sobre crema). Con solo
 color, "aplicada" y "en reposo" compartían silueta y su contraste entre sí era
-de 1.67:1 — y en deuteranopia el coral cae a 2.31:1.
+de 1.67:1 — y en deuteranopía (Viénot 1999) esos dos trazos quedan a **1.96:1**
+entre sí, o sea que la distinción se pierde casi por completo. Toda cifra de
+simulación va con el modelo y con el par medido: el "2.31:1" que decía antes
+esta línea no se reproduce con ninguna lectura, y sin decir contra qué
+superficie era imposible comprobarlo (8ª auditoría).
 
 **Nada de paneles translúcidos** (`bg-white/5`, `bg-white/10`) como superficie
 de contenido: sobre el shell negro con patrón se lavan y el bloque "no se

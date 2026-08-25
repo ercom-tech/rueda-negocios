@@ -1,14 +1,23 @@
 <%# Totales del pedido. Locals: order. Id "order-totals" para el Turbo replace.
 
     El coral resalta el SUBTOTAL, no el Total (decisión del usuario
-    2026-08-24): es la cifra sobre la que aplican las promociones —el acumulado
-    que elige el escalón es el importe bruto—, así que es la que el capturista
-    vigila mientras arma el pedido y la que le canta al cliente para llegar al
-    siguiente descuento. El Total se queda en negritas y con una línea que lo
-    separa: sigue siendo el cierre de la columna, sin competir por la mirada. %>
+    2026-08-24): es la cifra bruta que el capturista le canta al cliente
+    mientras arma el pedido, antes de descuentos e IVA.
+
+    Ojo con el porqué: NO es "la cifra sobre la que aplican las promociones",
+    como decía este comentario. El acumulado que elige el escalón suma solo las
+    partidas de ESA promoción —no el pedido entero— y 23 de las 38 promociones
+    de la rueda se miden en PIEZAS, no en pesos. Para la mayoría, vigilar el
+    Subtotal no dice cuándo cae el siguiente descuento; eso lo dice el modal
+    ("Llevas X, te faltan Y"). (8ª auditoría.)
+
+    El Total cierra la columna con tamaño, negritas y un filete que se ve:
+    `border-black/15` daba 1.41:1 sobre crema y era lo único que lo separaba
+    del bloque de arriba. `tabular-nums` en los cuatro importes para que las
+    comas decimales queden en columna entre renglones. %>
 <div id="order-totals" class="w-full overflow-hidden rounded-2xl border border-black/10 bg-brand-cream text-sm text-neutral-900 lg:w-80">
-  <div class="flex justify-between bg-brand-coral px-5 py-3 font-bold text-white"><span>Subtotal</span><span><%= number_to_currency(order.subtotal) %></span></div>
-  <div class="flex justify-between px-5 py-2"><span>Descuento</span><span><%= number_to_currency(order.discount_total) %></span></div>
-  <div class="flex justify-between px-5 py-2"><span>IVA</span><span><%= number_to_currency(order.tax_total) %></span></div>
-  <div class="flex justify-between border-t border-black/15 px-5 py-3 text-base font-bold"><span>Total</span><span><%= number_to_currency(order.total) %></span></div>
+  <div class="flex justify-between bg-brand-coral px-5 py-3 font-bold text-white"><span>Subtotal</span><span class="tabular-nums"><%= number_to_currency(order.subtotal) %></span></div>
+  <div class="flex justify-between px-5 py-2"><span>Descuento</span><span class="tabular-nums"><%= number_to_currency(order.discount_total) %></span></div>
+  <div class="flex justify-between px-5 py-2"><span>IVA</span><span class="tabular-nums"><%= number_to_currency(order.tax_total) %></span></div>
+  <div class="flex justify-between border-t-2 border-black/30 px-5 py-3 text-lg font-bold"><span>Total</span><span class="tabular-nums"><%= number_to_currency(order.total) %></span></div>
 </div>

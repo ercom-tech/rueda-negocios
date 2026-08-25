@@ -150,7 +150,10 @@ Desglose **por partida**: `iva_porcentaje` + `iva_monto`, `descto_porcentaje` +
   montos del propio catálogo ($5,000: 2,708 · $2,000: 2,631 · $10,000: 576).
   *(Hasta el 2026-08-24 la app lo trataba como campo de factura y lo forzaba a
   0 en remisión; era una suposición nuestra. El "3,079 de 110,577" que citaba
-  esta línea salía de un recorte más chico.)*
+  esta línea era CORRECTO para su recorte —remisiones del flujo de pedido
+  desde 2024: 2.78%, contra 2.84% del universo completo— y ya decía lo mismo
+  que dice esta línea. Lo que falló no fue la medición sino la conclusión que
+  se sacó de ella.)*
 - **`total` se redondea a 2 decimales; los demás importes NO.** El ERP redondea
   `total` en cabecera y detalle (7 de 1,245,383 y 10 de 8,694,854 escapan),
   pero deja `subtotal`, `descto_monto` e `iva_monto` con más decimales (1.16M

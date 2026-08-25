@@ -180,6 +180,37 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
 - Las tablas de personas usan **0 como "sin valor"** (`id_proveedor`,
   `id_marca`): `NULLIF` al exportar, o se pierden filas legítimas.
 
+## PDF (Prawn)
+
+- **Un `bounding_box` sin `height` hereda como alto lo que sobre de la hoja.**
+  Si lo que va dentro no cabe en ese resto, prawn-table lo **pagina renglón por
+  renglón** —una hoja por renglón— y, si el cursor quedó pegado al margen, no
+  dibuja **nada**: el contenido no se escribe a ningún stream y `render`
+  devuelve el documento sin levantar excepción ni log. Así salía el pie del
+  pedido (importe en letra + los cuatro totales) en el 2% de los casos, con
+  hojas en blanco detrás, en el papel que firma el cliente.
+  Todo bloque que deba salir entero mide su alto y salta de hoja antes:
+  `pdf.start_new_page if pdf.cursor < alto`. El alto de una tabla se obtiene
+  con **`pdf.make_table(rows, …).height`** —construir sin dibujar— y el de un
+  texto con `height_of` / `height_of_formatted`.
+- **`pdf.group` NO existe como salida.** En prawn 2.5.0 está deshabilitado y
+  levanta `NotImplementedError` ("lead to corrupted documents whenever a page
+  boundary was crossed"). Es la primera sugerencia que aparece al buscar el
+  problema anterior, y cuesta un ciclo entero comprobarla.
+- **La franja mala no es un número de partidas, es una posición.** Se repite
+  cerca de **cada** frontera de página y se mueve con el alto de la tabla: la
+  dispara igual una descripción que se parte en dos líneas. Los regalos la
+  vuelven mucho más probable (el prefijo "REGALO — " deja el 82% de los
+  renglones a doble alto) y además **no cuentan contra `MAX_ITEMS`**, así que
+  el impreso puede rebasar los 45 renglones. Por eso la prueba **barre un
+  rango** en vez de fijar un conteo.
+- **Extraer el texto del stream no prueba que se VEA.** Un bloque tapado por la
+  tabla que se dibuja encima se extrae idéntico a uno visible; lo que hay que
+  medir ahí es el espacio **reservado** frente al **ocupado**. Y al revés: para
+  ver si algo se partió entre hojas hay que leer el texto **por página**,
+  porque juntando las páginas un pie repartido en cuatro se lee como uno bien
+  puesto.
+
 ## Jobs y estado de corridas
 
 - Un registro de corrida (`SyncRun`) nace `running` con el **pid de su

@@ -34,19 +34,28 @@ module PromotionsHelper
   # crema) y como superficie ya no hace falta.
   #
   # Solo el COLOR cambia entre estados. La forma (`rounded-full`) vive en la
-  # base aunque el estado no tenga fondo: `transition-colors` anima el color
-  # pero NO el `border-radius`, así que con la forma en el estado el botón se
+  # base aunque el estado no tenga fondo: una transición anima el color pero
+  # NO el `border-radius`, así que con la forma en el estado el botón se
   # volvía cuadrado de golpe mientras su fondo seguía desvaneciéndose — un
   # cuadro apagándose al bajar la cantidad y perder el escalón.
+  #
+  # El cambio de estado va SIN transición, y eso es deliberado: la píldora de
+  # fondo es un nodo condicional que desaparece de golpe, así que animar el
+  # color del ícono lo dejaba ~150 ms en blanco sobre crema (1.16:1) al pasar
+  # de `available` a `applied` — la flama se borraba justo al cruzar un
+  # escalón, que es la interacción más común de la captura. Instantáneo, el
+  # ícono y su fondo cambian en el mismo frame. La transición se conserva solo
+  # en `offered`, que no tiene fondo y cuyo hover va de neutral a coral sobre
+  # crema: ahí ningún paso intermedio se lava (8ª auditoría).
   FLAME_CLASSES = {
     applied:   "text-brand-coral",
     available: "text-white",
-    offered:   "text-neutral-600 hover:text-brand-coral"
+    offered:   "text-neutral-600 transition-colors hover:text-brand-coral"
   }.freeze
 
   def promotion_flame_class(state)
     "relative inline-flex h-11 w-11 items-center justify-center rounded-full " \
-      "transition-colors #{FLAME_CLASSES.fetch(state)}"
+      "#{FLAME_CLASSES.fetch(state)}"
   end
 
   # El fondo coral que late, como capa aparte y solo en `available`.
@@ -56,6 +65,19 @@ module PromotionsHelper
   # el coral y el blanco del ícono se laven durante ese medio segundo.
   # Decisión del usuario (2026-08-24) tras probar una variante más discreta
   # (1 → .85): se queda el .5. Si alguien lo cambia, que sea por lo mismo.
+  #
+  # El costo, medido después (8ª auditoría) y dejado aquí para que la decisión
+  # se tome con el número a la vista, no para revertirla:
+  #
+  #   opacidad   píldora    ícono/píldora   píldora/crema   (piden 3:1)
+  #   1.0        #bd5343    4.69 ✓          4.04 ✓
+  #   0.85       #c56a5a    3.76 ✓          3.24 ✓
+  #   0.5        #d9a08f    2.24 ✗          1.93 ✗
+  #
+  # O sea: la mitad de cada ciclo la flama queda por debajo del mínimo de AA
+  # para elementos gráficos. Si algún día se quiere el latido sin ese costo, la
+  # salida NO es subir el piso —eso ya se descartó— sino dejar la píldora opaca
+  # y latir un `ring` alrededor, que no toca el contraste del ícono.
   #
   # `animate-pulse` anima la opacidad del elemento que la lleva: puesta en el
   # botón, al quitarse la clase la opacidad saltaba de ~0.5 a 1 de un frame al

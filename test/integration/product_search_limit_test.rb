@@ -1,9 +1,15 @@
 require "test_helper"
 
-# El tope del buscador y su aviso. Era 10 y silencioso: sobre el catálogo real
-# de la rueda, "LIJA" da 256 coincidencias y "TORNILLO" 228, así que 9 de cada
-# 10 búsquedas por palabra completa se cortaban sin decirlo — y "no está" se
-# veía igual que "quedó en el puesto 11".
+# El tope de los buscadores y su aviso. Era 10 y silencioso: sobre el catálogo
+# real de la rueda, "LIJA" da 256 coincidencias, "TORNILLO" 228 y "LLAVE" 178,
+# así que el corte era la regla y no la excepción — y "no está" se veía igual
+# que "quedó en el puesto 11".
+#
+# El recorte de esa afirmación, que antes faltaba: contando productos distintos
+# por palabra de 4+ letras de `products.description`, el 90% de las 1,000
+# palabras MÁS FRECUENTES rebasa 10 coincidencias; sobre las 12,166 palabras
+# distintas del catálogo (la mayoría casi nunca tecleadas) es el 7.4%. Lo que
+# importa es lo primero: se teclea lo frecuente (8ª auditoría).
 class ProductSearchLimitTest < ActionDispatch::IntegrationTest
   setup do
     @user  = User.create!(erp_person_id: 9501, username: "cap_bus", password: "secret123",
@@ -75,5 +81,54 @@ class ProductSearchLimitTest < ActionDispatch::IntegrationTest
 
     assert_equal Product::SEARCH_LIMIT, response.body.scan(/<li>/).size
     assert_no_match(/Se muestran las primeras/, response.body)
+  end
+
+  # --- El buscador de CLIENTE, que no tenía ninguna prueba ------------------
+  # El controlador calculaba el corte en una ivar y el partial lo lee de los
+  # locals, así que el aviso no se pintaba NUNCA: quedó como código muerto que
+  # nada delataba —ninguna prueba tocaba esta ruta— mientras el buscador de
+  # producto, con el mismo texto, sí funcionaba (8ª auditoría).
+  def make_clients(count)
+    count.times { |i| Client.create!(erp_client_key: "FER#{i.to_s.rjust(3, '0')}", name: "FERRETERIA #{i}") }
+  end
+
+  test "el buscador de cliente devuelve hasta el tope" do
+    make_clients(60)
+
+    get client_options_orders_path, params: { q: "FERRETERIA" }
+
+    assert_equal Client::SEARCH_LIMIT, response.body.scan(/<li>/).size
+  end
+
+  test "cuando hay más clientes que el tope, se dice" do
+    make_clients(60)
+
+    get client_options_orders_path, params: { q: "FERRETERIA" }
+
+    assert_match(/Se muestran las primeras #{Client::SEARCH_LIMIT} coincidencias/, response.body)
+    assert_match(/escribe más letras/, response.body)
+  end
+
+  test "sin corte no aparece el aviso de clientes" do
+    make_clients(3)
+
+    get client_options_orders_path, params: { q: "FERRETERIA" }
+
+    assert_equal 3, response.body.scan(/<li>/).size
+    assert_no_match(/Se muestran las primeras/, response.body)
+  end
+
+  # El aviso no puede colgar del listbox: ese role solo admite option/group.
+  test "el aviso de corte queda fuera del listbox" do
+    make_clients(60)
+
+    get client_options_orders_path, params: { q: "FERRETERIA" }
+
+    # El <ul> es el listbox y cierra ANTES del aviso.
+    listbox_end = response.body.index("</ul>")
+    aviso       = response.body.index("Se muestran las primeras")
+    assert listbox_end && aviso, "deben existir el listbox y el aviso"
+    assert_operator listbox_end, :<, aviso, "el aviso quedó dentro del listbox"
+    assert_match(/<ul[^>]*role="listbox"/, response.body)
   end
 end

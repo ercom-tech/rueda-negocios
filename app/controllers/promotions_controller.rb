@@ -92,8 +92,10 @@ class PromotionsController < ApplicationController
     # Y si un regalo que la escalera prometía no se pudo agregar, se dice: el
     # capturista ya se lo ofreció al cliente.
     if group.missing_gifts.any?
+      # "guardar el pedido": el botón de la pantalla dice "Guardar", no
+      # "Finalizar" — el mensaje tiene que nombrar el control que se ve.
       message += " No se pudo agregar #{group.missing_gifts.to_sentence}: " \
-                 "avísale al equipo del servidor antes de finalizar."
+                 "avísale al equipo del servidor antes de guardar el pedido."
     end
     message
   end

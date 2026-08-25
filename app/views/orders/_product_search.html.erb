@@ -23,7 +23,7 @@
       <input type="text" autocomplete="off" <%= "disabled" if limit_reached %>
              placeholder="<%= limit_reached ? "Alcanzaste el máximo de #{Order::MAX_ITEMS} partidas" : "Busca por código, nombre, modelo o No. de parte" %>"
              role="combobox" aria-autocomplete="list" aria-expanded="false"
-             aria-controls="product-search-results" aria-label="Buscar producto"
+             aria-controls="product-search-listbox" aria-label="Buscar producto"
              data-autocomplete-target="input"
              data-action="input->autocomplete#search keydown->autocomplete#navigate"
              class="w-full bg-transparent outline-none disabled:opacity-100 <%= limit_reached ? "placeholder:font-semibold placeholder:text-neutral-900" : "placeholder:text-neutral-800" %>" />
@@ -35,7 +35,11 @@
       Partidas <%= order.items_count_for_limit %> / <%= Order::MAX_ITEMS %>
     </span>
   </div>
-  <div id="product-search-results" role="listbox" aria-label="Resultados de producto"
+  <%# Sin `role="listbox"`: el partial ENTERO se inyecta aquí dentro, y un
+      listbox solo admite hijos option/group — el aviso de corte y los
+      mensajes de estado quedaban dentro. El role vive en el <ul> de
+      sugerencias, que sí contiene solo opciones (8ª auditoría). %>
+  <div id="product-search-results"
        data-autocomplete-target="results"
        class="absolute inset-x-0 top-full z-20 mt-1"></div>
 </div>

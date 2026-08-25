@@ -59,21 +59,95 @@ module Pdf
     # acentos van en Windows-1252. Se descartan los streams sin texto — el del
     # logo son píxeles.
     def pdf_text(order = @order)
+      pdf_pages(order).join(" ")
+    end
+
+    # Lo mismo, pero SIN juntar las hojas: un elemento por página. Juntarlas
+    # esconde justo el defecto de abajo — un pie repartido en cuatro hojas se
+    # lee igual que uno bien puesto.
+    def pdf_pages(order = @order)
       raw = OrderGenerator.new(order.reload).render
 
-      streams = raw.scan(/stream\r?\n(.*?)\r?\nendstream/m).flatten.filter_map do |chunk|
+      raw.scan(/stream\r?\n(.*?)\r?\nendstream/m).flatten.filter_map do |chunk|
         # Prawn no comprime por omisión, pero puede hacerlo.
         content = begin
           Zlib::Inflate.inflate(chunk.b)
         rescue Zlib::Error
           chunk.b
         end
-        content if content.include?("BT")
-      end
+        next unless content.include?("BT")
 
-      streams.join(" ").scan(/\[(.*?)\]\s*TJ/m).flatten.map do |chunks|
-        chunks.scan(/<([0-9A-Fa-f]+)>/).flatten.map { |hex| [ hex ].pack("H*") }.join
-      end.join(" ").force_encoding("Windows-1252").encode("UTF-8", invalid: :replace, undef: :replace)
+        content.scan(/\[(.*?)\]\s*TJ/m).flatten.map do |chunks|
+          chunks.scan(/<([0-9A-Fa-f]+)>/).flatten.map { |hex| [ hex ].pack("H*") }.join
+        end.join(" ").force_encoding("Windows-1252").encode("UTF-8", invalid: :replace, undef: :replace)
+      end
+    end
+
+    # Pedido aparte con N partidas, para barrer alturas de tabla sin arrastrar
+    # el estado del pedido del setup. La descripción y los regalos son
+    # parámetros porque cada forma mueve la franja a otro conteo.
+    def order_with_items(count, description: "PRODUCTO", gift: false)
+      order = Order.create!(user: @user, business_round: @round, client: @client, kind: "remission")
+      count.times do |i|
+        @seq = (@seq || 950_000) + 1
+        product = Product.create!(erp_product_id: @seq, description: description, max_discount: 50)
+        item = order.order_items.new(product: product, position: i + 1, quantity: 1,
+                                     unit_price: BigDecimal("1234.56"), discount_percent: 0,
+                                     tax_rate: 16, code: "0001", description: description, unit: "PZA")
+        # Los regalos se crean desde Promotions::Group, con su promoción; aquí
+        # interesa solo su efecto en el papel (el prefijo "REGALO — ", que
+        # manda la mayoría de los renglones a doble alto).
+        item.gift = true if gift && i.even?
+        item.save!(validate: false)
+      end
+      order.reload
+    end
+
+    # Descripción que se parte en dos líneas en la columna de 197 pt: el 6.5%
+    # del catálogo real lo hace, y con el prefijo de regalo lo hace el 82%.
+    DESCRIPCION_LARGA = "MARTILLO DEMOLEDOR HM1810 CON MALETIN Y JUEGO DE CINCELES DE REPUESTO".freeze
+
+    # El pie —importe en letra y los cuatro totales— se dibujaba donde quedara
+    # el cursor, en un `bounding_box` sin alto. Cerca de cada salto de hoja no
+    # cabía y prawn-table lo repartía RENGLÓN POR RENGLÓN, una hoja cada uno; y
+    # cuando la tabla cuadraba exacta con la hoja no se escribía NADA: el
+    # pedido salía sin Subtotal, sin Descuento, sin IVA, sin Total y sin
+    # importe en letra, con hojas en blanco detrás. `render` no levantaba
+    # excepción, así que el papel se imprimía y se firmaba así.
+    #
+    # Barrido y no un conteo fijo: la franja se repite cerca de cada frontera
+    # de página y se mueve con el alto de la tabla, así que un solo número
+    # dejaría de probar el defecto en cuanto cambie el encabezado (8ª aud.).
+    # Los tres tramos son los que un barrido de 1 a 60 marcó como defectuosos
+    # antes del arreglo — 28 de 180 combinaciones.
+    test "el pie completo cae en UNA hoja para cualquier numero de partidas" do
+      casos = [
+        { rango: 18..24, description: "PRODUCTO",          gift: false },
+        { rango: 11..15, description: DESCRIPCION_LARGA,   gift: false },
+        { rango: 9..13,  description: DESCRIPCION_LARGA,   gift: true }
+      ]
+
+      casos.each do |caso|
+        caso[:rango].each do |n|
+          order = order_with_items(n, description: caso[:description], gift: caso[:gift])
+          gen   = OrderGenerator.new(order)
+          gen.render # llena los importes impresos
+          letra = gen.send(:amount_in_words, gen.send(:printed_total, :total))
+          total = gen.send(:number_to_currency, gen.send(:printed_total, :total))
+
+          pages = pdf_pages(order)
+          etiqueta = "#{n} partidas (#{caso[:description][0, 8]}, regalos=#{caso[:gift]})"
+
+          completas = pages.count { |p| p.include?(letra) && p.include?(total) }
+          assert_equal 1, completas,
+                       "con #{etiqueta} el pie no quedó completo en una sola hoja " \
+                       "(#{pages.size} hojas; importe en letra y Total juntos en #{completas})"
+
+          # Una hoja en blanco trae solo el folio y "Página N de M".
+          vacias = pages.count { |p| p.length < 60 }
+          assert_equal 0, vacias, "con #{etiqueta} quedaron #{vacias} hojas en blanco"
+        end
+      end
     end
 
     test "el PDF se genera con partidas y sin ellas" do

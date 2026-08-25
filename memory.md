@@ -25,11 +25,79 @@ Si es **algo por hacer**, va al backlog.
 ## Índice de la bitácora
 
 - Decisiones generales del proyecto (abajo)
-- 5ª y 4ª auditorías — remediación (las dos secciones siguientes)
+- 8ª, 7ª, 6ª, 5ª y 4ª auditorías — remediación
 - Descubrimiento del esquema de catálogos (ERP)
 - Fase A — scaffolding · Fase B — login, menú, reportes, pedido (arcos 1–3)
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
+
+## 8ª auditoría (2026-08-24) — remediación
+
+Alcance: solo lo posterior a la 7ª (`2bcc943..HEAD`, 4 commits). 4 auditores en
+vez de 8, por el tamaño. Resultado: 1 CRÍTICA · 5 ALTA · 7 MEDIA · 10 BAJA ·
+1 degradado. Remediada al 100%.
+
+**El PDF salía sin totales en el 2% de los pedidos, y llevaba siete auditorías
+vivo.** `render_footer` abría su `bounding_box` sin `height`, así que heredaba
+como alto lo que sobrara de la hoja; cerca de cada frontera de página el pie no
+cabía y prawn-table lo repartía renglón por renglón, y cuando la tabla cuadraba
+exacta con la hoja **no se escribía nada**: ni Subtotal, ni Descuento, ni IVA,
+ni Total, ni el importe en letra. Cuatro hojas en blanco con folio, `render`
+sin excepción, y el papel firmándose así. Barrido propio: **28 de 180
+combinaciones** defectuosas antes del arreglo, 0 después.
+
+Por qué sobrevivió tanto: las pruebas del PDF leían el texto extraído del
+documento **juntando todas las páginas**, y así un pie repartido en cuatro
+hojas se lee idéntico a uno bien puesto. La medición que sirve es por página.
+La trampa completa quedó en `docs/convenciones-codigo.md` → "PDF (Prawn)".
+
+**Lo nuevo no creó el defecto pero lo volvió mucho más probable.** El prefijo
+"REGALO — " deja el 82% de los renglones a doble alto (contra 6.5% del catálogo
+normal), y los regalos no cuentan contra `MAX_ITEMS`, así que el impreso puede
+rebasar 45 renglones. De ahí la regla nueva del método: preguntar qué hace más
+**frecuente** el código nuevo, no solo qué rompe.
+
+**La mitad de un commit mío nunca funcionó.** El aviso "Se muestran las
+primeras 50 coincidencias" del buscador de **cliente** se calculaba en una ivar
+y el partial lo lee de los locals: no se pintó jamás, y ninguna prueba tocaba
+esa ruta. El de producto, con el mismo texto, sí funcionaba — que es lo que lo
+volvió invisible. Ahora los dos buscadores tienen prueba.
+
+**El `role="listbox"` estaba en el contenedor, no en la lista.** Como el
+partial entero se inyecta ahí con `innerHTML`, el aviso y los mensajes de
+estado caían **dentro** del listbox, que solo admite `option`/`group`. El
+comentario que yo había escrito afirmaba justo lo contrario ("va fuera del
+`<ul>`: el contenedor es un listbox"), y era verdad la premisa y falsa la
+conclusión. El role vive ahora en el `<ul>`, en los tres buscadores.
+
+**Una regresión mía en la flama.** Al pasarla a coral, el ícono quedó blanco;
+la píldora de fondo es un nodo condicional que desaparece de golpe, pero el
+`transition-colors` seguía animando el color ~150 ms → **blanco sobre crema,
+1.16:1**: la flama se borraba justo al cruzar un escalón. El cambio de estado
+va ahora sin transición (instantáneo y sincrónico con el fondo); la transición
+se conserva solo en `offered`, que no tiene fondo.
+
+**El latido a 0.5 se queda, con su número anotado.** Medido: la píldora cae a
+2.24:1 la mitad de cada ciclo, bajo el 3:1 que piden los elementos gráficos.
+Es decisión del usuario tomada a sabiendas (2026-08-24) y está registrada en
+`promotions_helper.rb` junto con la tabla de medidas y con la salida que no
+tiene ese costo (píldora opaca + `ring` que late), por si algún día se quiere.
+
+**Un ALTA se cayó en verificación: `vta_cliente.dividir_facturas`.** El auditor
+proponía precargar el monto del cliente. Se degradó a BAJA porque su "99.4%"
+salía de un proxy sin validar (tratar *factura vacía* como *no dividida*:
+75.8% de precisión; el número real es 54.6%), porque **el ERP tampoco lo
+prefilla** —la coincidencia cliente↔pedido va de 50.5% a 99.5% *según quién
+captura*, y sobre el mismo cliente un capturista coincide 0% y otro 93.8%: eso
+solo pasa si se teclea a mano—, y porque en 2.5 años los 1,007 pedidos del
+escenario temido cancelan menos que el promedio y se pagan al 100%.
+
+**Lo que más hallazgos produjo no fue el código: fueron mis propias cifras sin
+recorte.** Un "19.84% de las facturas" que eran todos los comprobantes (notas
+de crédito y pagos incluidos), un "9 de cada 10" que solo vale para las 1,000
+palabras más frecuentes, dos tiempos en milisegundos irreproducibles, un
+"2.31:1 en deuteranopía" sin superficie de referencia. Ninguno cambiaba una
+decisión; todos costaron re-medirse. Ver la regla nueva en `docs/auditorias.md`.
 
 ## 6ª auditoría (2026-08-19) — remediación
 
@@ -458,15 +526,30 @@ Cuatro piezas:
    que el dato exista y no lo mandemos. Un consecutivo que no es de ese cliente
    también se rechaza.
 
-**`dividir_facturas` entró a la limpieza por una razón distinta.** Está en el
-mismo bloque oculto del paso 1, así que una remisión que empezó como factura
-conservaba el monto sin que nadie pudiera verlo ni corregirlo. Pero aquí el ERP
-**no** decide: 3,079 de sus 110,577 remisiones sí traen monto de división, o
-sea que no es forma mal escrita sino regla de negocio. Se preguntó y se
-resolvió limpiarlo (decisión del usuario, 2026-08-11): una remisión viaja
-siempre en 0, coherente con la pantalla que ya lo rotula como campo de factura.
-Es la distinción que conviene conservar: **la invariante del ERP obliga; su
-moda solo sugiere.**
+**`dividir_facturas` entró a la limpieza por una razón distinta —y la decisión
+se revirtió el 2026-08-24.** Está en el mismo bloque oculto del paso 1, así que
+una remisión que empezó como factura conservaba el monto sin que nadie pudiera
+verlo ni corregirlo. Se resolvió limpiarlo (2026-08-11): una remisión viajaba
+siempre en 0, "coherente con la pantalla que ya lo rotula como campo de
+factura".
+
+**Estaba mal, y el dato para verlo ya estaba escrito aquí.** El usuario lo
+corrigió: el monto de división aplica también a las remisiones. Hoy el campo se
+muestra en los dos tipos, viaja tal cual al ERP y se imprime en el PDF.
+
+Lo que enseña este renglón no es "hay que re-medir con mejor recorte". El
+"3,079 de 110,577" era **correcto para su recorte** (remisiones del flujo de
+pedido desde 2024: 2.78%, contra 2.84% del universo completo de 6,128 de
+216,100) y **ya apuntaba a la conclusión buena** — decía textualmente que el
+ERP sí acepta remisiones con monto. Lo que falló fue la **inferencia** que se
+puso encima: se leyó "es la moda de las facturas" y se concluyó "entonces en
+remisión va en 0", cuando el propio dato decía que era regla de negocio viva.
+
+**La lección: una cifra correcta no protege de una conclusión equivocada.**
+Registrar esto como "falló el recorte" —que fue el primer diagnóstico— manda a
+la siguiente auditoría a re-medir, que es justo lo que no hacía falta (8ª
+auditoría). Se conserva la otra mitad, que sigue valiendo: **la invariante del
+ERP obliga; su moda solo sugiere.**
 
 **S01 vs P01: lo decidió el catálogo, no una preferencia.** El reporte proponía
 P01 por ser la moda global (60%), pero `sat_uso_cfdi` lo tiene con `baja = t`:

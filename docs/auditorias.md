@@ -40,8 +40,26 @@ reporte corto y cierto vale más que uno largo y especulativo.
   rama del código). En la 4ª, un ALTA se refutó porque midió la rama de
   *sucursal* del ERP cuando nuestros pedidos entran por la de *persona*; en la
   5ª, validar el recorte antes que las cifras evitó repetir el error.
+- **Toda cifra que se ESCRIBE lleva su recorte al lado, no solo las que se
+  miden durante la auditoría.** En la 8ª, la mayoría de los hallazgos de
+  documentación fueron números que yo mismo había puesto en comentarios y en el
+  backlog sin decir de dónde salían: un "19.84% de las facturas" que eran todos
+  los comprobantes, un "9 de cada 10" que solo vale para las 1,000 palabras más
+  frecuentes, dos tiempos en milisegundos que no se reproducen. Ninguno cambia
+  una decisión, y todos costaron medirse otra vez.
+- **Una cifra correcta no protege de una conclusión equivocada.** El caso de
+  `dividir_facturas`: la medición era buena y ya decía lo contrario de lo que
+  se concluyó encima de ella. Cuando algo resulte estar mal, la primera
+  pregunta no es "¿qué recorte falló?" sino "¿la conclusión se sigue del dato?"
+  — si se registra como error de medición, la próxima auditoría re-mide algo
+  que estaba bien y no revisa el razonamiento, que es lo que falló.
 - **Severidad honesta:** ALTA = corrompe datos, bloquea la operación sin salida
   o expone información. Si todo es alto, nada lo es.
+- **Un defecto puede ser viejo y aun así ser culpa del cambio nuevo.** El PDF
+  sin totales llevaba siete auditorías vivo, pero los regalos —introducidos en
+  el lote auditado— multiplican por 5 los renglones de doble alto y lo vuelven
+  mucho más probable. Preguntar por lo que el código nuevo hace más FRECUENTE,
+  no solo por lo que rompe.
 
 ## Las siete dimensiones
 
@@ -101,6 +119,18 @@ pantalla se la dice**. Estrenada en la 4ª; en la 5ª produjo el único ALTA (el
 pedido duplicado en el ERP guiado por el propio mensaje de colisión).
 
 ## Historial
+
+- **8ª (2026-08-24)** — solo lo posterior a la 7ª (4 commits, 23 archivos), con
+  4 auditores en vez de 8 por el alcance chico — 1 **CRÍTICA** · 5 ALTA ·
+  7 MEDIA · 10 BAJA · 1 degradado (ALTA→BAJA) → **remediada al 100% el mismo
+  ciclo**. La CRÍTICA (el PDF sin totales) era **preexistente** y se le había
+  pasado por encima a siete auditorías: nació de mirar el PDF por su texto
+  extraído, que no distingue "está en el documento" de "está en la hoja
+  correcta". Patrón que dejó: **el riesgo no estaba en el código nuevo sino en
+  lo que el código nuevo hacía más probable** (los regalos multiplican por 5
+  los renglones de doble alto y empujan a la franja mala), y **las cifras que
+  yo mismo escribí sin declarar su recorte** fueron la fuente de más hallazgos
+  que cualquier defecto de lógica.
 
 - **1ª (2026-07-25)** — 6 ALTA · 18 MEDIA · 14 BAJA → remediada al 100%.
 - **2ª (2026-07-26, post-remediación)** — 2 ALTA · 9 MEDIA · 24 BAJA →
