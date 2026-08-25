@@ -175,6 +175,30 @@ class Order < ApplicationRecord
   # listado no puedan divergir. Devuelve SIEMPRE los tres estatus, con ceros
   # los que no tengan pedidos: las tarjetas del reporte son también el filtro
   # de estatus y deben mostrarse completas.
+  # Purga del SISTEMA de los pedidos ya transmitidos: la usan el replace del
+  # sync-down y "Cerrar rueda", los dos únicos lugares donde el programa
+  # —no el capturista— borra ventas que ya viven en el ERP.
+  #
+  # Va por `delete_all` y NO por `destroy_all`, y eso es la corrección: las
+  # partidas con promoción aplicada llevan un `before_destroy` que hace
+  # `throw :abort` (el candado que impide al capturista borrarlas desde una
+  # pestaña rezagada). Con `destroy_all`, ese candado —una regla dirigida a la
+  # UI— hacía que las partidas SOBREVIVIERAN a la purga sin excepción ni
+  # aviso: el sync-down reventaba después al borrar el catálogo
+  # (`PG::ForeignKeyViolation` de order_items contra promotion_tiers) y
+  # "Cerrar rueda" se quedaba callado dejando pedidos vivos. Se veía al segundo
+  # día de un evento, que es cuando se vuelve a obtener información
+  # (2026-08-25).
+  #
+  # Las partidas se borran explícitamente y primero: `delete_all` no dispara
+  # `dependent: :destroy`, así que sin esa línea quedarían huérfanas y el
+  # catálogo seguiría sin poder borrarse. `OrderItem` no tiene dependientes,
+  # así que la cadena termina ahí.
+  def self.purge_transmitted!
+    OrderItem.where(order_id: transmitted.select(:id)).delete_all
+    transmitted.delete_all
+  end
+
   #
   # `products` (subconsulta de ids) restringe la suma a las partidas de esos
   # productos: con un filtro de proveedor/marca/producto activo, el importe que

@@ -92,7 +92,10 @@ module Sync
     # mismo patrón que CloseRound (ver docs/convenciones-codigo.md).
     def purge_local_orders!
       @purged_orders = Order.transmitted.count
-      Order.transmitted.destroy_all if @purged_orders.positive?
+      # `purge_transmitted!` y no `destroy_all`: el candado de promoción de
+      # OrderItem aborta el destroy y las partidas sobrevivían a la purga, con
+      # el replace del catálogo reventando después por FK (ver Order).
+      Order.purge_transmitted! if @purged_orders.positive?
       Guards.no_local_orders!(GuardError, "al obtener la información")
     end
 

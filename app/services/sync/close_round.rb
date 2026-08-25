@@ -45,7 +45,9 @@ module Sync
         # Así, si algo se coló, la segunda guarda deshace la transacción entera
         # y no se pierde nada — el operador reintenta.
         removed = Order.transmitted.count
-        Order.transmitted.destroy_all
+        # Ver Order.purge_transmitted!: con `destroy_all`, el candado de
+        # promoción dejaba pedidos vivos y "Cerrar rueda" reportaba éxito.
+        Order.purge_transmitted!
         Guards.no_local_orders!(PendingOrdersError, "al cerrar la rueda")
 
         SyncRun.delete_all

@@ -123,7 +123,14 @@
       descubre cuando el cliente reclama. El capturista tampoco puede teclear
       el descuento a mano — 6,042 de los 6,046 productos en promoción lo tienen
       por encima de su tope (7ª auditoría). %>
-  <% if kind == "down" && summary.dig("entities", "promotions").to_i.zero? %>
+  <%# `run&.completed?` no es redundante: en una corrida FALLIDA el summary
+      viene vacío, así que `nil.to_i.zero?` daba true y el aviso se encendía
+      encima del "✗ Falló". El operador leía "revisa que el servidor esté
+      actualizado" cuando la causa era otra —el 2026-08-25, una violación de
+      llave foránea en la purga— y se iba a revisar la API por un problema
+      local. Los demás avisos de aquí abajo no lo sufren porque preguntan
+      `.any?` sobre arreglos, que vacíos no disparan nada. %>
+  <% if kind == "down" && run&.completed? && summary.dig("entities", "promotions").to_i.zero? %>
     <div class="mt-3 rounded-2xl bg-brand-cream px-4 py-3 text-left text-sm leading-snug text-neutral-900">
       La información no trajo <span class="font-semibold">ninguna promoción</span>: los
       descuentos de la rueda no van a aparecer y no se pueden capturar a mano. Revisa que el

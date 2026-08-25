@@ -254,6 +254,18 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
   ya pasó en la 5ª (`skipped_users`) y volvió a pasar en la 7ª
   (`skipped_promotion_products`, `shared_promotion_products`). El panel es el
   camino del operador; el rake, el de consola.
+- **Un candado `before_destroy` dirigido a la UI también bloquea las purgas
+  del SISTEMA, y `destroy_all` no lo dice.** El `throw :abort` que impide al
+  capturista borrar una partida con promoción aplicada hacía que esas partidas
+  **sobrevivieran** al replace del sync-down y a "Cerrar rueda": `destroy_all`
+  devuelve sin excepción, así que el sync reventaba después con un
+  `PG::ForeignKeyViolation` contra el catálogo, y cerrar la rueda reportaba
+  éxito dejando pedidos vivos. Aparece al segundo día de un evento, que es
+  cuando se vuelve a obtener información. Toda purga del sistema pasa por
+  `Order.purge_transmitted!`, que borra hijos y padres con `delete_all` — y
+  entonces hay que borrar los hijos **explícitamente**, porque `delete_all` no
+  dispara `dependent: :destroy`. La regla al escribir un candado nuevo:
+  preguntarse quién más llama a `destroy` además de la pantalla.
 - **Una validación `on: :update` NO cubre `destroy`.** Un candado de negocio
   que impide editar tiene que impedir borrar con un `before_destroy` que haga
   `throw :abort` — `destroy` no corre validaciones. Esconder el control en la

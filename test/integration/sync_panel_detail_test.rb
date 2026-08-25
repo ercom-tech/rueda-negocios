@@ -23,6 +23,41 @@ class SyncPanelDetailTest < ActionDispatch::IntegrationTest
                     status: "completed", summary: { entities: {} }.merge(summary))
   end
 
+  # --- El aviso de "sin promociones" solo aplica a una corrida que SÍ corrió -
+  # En una corrida fallida el summary viene vacío, y `nil.to_i.zero?` daba
+  # true: el aviso se encendía junto al "✗ Falló" y mandaba a revisar que el
+  # servidor estuviera actualizado, cuando la causa era otra. Pasó de verdad
+  # (2026-08-25) con una violación de llave foránea en la purga: el operador
+  # se fue a revisar la API por un problema de datos locales.
+
+  test "una corrida fallida no acusa a la API de no traer promociones" do
+    SyncRun.create!(kind: "down", started_at: 1.minute.ago, finished_at: Time.current,
+                    status: "failed",
+                    message: "No se pudo obtener la información. Revisa que el servidor esté disponible e inténtalo de nuevo.")
+
+    get root_path
+
+    assert_response :success
+    assert_match(/No se pudo obtener la información/, response.body)
+    assert_no_match(/ninguna promoción/, response.body)
+  end
+
+  test "una corrida exitosa sin promociones sí lo dice" do
+    down_run!(entities: { "products" => 100, "promotions" => 0 })
+
+    get root_path
+
+    assert_match(/ninguna promoción/, response.body)
+  end
+
+  test "una corrida exitosa con promociones no dice nada" do
+    down_run!(entities: { "products" => 100, "promotions" => 38 })
+
+    get root_path
+
+    assert_no_match(/ninguna promoción/, response.body)
+  end
+
   # --- Transmisión parcial -------------------------------------------------
 
   test "el panel lista el folio y el motivo de cada pedido rechazado" do

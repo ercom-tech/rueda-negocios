@@ -31,6 +31,53 @@ Si es **algo por hacer**, va al backlog.
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
 
+## El candado que impedía purgar (2026-08-25)
+
+Con los pedidos del día ya transmitidos, "Obtener información" empezó a fallar
+en la laptop. El panel decía *"No se pudo obtener la información. Revisa que el
+servidor esté disponible"* y, debajo, *"La información no trajo ninguna
+promoción: revisa que el servidor esté actualizado"*. Las dos pistas apuntaban
+a la API, y las dos eran falsas.
+
+**La causa, del log:**
+
+```
+PG::ForeignKeyViolation: update or delete on table "promotion_tiers"
+violates constraint on table "order_items"
+DETAIL: Key (id)=(92) is still referenced from table "order_items".
+en down.rb:106 clear_catalog!
+```
+
+**Es el choque de dos remediaciones nuestras.** La 7ª auditoría le puso a
+`OrderItem` un `before_destroy` con `throw :abort` para que una pestaña
+rezagada no borrara por el endpoint una partida con promoción aplicada — un
+candado dirigido al CAPTURISTA. Pero las dos purgas del SISTEMA (el replace del
+sync-down y "Cerrar rueda") borran con `Order.transmitted.destroy_all`, y pasan
+por el mismo callback: las partidas sobrevivían a la purga **sin excepción ni
+aviso**, y el borrado del catálogo reventaba después contra sus llaves foráneas.
+
+**"Cerrar rueda" fallaba peor: en silencio.** Ahí no hay catálogo que borrar
+después, así que no reventaba nada — simplemente dejaba los pedidos vivos y
+reportaba éxito. Es la operación con la que se cierra el evento.
+
+**Arreglo:** `Order.purge_transmitted!`, usado por los dos servicios, borra con
+`delete_all` (que no dispara callbacks) y borra las partidas **explícitamente
+antes** que los pedidos, porque `delete_all` tampoco dispara
+`dependent: :destroy`. El candado sigue intacto para la UI, y hay una prueba
+que lo comprueba junto a las otras dos.
+
+**Cuándo aparece:** el segundo día de un evento. Se transmite al final del día
+1 y al día 2 se vuelve a obtener información. Ninguna auditoría lo cazó porque
+el estado que lo dispara —pedidos transmitidos con promoción, todavía en la
+laptop— solo existe después de un ciclo completo.
+
+**Y un segundo defecto que salió de paso:** el aviso de "no trajo ninguna
+promoción" se encendía también en corridas FALLIDAS, porque el summary viene
+vacío y `nil.to_i.zero?` da true. O sea que el panel acusaba a la API de estar
+desactualizada cuando el problema era local. Ahora exige `run&.completed?`. La
+lección para los avisos del panel: **un contador en cero significa "corrió y
+dio cero", no "no corrió"** — y en un camino de falla los dos se confunden.
+
 ## El panel que no se enteraba (2026-08-25)
 
 En la laptop, una transmisión se quedaba "en progreso" para siempre; abrir el
