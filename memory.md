@@ -31,6 +31,62 @@ Si es **algo por hacer**, va al backlog.
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
 
+## El panel que no se enteraba (2026-08-25)
+
+En la laptop, una transmisión se quedaba "en progreso" para siempre; abrir el
+panel en otra pestaña mostraba "Listo". O sea: el servidor tenía el estado
+bueno y la pestaña vieja no se había enterado.
+
+**Causa: el broadcast salió cuando nadie escuchaba.** Al lanzar el sync el
+controlador responde `redirect_to root_path`; el navegador NAVEGA, y esa
+navegación tira la suscripción de Action Cable mientras abre otra. La corrida
+termina en menos de un segundo —con pocos pedidos es lo normal— y su broadcast
+cae justo en ese hueco. Con el adaptador `async` no hay retención ni reenvío al
+que llega tarde: el mensaje se pierde y la página conserva el HTML que se
+renderizó con la corrida viva. Antes no se notaba porque los sync tardaban más.
+
+**Arreglo:** el panel PIDE su estado además de esperarlo. `server#menu` devuelve
+el mismo turbo_stream que emite el broadcast, y `sync_status_controller` sondea
+cada 3 s **mientras hay corrida viva**. El broadcast se conserva como camino
+rápido; el sondeo cubre cuando no llega, y de paso deja el panel a salvo de que
+Action Cable falle por cualquier otra razón durante el evento.
+
+**Dos trampas que costaron sangre y quedaron en las convenciones:**
+
+1. **El sondeo tenía que ser condicional, no por eficiencia sino por
+   corrección.** La respuesta reemplaza el div que lleva el `data-controller`,
+   así que Stimulus lo reconecta: un refresh incondicional en `connect()` es un
+   bucle infinito de peticiones contra la laptop que está sirviendo a todo el
+   salón. La condición viene en el HTML nuevo, así la cadena se apaga sola.
+2. **La primera versión de la prueba de sistema pasaba SIN el arreglo.**
+   Asumí que en test los broadcasts no viajan; falso: el adaptador `test`
+   hereda de `Async` y el servidor de Capybara vive en el mismo proceso, así
+   que sí se entregan. Había que cerrar la corrida con `update_columns` —que
+   salta el callback— para reproducir el mensaje perdido de verdad. **Lo cazó
+   el fail-first, no la lectura del código.**
+
+**Y una que corregí antes de commitear:** `sync_down&.running? || sync_up&.running?`
+da **nil** cuando no hay corridas, y nil rinde como cadena vacía en el atributo
+del value de Stimulus. La prueba de sistema lo detectó.
+
+### Lo que enseñó el diagnóstico, que es lo más caro de este renglón
+
+Antes de esto diagnostiqué DOS causas equivocadas y llegué a implementar una
+—un corte por antigüedad en `recover_orphaned!`, con latido y pruebas— que el
+usuario mandó revertir. Ninguna hipótesis era descabellada:
+
+- *"El job murió y el pid no lo delata con `:async`"*: el hueco existe de
+  verdad (ver backlog), pero **no era esto** — las cinco corridas estaban
+  `completed` en menos de un segundo. La consulta que lo demostraba costaba
+  una línea y la hice **después** de escribir el arreglo.
+- *"Action Cable rechaza el WebSocket por el `Origin`"*: el log mostraba
+  `Started GET "/cable" [WebSocket] for 127.0.0.1` — conectaba bien.
+
+**La regla:** cuando un síntoma admite varias explicaciones, la consulta que
+las separa va ANTES del arreglo, no después. Aquí eran dos comandos de lectura.
+Es la misma lección que la 8ª auditoría dejó escrita para las cifras —declarar
+el recorte antes de concluir— aplicada al diagnóstico en vivo.
+
 ## 8ª auditoría (2026-08-24) — remediación
 
 Alcance: solo lo posterior a la 7ª (`2bcc943..HEAD`, 4 commits). 4 auditores en

@@ -13,13 +13,26 @@
     espejo de los guards del controller. El broadcast de SyncRun reemplaza
     este div completo (id server-menu) al cerrar el run, así los botones se
     rehabilitan en vivo. %>
-<% sync_busy = sync_down&.running? || sync_up&.running? %>
+<%# El `|| false` no es adorno: sin ninguna corrida los dos `&.running?` dan
+    nil, y nil rinde como cadena VACÍA en el atributo del value de Stimulus
+    (`busy-value=""`), no como "false". %>
+<% sync_busy = sync_down&.running? || sync_up&.running? || false %>
 <% locked = !has_round || sync_busy %>
 <% grid  = "grid grid-cols-[3.5rem_11rem_minmax(0,1fr)] items-center gap-6" %>
 <% title = "justify-self-center text-right text-2xl font-extrabold leading-tight" %>
 <% desc  = "text-left text-xl leading-snug" %>
 
-<div id="server-menu" class="flex flex-col gap-5">
+<%# `sync-status` PIDE el estado al conectar y, mientras hay corrida viva,
+    sigue preguntando. El broadcast de SyncRun se pierde cuando la corrida
+    termina durante la navegación del redirect —el cable se está
+    re-suscribiendo y con el adaptador async no hay reenvío—, y entonces el
+    panel se queda "en progreso" hasta que alguien recarga. Va en este div
+    porque es el que se reemplaza: cada actualización reconecta el controller
+    con el `busy` nuevo, así el sondeo se detiene solo al terminar. %>
+<div id="server-menu" class="flex flex-col gap-5"
+     data-controller="sync-status"
+     data-sync-status-url-value="<%= server_menu_path %>"
+     data-sync-status-busy-value="<%= sync_busy %>">
   <%# ── 1. Elegir rueda (coral) — Heroicon calendar-days. Con rueda en
        curso queda deshabilitada (el cambio de rueda pasa por "Cerrar
        rueda"); el controller protege además rounds/select_round. ────── %>

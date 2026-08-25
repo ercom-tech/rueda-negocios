@@ -18,6 +18,7 @@ Rails.application.routes.draw do
     post  "sync-down",  action: :sync_down,    as: :sync_down     # obtener información
     post  "sync-up",    action: :sync_up,      as: :sync_up       # transmitir pedidos
     post  "close-round", action: :close_round, as: :close_round   # cerrar rueda (purga pedidos)
+    get   "menu",       action: :menu,         as: :menu          # estado del menú (lo pide el panel)
   end
 
   # Reportes de venta (hub de reportes).

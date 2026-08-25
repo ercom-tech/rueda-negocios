@@ -170,6 +170,34 @@ combo ("este cliente suele dividir cada $25,000"), dejando la decisión al
 capturista. Sin daño observable en 2.5 años: los pedidos del escenario temido
 cancelan menos que el promedio (0.56% vs 0.75%) y se pagan al 100%.
 
+### El pid no delata a un job muerto con el adaptador `:async` (BAJA)
+
+`SyncRun` detecta corridas huérfanas por el pid de su dueño, y `SyncUpJob`
+registra el suyo real (`run.update!(pid: Process.pid)`) justo para eso. Pero la
+laptop del evento corre en **development**, donde ActiveJob usa `:async`: el
+job vive en un hilo DENTRO de puma, así que ese pid **es el de puma**. Si un
+job muriera de golpe, la corrida quedaría `running` con un dueño perfectamente
+vivo, el corte por boot tampoco aplicaría —puma no se reinició— y el panel se
+quedaría bloqueado con la captura pausada.
+
+**No es lo que pasó el 2026-08-25** (aquello era el broadcast perdido, ya
+resuelto), y por eso el arreglo que se había escrito se revirtió: no había
+defecto que curar y el remedio tenía su propio riesgo — un umbral por debajo
+del peor caso legítimo mata una corrida que sigue transmitiendo y libera la
+guarda encima de ella.
+
+Si algún día aparece un cuelgue de verdad, la forma que ya estaba pensada:
+`Sync::Up#run!` acepta un bloque que late al terminar CADA pedido (incluidos
+los fallidos, que son los que alargan el lote), y el umbral se mide contra el
+techo de UN pedido (`OPEN_TIMEOUT + READ_TIMEOUT`), no contra la duración
+total — con el lote más largo posible el hueco entre latidos no crece. El
+sync-down no late (descarga acotada + import en una transacción), así que su
+techo se mide desde el arranque.
+
+Mitigación que ya existe hoy: el sondeo del panel (`sync_status_controller`)
+consulta el estado real cada 3 s, así que un cuelgue se ve como tal en vez de
+confundirse con "el mensaje no llegó".
+
 ### Montos de división fuera del catálogo (BAJA, asimetría)
 
 El ERP tiene pedidos con montos que no están en `vta_pedido_monto_divide`

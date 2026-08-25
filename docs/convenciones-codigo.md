@@ -135,6 +135,22 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
   (`turbo:submit-end->modal#close`). Si se queda abierto tapa justo lo que el
   usuario quiere revisar, y su fondo (`bg-black/50`) se come el siguiente
   clic: el segundo defecto no se ve, solo se siente como "el botón no sirve".
+- **Un `broadcast_*` no es una entrega garantizada: si nadie está suscrito en
+  ese instante, el mensaje se pierde.** Y hay un momento en que casi nunca hay
+  nadie: justo después de un `redirect_to`, porque la navegación tira la
+  suscripción de Action Cable mientras abre otra. Una acción en background que
+  termina en menos de un segundo —lo normal— emite su broadcast dentro de ese
+  hueco, y con el adaptador `async` (development) no hay retención ni reenvío
+  al que llega tarde. El síntoma es una pantalla congelada en el estado
+  anterior que solo se arregla recargando, sin nada que lo delate. Toda región
+  que dependa de un broadcast para salir de un estado transitorio necesita
+  **poder pedir su estado**, no solo esperarlo (ver `sync_status_controller` y
+  `server#menu`).
+- **Un controller que se repinta a sí mismo se realimenta.** Si la respuesta
+  reemplaza el nodo que lleva el `data-controller`, Stimulus lo reconecta: un
+  refresh incondicional en `connect()` es un bucle infinito de peticiones. La
+  condición que lo enciende (aquí, "hay corrida viva") tiene que venir en el
+  HTML nuevo, para que la cadena se apague sola.
 - **No reconstruyas DOM que está recibiendo eventos de puntero.** Stimulus
   enlaza las acciones de los nodos nuevos de forma asíncrona
   (MutationObserver): si un `mousedown`/`mouseenter` regenera los elementos, el
@@ -269,6 +285,14 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
   no necesita Node en runtime (importmap), pero está instalado y es lo único
   que caza un error de sintaxis antes del navegador — una continuación de línea
   estilo Ruby (`\`) en JS rompe el controller entero sin que nada más avise.
+- **En una prueba de sistema, los broadcasts de Action Cable SÍ se entregan.**
+  El adaptador `test` hereda de `Async`, y el servidor de Capybara vive en el
+  mismo proceso que la prueba, así que un `broadcast_replace_to` llega al
+  navegador de verdad. Consecuencia práctica: una prueba que quiera reproducir
+  un **mensaje perdido** no puede cerrar el registro con `update!` —el callback
+  emitiría el broadcast y la pantalla se arreglaría por ahí—; tiene que usar
+  `update_columns`, que salta los callbacks. Sin eso la prueba pasa con y sin
+  el arreglo, que fue exactamente lo que pasó al escribirla.
 - **Una prueba que pasa puede estar pasando por el camino equivocado.** No es
   exclusivo de las pruebas de sistema: en un modelo con varias validaciones,
   la que rechaza el guardado puede no ser la que se quería probar (un

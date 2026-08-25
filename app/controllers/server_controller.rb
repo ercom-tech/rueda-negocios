@@ -5,6 +5,32 @@ class ServerController < ApplicationController
 
   before_action :require_server
 
+  # Estado del menú, para que el panel lo PIDA en vez de solo esperarlo.
+  #
+  # El broadcast de `SyncRun` no basta: al lanzar un sync el controlador
+  # responde con un redirect, el navegador NAVEGA, y esa navegación tira la
+  # suscripción de Action Cable y abre otra. Una corrida que termina en menos
+  # de un segundo —lo normal con pocos pedidos— emite su broadcast dentro de
+  # ese hueco, y con el adaptador `async` no hay retención ni reenvío al que
+  # llega tarde: el mensaje se pierde y el panel se queda con el HTML que se
+  # renderizó cuando la corrida seguía viva. Solo recargar lo destrababa, y
+  # nada en pantalla lo decía (2026-08-25).
+  #
+  # El broadcast se conserva: cuando llega, actualiza al instante. Esto cubre
+  # los casos en que no llega, y de paso deja el panel a salvo de que Action
+  # Cable falle por cualquier otra razón durante el evento.
+  def menu
+    SyncRun.recover_orphaned!
+
+    render turbo_stream: turbo_stream.replace(
+      "server-menu",
+      partial: "home/server_menu",
+      locals: { setting:   Setting.instance,
+                sync_down: SyncRun.latest("down"),
+                sync_up:   SyncRun.latest("up") }
+    )
+  end
+
   # Elegir la rueda a trabajar: lista las disponibles en el ERP. Bloqueado
   # mientras haya una rueda en curso: el cambio de rueda pasa SIEMPRE por
   # "Cerrar rueda" (y sus guardas: capturados sin transmitir, sync corriendo).
