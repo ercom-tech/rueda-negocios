@@ -207,6 +207,19 @@ Nuestro `Order#dividir_facturas_in_catalog` los rechazaría, mientras que
 catálogo. No es defecto activo —el combo solo ofrece los del catálogo—, pero
 las dos puntas no coinciden en qué consideran válido.
 
+### Productos de promoción que no llegan al catálogo (antes del 27-ago)
+
+El panel avisa **186** al obtener información en testing (eran 119 el 24-ago:
+subieron, así que se movió algo en la configuración). Son productos que una
+promoción `canal_venta='RUN'` de la rueda incluye, pero cuyo proveedor o marca
+no está dado de alta en la rueda — configuración del ERP, no defecto de la app.
+
+La consulta que los lista **con su causa** está en `docs/diagnostico-erp.md`.
+Hay que correrla en testing, llevarle el agregado a FECEGO y que decidan por
+promoción: dar de alta el proveedor/marca, o desactivar esa promoción para la
+rueda. No hay salida por el lado del capturista — 6,042 de los 6,046 productos
+en promoción tienen el descuento por encima de su `descto_tope`.
+
 ## Definiciones con FECEGO
 
 ### Timbrar una factura con una partida de regalo al 100% (antes del 27-ago)

@@ -175,6 +175,27 @@ class Order < ApplicationRecord
   # listado no puedan divergir. Devuelve SIEMPRE los tres estatus, con ceros
   # los que no tengan pedidos: las tarjetas del reporte son también el filtro
   # de estatus y deben mostrarse completas.
+  # Descartar el pedido COMPLETO (botón "Descartar" del paso 2, y el mismo
+  # camino cuando se llega desde el reporte de capturados).
+  #
+  # Salta el candado de promoción de `OrderItem` por la misma razón que
+  # `purge_transmitted!`: ese `throw :abort` existe para que no se borre UNA
+  # partida suelta dejando el pedido a medias —el bote de basura de una fila—,
+  # no para impedir tirar el pedido entero, donde no queda nada inconsistente.
+  # Con `destroy`, las partidas abortaban y el pedido SOBREVIVÍA mientras el
+  # flash decía "Pedido descartado.": en un borrador se perdía la captura, y en
+  # un capturado —el caso que llega desde el reporte— el siguiente sync-up
+  # transmitía al ERP una venta que el capturista creía cancelada (2026-08-26).
+  #
+  # Es el mismo defecto que la 6ª auditoría marcó ALTA para los transmitidos,
+  # por otra puerta: el `destroy` cuyo resultado nadie mira.
+  def discard!
+    self.class.transaction do
+      order_items.delete_all
+      delete
+    end
+  end
+
   # Purga del SISTEMA de los pedidos ya transmitidos: la usan el replace del
   # sync-down y "Cerrar rueda", los dos únicos lugares donde el programa
   # —no el capturista— borra ventas que ya viven en el ERP.

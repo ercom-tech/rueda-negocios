@@ -254,18 +254,28 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
   ya pasó en la 5ª (`skipped_users`) y volvió a pasar en la 7ª
   (`skipped_promotion_products`, `shared_promotion_products`). El panel es el
   camino del operador; el rake, el de consola.
-- **Un candado `before_destroy` dirigido a la UI también bloquea las purgas
-  del SISTEMA, y `destroy_all` no lo dice.** El `throw :abort` que impide al
-  capturista borrar una partida con promoción aplicada hacía que esas partidas
-  **sobrevivieran** al replace del sync-down y a "Cerrar rueda": `destroy_all`
-  devuelve sin excepción, así que el sync reventaba después con un
-  `PG::ForeignKeyViolation` contra el catálogo, y cerrar la rueda reportaba
-  éxito dejando pedidos vivos. Aparece al segundo día de un evento, que es
-  cuando se vuelve a obtener información. Toda purga del sistema pasa por
-  `Order.purge_transmitted!`, que borra hijos y padres con `delete_all` — y
-  entonces hay que borrar los hijos **explícitamente**, porque `delete_all` no
-  dispara `dependent: :destroy`. La regla al escribir un candado nuevo:
-  preguntarse quién más llama a `destroy` además de la pantalla.
+- **Un candado `before_destroy` dirigido a la UI bloquea TODO lo que borre por
+  `destroy`, y sin decirlo.** El `throw :abort` que impide al capturista borrar
+  una partida con promoción aplicada rompió tres cosas distintas, todas
+  silenciosas porque `destroy` devuelve `false` en vez de levantar:
+  - el **replace del sync-down**: las partidas sobrevivían a la purga y el
+    borrado del catálogo reventaba después con `PG::ForeignKeyViolation`;
+  - **"Cerrar rueda"**: dejaba pedidos vivos y reportaba éxito;
+  - **"Descartar pedido"**: el pedido sobrevivía y el flash decía "Pedido
+    descartado." — en un capturado, el siguiente sync-up transmitía al ERP una
+    venta que el capturista creía cancelada.
+
+  Los tres borran una unidad COMPLETA (el pedido, o todos los transmitidos),
+  donde el candado no protege de nada: existe para que no se borre **una
+  partida suelta** dejando el pedido a medias. Van por `Order#discard!` y
+  `Order.purge_transmitted!`, que usan `delete_all`/`delete` — y ahí hay que
+  borrar los hijos **explícitamente**, porque `delete_all` no dispara
+  `dependent: :destroy`.
+
+  Dos reglas que salen de esto: al escribir un candado nuevo, preguntarse
+  **quién más llama a `destroy`** además de la pantalla que lo motivó; y
+  **nunca dar por hecho un `destroy`** cuyo resultado no se mira — o se
+  comprueba (`unless item.destroy`), o se usa un borrado que no puede abortar.
 - **Una validación `on: :update` NO cubre `destroy`.** Un candado de negocio
   que impide editar tiene que impedir borrar con un `before_destroy` que haga
   `throw :abort` — `destroy` no corre validaciones. Esconder el control en la

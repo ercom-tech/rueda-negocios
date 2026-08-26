@@ -60,7 +60,10 @@ class OrdersController < ApplicationController
                          alert: "Este pedido ya se transmitió al ERP y no se puede descartar aquí."
     end
 
-    order.destroy
+    # `discard!` y no `destroy`: con una promoción aplicada, el candado de las
+    # partidas abortaba el borrado y el flash de abajo confirmaba un descarte
+    # que no ocurría (ver Order#discard!).
+    order.discard!
     redirect_to root_path, notice: "Pedido descartado."
   end
 

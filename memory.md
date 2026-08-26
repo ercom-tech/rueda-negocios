@@ -31,6 +31,43 @@ Si es **algo por hacer**, va al backlog.
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
 
+## "Descartar" no descartaba (2026-08-26)
+
+A petición del usuario se validó si el botón Descartar realmente descarta, por
+los dos caminos: directo en el pedido y llegando desde el reporte de capturados
+(el folio del reporte abre el mismo `orders#show`). **Los dos fallaban** cuando
+el pedido tenía una promoción aplicada.
+
+Es la **tercera puerta** del mismo candado que dos días antes rompió el
+sync-down y "Cerrar rueda": el `before_destroy` con `throw :abort` de
+`OrderItem`. `orders#destroy` llamaba a `order.destroy` sin mirar el resultado,
+las partidas abortaban, el pedido sobrevivía y el flash decía "Pedido
+descartado.".
+
+**Lo grave es el caso del reporte.** Ahí el pedido está `captured`, así que
+sobrevive y **el siguiente sync-up lo transmite al ERP**: una venta que el
+capturista dio por cancelada acaba surtida, cobrada y entregada. En un borrador
+solo se pierde la captura.
+
+Se resolvió con `Order#discard!` (hermano de `purge_transmitted!`): borra
+partidas y pedido con `delete_all`/`delete`. El candado queda intacto para el
+bote de basura de una fila, que es a lo que apunta. Por decisión del usuario,
+**descartar un capturado sigue permitido** (`editable?` solo excluye
+transmitidos).
+
+De paso se barrió el resto del código buscando el mismo patrón: los otros dos
+`destroy` están bien — `order_items_controller` comprueba el resultado
+(`unless item.destroy`) y `Promotions::Group` usa el bypass `promotion_managed`.
+
+**Lo que enseña, y por lo que este renglón vale más que su arreglo:** es el
+mismo defecto que la 6ª auditoría marcó ALTA —"el `destroy` cuyo resultado
+nadie mira"— reapareciendo por una puerta nueva **dos auditorías después**, y
+lo encontró una pregunta del usuario, no una auditoría. Cuando un candado nuevo
+entra al sistema hay que ir a buscar a TODOS los que llaman a `destroy`, no
+solo a la pantalla que lo motivó. Las tres roturas (sync-down, cerrar rueda,
+descartar) salieron del mismo `throw :abort` y aparecieron de una en una, con
+días de diferencia.
+
 ## El candado que impedía purgar (2026-08-25)
 
 Con los pedidos del día ya transmitidos, "Obtener información" empezó a fallar

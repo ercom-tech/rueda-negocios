@@ -139,6 +139,7 @@ hace falta.
 | `backlog.md` | Lo que falta implementar |
 | `docs/erp-esquema-catalogos.md`, `docs/erp-esquema-pedidos.md`, `docs/erp-esquema-promociones.md` | Esquema del ERP |
 | `docs/instalacion-laptop.md` | Instalación en la laptop-servidor |
+| `docs/diagnostico-erp.md` | Consultas para saber **cuáles** son los omitidos que el panel solo cuenta |
 | `docs/auditorias.md` | Cómo se audita el proyecto: método y dimensiones |
 | `docs/auditorias-2026-07.md` | Historial de las 2 primeras auditorías (cerradas) |
 
