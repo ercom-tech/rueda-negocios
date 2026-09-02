@@ -25,6 +25,10 @@ Rails.application.routes.draw do
   get "reports", to: "reports#index", as: :reports
   get "reports/captured-orders", to: "reports#captured_orders", as: :captured_orders_report
   get "reports/product-options", to: "reports#product_options", as: :product_options_report # autocompletado del filtro de producto
+  # Reporte de productos (piezas vendidas). Responde HTML y CSV: la descarga es
+  # la MISMA acción con `format: :csv`, así el archivo sale con exactamente los
+  # filtros que se están viendo en pantalla.
+  get "reports/products", to: "reports#products", as: :products_report
 
   # Levantamiento de pedido.
   resources :orders, only: %i[new create show edit update destroy] do

@@ -69,6 +69,21 @@ simulación va con el modelo y con el par medido: el "2.31:1" que decía antes
 esta línea no se reproduce con ninguna lectura, y sin decir contra qué
 superficie era imposible comprobarlo (8ª auditoría).
 
+**`bg-white/10` es para fondo OSCURO, no para el marco dorado de los filtros.**
+Un botón secundario con esa clase dentro de la barra dorada se lava hasta
+volverse ilegible — el blanco sobre dorado claro no tiene dónde apoyarse. Ahí
+el secundario va con el mismo negro de los controles (`control_class`), que ya
+es el fondo de los combos vecinos. Pasó con el "Limpiar" del reporte de
+productos y solo se vio al mirar la pantalla renderizada.
+
+**Una columna que ES el reporte no se oculta en tablet.** `hidden
+lg:table-cell` está bien para datos secundarios —la hora o el vendedor del
+reporte de pedidos—, pero en una tabla cuyas columnas son lo que el usuario
+pidió ver, esconderlas deja media pantalla inservible en la tablet del evento.
+La salida es dar `min-w` a la columna larga y dejar que el contenedor
+`overflow-x-auto` haga su trabajo: se llega a todo con scroll, y la descripción
+no se estrangula a cinco líneas.
+
 **Nada de paneles translúcidos** (`bg-white/5`, `bg-white/10`) como superficie
 de contenido: sobre el shell negro con patrón se lavan y el bloque "no se
 aprecia". Un bloque de contenido es crema; si necesita jerarquía propia, se

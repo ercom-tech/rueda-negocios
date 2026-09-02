@@ -227,6 +227,23 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
   porque juntando las páginas un pie repartido en cuatro se lee como uno bien
   puesto.
 
+## Exportación a Excel (caxlsx)
+
+- **caxlsx ADIVINA el tipo de cada celda, y adivina mal con los códigos.**
+  `"009711"` lo guarda como el número 9711: el código FECEGO pierde sus ceros
+  a la izquierda, y va SIEMPRE a 6 dígitos (es como lo muestra el ERP y como
+  lo teclea la gente). Lo mismo amenaza al No. de parte. Hay que declarar los
+  tipos por columna — `sheet.add_row(valores, types: [:string, …, :float, …])`
+  — y no confiar en la inferencia.
+- **Las cantidades sí van numéricas, y esa es la razón de ofrecer .xlsx además
+  del CSV**: se pueden sumar y ordenar en Excel sin convertir nada. En el CSV
+  todo es texto por definición.
+- **Sin registrar el MIME, `format.xlsx` no existe** y la petición muere en un
+  406 sin explicación (`config/initializers/mime_types.rb`).
+- **Esto solo se ve abriendo el XML de la hoja**: `unzip -p archivo.xlsx
+  xl/worksheets/sheet1.xml`. Una prueba que solo compruebe que el archivo se
+  descarga y pesa algo pasa con los códigos rotos.
+
 ## Jobs y estado de corridas
 
 - Un registro de corrida (`SyncRun`) nace `running` con el **pid de su

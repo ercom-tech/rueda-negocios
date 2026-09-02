@@ -1,0 +1,162 @@
+<% content_for :title, "Reporte de productos · Rueda de Negocios" %>
+
+<div class="relative min-h-screen w-full overflow-hidden bg-black text-white">
+  <div class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.18]"
+       style="background-image: url('<%= image_path "tools_pattern_white.svg" %>');"></div>
+
+  <div class="relative z-10 flex min-h-screen flex-col px-6 py-6 sm:px-10 lg:px-[5%] lg:py-8">
+    <%= render "shared/top_bar" %>
+
+    <%# ── Título + alcance + regreso al hub (mismo molde que pedidos) ── %>
+    <div class="mt-8 mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex flex-wrap items-center gap-3">
+        <h1 class="text-3xl font-extrabold text-white sm:text-4xl">Reporte de productos</h1>
+        <span class="rounded-full bg-brand-gold px-3 py-1 text-xs font-semibold text-neutral-900">
+          <%= @all_scope ? "Todos los pedidos" : "Mis pedidos" %>
+        </span>
+      </div>
+      <%= link_to "← Volver a reportes", reports_path, class: back_link_class %>
+    </div>
+
+    <div class="w-full">
+    <%# Filtros y descarga en el mismo marco dorado: son la misma decisión
+        ("qué quiero ver"), y el archivo sale con lo que está en pantalla. %>
+    <% control_class = "flex h-[46px] items-center gap-2 rounded-full bg-black px-5 text-white focus-within:ring-2 focus-within:ring-brand-gold" %>
+    <%= form_with url: products_report_path, method: :get,
+          data: { controller: "form-submit" } do %>
+      <%= hidden_field_tag :per_page, @pagy.limit %>
+      <section class="mb-6 rounded-3xl bg-brand-gold p-2">
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <%= render "shared/custom_select", name: "supplier_id", options: @options[:suppliers],
+                selected: @supplier_id, placeholder: "Todos los proveedores", label: "Proveedor",
+                filterable: true, input_data: { action: "change->form-submit#submit" } %>
+          <%= render "shared/custom_select", name: "brand_id", options: @options[:brands],
+                selected: @brand_id, placeholder: "Todas las marcas", label: "Marca",
+                filterable: true, input_data: { action: "change->form-submit#submit" } %>
+
+          <div class="flex items-center justify-end gap-2 sm:col-span-2 lg:col-span-1">
+            <% if @supplier_id || @brand_id %>
+              <%= link_to "Limpiar", products_report_path(per_page: @pagy.limit),
+                    class: "#{control_class} font-semibold" %>
+            <% end %>
+            <%# Las descargas son la MISMA acción en otro formato, así que se
+                llevan los filtros vigentes — y van completas, sin paginar.
+                Íconos Heroicons outline distintos por formato: `document-text`
+                para el CSV (un archivo de texto) y `table-cells` para Excel
+                (una hoja de cálculo). Con el mismo ícono de descarga en los
+                dos, el formato solo se distinguía leyendo la palabra. %>
+            <%= link_to products_report_path(format: :csv, supplier_id: @supplier_id, brand_id: @brand_id),
+                  title: "Descargar como CSV", class: "#{control_class} font-semibold" do %>
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+              </svg>
+              CSV
+            <% end %>
+            <%= link_to products_report_path(format: :xlsx, supplier_id: @supplier_id, brand_id: @brand_id),
+                  title: "Descargar como Excel", class: "#{control_class} font-semibold" do %>
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 0 1-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0 1 12 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m17.25-3.75h-7.5c-.621 0-1.125.504-1.125 1.125m8.625-1.125c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125M12 10.875v-1.5m0 1.5c0 .621-.504 1.125-1.125 1.125M12 10.875c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125M13.125 12h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125M20.625 12c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h7.5M12 14.625v-1.5m0 1.5c0 .621-.504 1.125-1.125 1.125M12 14.625c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125m0 1.5v-1.5m0 0c0-.621.504-1.125 1.125-1.125m0 0h7.5" />
+              </svg>
+              Excel
+            <% end %>
+          </div>
+        </div>
+      </section>
+    <% end %>
+
+    <div class="overflow-x-auto rounded-3xl border border-black/10 bg-brand-cream text-neutral-900">
+      <table class="w-full text-sm">
+        <thead class="bg-black text-white">
+          <tr>
+            <th class="px-4 py-3 text-left font-semibold">Código</th>
+            <th class="min-w-[18rem] px-4 py-3 text-left font-semibold">Descripción</th>
+            <th class="px-4 py-3 text-left font-semibold">Modelo</th>
+            <th class="px-4 py-3 text-left font-semibold whitespace-nowrap">No. de parte</th>
+            <th class="px-4 py-3 text-right font-semibold">Cantidad</th>
+            <th class="px-4 py-3 text-right font-semibold">Regalos</th>
+            <th class="px-4 py-3 text-left font-semibold whitespace-nowrap">SKU proveedor</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @rows.each do |row| %>
+            <tr class="border-t border-black/10">
+              <td class="px-4 py-3 font-semibold tabular-nums"><%= row.code %></td>
+              <td class="min-w-[18rem] px-4 py-3"><%= row.description %></td>
+              <td class="px-4 py-3 text-neutral-600"><%= row.model.presence || "—" %></td>
+              <td class="px-4 py-3 text-neutral-600 whitespace-nowrap"><%= row.part_number.presence || "—" %></td>
+              <td class="px-4 py-3 text-right font-semibold tabular-nums"><%= report_quantity(row.sold) %></td>
+              <td class="px-4 py-3 text-right tabular-nums <%= "text-neutral-400" if row.gifted.zero? %>"><%= report_quantity(row.gifted) %></td>
+              <td class="px-4 py-3 text-neutral-600 whitespace-nowrap"><%= row.sku.presence || "—" %></td>
+            </tr>
+          <% end %>
+
+          <% if @rows.empty? %>
+            <tr>
+              <td colspan="7" class="px-4 py-10 text-center text-neutral-600">
+                <% if @supplier_id || @brand_id %>
+                  Ningún producto vendido coincide con lo que elegiste.
+                  <%= link_to "Quitar filtros", products_report_path(per_page: @pagy.limit),
+                        class: "ml-2 font-semibold text-neutral-900 underline decoration-brand-gold decoration-2 underline-offset-4" %>
+                <% else %>
+                  Todavía no hay productos vendidos.
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+
+    <%= render "shared/paginator", pagy: @pagy, noun: "producto",
+          base_params: { supplier_id: @supplier_id, brand_id: @brand_id }.compact,
+          page_sizes: @page_sizes %>
+
+    <%# ── Fuera de catálogo ─────────────────────────────────────────────
+        Bloque APARTE, no mezclado con la tabla: el genérico no pertenece a
+        ningún proveedor ni marca, así que compararlo con productos de
+        catálogo en el mismo orden sería engañoso. Se agrupa por lo que el
+        capturista tecleó, que es lo que identifica cada cosa vendida. %>
+    <% if @sales.generic_rows.any? %>
+      <section class="mt-8">
+        <h2 class="mb-3 text-lg font-bold text-white">
+          Fuera de catálogo
+          <span class="ml-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold">Código 999999</span>
+        </h2>
+        <div class="overflow-x-auto rounded-3xl border border-black/10 bg-brand-cream text-neutral-900">
+          <table class="w-full text-sm">
+            <thead class="bg-black text-white">
+              <tr>
+                <th class="min-w-[18rem] px-4 py-3 text-left font-semibold">Descripción capturada</th>
+                <th class="px-4 py-3 text-left font-semibold whitespace-nowrap">No. de parte</th>
+                <th class="px-4 py-3 text-right font-semibold">Cantidad</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @sales.generic_rows.each do |row| %>
+                <tr class="border-t border-black/10">
+                  <td class="px-4 py-3"><%= row.description %></td>
+                  <td class="px-4 py-3 text-neutral-600 whitespace-nowrap"><%= row.part_number.presence || "—" %></td>
+                  <td class="px-4 py-3 text-right font-semibold tabular-nums"><%= report_quantity(row.sold) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    <% end %>
+
+    <%# El filtro esconde el fuera de catálogo; decirlo evita que el reporte
+        filtrado se lea como "esto fue todo lo que se vendió". %>
+    <% if @sales.hidden_generic_quantity.positive? %>
+      <p class="mt-4 rounded-2xl bg-brand-cream px-5 py-3 text-sm text-neutral-900">
+        Además se capturaron
+        <span class="font-semibold"><%= report_quantity(@sales.hidden_generic_quantity) %></span>
+        piezas fuera de catálogo, que no pertenecen a ningún proveedor ni marca.
+        <%= link_to "Quita los filtros", products_report_path(per_page: @pagy.limit),
+              class: "font-semibold underline decoration-brand-gold decoration-2 underline-offset-4" %>
+        para verlas.
+      </p>
+    <% end %>
+    </div>
+  </div>
+</div>

@@ -1,3 +1,5 @@
+require "csv"
+
 class ReportsController < ApplicationController
   include Pagy::Backend
 
@@ -13,8 +15,15 @@ class ReportsController < ApplicationController
   # la rueda) daba la pantalla de error de Rails en plena laptop del evento.
   rescue_from Pagy::OverflowError do
     # Se rearma con los filtros ya saneados, no con los parámetros crudos de la
-    # petición: un `?host=` en la URL se colaría al enlace de regreso.
-    redirect_to captured_orders_report_path((@filter&.to_params || {}).merge(per_page: page_size))
+    # petición: un `?host=` en la URL se colaría al enlace de regreso. Y vuelve
+    # al reporte en el que se estaba: mandar al de pedidos desde el de
+    # productos sería perder los filtros sin explicación.
+    if action_name == "products"
+      redirect_to products_report_path(supplier_id: @supplier_id, brand_id: @brand_id,
+                                       per_page: page_size)
+    else
+      redirect_to captured_orders_report_path((@filter&.to_params || {}).merge(per_page: page_size))
+    end
   end
 
   def index; end
@@ -40,6 +49,45 @@ class ReportsController < ApplicationController
                                  .order(created_at: :desc),
                           limit: page_size)
     @matching = matching_totals(@orders, @products)
+  end
+
+  # Reporte de productos: piezas vendidas por producto en la rueda. Mismo
+  # alcance por rol que el de pedidos (`accessible_orders`), así que un
+  # capturista ve lo que él capturó y el equipo-servidor ve todo.
+  #
+  # HTML y CSV comparten TODO menos la presentación: el archivo sale con los
+  # mismos filtros que se están viendo, porque es la misma acción.
+  def products
+    @all_scope   = current_user.can_see_all_orders?
+    @supplier_id = params[:supplier_id].presence&.to_i
+    @brand_id    = params[:brand_id].presence&.to_i
+    @options     = product_report_options
+    # Un id que no está en las opciones se ignora: los combos acotan al
+    # universo del capturista, y sin esto un `?supplier_id=` a mano lo saltaría.
+    @supplier_id = nil unless @options[:suppliers].any? { |(_, id)| id == @supplier_id }
+    @brand_id    = nil unless @options[:brands].any? { |(_, id)| id == @brand_id }
+
+    @sales = ProductSales.new(accessible_orders, supplier_id: @supplier_id, brand_id: @brand_id)
+
+    respond_to do |format|
+      format.html do
+        @page_sizes = PAGE_SIZES
+        # `Pagy.new` a mano y no `pagy_array`: esa extra no está cargada y
+        # activarla globalmente para una pantalla no se paga.
+        rows  = @sales.catalog_rows
+        @pagy = Pagy.new(count: rows.size, page: params[:page] || 1, limit: page_size)
+        @rows = rows[@pagy.offset, @pagy.limit] || []
+      end
+      # Las descargas van COMPLETAS, sin paginar: el archivo se abre para
+      # trabajarlo, y uno con 25 de 300 renglones sería una trampa silenciosa.
+      format.csv do
+        send_data products_csv, filename: products_filename("csv"), type: "text/csv; charset=utf-8"
+      end
+      format.xlsx do
+        send_data products_xlsx, filename: products_filename("xlsx"),
+                  type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      end
+    end
   end
 
   # Sugerencias del filtro de producto. Acotadas al universo de quien mira: al
@@ -103,6 +151,87 @@ class ReportsController < ApplicationController
              .pluck(:order_id, Arel.sql("COUNT(*)"),
                     Arel.sql("COALESCE(SUM(#{Order::ITEM_TOTAL_SQL}), 0)"))
              .to_h { |id, count, total| [ id, { count: count, total: total } ] }
+  end
+
+  # Combos del reporte de productos: SOLO proveedor y marca, y acotados al
+  # universo de quien mira — mismo criterio que los del reporte de pedidos.
+  def product_report_options
+    {
+      suppliers: (@all_scope ? Supplier.order(:name) : available_suppliers).map { |s| [ s.name, s.id ] },
+      brands: (@all_scope ? Brand.order(:name) : available_brands).map { |b| [ b.name, b.id ] }
+    }
+  end
+
+  PRODUCTS_CSV_HEADERS = [ "Código FECEGO", "Descripción", "Modelo", "No. de parte",
+                          "Cantidad", "Regalos", "SKU proveedor" ].freeze
+
+  # El BOM (`﻿`) NO es adorno: sin él, Excel en Windows abre el archivo en
+  # la codificación local y "MARTILLO DEMOLEDOR 3/4" sale con los acentos rotos.
+  # Es la trampa clásica de exportar CSV en español, y no se ve al probarlo en
+  # una Mac.
+  def products_csv
+    CSV.generate(String.new("﻿")) do |csv|
+      csv << PRODUCTS_CSV_HEADERS
+      (@sales.catalog_rows + @sales.generic_rows).each do |row|
+        csv << [ row.code, row.description, row.model, row.part_number,
+                number_or_blank(row.sold), number_or_blank(row.gifted), row.sku ]
+      end
+    end
+  end
+
+  # Las cantidades salen sin ceros insignificantes (2 y no 2.000): la columna
+  # es `decimal(14,3)` porque hay productos a granel, pero el 99% son piezas
+  # enteras y "2.000" en una celda de Excel se lee como error de captura.
+  def number_or_blank(value)
+    return nil if value.nil? || value.zero?
+
+    value.to_d.to_s("F").sub(/\.?0+\z/, "")
+  end
+
+  # En el .xlsx las cantidades van como NÚMERO, no como texto: es la ventaja
+  # real del formato sobre el CSV — se pueden sumar y ordenar en Excel sin
+  # convertir nada. Una celda vacía en vez de 0 para que el promedio de la
+  # columna de regalos no cuente los renglones sin regalo.
+  def number_or_nil(value)
+    return nil if value.nil? || value.zero?
+
+    value.to_f
+  end
+
+  def products_xlsx
+    package = Axlsx::Package.new
+    package.workbook.add_worksheet(name: "Productos") do |sheet|
+      header = sheet.styles.add_style(b: true, bg_color: "111111", fg_color: "FFFFFF")
+      sheet.add_row PRODUCTS_CSV_HEADERS, style: header
+      # Los tipos se declaran, no se adivinan: caxlsx ve "009711" y lo guarda
+      # como número 9711, perdiendo los ceros a la izquierda — y el código
+      # FECEGO va SIEMPRE a 6 dígitos (es como lo muestra el ERP y como lo
+      # teclea la gente). El No. de parte tiene el mismo riesgo. Las cantidades
+      # sí van numéricas a propósito: es la ventaja del xlsx sobre el CSV.
+      types = [ :string, :string, :string, :string, :float, :float, :string ]
+      (@sales.catalog_rows + @sales.generic_rows).each do |row|
+        sheet.add_row [ row.code, row.description, row.model, row.part_number,
+                       number_or_nil(row.sold), number_or_nil(row.gifted), row.sku ],
+                      types: types
+      end
+      # Anchos a ojo del contenido real: la descripción del ERP es larga y sin
+      # esto sale la columna estándar, que la corta en todas las filas.
+      sheet.column_widths 12, 55, 14, 14, 10, 10, 16
+      # Congelar el encabezado: son cientos de renglones y sin esto se pierde
+      # de vista qué columna es cuál al bajar.
+      sheet.sheet_view.pane { |pane| pane.top_left_cell = "A2"; pane.state = :frozen; pane.y_split = 1 }
+    end
+    package.to_stream.read
+  end
+
+  # Nombre con la fecha y el filtro, para que dos descargas del mismo día no se
+  # pisen en la carpeta de Descargas.
+  def products_filename(extension)
+    parts = [ "productos" ]
+    parts << Supplier.find_by(id: @supplier_id)&.name if @supplier_id
+    parts << Brand.find_by(id: @brand_id)&.name if @brand_id
+    parts << Time.current.strftime("%Y-%m-%d")
+    "#{parts.compact.join('-').parameterize}.#{extension}"
   end
 
   def require_round

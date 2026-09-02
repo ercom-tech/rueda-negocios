@@ -31,6 +31,60 @@ Si es **algo por hacer**, va al backlog.
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
 
+## Reporte de productos (2026-09-02)
+
+Se habilitó la tercera card del hub de reportes: piezas vendidas por producto,
+con filtros de proveedor y marca, en pantalla y en CSV.
+
+**Decisiones del usuario:**
+
+- **Alcance "solo mis pedidos"** — un capturista suma lo que él capturó; el
+  equipo-servidor ve todo. Es el mismo `accessible_orders` del reporte de
+  pedidos, así que el filtro no puede usarse para asomarse a pedidos ajenos.
+- **Vendido y regalado en columnas separadas.** Las dos son piezas que salen
+  del almacén, pero un solo número escondería cuánto se bonificó dentro de lo
+  que se cobró.
+
+**El genérico 999999 fue la decisión de diseño interesante.** Son ventas
+reales que, agrupadas por producto, darían un renglón sin sentido: es UN
+`product_id` con tantas descripciones como cosas se hayan vendido con él. Se
+resolvió agrupándolo **por el texto capturado** —que ya viene normalizado
+(`squish.upcase` en `normalize_generic_fields`), así que no fragmenta— y
+mostrándolo en un **bloque aparte**, visible solo cuando NO hay filtro de
+proveedor ni marca: no pertenece a ninguno, y meterlo en el total de MAKITA
+sería inventar venta. Con filtro activo se **anuncia** cuántas piezas quedan
+fuera, por la misma norma que el aviso de corte del buscador: un recorte no
+puede ser silencioso.
+
+Se descartó **atribuirlo al proveedor del capturista o al pill de contexto**:
+el genérico existe precisamente porque el producto no está en el catálogo, y
+el pill es etiqueta, no restricción. Eso metería ventas falsas en el reporte de
+un proveedor — el error que la 7ª auditoría ya documentó (pedirle la cifra a la
+regla en vez de al objeto que la aplica).
+
+Efecto secundario que resultó el más útil: ese bloque **es la lista de lo que
+se vende fuera de catálogo**, con descripción y número de parte, ordenada por
+cantidad. Es justo lo que FECEGO necesita para decidir qué dar de alta en el
+ERP antes de la siguiente rueda.
+
+**Descarga en CSV y en Excel** (2026-09-02, petición del usuario), con íconos
+Heroicons distintos por formato —`document-text` para el CSV, `table-cells`
+para Excel—: con el mismo ícono de descarga en los dos, el formato solo se
+distinguía leyendo la palabra. Se agregó `caxlsx` (Ruby puro, sin binarios:
+funciona con la laptop desconectada). Ojo con su inferencia de tipos — ver
+`docs/convenciones-codigo.md` → "Exportación a Excel": guardaba el código
+FECEGO como número y le comía los ceros a la izquierda. **Lo cazó una prueba
+que abre el XML de la hoja**; una que solo comprobara que el archivo se
+descarga habría pasado con los códigos rotos.
+
+**Tres defectos que solo cazó la revisión visual** (las 16 pruebas pasaban):
+el botón "Limpiar" llevaba `bg-white/10` sobre el marco DORADO, donde se lava
+—esa clase es para fondo oscuro—; en tablet el botón de descarga quedaba
+descolgado a media fila; y Modelo, No. de parte y SKU se ocultaban en tablet
+con `hidden lg:table-cell`, que es lo que hace el reporte de pedidos con sus
+columnas secundarias, pero aquí **esas columnas SON el reporte**. Ahora se ven
+siempre y la tabla scrollea. Ver `docs/convenciones-visuales.md`.
+
 ## "Descartar" no descartaba (2026-08-26)
 
 A petición del usuario se validó si el botón Descartar realmente descarta, por

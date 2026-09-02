@@ -26,6 +26,14 @@ gem "pagy", "~> 9.0"
 gem "prawn", "~> 2.5"
 gem "prawn-table", "~> 0.2"
 
+# Exportación del reporte de productos. `csv` va explícita aunque hoy venga
+# con Ruby 3.3: deja de ser gema por defecto en 3.4, y sin fijarla aquí la
+# descarga reventaría al actualizar el intérprete. `caxlsx` genera el .xlsx en
+# Ruby puro —sin binarios ni servicios—, que es lo que permite descargarlo con
+# la laptop desconectada en pleno evento.
+gem "csv", "~> 3.3"
+gem "caxlsx", "~> 4.1"
+
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 gem "bcrypt", "~> 3.1.7"
 

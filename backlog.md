@@ -220,6 +220,35 @@ promoción: dar de alta el proveedor/marca, o desactivar esa promoción para la
 rueda. No hay salida por el lado del capturista — 6,042 de los 6,046 productos
 en promoción tienen el descuento por encima de su `descto_tope`.
 
+### Una desconexión del ERP no es un "error interno del servidor" (BAJA)
+
+`rueda-api` mete `Sequel::DatabaseDisconnectError` en el saco genérico del 500,
+así que el operador lee *"Error interno del servidor; no se guardó nada"* —que
+suena a bug de la app— cuando lo que ocurrió fue que el Postgres del ERP cerró
+las conexiones a media transacción (`PQconsumeInput() FATAL: terminating
+connection due to administrator command`).
+
+Pasó **dos veces en testing** (25 y 26 de agosto), las dos con el mismo pedido
+entrando limpio al reintentar. El comportamiento es correcto —`OrderCreate.call`
+envuelve todo en `DB.transaction`, así que no queda nada a medias, y la PK de
+negocio evita duplicar si algo hubiera entrado—; lo que está mal es solo el
+rótulo, que manda a "revisar el registro del servidor" en vez de decir
+"reintenta".
+
+**Arreglo:** un `rescue Sequel::DatabaseDisconnectError` propio en
+`app/application.rb`, con **503** y un mensaje del estilo "se perdió la conexión
+con la base del ERP; el pedido no se guardó, vuelve a transmitir". Y el texto
+correspondiente en `Sync::Up#failure_reason`, que es donde se traduce cada tipo
+de falla a lenguaje de operación.
+
+**No se hizo antes del evento a propósito:** obliga a redesplegar `rueda-api`, y
+el caso ya se resuelve reintentando. Se pospuso el 2026-08-26, a un día de la
+rueda.
+
+**Aparte, para preguntarle al equipo del ERP:** dos reinicios de Postgres en dos
+días no parece casualidad. Si hay un trabajo de mantenimiento programado,
+conviene saber a qué hora para no transmitir encima.
+
 ## Definiciones con FECEGO
 
 ### Timbrar una factura con una partida de regalo al 100% (antes del 27-ago)
