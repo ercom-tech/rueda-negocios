@@ -131,6 +131,13 @@ corren con `bin/rails test:system`, aparte de la suite normal.
 - **Calendario de rango** del reporte: arrastre, clic-clic, preview, rango de
   un solo día, día actual. Ahí ya se escapó el segundo día que no se
   registraba. Ojo: los eventos sintéticos NO lo reprodujeron.
+- **Encabezados ordenables** del reporte de pedidos (`fd7cb89`): que el clic
+  reordene de verdad, que el segundo invierta, y que el orden sobreviva al
+  cambiar de página y de filtro. Se verificó con clics reales al construirlo
+  —incluida la captura a 768 px— pero no quedó prueba de sistema; la cobertura
+  que hay es de integración.
+- **Filtros del reporte de productos** (`c61d68d`): los combos disparan
+  `form-submit` al cambiar, que es JS. Mismo caso que el anterior.
 - **Buscador de producto**: autocompletado, agregar al pedido, contador de
   partidas, aviso de capturista sin proveedor ni marca.
 - **Paso por múltiplos del empaque** con las flechas ↑/↓ (`step="any"` y el
@@ -308,6 +315,22 @@ puede verificar el ERP; cuesta una regla más en el modelo de permisos.
 **Pospuesto el 2026-09-02** (decisión del usuario): es el único punto de la
 remediación con migración, y su escenario exige que primero falle la red **y**
 que el capturista decida descartar justo ese pedido.
+
+### El reporte de productos no ordena por columna (BAJA)
+
+Sus encabezados tienen el mismo `thead` negro, el mismo `font-semibold` y los
+mismos rótulos que los del reporte de pedidos, que desde `fd7cb89` **sí**
+ordenan al hacer clic. Nada distingue unos de otros, así que invitan a un clic
+que no hace nada (9ª auditoría).
+
+Dos salidas, y la primera es la buena si alguien lo pide: **darle orden por
+columna**, que además es barato — `catalog_rows` ya se ordena en Ruby, así que
+no hace falta tocar SQL ni paginar distinto. La otra es distinguirlos
+visualmente de los que sí ordenan, pero eso deja la pregunta viva ("¿por qué
+este no?").
+
+Hoy sale ordenado por cantidad descendente, que es como se lee este reporte, y
+nadie ha pedido otra cosa.
 
 ### El reporte de productos solo ve lo que queda en la laptop (MEDIA)
 
