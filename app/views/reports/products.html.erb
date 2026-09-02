@@ -125,8 +125,11 @@
       </table>
     </div>
 
+    <%# `per_page` viaja en base_params: sin él, "Siguiente" volvía a 25 aunque
+        se estuvieran viendo 100, y la lista se renumeraba bajo el usuario. %>
     <%= render "shared/paginator", pagy: @pagy, noun: "producto",
-          base_params: { supplier_id: @supplier_id, brand_id: @brand_id }.compact,
+          base_params: { supplier_id: @supplier_id, brand_id: @brand_id }.compact
+                         .merge(per_page: @pagy.limit),
           page_sizes: @page_sizes %>
 
     <%# ── Fuera de catálogo ─────────────────────────────────────────────

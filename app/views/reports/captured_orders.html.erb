@@ -119,7 +119,8 @@
     <%# El orden viaja con los filtros: cambiar de página no puede reordenar
         la tabla por debajo. %>
     <%= render "shared/paginator", pagy: @pagy, noun: "pedido",
-          base_params: @filter.to_params.merge(@sort.to_params), page_sizes: @page_sizes %>
+          base_params: @filter.to_params.merge(@sort.to_params).merge(per_page: @pagy.limit),
+          page_sizes: @page_sizes %>
     </div>
   </div>
 </div>

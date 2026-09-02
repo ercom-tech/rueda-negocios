@@ -63,8 +63,10 @@ class ReportsController < ApplicationController
   # mismos filtros que se están viendo, porque es la misma acción.
   def products
     @all_scope   = current_user.can_see_all_orders?
-    @supplier_id = params[:supplier_id].presence&.to_i
-    @brand_id    = params[:brand_id].presence&.to_i
+    # Por `ParamSanitizing` y no `to_i`: un `?supplier_id[]=1` llega como
+    # arreglo y `to_i` levanta NoMethodError — la pantalla de error de Rails.
+    @supplier_id = ParamSanitizing.id(params[:supplier_id])
+    @brand_id    = ParamSanitizing.id(params[:brand_id])
     @options     = product_report_options
     # Un id que no está en las opciones se ignora: los combos acotan al
     # universo del capturista, y sin esto un `?supplier_id=` a mano lo saltaría.
@@ -79,7 +81,10 @@ class ReportsController < ApplicationController
         # `Pagy.new` a mano y no `pagy_array`: esa extra no está cargada y
         # activarla globalmente para una pantalla no se paga.
         rows  = @sales.catalog_rows
-        @pagy = Pagy.new(count: rows.size, page: params[:page] || 1, limit: page_size)
+        # `page` saneado: un `?page[]=2` hace que Pagy levante
+        # `Pagy::VariableError`, que no es `OverflowError` y el `rescue_from`
+        # de arriba no atrapa.
+        @pagy = Pagy.new(count: rows.size, page: ParamSanitizing.page(params[:page]), limit: page_size)
         @rows = rows[@pagy.offset, @pagy.limit] || []
       end
       # Las descargas van COMPLETAS, sin paginar: el archivo se abre para

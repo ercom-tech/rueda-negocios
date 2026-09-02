@@ -114,16 +114,12 @@ class OrdersFilter
   # (`?user_id[]=1`), y ahí `to_i`/`strip` reventaban con 500. Se acepta solo
   # texto o número, y un id no numérico se descarta en vez de volverse 0 —que
   # filtraba hacia la nada y además se quedaba pegado en todos los enlaces.
-  def id_param(value)
-    return nil unless value.is_a?(String) || value.is_a?(Integer)
+  # Delegan a `ParamSanitizing`: el mismo saneo lo necesita el reporte de
+  # productos, y tenerlo aquí como método privado hizo que aquel volviera a
+  # caer en el `NoMethodError` de `?id[]=1` (9ª auditoría).
+  def id_param(value) = ParamSanitizing.id(value)
 
-    number = Integer(value, exception: false)
-    number if number&.positive?
-  end
-
-  def text_param(value)
-    value.strip.presence if value.is_a?(String)
-  end
+  def text_param(value) = ParamSanitizing.text(value)
 
   def date_param(value)
     return nil unless value.is_a?(String)

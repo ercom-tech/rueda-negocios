@@ -77,6 +77,14 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
   capa flotante nueva que se despliegue hacia abajo tiene que medir el espacio
   y voltearse o acotarse (ver `select#position`), no confiar en que la página
   crezca. En pantalla baja aplica a casi todos los combos, no solo al último.
+- **Todo parámetro de URL que se use para consultar pasa por
+  `ParamSanitizing`.** Un `?id[]=1` llega como **arreglo** y un `?id[x]=1` como
+  `ActionController::Parameters`: sobre cualquiera de los dos, `to_i` levanta
+  `NoMethodError` — la pantalla de error de Rails en la laptop del evento. Y
+  con Pagy, un `?page[]=2` levanta `Pagy::VariableError`, que **no** es
+  `Pagy::OverflowError` y por tanto no lo atrapa el `rescue_from` que existe
+  para eso. El saneo tiene UN solo lugar a propósito: cuando vivía como método
+  privado de `OrdersFilter`, la pantalla siguiente lo volvió a pagar.
 - **El rótulo visible de un combo custom no es un `<label>`:** el control es un
   `<button>`, así que la asociación va por `aria-label`. Sin él, todos los
   combos se anuncian igual y los mensajes que nombran un campo no se pueden

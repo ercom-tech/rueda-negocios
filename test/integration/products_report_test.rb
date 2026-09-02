@@ -436,4 +436,61 @@ class ProductsReportTest < ActionDispatch::IntegrationTest
 
     assert_no_match(/No incluye/, response.body)
   end
+
+  # --- Parámetros forjados (9ª auditoría) ----------------------------------
+  # `?id[]=1` llega como arreglo y `?id[x]=1` como ActionController::Parameters:
+  # sobre cualquiera de los dos un `to_i` levanta NoMethodError, o sea la
+  # pantalla de error de Rails en la laptop del evento. `OrdersFilter` ya pagaba
+  # esta lección y el reporte nuevo no la reusó.
+  test "un id como arreglo no revienta la pantalla" do
+    item!(order!, @martillo, quantity: 3)
+    login_as "cap_pr"
+
+    get products_report_path(supplier_id: [ @supplier.id ])
+
+    assert_response :success
+    assert_match(/MARTILLO DEMOLEDOR/, response.body)
+  end
+
+  test "un id como hash tampoco" do
+    item!(order!, @martillo, quantity: 3)
+    login_as "cap_pr"
+
+    get products_report_path, params: { brand_id: { x: 1 } }
+
+    assert_response :success
+  end
+
+  # `?page[]=2` hace que Pagy levante `Pagy::VariableError`, que NO es
+  # `OverflowError` y por tanto el `rescue_from` del controlador no atrapa.
+  test "una página como arreglo cae a la primera" do
+    item!(order!, @martillo, quantity: 3)
+    login_as "cap_pr"
+
+    get products_report_path, params: { page: [ 2 ] }
+
+    assert_response :success
+    assert_match(/MARTILLO DEMOLEDOR/, response.body)
+  end
+
+  test "una página que no es número cae a la primera" do
+    item!(order!, @martillo, quantity: 3)
+    login_as "cap_pr"
+
+    get products_report_path(page: "; DROP TABLE orders --")
+
+    assert_response :success
+  end
+
+  # --- El tamaño de página sobrevive al paginar ----------------------------
+  # Con 100 por página, "Siguiente" volvía a 25 y renumeraba la lista debajo
+  # del usuario.
+  test "los enlaces de página conservan el tamaño elegido" do
+    60.times { |i| item!(order!, product!(9800 + i, "PRODUCTO #{i}", model: "M", part: "P", supplier: @supplier, sku: "S#{i}"), quantity: 1) }
+    login_as "cap_pr"
+
+    get products_report_path(per_page: 50)
+
+    assert_match(/per_page=50/, response.body, "el paginador arrastra per_page")
+  end
 end

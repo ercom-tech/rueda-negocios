@@ -272,6 +272,43 @@ lentitud al teclear cantidades, es el primer lugar donde mirar. La salida
 natural sería repintar solo la fila tocada más el bloque de totales, en vez de
 la tabla entera.
 
+### Descartar un pedido que el ERP pudo haber recibido (MEDIA)
+
+`Sync::Up` tiene tres rescues que dejan el pedido en `captured` diciéndole al
+operador *"pudo haber entrado al ERP: vuelve a transmitir sin editar"* —
+`Net::ReadTimeout`, `SystemCallError`/`JSON::ParserError` y
+`ActiveRecord::ActiveRecordError` (este último es literal: "el pedido entró al
+ERP pero no se pudo guardar su folio en esta laptop").
+
+Pero `captured` es `editable?`, o sea con el botón **Descartar** vivo. Si el
+capturista lo usa, el pedido desaparece de la laptop y el ERP lo surte,
+embarca y cobra igual: una venta que nadie pidió (9ª auditoría).
+
+Es la **cuarta puerta** del mismo defecto. La 6ª auditoría cerró el caso
+`transmitted?`; `3e0139d` cerró el candado de promoción que hacía sobrevivir al
+pedido; esta sigue abierta.
+
+**Lo que NO sirve:** avisar en el modal. Un texto informa pero no impide nada —
+quien va de prisa confirma igual.
+
+**Forma propuesta:** una columna `erp_maybe_present_at` que esos tres rescues
+sellen, y bloquear el descarte mientras esté puesta, igual que con un pedido
+transmitido. La salida se enuncia y es la que ya dice el mensaje de falla:
+**volver a transmitir**. `OrderCreate` es idempotente, así que si el ERP ya lo
+tenía devuelve su folio y el pedido pasa a `transmitted` —y entonces cae en la
+regla que ya existe—; y si no lo tenía, entra. En los dos casos la duda
+desaparece sola.
+
+**El costo que hay que aceptar antes de hacerlo:** sin red ese pedido no se
+puede descartar. Es correcto —sin red tampoco se puede resolver la duda— pero
+es una restricción real para el capturista en el salón. Variante si estorba:
+bloquear solo al capturista y permitírselo al equipo-servidor, que es quien
+puede verificar el ERP; cuesta una regla más en el modelo de permisos.
+
+**Pospuesto el 2026-09-02** (decisión del usuario): es el único punto de la
+remediación con migración, y su escenario exige que primero falle la red **y**
+que el capturista decida descartar justo ese pedido.
+
 ### El reporte de productos solo ve lo que queda en la laptop (MEDIA)
 
 `ProductSales` suma sobre `accessible_orders`, o sea sobre los pedidos que
