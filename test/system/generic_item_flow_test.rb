@@ -67,7 +67,7 @@ class GenericItemFlowTest < ApplicationSystemTestCase
 
     # La descripción vive en un input (la fila del genérico es editable), así
     # que se afirma por campo, no por texto visible.
-    assert_text "Partidas 1 / 45"
+    assert_text "Partidas: 1"
     item = @order.order_items.sole
     assert_field "description_order_item_#{item.id}", with: "CESPOL DE HULE"
     assert_equal 226.94, item.unit_price

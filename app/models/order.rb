@@ -1,8 +1,12 @@
 class Order < ApplicationRecord
-  # Tope de partidas por pedido: regla de negocio de la rueda (el ERP NO la
-  # impone — su histórico llega a 287 renglones). Puede subir cuando entren
-  # los regalos por promoción.
-  MAX_ITEMS = 45
+  # SIN tope de partidas por pedido (2026-09-02). El de 45 era regla de negocio
+  # nuestra, no del ERP —su histórico llega a 287 renglones y tiene 3,177
+  # pedidos por encima de 45—, y en la operación real del evento estorbaba: un
+  # cliente grande no cabía en un pedido. Se quitó la constante en vez de
+  # subirla o dejarla en cero: una constante que ya no restringe nada es código
+  # que el siguiente lector interpreta como regla viva.
+  #
+  # Lo que SÍ se conserva es el contador del buscador, ahora informativo.
 
   # Las observaciones viajan al ERP, que maneja texto en mayúsculas: se
   # normalizan aquí (fuente de verdad); el `uppercase` del textarea es solo
@@ -87,19 +91,15 @@ class Order < ApplicationRecord
     end
   end
 
-  # Partidas que cuentan contra MAX_ITEMS. Punto ÚNICO de la regla (lo usan
-  # la validación de OrderItem y el contador de la vista). Los regalos de
-  # promoción quedan fuera: el capturista no los pidió y no debe perder un
-  # renglón propio por ellos (decisión FECEGO 2026-08-22).
-  # En SQL y no sobre la colección cargada: se pregunta durante la validación
-  # de una partida que todavía no existe, y la asociación en memoria ya trae
-  # la que se está construyendo — contarla adelantaba el tope en uno.
-  def items_count_for_limit
-    order_items.where(gift: false).count
-  end
-
-  def items_limit_reached?
-    items_count_for_limit >= MAX_ITEMS
+  # Renglones del pedido, para el contador del buscador. Cuenta TODAS las
+  # partidas, regalos incluidos (decisión del usuario 2026-09-02): el contador
+  # ya no defiende un tope, así que tiene que cuadrar con lo que se ve en la
+  # tabla — si dijera 10 con 12 renglones en pantalla, confundiría.
+  #
+  # Mientras existió el tope excluía los regalos, porque el capturista no debía
+  # perder un renglón propio por uno que no pidió. Sin tope esa razón muere.
+  def items_count
+    order_items.count
   end
 
   # --- Promociones -------------------------------------------------------

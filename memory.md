@@ -31,6 +31,42 @@ Si es **algo por hacer**, va al backlog.
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
 
+## Se quitó el tope de 45 partidas (2026-09-02)
+
+Petición del usuario: **no era funcional en la operación del evento** — un
+cliente grande no cabía en un pedido. El tope era regla de negocio nuestra, no
+del ERP: su histórico llega a **287 renglones** y tiene 3,177 pedidos por
+encima de 45. La nota original ya anticipaba que "puede subir"; se quitó del
+todo.
+
+Se eliminaron `Order::MAX_ITEMS`, `items_limit_reached?` y la validación
+`order_items_within_limit` de `OrderItem`, en vez de dejar la constante en un
+número enorme o en nil: **una constante que ya no restringe nada la lee el
+siguiente como regla viva.**
+
+**El contador se queda**, ya sin el "/ 45", y ahora cuenta **todas** las
+partidas —regalos incluidos— por decisión del usuario: dejó de defender un
+tope y pasó a ser informativo, así que tiene que cuadrar con lo que se ve en la
+tabla. Si dijera 10 con 12 renglones en pantalla, confundiría. Mientras hubo
+tope excluía los regalos, porque el capturista no debía perder un renglón
+propio por uno que no pidió; sin tope esa razón muere. `items_count_for_limit`
+pasó a llamarse `items_count`: el nombre viejo prometía una regla que ya no
+existe.
+
+**Y al quitarlo se descubrió que la prueba del tope nunca lo probó.** Decía
+*"el POST de la partida excedente no crea el registro y avisa el motivo"*, pero
+mandaba `params: { order_item: { product_id: … } }` cuando
+`OrderItemsController#create` espera `product_id` **suelto**. El POST moría en
+un 404, así que "no se creó la partida" se cumplía por la razón equivocada. La
+prueba pasó meses en verde sin ejercitar la regla que decía cubrir — es el
+mismo patrón que ya está en las convenciones ("una prueba que pasa puede estar
+pasando por el camino equivocado"), y esta vez lo destapó **borrar la
+funcionalidad**, no auditarla.
+
+Pendiente que dejo anotado: la pantalla de captura repinta la tabla completa en
+cada cambio de cantidad (15 consultas). Con 45 renglones iba bien; con 150 no
+está medido.
+
 ## Reporte de productos (2026-09-02)
 
 Se habilitó la tercera card del hub de reportes: piezas vendidas por producto,

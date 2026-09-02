@@ -196,9 +196,10 @@ preguntarle a FECEGO qué significa esa configuración.
 
 ## Detalles operativos
 
-- **El ERP no impone el tope de 45 partidas.** Su máximo histórico real es
-  **287**, y 3,294 pedidos pasan de 45. El 45 es regla de negocio de la rueda,
-  y los regalos no cuentan contra él.
+- **El ERP nunca impuso un tope de partidas.** Su máximo histórico real es
+  **287**, y 3,294 pedidos pasan de 45. El tope de 45 que tuvo la app era regla
+  de negocio de la rueda, y **se quitó el 2026-09-02** por no ser funcional en
+  la operación del evento.
 - **Un producto de regalo puede no pertenecer a la rueda.** El esmeril SKIL de
   FANDELI (26748) no está en ningún universo RUN ni es de una marca o
   proveedor participante: el export lo suma al catálogo a propósito, o la

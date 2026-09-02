@@ -217,9 +217,10 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
   cerca de **cada** frontera de página y se mueve con el alto de la tabla: la
   dispara igual una descripción que se parte en dos líneas. Los regalos la
   vuelven mucho más probable (el prefijo "REGALO — " deja el 82% de los
-  renglones a doble alto) y además **no cuentan contra `MAX_ITEMS`**, así que
-  el impreso puede rebasar los 45 renglones. Por eso la prueba **barre un
-  rango** en vez de fijar un conteo.
+  renglones a doble alto) y **desde que se quitó el tope de partidas
+  (2026-09-02) un pedido puede tener los renglones que sea**. Por eso la
+  prueba **barre un rango** en vez de fijar un conteo — y por eso el arreglo
+  del pie tenía que ser geométrico y no una tabla de casos.
 - **Extraer el texto del stream no prueba que se VEA.** Un bloque tapado por la
   tabla que se dibuja encima se extrae idéntico a uno visible; lo que hay que
   medir ahí es el espacio **reservado** frente al **ocupado**. Y al revés: para

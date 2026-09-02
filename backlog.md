@@ -120,7 +120,7 @@ corren con `bin/rails test:system`, aparte de la suite normal.
 - **Calendario de rango** del reporte: arrastre, clic-clic, preview, rango de
   un solo día, día actual. Ahí ya se escapó el segundo día que no se
   registraba. Ojo: los eventos sintéticos NO lo reprodujeron.
-- **Buscador de producto**: autocompletado, agregar al pedido, tope de 45
+- **Buscador de producto**: autocompletado, agregar al pedido, contador de
   partidas, aviso de capturista sin proveedor ni marca.
 - **Paso por múltiplos del empaque** con las flechas ↑/↓ (`step="any"` y el
   paso implementado a mano) y el auto-guardado en `blur` solo si cambió.
@@ -248,6 +248,18 @@ rueda.
 **Aparte, para preguntarle al equipo del ERP:** dos reinicios de Postgres en dos
 días no parece casualidad. Si hay un trabajo de mantenimiento programado,
 conviene saber a qué hora para no transmitir encima.
+
+### Medir la captura con pedidos muy largos (BAJA)
+
+Al quitar el tope de 45 partidas (2026-09-02) un pedido puede tener los
+renglones que sea. La tabla de captura repinta **completa** en cada cambio de
+cantidad o descuento —15 consultas por repintado tras la optimización de la 5ª
+auditoría—, y eso está medido con 45 renglones, no con 150.
+
+Si en la próxima rueda aparecen pedidos muy grandes y el capturista siente
+lentitud al teclear cantidades, es el primer lugar donde mirar. La salida
+natural sería repintar solo la fila tocada más el bloque de totales, en vez de
+la tabla entera.
 
 ## Definiciones con FECEGO
 

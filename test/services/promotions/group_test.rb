@@ -270,7 +270,10 @@ class PromotionsGroupTest < ActiveSupport::TestCase
     assert_equal [ chico.id ], @order.reload.order_items.select(&:gift?).map(&:product_id)
   end
 
-  test "los regalos no cuentan contra el tope de partidas" do
+  # El regalo entra como partida PROPIA, marcada `gift`, y el contador del
+  # buscador la incluye (desde que se quitó el tope, 2026-09-02: el contador
+  # tiene que cuadrar con lo que se ve en la tabla).
+  test "el regalo entra como partida marcada y suma al contador" do
     a, gift_product = product(price: 1000), product(price: 50)
     promo = promotion(tiers: [ { from: 1000, percent: 9 } ], products: [ a ])
     promo.promotion_tiers.first.promotion_gifts.create!(product: gift_product, quantity: 1)
@@ -278,8 +281,8 @@ class PromotionsGroupTest < ActiveSupport::TestCase
 
     group_for(promo).apply!
 
-    assert_equal 1, @order.reload.items_count_for_limit
-    assert_equal 2, @order.order_items.size
+    assert_equal 2, @order.reload.items_count
+    assert_equal 1, @order.order_items.where(gift: true).count
   end
 
   # Un regalo sin precio entraría en $0.00: un faltante que el ERP no puede

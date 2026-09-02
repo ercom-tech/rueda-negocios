@@ -32,7 +32,6 @@ class OrderItem < ApplicationRecord
   # Solo al agregar: un pedido que YA rebasa el tope (p.ej. si la regla baja
   # después) debe seguir siendo editable — corregir cantidades y quitar
   # renglones — en vez de quedar atorado sin poder guardar nada.
-  validate :order_items_within_limit, on: :create
   validate :promotion_not_applied_to_product, on: :create
   validate :not_locked_by_promotion, on: :update
   # El candado de edición es `on: :update` y NO cubría el borrado: la pantalla
@@ -162,18 +161,6 @@ class OrderItem < ApplicationRecord
     errors.add(:base, "La descripción y el número de parte viajan juntos al ERP y no caben: " \
                       "#{over == 1 ? 'sobra 1 carácter' : "sobran #{over} caracteres"} " \
                       "(máximo #{ERP_CAPTURED_NAME_LIMIT} entre ambos).")
-  end
-
-  # Tope de partidas del pedido (Order::MAX_ITEMS). Va en el modelo y no solo
-  # en el controlador: cubre cualquier ruta futura y un POST forjado por igual.
-  # El controlador ya muestra estos mensajes en el flash cuando `save` falla.
-  def order_items_within_limit
-    # Los regalos no cuentan contra el tope (decisión FECEGO 2026-08-22): el
-    # capturista no los pidió y no debe perder un renglón propio por ellos.
-    # El ERP aguanta de sobra — su histórico llega a 287 partidas.
-    return if gift? || order.blank? || !order.items_limit_reached?
-
-    errors.add(:base, "Un pedido no puede tener más de #{Order::MAX_ITEMS} partidas.")
   end
 
   # --- Promociones -------------------------------------------------------

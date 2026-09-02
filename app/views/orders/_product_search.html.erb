@@ -1,38 +1,33 @@
 <%# Buscador de producto (autocompletado). Locals: order.
     Id "product-search" para que OrderItems lo repinte con MORPH en cada alta/
-    baja de partida: al llegar al tope (Order::MAX_ITEMS) queda deshabilitado
-    sin recargar. Morph y no replace a propósito — un replace reconectaría el
-    controlador Stimulus, que al conectar enfoca el buscador, y le robaría el
-    foco a la tabla cada vez que se edita una cantidad o un descuento. %>
-<% limit_reached = order.items_limit_reached? %>
+    baja de partida, así el contador se actualiza sin recargar. Morph y no
+    replace a propósito — un replace reconectaría el controlador Stimulus, que
+    al conectar enfoca el buscador, y le robaría el foco a la tabla cada vez
+    que se edita una cantidad o un descuento. %>
 <div id="product-search" class="relative" data-controller="autocomplete"
      data-autocomplete-url-value="<%= product_options_order_path(order) %>"
-     data-autocomplete-autofocus-value="<%= !limit_reached %>"
+     data-autocomplete-autofocus-value="true"
      data-action="click@window->autocomplete#hide turbo:submit-end->autocomplete#reset">
   <%# Gris del manual de identidad (pill "# Pedido" de la referencia paso2) —
       el mismo neutral-400 de los pills grises del sitio. %>
   <div class="flex items-center gap-3 rounded-full bg-neutral-400 px-5 py-3 text-neutral-900 focus-within:ring-2 focus-within:ring-brand-gold">
-    <%# El 60% de "deshabilitado" va SOLO sobre el ícono. Al tope, el
-        placeholder deja de ser una invitación a escribir y pasa a ser el
-        mensaje que explica por qué no se puede: atenuarlo lo dejaba en 2.21:1
-        —ilegible incluso subiéndolo a neutral-900, que al 60% solo llega a
-        3.25— y el capturista tecleaba sin entender qué pasaba. Misma regla que
-        el contador: el 60% va al control, no al dato. %>
     <div class="flex min-w-0 flex-1 items-center gap-3">
-      <svg class="h-5 w-5 shrink-0 text-neutral-700 <%= "opacity-60" if limit_reached %>" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
-      <input type="text" autocomplete="off" <%= "disabled" if limit_reached %>
-             placeholder="<%= limit_reached ? "Alcanzaste el máximo de #{Order::MAX_ITEMS} partidas" : "Busca por código, nombre, modelo o No. de parte" %>"
+      <svg class="h-5 w-5 shrink-0 text-neutral-700" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+      <input type="text" autocomplete="off"
+             placeholder="Busca por código, nombre, modelo o No. de parte"
              role="combobox" aria-autocomplete="list" aria-expanded="false"
              aria-controls="product-search-listbox" aria-label="Buscar producto"
              data-autocomplete-target="input"
              data-action="input->autocomplete#search keydown->autocomplete#navigate"
-             class="w-full bg-transparent outline-none disabled:opacity-100 <%= limit_reached ? "placeholder:font-semibold placeholder:text-neutral-900" : "placeholder:text-neutral-800" %>" />
+             class="w-full bg-transparent outline-none placeholder:text-neutral-800" />
     </div>
-    <%# Contador contra el tope, al extremo derecho del propio buscador:
-        visible siempre (no solo al acercarse) para que el capturista no
-        llegue al límite a ciegas. %>
-    <span class="shrink-0 text-sm <%= limit_reached ? "font-bold" : "font-semibold" %>">
-      Partidas <%= order.items_count_for_limit %> / <%= Order::MAX_ITEMS %>
+    <%# Contador de renglones, al extremo derecho del propio buscador. Ya no
+        defiende un tope —se quitó el de 45 el 2026-09-02— pero se conserva
+        porque el capturista lo usa para saber por dónde va en un pedido largo.
+        Cuenta TODAS las partidas, regalos incluidos: tiene que cuadrar con lo
+        que se ve en la tabla de abajo. %>
+    <span class="shrink-0 text-sm font-semibold">
+      Partidas: <%= order.items_count %>
     </span>
   </div>
   <%# Sin `role="listbox"`: el partial ENTERO se inyecta aquí dentro, y un

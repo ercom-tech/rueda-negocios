@@ -157,37 +157,41 @@ class OrderItemTest < ActiveSupport::TestCase
                     "Captúralo fuera de catálogo (999999) con su precio, o avisa al equipo del servidor."
   end
 
-  # --- Tope de partidas (Order::MAX_ITEMS) --------------------------------
+  # --- Sin tope de partidas (2026-09-02) ----------------------------------
+  # El de 45 era regla de negocio nuestra, no del ERP, y en la operación real
+  # del evento estorbaba: un cliente grande no cabía en un pedido. Se quitó.
 
   def fill_order_to(count)
     count.times { |i| @order.order_items.create!(position: i + 1, quantity: 1, unit_price: 100, tax_rate: 16, discount_percent: 0) }
   end
 
-  test "la partida en el tope (MAX_ITEMS) se agrega y la siguiente no" do
-    fill_order_to(Order::MAX_ITEMS - 1)
+  test "un pedido admite muchas más de 45 partidas" do
+    fill_order_to(60)
 
-    assert item(discount_percent: 0, position: Order::MAX_ITEMS).save, "la partida #{Order::MAX_ITEMS} debe caber"
+    partida = item(discount_percent: 0, position: 61)
 
-    excedente = item(discount_percent: 0, position: Order::MAX_ITEMS + 1)
-    assert_not excedente.valid?
-    assert_includes excedente.errors.full_messages,
-                    "Un pedido no puede tener más de #{Order::MAX_ITEMS} partidas."
+    assert partida.save, "la partida 61 debe caber: ya no hay tope"
+    assert_equal 61, @order.reload.items_count
   end
 
-  test "un pedido en el tope sigue siendo editable (la regla es solo al agregar)" do
-    fill_order_to(Order::MAX_ITEMS)
-    ultima = @order.order_items.last
+  test "ninguna partida se rechaza por cantidad de renglones" do
+    fill_order_to(120)
 
-    assert ultima.update(quantity: 5), "editar cantidad no debe chocar con el tope"
-    assert ultima.destroy, "quitar una partida tampoco"
+    partida = item(discount_percent: 0, position: 121)
+
+    assert partida.valid?
+    assert_empty partida.errors.full_messages.grep(/no puede tener más de/)
   end
 
-  test "quitar una partida vuelve a abrir espacio" do
-    fill_order_to(Order::MAX_ITEMS)
-    assert @order.items_limit_reached?
+  # El contador del buscador cuenta TODAS las partidas, regalos incluidos
+  # (decisión del usuario): tiene que cuadrar con lo que se ve en la tabla.
+  test "el contador incluye los regalos" do
+    fill_order_to(3)
+    regalo = @order.order_items.new(position: 4, quantity: 1, unit_price: 100,
+                                    tax_rate: 16, discount_percent: 100)
+    regalo.gift = true
+    regalo.save!(validate: false)
 
-    @order.order_items.last.destroy
-    assert_not @order.reload.items_limit_reached?
-    assert item(discount_percent: 0, position: Order::MAX_ITEMS).save
+    assert_equal 4, @order.reload.items_count
   end
 end
