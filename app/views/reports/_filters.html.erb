@@ -1,7 +1,7 @@
 <%# Barra de filtros del reporte. Locals: filter (OrdersFilter), options, per_page.
 
     Marco dorado DELGADO con los mismos márgenes del paso 2 (`p-2` y `gap-2`):
-    el dorado se lee como borde, no como fondo con aire. Controles en control_class
+    el dorado se lee como borde, no como fondo con aire. Controles en filter_control_class
     negro, todos del mismo fondo, sin título y sin etiquetas — el nombre de la
     dimensión va DENTRO del control como hint ("Todos los proveedores"), que es
     la línea que se ahorra por filtro.
@@ -19,7 +19,6 @@
     GET sin `page`: cambiar un filtro regresa siempre a la primera página
     (quedarse en la 7 con menos resultados deja la tabla vacía). El tamaño de
     página sí viaja, para no perderlo al filtrar. %>
-<% control_class      = "flex h-[46px] items-center gap-2 rounded-full bg-black px-5 text-white focus-within:ring-2 focus-within:ring-brand-gold" %>
 <% on_change = { action: "change->form-submit#submit" } %>
 
 <%= form_with url: captured_orders_report_path, method: :get,
@@ -70,7 +69,7 @@
       <div class="relative" data-controller="autocomplete product-filter"
            data-autocomplete-url-value="<%= product_options_report_path %>"
            data-action="click@window->autocomplete#hide">
-        <div class="<%= control_class %>">
+        <div class="<%= filter_control_class %>">
           <svg class="h-5 w-5 shrink-0 text-white/60" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
           <%= text_field_tag :product_q, filter.product_q, "aria-label": "Producto",
                 placeholder: "Producto: código, nombre o No. de parte", autocomplete: "off",

@@ -29,9 +29,11 @@ class OrderItem < ApplicationRecord
   validate :unit_price_positive
   validate :discount_within_limits
   validate :generic_description_fits_erp, if: :generic?
-  # Solo al agregar: un pedido que YA rebasa el tope (p.ej. si la regla baja
-  # después) debe seguir siendo editable — corregir cantidades y quitar
-  # renglones — en vez de quedar atorado sin poder guardar nada.
+  # `on: :create`: la regla es sobre AGREGAR a un grupo ya congelado. Un pedido
+  # con la promoción aplicada tiene que seguir siendo editable por los caminos
+  # que la promoción sí permite. (Este comentario describía el tope de 45
+  # partidas, que se quitó el 2026-09-02; quedó encima de la validación
+  # equivocada, atribuyéndole una razón que no era la suya.)
   validate :promotion_not_applied_to_product, on: :create
   validate :not_locked_by_promotion, on: :update
   # El candado de edición es `on: :update` y NO cubría el borrado: la pantalla

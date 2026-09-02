@@ -1,11 +1,26 @@
 module ReportsHelper
+  # Estilo de los controles dentro de la barra dorada de filtros (combos,
+  # botones de descarga). Estaba copiado carácter por carácter en las dos
+  # vistas de reporte: si cambiara el alto o el anillo de foco, una se quedaba
+  # atrás sin que nada lo delatara.
+  def filter_control_class
+    "flex h-[46px] items-center gap-2 rounded-full bg-black px-5 text-white " \
+      "focus-within:ring-2 focus-within:ring-brand-gold"
+  end
+
   # Encabezado ordenable de la tabla del reporte de pedidos.
   #
   # El enlace lleva `page: nil` a propósito: reordenar y quedarse en la página
   # 7 deja al usuario en medio de una lista que ya no es la que estaba viendo.
   # `aria-sort` es lo que le dice a un lector de pantalla cuál columna manda —
   # sin él, la flecha es información solo para quien la ve.
-  def sortable_header(column, label, sort:, base_params:, align: "left")
+  # `extra` son clases del `<th>` — hoy solo `hidden lg:table-cell`, para las
+  # columnas que se esconden en tablet. Existe para que las NUEVE columnas
+  # pasen por aquí: cuando Hora y Vendedor se escribían a mano porque el helper
+  # no las admitía, la lógica de `aria-sort` quedó duplicada y expresada de dos
+  # formas distintas — el mismo patrón que las convenciones narran con
+  # `back_link_class` (9ª auditoría).
+  def sortable_header(column, label, sort:, base_params:, align: "left", extra: nil)
     url = url_for(base_params.merge(sort: column, dir: sort.next_dir_for(column), page: nil))
     aria = case sort.direction_for(column)
     when "asc"  then "ascending"
@@ -13,7 +28,8 @@ module ReportsHelper
     else "none"
     end
 
-    tag.th class: "px-4 py-3 text-#{align} font-semibold", aria: { sort: aria } do
+    tag.th class: [ "px-4 py-3 text-#{align} font-semibold", extra ].compact.join(" "),
+           aria: { sort: aria } do
       link_to url, class: sort_header_class(sort.active?(column)) do
         safe_join([ label, sort_caret(sort.direction_for(column)) ])
       end

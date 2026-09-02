@@ -63,8 +63,11 @@ class OrderItemsCounterTest < ActionDispatch::IntegrationTest
     get order_path(@order)
 
     assert_response :success
-    assert_select "#product-search span", text: /Partidas:\s*3/
-    assert_no_match(/\/\s*45/, response.body)
+    # Sobre el TEXTO DEL CONTADOR, no sobre el HTML entero: un
+    # `assert_no_match(/\/\s*45/, response.body)` daba falso positivo en cuanto
+    # un digest de asset traía "/…45".
+    contador = css_select("#product-search span").map(&:text).join(" ").squish
+    assert_equal "Partidas: 3", contador
   end
 
   # Cuenta TODAS las partidas, regalos incluidos, para cuadrar con la tabla.

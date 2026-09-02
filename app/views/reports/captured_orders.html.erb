@@ -39,21 +39,11 @@
               <%= sortable_header "user", "Capturista", sort: @sort, base_params: sort_params %>
             <% end %>
             <%= sortable_header "date", "Fecha", sort: @sort, base_params: sort_params %>
-            <th class="hidden px-4 py-3 text-left font-semibold lg:table-cell"
-                aria-sort="<%= @sort.active?("time") ? (@sort.dir == "asc" ? "ascending" : "descending") : "none" %>">
-              <%= link_to url_for(sort_params.merge(sort: "time", dir: @sort.next_dir_for("time"), page: nil)),
-                    class: sort_header_class(@sort.active?("time")) do %>
-                Hora<%= sort_caret @sort.direction_for("time") %>
-              <% end %>
-            </th>
+            <%= sortable_header "time", "Hora", sort: @sort, base_params: sort_params,
+                  extra: "hidden lg:table-cell" %>
             <%= sortable_header "client", "Cliente", sort: @sort, base_params: sort_params %>
-            <th class="hidden px-4 py-3 text-left font-semibold lg:table-cell"
-                aria-sort="<%= @sort.active?("salesperson") ? (@sort.dir == "asc" ? "ascending" : "descending") : "none" %>">
-              <%= link_to url_for(sort_params.merge(sort: "salesperson", dir: @sort.next_dir_for("salesperson"), page: nil)),
-                    class: sort_header_class(@sort.active?("salesperson")) do %>
-                Vendedor<%= sort_caret @sort.direction_for("salesperson") %>
-              <% end %>
-            </th>
+            <%= sortable_header "salesperson", "Vendedor", sort: @sort, base_params: sort_params,
+                  extra: "hidden lg:table-cell" %>
             <%= sortable_header "folio", "Clave local", sort: @sort, base_params: sort_params %>
             <%= sortable_header "items", "Renglones", sort: @sort, base_params: sort_params, align: "right" %>
             <%= sortable_header "total", "Total", sort: @sort, base_params: sort_params, align: "right" %>

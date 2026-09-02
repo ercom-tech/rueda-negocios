@@ -327,6 +327,23 @@ puede verificar el ERP; cuesta una regla más en el modelo de permisos.
 remediación con migración, y su escenario exige que primero falle la red **y**
 que el capturista decida descartar justo ese pedido.
 
+### Dos asperezas visuales del reporte de productos (BAJA)
+
+Salieron de la 9ª auditoría y se dejaron fuera de la remediación a propósito:
+arreglarlas bien pide rediseñar, y no estaba claro cuál es la forma correcta.
+
+- **El paginador queda encajado entre las dos tablas.** Su conteo ("2
+  productos") cuenta solo el catálogo y se lee pegado al encabezado "Fuera de
+  catálogo", que trae filas no contadas. La salida no es obvia: separar con
+  aire, mover el conteo arriba de la tabla, o replantear el orden de los dos
+  bloques.
+- **El blanco de clic de los encabezados ordenables es solo el texto**, no toda
+  la celda: el `px-4 py-3` vive en el `<th>` y el `<a>` es `inline-flex`. Pasa
+  el criterio de WCAG 2.2 por la excepción de espaciado (los centros quedan a
+  ≥32 px en horizontal y ≥44 px del enlace de la primera fila), pero en tablet
+  es un blanco chico. Se arregla moviendo el padding al enlace
+  (`block w-full px-4 py-3` con `justify-*` según el `align`).
+
 ### El reporte de productos no ordena por columna (BAJA)
 
 Sus encabezados tienen el mismo `thead` negro, el mismo `font-semibold` y los

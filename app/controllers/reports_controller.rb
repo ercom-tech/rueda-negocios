@@ -49,9 +49,9 @@ class ReportsController < ApplicationController
     # tabla se vería ordenada dentro de una página que siempre trae los mismos
     # pedidos. `@products` va porque con filtro de partida las columnas
     # Renglones y Total muestran —y por tanto ordenan por— lo que coincide.
-    listado = @sort.apply(@filter.apply_status(filtered), @products)
+    ordered = @sort.apply(@filter.apply_status(filtered), @products)
                    .includes(:user, :order_items, client: :salesperson)
-    @pagy, @orders = pagy(listado, limit: page_size)
+    @pagy, @orders = pagy(ordered, limit: page_size)
     @matching = matching_totals(@orders, @products)
   end
 
