@@ -82,7 +82,7 @@
               </td>
               <td class="px-4 py-3 font-semibold whitespace-nowrap">
                 <%= link_to order.folio, order_path(order), title: "Abrir pedido",
-                      class: "underline decoration-brand-gold decoration-2 underline-offset-4 hover:text-brand-coral" %>
+                      class: "underline decoration-brand-coral-dark decoration-2 underline-offset-4 hover:text-brand-coral" %>
               </td>
               <%# Con filtro de partida, renglones e importe son los de las
                   partidas que coinciden (el aviso arriba del resumen lo dice). %>
@@ -105,7 +105,7 @@
                 <% if @filter.any? %>
                   Ningún pedido coincide con lo que elegiste.
                   <%= link_to "Quitar filtros", captured_orders_report_path(per_page: @pagy.limit),
-                        class: "ml-2 font-semibold text-neutral-900 underline decoration-brand-gold decoration-2 underline-offset-4" %>
+                        class: "ml-2 font-semibold text-neutral-900 underline decoration-brand-coral-dark decoration-2 underline-offset-4" %>
                 <% else %>
                   Todavía no hay pedidos capturados.
                 <% end %>
@@ -118,6 +118,18 @@
 
     <%# El orden viaja con los filtros: cambiar de página no puede reordenar
         la tabla por debajo. %>
+    <%# Hora y Vendedor se ocultan en tablet, y con ellas su flecha y su
+        encabezado dorado: ordenando por una de las dos, la tabla quedaba
+        ordenada por un criterio invisible. Aquí se dice, y solo cuando hace
+        falta (`lg:hidden`, el mismo corte que esconde las columnas). %>
+    <% if @sort.hidden_on_tablet? %>
+      <p class="mt-4 text-sm text-white/70 lg:hidden">
+        Ordenado por <span class="font-semibold text-brand-gold"><%= @sort.label %></span>,
+        <%= @sort.dir == "asc" ? "de menor a mayor" : "de mayor a menor" %>.
+        <span class="block">Esa columna no se muestra a este ancho.</span>
+      </p>
+    <% end %>
+
     <%= render "shared/paginator", pagy: @pagy, noun: "pedido",
           base_params: @filter.to_params.merge(@sort.to_params).merge(per_page: @pagy.limit),
           page_sizes: @page_sizes %>

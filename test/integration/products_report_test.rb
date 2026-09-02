@@ -493,4 +493,43 @@ class ProductsReportTest < ActionDispatch::IntegrationTest
 
     assert_match(/per_page=50/, response.body, "el paginador arrastra per_page")
   end
+
+  # --- Contraste y accesibilidad (9ª auditoría) ----------------------------
+
+  # El dorado de trazo sobre crema da 1.39:1 — la convención lo tiene escrito y
+  # esta pantalla lo había copiado igual.
+  test "los enlaces sobre crema no se subrayan en dorado" do
+    item!(order!, @martillo, quantity: 3)
+    login_as "cap_pr"
+
+    get products_report_path(supplier_id: @supplier.id)
+
+    assert_no_match(/decoration-brand-gold/, response.body)
+  end
+
+  # El contenedor apuesta el diseño al scroll horizontal: sin nada enfocable
+  # dentro, con teclado no había forma de llegar a las columnas de la derecha.
+  test "las tablas con scroll horizontal son alcanzables por teclado" do
+    item!(order!, @martillo, quantity: 3)
+    item!(order!, @generico, quantity: 2, description: "ALGO FUERA")
+    login_as "cap_pr"
+
+    get products_report_path
+
+    assert_select "div[role=region][tabindex='0']", 2
+    assert_select "div[role=region][aria-label=?]", "Productos vendidos"
+    assert_select "div[role=region][aria-label=?]", "Productos fuera de catálogo"
+  end
+
+  # `title` no cuenta para el nombre accesible cuando el enlace tiene texto:
+  # el lector anunciaba "CSV, enlace".
+  test "las descargas dicen qué descargan" do
+    item!(order!, @martillo, quantity: 3)
+    login_as "cap_pr"
+
+    get products_report_path
+
+    assert_select "a[aria-label=?]", "Descargar el reporte en CSV"
+    assert_select "a[aria-label=?]", "Descargar el reporte en Excel"
+  end
 end

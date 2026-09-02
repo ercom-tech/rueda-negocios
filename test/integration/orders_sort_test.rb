@@ -375,4 +375,50 @@ class OrdersSortTest < ActionDispatch::IntegrationTest
 
     assert_select "th a[href*='status=captured']"
   end
+
+  # --- El orden que no se ve (9ª auditoría) --------------------------------
+  # Hora y Vendedor son `hidden lg:table-cell`: a 768 px se van con su flecha y
+  # su encabezado dorado, y `display:none` las saca también del árbol de
+  # accesibilidad, así que ni el `aria-sort` se anuncia. La tabla quedaba
+  # ordenada por un criterio del que no había ninguna señal.
+  test "ordenando por una columna que se oculta en tablet, se dice en texto" do
+    order!(user: @ana, client: @c1, folio: "RN-000001")
+    login_as "srv960"
+
+    get captured_orders_report_path(sort: "salesperson", dir: "asc")
+
+    assert_match(/Ordenado por/, response.body)
+    assert_match(/Vendedor/, response.body)
+    assert_match(/de menor a mayor/, response.body)
+    assert_match(/no se muestra a este ancho/, response.body)
+  end
+
+  test "la hora también se anuncia" do
+    order!(user: @ana, client: @c1, folio: "RN-000001")
+    login_as "srv960"
+
+    get captured_orders_report_path(sort: "time", dir: "desc")
+
+    assert_match(/Ordenado por/, response.body)
+    assert_match(/de mayor a menor/, response.body)
+  end
+
+  # Con una columna visible no hace falta: la flecha y el dorado ya lo dicen.
+  test "ordenando por una columna visible no se repite el rótulo" do
+    order!(user: @ana, client: @c1, folio: "RN-000001")
+    login_as "srv960"
+
+    get captured_orders_report_path(sort: "total", dir: "asc")
+
+    assert_no_match(/Ordenado por/, response.body)
+  end
+
+  test "sin orden explícito tampoco" do
+    order!(user: @ana, client: @c1, folio: "RN-000001")
+    login_as "srv960"
+
+    get captured_orders_report_path
+
+    assert_no_match(/Ordenado por/, response.body)
+  end
 end

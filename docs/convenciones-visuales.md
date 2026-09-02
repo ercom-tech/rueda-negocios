@@ -96,6 +96,13 @@ secundarios sobre fondo oscuro.
 **100% Heroicons outline**, `currentColor`, trazo 1.5. Cero emojis y cero
 assets de íconos sueltos.
 
+**Excepción: la flecha de orden de una tabla** (`sort_caret`). Va a **trazo 2**
+y no 1.5: es un chevron de 16 px (`h-4`) sobre el `thead` negro, y a ese tamaño
+el trazo fino se pierde justo en el elemento que dice cuál columna manda. Mismo
+argumento que el favicon —a tamaño chico el trazo desaparece— y por eso queda
+escrito aquí: la del favicon estaba registrada y esta no, así que parecía un
+descuido (9ª auditoría).
+
 **Excepción: el favicon** (`public/icon.svg` + `icon.png`). Va en silueta
 **sólida**, no en outline: a 16 px un trazo de 1.5 desaparece. Y el dorado va
 de **fondo**, no de acento — entre varias pestañas abiertas el color identifica

@@ -56,6 +56,20 @@ class OrdersSort
     "status" => { sql: "CASE orders.status WHEN 'draft' THEN 0 WHEN 'captured' THEN 1 ELSE 2 END" }
   }.freeze
 
+  # Cómo se llama cada columna para el usuario, y cuáles desaparecen en tablet
+  # (`hidden lg:table-cell` en la vista). Ordenando por una oculta, la tabla
+  # queda ordenada por un criterio del que no hay ninguna señal en pantalla —
+  # ni flecha, ni columna dorada, ni `aria-sort`, porque `display:none` la saca
+  # también del árbol de accesibilidad. Por eso el rótulo se muestra aparte
+  # (ver `hidden_on_tablet?` y el paginador).
+  LABELS = {
+    "user" => "Capturista", "date" => "Fecha", "time" => "Hora",
+    "client" => "Cliente", "salesperson" => "Vendedor", "folio" => "Clave local",
+    "items" => "Renglones", "total" => "Total", "status" => "Estatus"
+  }.freeze
+
+  HIDDEN_ON_TABLET = %w[time salesperson].freeze
+
   attr_reader :key, :dir
 
   def initialize(params)
@@ -72,6 +86,12 @@ class OrdersSort
   # El clic siguiente sobre la MISMA columna invierte; sobre otra, empieza
   # ascendente. Una columna que empezara descendente sorprende.
   def next_dir_for(column) = active?(column) && dir == "asc" ? "desc" : "asc"
+
+  def label = LABELS[key]
+
+  # ¿La columna que ordena está escondida a este ancho? Lo usa la vista para
+  # decir en texto por dónde va el orden cuando la flecha no se ve.
+  def hidden_on_tablet? = HIDDEN_ON_TABLET.include?(key)
 
   def to_params
     return {} if key == DEFAULT_KEY && dir == DEFAULT_DIR

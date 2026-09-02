@@ -66,6 +66,60 @@ cambio en sí:
    distingue, y confirmó que idiomorph **mueve** la fila nueva al principio en
    vez de recrear la tabla: el foco y lo tecleado sobreviven.
 
+## 9ª auditoría (2026-09-02) — remediación
+
+Alcance: lo pendiente de desplegar en la laptop (`bba5265..HEAD`, 5 commits).
+5 auditores. **6 ALTA · ~18 MEDIA · ~28 BAJA.** Se remedió por bloques.
+
+**Bloque 0 — el despliegue.** La guía vivía en el directorio temporal de la
+sesión y se perdió: al llegar el momento no había contra qué comparar. Ahora es
+`docs/despliegue-laptop.md`. Y `docs/instalacion-laptop.md` nombraba mal el
+servicio y la ruta desde antes (`rueda-negocios` en `~/Projects/_fecego/`
+contra los reales `fecego-rueda-negocios` en `~/Proyectos/`), con sus `git
+clone` apuntando a un directorio que no coincidía con el `WorkingDirectory` del
+unit que la propia guía define.
+
+Dos cosas medidas que valen más que los pasos: **sin `bundle install` la app no
+arranca** (Bundler falla antes de Rails y el servicio entra en bucle), y **sin
+`restart` los initializers nuevos no existen** — el reload de development
+recarga `app/`, no `config/initializers/`, así que un MIME sin registrar da 500
+en la pantalla que lo usa mientras todo lo demás parece bien.
+
+**Bloque 1 — lo que le mentía al usuario.** El reporte de productos suma sobre
+lo que queda en la laptop, y el sync-down purga los transmitidos en cada
+obtención: en una rueda de varios días mostraba solo lo capturado desde la
+última, con el badge diciendo "Todos los pedidos". Mitigado declarando el corte
+y avisando con el número de pedidos purgados; la solución de fondo (sacarlo del
+ERP) quedó en el backlog con su costo enfrente — dejaría de funcionar sin
+conexión.
+
+**Bloque 2 — parámetros.** `?supplier_id[]=1` daba 500. `OrdersFilter#id_param`
+ya pagaba esa lección y la pantalla nueva no la reusó; el saneo pasó a
+`ParamSanitizing`, con un solo lugar.
+
+**Bloque 3 — contraste y accesibilidad.** Todo medido: el subrayado dorado
+sobre crema (1.39:1, regla que YA estaba escrita y que propagué igual), la raya
+de regalos en `neutral-400` (2.24:1), el badge `bg-white/10` sobre negro
+(1.20:1, la píldora no existía como forma). Y dos de teclado: la tabla que
+apuesta su diseño al scroll horizontal no era desplazable sin ratón, y ordenar
+por una columna oculta en tablet dejaba la tabla ordenada por un criterio
+invisible — sin flecha, sin dorado y sin `aria-sort`, porque `display:none`
+saca el elemento del árbol de accesibilidad.
+
+### El patrón de esta auditoría
+
+Cuatro hallazgos independientes fueron **la misma regla, ya escrita en el repo,
+sin aplicar**: "el orden sigue a lo que la celda muestra" (roto en Cliente y en
+Renglones/Total), "el dorado no sirve de trazo sobre el crema" (propagado a una
+pantalla nueva) y el saneo de `id_param` (reescrito con `to_i`). Tres de ellas
+las había escrito yo en los días anteriores.
+
+La conclusión práctica: **tener la norma escrita no basta si el caso nuevo no
+se parece al que la motivó.** En Cliente la regla estaba fresca —de dos días
+antes— y aun así no la vi, porque la tenía asociada a "columnas calculadas" y
+no a "columna que muestra otro campo". Vale más releer las convenciones al
+tocar una pantalla que confiar en recordarlas.
+
 ## Ordenamiento del reporte de pedidos (2026-09-02)
 
 Las nueve columnas del reporte de pedidos capturados ordenan al hacer clic en
