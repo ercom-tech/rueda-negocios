@@ -84,8 +84,10 @@ pero el proveedor de esos productos no está dado de alta en
 - **Desactivar esa promoción** para la rueda, si no debía participar.
 
 Lo que **no** es opción: que el capturista teclee el descuento a mano. En la
-rueda 3, 6,042 de los 6,046 productos en promoción lo tienen por encima de su
-`descto_tope`.
+rueda 3, **8,665 de los 9,981** productos en promoción lo tienen por encima de
+su `descto_tope` (86.8%, medido el 2026-09-02 sobre el ERP de desarrollo). La
+cifra se mueve con cada promoción que se configura — en agosto era 6,042 de
+6,046 — así que conviene re-medirla antes de citarla.
 
 ## Clientes de la rueda: cuáles llegan y cuáles no
 

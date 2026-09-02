@@ -224,11 +224,14 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
 - **La franja mala no es un número de partidas, es una posición.** Se repite
   cerca de **cada** frontera de página y se mueve con el alto de la tabla: la
   dispara igual una descripción que se parte en dos líneas. Los regalos la
-  vuelven mucho más probable (el prefijo "REGALO — " deja el 82% de los
-  renglones a doble alto) y **desde que se quitó el tope de partidas
-  (2026-09-02) un pedido puede tener los renglones que sea**. Por eso la
-  prueba **barre un rango** en vez de fijar un conteo — y por eso el arreglo
-  del pie tenía que ser geométrico y no una tabla de casos.
+  vuelven mucho más probable — el prefijo `"REGALO — "` deja el **94%** de los
+  renglones a doble alto, contra el **3.3%** del catálogo sin prefijo (medido
+  sobre las 15,631 descripciones del catálogo local, Helvetica 8 pt, ancho útil
+  **189 pt** = los 197 de la columna menos el padding de 4+4 del `cell_style`).
+  Y **desde que se quitó el tope de partidas (2026-09-02) un pedido puede tener
+  los renglones que sea**. Por eso la prueba **barre un rango** en vez de fijar
+  un conteo — y por eso el arreglo del pie tenía que ser geométrico y no una
+  tabla de casos.
 - **Extraer el texto del stream no prueba que se VEA.** Un bloque tapado por la
   tabla que se dibuja encima se extrae idéntico a uno visible; lo que hay que
   medir ahí es el espacio **reservado** frente al **ocupado**. Y al revés: para

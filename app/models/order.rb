@@ -1,8 +1,8 @@
 class Order < ApplicationRecord
   # SIN tope de partidas por pedido (2026-09-02). El de 45 era regla de negocio
-  # nuestra, no del ERP —su histórico llega a 287 renglones y tiene 3,177
-  # pedidos por encima de 45—, y en la operación real del evento estorbaba: un
-  # cliente grande no cabía en un pedido. Se quitó la constante en vez de
+  # nuestra, no del ERP —su histórico llega a 287 renglones y 3,204 pedidos
+  # pasan de 45 (2026-09-02, `baja = false`)—, y en la operación real del
+  # evento estorbaba: un cliente grande no cabía en un pedido. Se quitó la constante en vez de
   # subirla o dejarla en cero: una constante que ya no restringe nada es código
   # que el siguiente lector interpreta como regla viva.
   #
@@ -170,11 +170,6 @@ class Order < ApplicationRecord
   MATCHING_ITEMS_TOTAL_SQL =
     "COALESCE(SUM(CASE WHEN order_items.product_id IN (?) THEN #{ITEM_TOTAL_SQL} ELSE 0 END), 0)".freeze
 
-  # Resumen { estatus => { count:, total: } } del alcance recibido — se llama
-  # sobre el scope ya acotado por rol y por los filtros, de modo que resumen y
-  # listado no puedan divergir. Devuelve SIEMPRE los tres estatus, con ceros
-  # los que no tengan pedidos: las tarjetas del reporte son también el filtro
-  # de estatus y deben mostrarse completas.
   # Descartar el pedido COMPLETO (botón "Descartar" del paso 2, y el mismo
   # camino cuando se llega desde el reporte de capturados).
   #
@@ -220,6 +215,11 @@ class Order < ApplicationRecord
     transmitted.delete_all
   end
 
+  # Resumen { estatus => { count:, total: } } del alcance recibido — se llama
+  # sobre el scope ya acotado por rol y por los filtros, de modo que resumen y
+  # listado no puedan divergir. Devuelve SIEMPRE los tres estatus, con ceros
+  # los que no tengan pedidos: las tarjetas del reporte son también el filtro
+  # de estatus y deben mostrarse completas.
   #
   # `products` (subconsulta de ids) restringe la suma a las partidas de esos
   # productos: con un filtro de proveedor/marca/producto activo, el importe que

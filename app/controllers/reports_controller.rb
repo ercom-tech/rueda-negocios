@@ -59,8 +59,8 @@ class ReportsController < ApplicationController
   # alcance por rol que el de pedidos (`accessible_orders`), así que un
   # capturista ve lo que él capturó y el equipo-servidor ve todo.
   #
-  # HTML y CSV comparten TODO menos la presentación: el archivo sale con los
-  # mismos filtros que se están viendo, porque es la misma acción.
+  # HTML, CSV y Excel comparten TODO menos la presentación: el archivo sale con
+  # los mismos filtros que se están viendo, porque es la misma acción.
   def products
     @all_scope   = current_user.can_see_all_orders?
     # Por `ParamSanitizing` y no `to_i`: un `?supplier_id[]=1` llega como
@@ -221,8 +221,8 @@ class ReportsController < ApplicationController
   end
 
   # Las cantidades salen sin ceros insignificantes (2 y no 2.000): la columna
-  # es `decimal(14,3)` porque hay productos a granel, pero el 99% son piezas
-  # enteras y "2.000" en una celda de Excel se lee como error de captura.
+  # es `decimal(14,3)` porque hay productos a granel, pero el 97.6% son piezas
+  # enteras (medido sobre `vta_pedido_detalle`, `id_empresa=1`, `baja=false`) y "2.000" en una celda de Excel se lee como error de captura.
   def number_or_blank(value)
     return nil if value.nil? || value.zero?
 

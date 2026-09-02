@@ -121,8 +121,10 @@
       llave (el `Array()` del sync-down lo tolera a propósito) y el panel decía
       "✓ Listo" igual: se captura la rueda entera a precio de lista y se
       descubre cuando el cliente reclama. El capturista tampoco puede teclear
-      el descuento a mano — 6,042 de los 6,046 productos en promoción lo tienen
-      por encima de su tope (7ª auditoría). %>
+      el descuento a mano: casi todos los productos en promoción lo tienen por
+      encima de su tope (7ª auditoría). La proporción exacta se mueve cada vez
+      que se configura una promoción, así que la cifra medida vive en
+      `backlog.md` con su fecha, no aquí. %>
   <%# `run&.completed?` no es redundante: en una corrida FALLIDA el summary
       viene vacío, así que `nil.to_i.zero?` daba true y el aviso se encendía
       encima del "✗ Falló". El operador leía "revisa que el servidor esté

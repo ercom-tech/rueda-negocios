@@ -140,7 +140,7 @@ vivo de menor consecutivo, que es el que el export copia a
 | 9% | 5 |
 | 1% | 1 |
 
-Contra descuentos de hasta 23%: **6,042 de los 6,046 (99.93%)** rebasan su tope
+Contra descuentos de hasta 23%: **6,042 de los 6,046 (99.93%)** rebasaban su tope
 en el escalón que les toca, y 5,472 (90.5%) lo rebasan incluso en el más bajo.
 Con el tope encima, casi ninguna promoción de la rueda se podría aplicar. Ojo
 con los **1,480 productos que llegan con tope 0** (24%): en
@@ -194,10 +194,17 @@ histórico — el ERP tampoco resuelve el caso solo.
 Por ahora se dan todos (decisión del usuario 2026-08-22) y queda en el backlog
 preguntarle a FECEGO qué significa esa configuración.
 
+> **Las cifras de universo de esta sección son del 2026-08-22.** El catálogo
+> de promociones de la rueda cambia cuando FECEGO configura una nueva: al
+> 2026-09-02 los productos en promoción de la rueda 3 son 9,981 y los que
+> rebasan su tope, 8,665 (86.8%). Lo que no cambia es el mecanismo, que es lo
+> que este documento describe.
+
 ## Detalles operativos
 
 - **El ERP nunca impuso un tope de partidas.** Su máximo histórico real es
-  **287**, y 3,294 pedidos pasan de 45. El tope de 45 que tuvo la app era regla
+  **287** —estable bajo cualquier recorte— y **3,204 pedidos pasan de 45**
+  (2026-09-02, `baja = false`; contando las partidas de baja, 3,299). El tope de 45 que tuvo la app era regla
   de negocio de la rueda, y **se quitó el 2026-09-02** por no ser funcional en
   la operación del evento.
 - **Un producto de regalo puede no pertenecer a la rueda.** El esmeril SKIL de

@@ -122,7 +122,7 @@ tocar una pantalla que confiar en recordarlas.
 
 ## Ordenamiento del reporte de pedidos (2026-09-02)
 
-Las nueve columnas del reporte de pedidos capturados ordenan al hacer clic en
+Las columnas del reporte de pedidos capturados ordenan al hacer clic en
 su encabezado. Vive en `app/queries/orders_sort.rb`, hermano de `OrdersFilter`.
 
 **Lo que decidió el diseño:**
@@ -172,8 +172,11 @@ confiarse. Con código recién creado hay que deshacer el cambio a mano.
 
 Petición del usuario: **no era funcional en la operación del evento** — un
 cliente grande no cabía en un pedido. El tope era regla de negocio nuestra, no
-del ERP: su histórico llega a **287 renglones** y tiene 3,177 pedidos por
-encima de 45. La nota original ya anticipaba que "puede subir"; se quitó del
+del ERP: su histórico llega a **287 renglones** —máximo estable bajo cualquier recorte—
+y **3,204 pedidos pasan de 45** (medido el 2026-09-02: `vta_pedido_detalle`
+agrupado por la PK del pedido, `id_empresa = 1` y `baja = false`; contando
+también las partidas dadas de baja son 3,299). El conteo sube con el tiempo; lo
+que no cambia es que el ERP nunca impuso el tope. La nota original ya anticipaba que "puede subir"; se quitó del
 todo.
 
 Se eliminaron `Order::MAX_ITEMS`, `items_limit_reached?` y la validación
@@ -201,8 +204,10 @@ pasando por el camino equivocado"), y esta vez lo destapó **borrar la
 funcionalidad**, no auditarla.
 
 Pendiente que dejo anotado: la pantalla de captura repinta la tabla completa en
-cada cambio de cantidad (15 consultas). Con 45 renglones iba bien; con 150 no
-está medido.
+cada cambio de cantidad. Son **13 consultas por repintado y no crecen con el
+número de renglones** (medido con 5 y con 45): lo que crece es el HTML —~4.4 KB
+por renglón, o sea 1.3 MB en un pedido de 300 partidas—, así que lo que hay que
+cronometrar con 150 es el **render**, no el SQL.
 
 ## Reporte de productos (2026-09-02)
 
@@ -250,7 +255,7 @@ FECEGO como número y le comía los ceros a la izquierda. **Lo cazó una prueba
 que abre el XML de la hoja**; una que solo comprobara que el archivo se
 descarga habría pasado con los códigos rotos.
 
-**Tres defectos que solo cazó la revisión visual** (las 16 pruebas pasaban):
+**Tres defectos que solo cazó la revisión visual** (las 20 pruebas de entonces pasaban):
 el botón "Limpiar" llevaba `bg-white/10` sobre el marco DORADO, donde se lava
 —esa clase es para fondo oscuro—; en tablet el botón de descarga quedaba
 descolgado a media fila; y Modelo, No. de parte y SKU se ocultaban en tablet
@@ -419,8 +424,8 @@ hojas se lee idéntico a uno bien puesto. La medición que sirve es por página.
 La trampa completa quedó en `docs/convenciones-codigo.md` → "PDF (Prawn)".
 
 **Lo nuevo no creó el defecto pero lo volvió mucho más probable.** El prefijo
-"REGALO — " deja el 82% de los renglones a doble alto (contra 6.5% del catálogo
-normal), y los regalos no cuentan contra `MAX_ITEMS`, así que el impreso puede
+"REGALO — " deja el 94% de los renglones a doble alto (contra 3.3% del catálogo
+normal; medido sobre las 15,631 descripciones a 189 pt de ancho útil), y los regalos no cuentan contra `MAX_ITEMS`, así que el impreso puede
 rebasar 45 renglones. De ahí la regla nueva del método: preguntar qué hace más
 **frecuente** el código nuevo, no solo qué rompe.
 
@@ -1699,8 +1704,9 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
   `position` **solo se muestra** en esa columna — el PDF no la lleva y el
   payload del sync-up ya numera `1..N` con `with_index(1)`, así que el ERP
   nunca vio huecos.
-- **Tope de 45 partidas por pedido (2026-08-10):** regla de **negocio** de la
-  rueda, NO del ERP — medido: el histórico del ERP llega a 287 renglones y
+- **Tope de 45 partidas por pedido (2026-08-10):** *(DEROGADO el 2026-09-02 —
+  ver "Se quitó el tope de 45 partidas". Las cifras de abajo son las de
+  entonces.)* regla de **negocio** de la rueda, NO del ERP — medido: el histórico del ERP llega a 287 renglones y
   tiene 3,177 pedidos con más de 45. El usuario confirmó que la regla opera
   hoy y que **puede subir cuando entren los regalos por promoción**; y que
   aplica solo a partidas (renglones), nunca a cantidades. Implementación:

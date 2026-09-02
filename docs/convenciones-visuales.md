@@ -169,7 +169,7 @@ Todo elemento deshabilitado o "próximamente" se ve al **60%**:
   `opacity-60` + badge dorado a plena opacidad.
 - **Sin badge** (bloqueo por estado): `opacity-60` en el contenedor completo.
 - Cuando dentro del bloque hay información que el usuario necesita leer justo
-  en ese momento (p. ej. el contador de partidas al llegar al tope), el 60% se
+  en ese momento (vivió en el buscador de producto mientras hubo tope de partidas: el contador y el placeholder que explicaba por qué no se podía escribir — se quitó con el tope el 2026-09-02, pero la regla vale para el siguiente caso), el 60% se
   aplica solo al **control**, no al dato. Incluye el **placeholder** cuando al
   deshabilitarse pasa a explicar *por qué* no se puede escribir: atenuarlo lo
   dejaba en 2.21:1, y no se arregla oscureciéndolo — ni `neutral-900` al 60%

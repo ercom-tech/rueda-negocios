@@ -235,8 +235,19 @@ no está dado de alta en la rueda — configuración del ERP, no defecto de la a
 La consulta que los lista **con su causa** está en `docs/diagnostico-erp.md`.
 Hay que correrla en testing, llevarle el agregado a FECEGO y que decidan por
 promoción: dar de alta el proveedor/marca, o desactivar esa promoción para la
-rueda. No hay salida por el lado del capturista — 6,042 de los 6,046 productos
-en promoción tienen el descuento por encima de su `descto_tope`.
+rueda. No hay salida general por el lado del capturista: **8,665 de los 9,981
+productos en promoción de la rueda 3 tienen el descuento por encima de su
+`descto_tope`** (86.8%).
+
+*Medido el 2026-09-02 sobre el ERP de desarrollo: `id_empresa = 1`, promociones
+`RUN` vivas de `id_rueda_negocio = 3`, descuento = el del código o el mayor de
+sus escalones, tope = `com_producto_has_precio.descto_tope` del renglón vivo de
+menor `consecutivo` (el mismo que usa `Export#products`).* La proporción bajó
+del 99.93% de agosto —eran 6,042 de 6,046— porque entraron HTOO01 (1,921
+productos), PESO10 (1,932) e INO010 (82); **PESO10 va al 9% y 1,305 de los
+suyos SÍ caben dentro del tope**, así que "no hay salida" ya no es universal.
+Re-medir antes de llevárselo a FECEGO: la cifra se mueve con cada promoción
+que se configura.
 
 ### Una desconexión del ERP no es un "error interno del servidor" (BAJA)
 
