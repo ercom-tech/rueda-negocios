@@ -83,7 +83,10 @@ class PromotionFlowTest < ApplicationSystemTestCase
     visit order_path(@order)
 
     # Un cambio de cantidad dispara el repintado con morph de toda la región.
-    quantity = first("input[aria-label^='Cantidad']")
+    # Se ancla a la partida por su nombre y no con `first`: la tabla muestra la
+    # más reciente ARRIBA, así que "la primera fila" es el esmeril, y los
+    # importes que se comprueban abajo son los del taladro.
+    quantity = find("input[aria-label='Cantidad — TALADRO']")
     quantity.set("3")
     quantity.native.send_keys(:tab)
     assert_text "$3,480.00"   # ya repintó
@@ -96,7 +99,7 @@ class PromotionFlowTest < ApplicationSystemTestCase
     # focus/blur a secas no envía nada y la prueba pasaría sin que ningún
     # morph hubiera ocurrido.
     page.execute_script(<<~JS)
-      const input = document.querySelector("input[aria-label^='Descuento']")
+      const input = document.querySelector("input[aria-label='Descuento (%) — TALADRO']")
       input.dispatchEvent(new FocusEvent("focus"))
       input.value = "3"
       input.dispatchEvent(new FocusEvent("blur"))

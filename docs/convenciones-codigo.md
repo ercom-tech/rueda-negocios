@@ -359,6 +359,16 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
   no necesita Node en runtime (importmap), pero está instalado y es lo único
   que caza un error de sintaxis antes del navegador — una continuación de línea
   estilo Ruby (`\`) en JS rompe el controller entero sin que nada más avise.
+- **`assert_text` no garantiza que el morph terminó.** El texto que se espera
+  suele aparecer en varios lugares —el nombre del producto está también en el
+  buscador—, así que la aserción se cumple antes de que la región repintada
+  esté completa, y la lectura siguiente agarra la tabla a medio camino. Esperar
+  a la ESTRUCTURA (`assert_selector "tbody tr", count: 3`), no al texto.
+- **Para saber si idiomorph reusó un nodo o lo recreó, marcarlo con una
+  PROPIEDAD JS, no con `dataset`.** Un data-attr es un atributo, e idiomorph
+  sincroniza los atributos con los del HTML nuevo: desaparece aunque el nodo
+  sea el mismo, y la prueba concluye lo contrario de lo que pasó. Una propiedad
+  expando (`el.__marca = …`) solo se pierde si el elemento se reemplaza.
 - **En una prueba de sistema, los broadcasts de Action Cable SÍ se entregan.**
   El adaptador `test` hereda de `Async`, y el servidor de Capybara vive en el
   mismo proceso que la prueba, así que un `broadcast_replace_to` llega al

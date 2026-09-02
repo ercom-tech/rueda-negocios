@@ -44,7 +44,22 @@
       </tr>
     </thead>
     <tbody>
-      <% order.order_items.each do |item| %>
+      <%# La MÁS RECIENTE arriba (decisión del usuario 2026-09-02): al capturar
+          un pedido largo, la partida que se acaba de agregar quedaba fuera de
+          la pantalla y había que bajar a verla.
+
+          El `reverse` es SOLO de esta vista, y eso importa: el orden de
+          `order_items` es también el que numera las partidas en el ERP
+          —`Sync::Up` deriva el `consecutivo` de la posición en la colección, y
+          `consec_origen_promo` apunta al índice de la que detonó cada regalo—,
+          así que invertir la asociación mandaría el pedido al revés y con los
+          regalos apuntando mal. El PDF y el ERP conservan 1, 2, 3.
+
+          Sobre la colección ya cargada (`includes(:product)` del has_many), no
+          con un `reorder` que dispararía otra consulta. La columna
+          "Consecutivo" sigue mostrando `item.position`, o sea el número real
+          de la partida: se ve 5, 4, 3, 2, 1. %>
+      <% order.order_items.reverse.each do |item| %>
         <%= render "orders/item_row", order: order, item: item,
                                       group: groups_by_product[item.product_id] %>
       <% end %>

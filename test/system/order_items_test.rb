@@ -84,4 +84,68 @@ class OrderItemsTest < ApplicationSystemTestCase
     assert_no_selector "#order_item_#{@first.id}"
     assert_equal [ 1 ], @order.order_items.reload.map(&:position)
   end
+
+  # --- Orden de la tabla (2026-09-02) --------------------------------------
+  # La más reciente arriba. Es cambio de VISTA, pero la tabla se repinta con
+  # morph, así que hay que verlo en navegador: idiomorph empareja por id y
+  # tiene que MOVER la fila nueva al principio, no recrear la tabla — si la
+  # recreara, el foco y el estado de los campos se perderían en cada alta.
+  test "una partida agregada por el buscador aparece arriba, sin recrear la tabla" do
+    supplier = Supplier.find_by(erp_supplier_id: 970_001)
+    nuevo = Product.create!(erp_product_id: 970_003, description: "TALADRO NUEVO", max_discount: 50)
+    Price.create!(product: nuevo, credit_wholesale_price: 500, tax_rate: 0)
+    ProductSupplier.create!(product: nuevo, supplier: supplier)
+
+    sign_in @user
+    visit order_path(@order)
+
+    # Marca en un nodo existente: si idiomorph recreara la tabla en vez de
+    # mover la fila nueva al principio, la marca desaparecería — y con ella el
+    # foco y lo tecleado en cualquier campo a medio editar.
+    #
+    # Propiedad JS y NO `dataset`: un data-attr es un ATRIBUTO, e idiomorph
+    # sincroniza los atributos con los del HTML nuevo, así que lo borraría
+    # aunque el nodo fuera el mismo. Una propiedad expando solo desaparece si
+    # el elemento se reemplaza de verdad.
+    page.execute_script(<<~JS)
+      document.querySelector("input[aria-label='Cantidad — MARTILLO DE UÑA']").__marca = "viva"
+    JS
+
+    fill_in "Busca por código, nombre, modelo o No. de parte", with: "TALADRO"
+    click_button "TALADRO NUEVO", match: :first
+
+    # Esperar a la TABLA, no al texto: "TALADRO NUEVO" aparece también en el
+    # buscador, así que `assert_text` se cumple antes de que el morph termine
+    # de repintar y la lectura de abajo agarraba la tabla a medio camino.
+    assert_selector "tbody tr", count: 3, wait: 5
+
+    # Por el CONSECUTIVO y no por la descripción: en una partida con producto
+    # la descripción vive en un input, y el `.text` de un input es vacío.
+    assert_equal %w[3 2 1], all("tbody tr td:nth-child(2)").map(&:text),
+                 "la más reciente arriba"
+
+    fila_nueva = @order.order_items.order(:position).last
+    assert_equal ActionView::RecordIdentifier.dom_id(fila_nueva), all("tbody tr").first[:id],
+                 "la primera fila es la partida recién agregada"
+
+    marca = page.evaluate_script(
+      "document.querySelector(\"input[aria-label='Cantidad — MARTILLO DE UÑA']\").__marca"
+    )
+    assert_equal "viva", marca, "idiomorph reusó los nodos existentes en vez de recrear la tabla"
+  end
+
+  # El bote de basura nombra la partida por su descripción, no por su lugar en
+  # la tabla: invertir el orden no puede hacer que borre la equivocada.
+  test "el bote de basura sigue apuntando a su propia partida" do
+    sign_in @user
+    visit order_path(@order)
+
+    trash_button_of(@first).click
+    within "##{ActionView::RecordIdentifier.dom_id(@first, :remove_dialog)}" do
+      click_button "Sí, quitar"
+    end
+
+    assert_no_text "MARTILLO DE UÑA"
+    assert_text "LLAVE PERICO 10", wait: 5
+  end
 end

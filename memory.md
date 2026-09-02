@@ -31,6 +31,41 @@ Si es **algo por hacer**, va al backlog.
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
 
+## La lista de partidas, al revés (2026-09-02)
+
+Petición del usuario: en el paso 2, la partida más reciente arriba (5,4,3,2,1
+en vez de 1,2,3,4,5). Al capturar un pedido largo, la que se acababa de agregar
+quedaba fuera de la pantalla.
+
+**Es cambio de VISTA y tenía que seguir siéndolo.** El orden de `order_items`
+es también el que numera las partidas en el ERP: `Sync::Up` deriva el
+`consecutivo` de la posición en la colección y `consec_origen_promo` apunta al
+índice de la que detonó cada regalo. Invertir la asociación habría mandado el
+pedido al revés y los regalos apuntando mal. Se invierte solo al renderizar
+(`order_items.reverse` en `_items_table`), y hay prueba que ata que la
+asociación, el PDF y el payload conserven 1, 2, 3.
+
+La columna "Consecutivo" muestra `item.position`, así que se ve 3, 2, 1: el
+número real de cada partida, no una renumeración de la vista.
+
+**Tres cosas que solo aparecieron al probarlo en navegador**, y ninguna era el
+cambio en sí:
+
+1. Una prueba de sistema de promociones tomaba `first("input[aria-label^=
+   'Cantidad']")` — "la primera fila" — y con el orden invertido esa es otra
+   partida, así que los importes esperados dejaban de cuadrar. Se ancló a la
+   partida por su nombre, que además la vuelve inmune al orden.
+2. **`assert_text` no espera al morph.** "TALADRO NUEVO" aparece también en el
+   buscador, así que la aserción se cumplía antes de que la tabla terminara de
+   repintarse y la lectura siguiente veía 2 filas en vez de 3. Hay que esperar
+   a la ESTRUCTURA, no al texto.
+3. **Marcar un nodo con `dataset` para detectar si idiomorph lo recreó no
+   sirve**: es un atributo, y idiomorph los sincroniza con el HTML nuevo, así
+   que desaparece aunque el nodo sea el mismo — la prueba concluía que había
+   recreado la tabla cuando no. Con una propiedad JS (`el.__marca`) sí se
+   distingue, y confirmó que idiomorph **mueve** la fila nueva al principio en
+   vez de recrear la tabla: el foco y lo tecleado sobreviven.
+
 ## Ordenamiento del reporte de pedidos (2026-09-02)
 
 Las nueve columnas del reporte de pedidos capturados ordenan al hacer clic en
