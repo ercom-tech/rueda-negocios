@@ -304,4 +304,136 @@ class ProductsReportTest < ActionDispatch::IntegrationTest
     assert_match(/MARTILLO DEMOLEDOR/, response.body)
     assert_no_match(/LIJA OXIDO/, response.body)
   end
+
+  # --- Lo que el reporte declara sobre sí mismo (9ª auditoría) -------------
+
+  # El badge dice "Todos los pedidos" (alcance por ROL) y se leía como "todo lo
+  # del evento". Ni los borradores ni los pedidos que el sync-down ya purgó de
+  # la laptop pueden contarse aquí.
+  test "la pantalla declara que solo cuenta pedidos finalizados" do
+    item!(order!, @martillo, quantity: 3)
+    login_as "cap_pr"
+
+    get products_report_path
+
+    assert_match(/pedidos <span class="font-semibold">finalizados<\/span>/, response.body)
+    assert_match(/Los que siguen en borrador no aparecen/, response.body)
+  end
+
+  # El replace del sync-down purga los transmitidos: en una rueda de varios
+  # días el reporte solo cubre lo capturado desde la última obtención, y sin
+  # este aviso el total se leía como el del evento completo.
+  test "avisa de los pedidos que el sync-down se llevó de la laptop" do
+    item!(order!, @martillo, quantity: 3)
+    SyncRun.create!(kind: "down", started_at: 1.hour.ago, finished_at: 1.hour.ago,
+                    status: "completed", summary: { entities: {}, purged_orders: 4 })
+    login_as "cap_pr"
+
+    get products_report_path
+
+    assert_equal 4, ProductSales.new(@user.orders).purged_orders
+    assert_match(/aparecen 4 pedidos ya transmitidos/, response.body)
+    assert_match(/sus partidas están en el ERP, no aquí/, response.body)
+  end
+
+  test "con un solo pedido purgado, el aviso concuerda en singular" do
+    item!(order!, @martillo, quantity: 3)
+    SyncRun.create!(kind: "down", started_at: 1.hour.ago, finished_at: 1.hour.ago,
+                    status: "completed", summary: { entities: {}, purged_orders: 1 })
+    login_as "cap_pr"
+
+    get products_report_path
+
+    assert_match(/aparece 1 pedido ya transmitido/, response.body)
+    assert_no_match(/aparecen 1 pedidos/, response.body)
+  end
+
+  test "sin purgas no hay aviso" do
+    item!(order!, @martillo, quantity: 3)
+    SyncRun.create!(kind: "down", started_at: 1.hour.ago, finished_at: 1.hour.ago,
+                    status: "completed", summary: { entities: {}, purged_orders: 0 })
+    login_as "cap_pr"
+
+    get products_report_path
+
+    assert_equal 0, ProductSales.new(@user.orders).purged_orders
+    assert_no_match(/ya transmitidos que se quitaron/, response.body)
+  end
+
+  # Se acumulan todas las corridas de la rueda: "Cerrar rueda" borra el
+  # historial, así que la cuenta se reinicia sola con cada rueda.
+  test "el aviso suma todas las obtenciones de la rueda" do
+    2.times do |i|
+      SyncRun.create!(kind: "down", started_at: (i + 1).hours.ago, finished_at: (i + 1).hours.ago,
+                      status: "completed", summary: { entities: {}, purged_orders: 3 })
+    end
+
+    assert_equal 6, ProductSales.new(@user.orders).purged_orders
+  end
+
+  # Concordancia: "se capturaron 1 piezas" era el caso más común del genérico.
+  test "el aviso de piezas escondidas concuerda en singular" do
+    item!(order!, @generico, quantity: 1, description: "ALGO")
+    item!(order!, @martillo, quantity: 1)
+    login_as "cap_pr"
+
+    get products_report_path(supplier_id: @supplier.id)
+
+    assert_match(/Además se capturó <span class="font-semibold">1 pieza<\/span>/, response.body)
+    assert_match(/no pertenece a ningún proveedor/, response.body)
+    assert_match(/para verla\./, response.body)
+    assert_no_match(/se capturaron 1 piezas/, response.body)
+  end
+
+  test "y en plural cuando son varias" do
+    item!(order!, @generico, quantity: 6, description: "ALGO")
+    item!(order!, @martillo, quantity: 1)
+    login_as "cap_pr"
+
+    get products_report_path(supplier_id: @supplier.id)
+
+    assert_match(/Además se capturaron/, response.body)
+    assert_match(/piezas fuera de catálogo, que no pertenecen/, response.body)
+    assert_match(/para verlas\./, response.body)
+  end
+
+  # --- El archivo dice lo mismo que la pantalla ----------------------------
+
+  # En pantalla el fuera de catálogo va en un bloque aparte; en el archivo todo
+  # es una lista, así que sin marca de origen ordenar por Cantidad en Excel
+  # mezclaba los dos universos.
+  test "el archivo distingue el catálogo del fuera de catálogo" do
+    item!(order!, @martillo, quantity: 3)
+    item!(order!, @generico, quantity: 2, description: "ALGO FUERA")
+    login_as "cap_pr"
+
+    get products_report_path(format: :csv)
+
+    assert_match(/Origen/, response.body)
+    catalogo = response.body.lines.find { |l| l.include?("MARTILLO DEMOLEDOR") }
+    generico = response.body.lines.find { |l| l.include?("ALGO FUERA") }
+    assert_match(/Catálogo/, catalogo)
+    assert_match(/Fuera de catálogo/, generico)
+  end
+
+  # Con filtro, el genérico no va en el archivo — pero se dice, como en pantalla.
+  test "el archivo avisa de lo que el filtro dejó fuera" do
+    item!(order!, @martillo, quantity: 3)
+    item!(order!, @generico, quantity: 5, description: "ALGO FUERA")
+    login_as "cap_pr"
+
+    get products_report_path(format: :csv, supplier_id: @supplier.id)
+
+    assert_no_match(/ALGO FUERA/, response.body)
+    assert_match(/No incluye 5 piezas fuera de catálogo, excluidas por el filtro/, response.body)
+  end
+
+  test "sin filtro el archivo no lleva la nota" do
+    item!(order!, @martillo, quantity: 3)
+    login_as "cap_pr"
+
+    get products_report_path(format: :csv)
+
+    assert_no_match(/No incluye/, response.body)
+  end
 end

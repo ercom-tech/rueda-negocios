@@ -17,8 +17,12 @@ class OrdersSortTest < ActionDispatch::IntegrationTest
 
     @v1 = Salesperson.create!(erp_salesperson_id: 1, name: "ZULEMA")
     @v2 = Salesperson.create!(erp_salesperson_id: 2, name: "ARTURO")
-    @c1 = Client.create!(erp_client_key: "CLI1", name: "Uno", commercial_name: "ZAPATERIA", salesperson: @v1)
-    @c2 = Client.create!(erp_client_key: "CLI2", name: "Dos", commercial_name: "ABARROTES", salesperson: @v2)
+    # `commercial_name` vacío en uno de los dos a propósito: el export lo trae
+    # como cadena vacía (no NULL) en 74 de los 124 clientes de la rueda, y con
+    # los dos llenos la prueba de orden por cliente pasaba sin reproducir el
+    # caso real (9ª auditoría).
+    @c1 = Client.create!(erp_client_key: "CLI1", name: "ZAPATA ROJAS", commercial_name: "", salesperson: @v1)
+    @c2 = Client.create!(erp_client_key: "CLI2", name: "ABARCA LUNA", commercial_name: "ABARROTES", salesperson: @v2)
 
     @p1 = product!(960_001, @sup, 100)
     @p2 = product!(960_002, @other, 50)
@@ -97,14 +101,35 @@ class OrdersSortTest < ActionDispatch::IntegrationTest
     assert_equal %w[RN-000001 RN-000002], folios(response.body)
   end
 
-  test "ordena por cliente, por nombre comercial" do
-    order!(user: @ana, client: @c1, folio: "RN-000001")  # ZAPATERIA
-    order!(user: @ana, client: @c2, folio: "RN-000002")  # ABARROTES
+  # Por el nombre que la celda MUESTRA (`clave — name`), no por
+  # `commercial_name`, que es invisible y que además está vacío en más de la
+  # mitad del padrón: ordenar por él amontonaba esos y desordenaba el resto.
+  test "ordena por cliente, por el nombre que se ve" do
+    order!(user: @ana, client: @c1, folio: "RN-000001")  # ZAPATA ROJAS (sin comercial)
+    order!(user: @ana, client: @c2, folio: "RN-000002")  # ABARCA LUNA
+    login_as "srv960"
+
+    get captured_orders_report_path(sort: "client", dir: "asc")
+    assert_equal %w[RN-000002 RN-000001], folios(response.body), "ABARCA antes que ZAPATA"
+
+    get captured_orders_report_path(sort: "client", dir: "desc")
+    assert_equal %w[RN-000001 RN-000002], folios(response.body)
+  end
+
+  # El caso que el fixture viejo no podía producir: un cliente CON nombre
+  # comercial y otro SIN él tienen que ordenarse por lo que se ve, no
+  # agruparse por tener o no ese campo.
+  test "un cliente sin nombre comercial se ordena entre los demás" do
+    sin_comercial = Client.create!(erp_client_key: "CLI3", name: "MENDOZA SILVA", commercial_name: "")
+    order!(user: @ana, client: @c2, folio: "RN-000001")            # ABARCA LUNA
+    order!(user: @ana, client: sin_comercial, folio: "RN-000002")  # MENDOZA SILVA
+    order!(user: @ana, client: @c1, folio: "RN-000003")            # ZAPATA ROJAS
     login_as "srv960"
 
     get captured_orders_report_path(sort: "client", dir: "asc")
 
-    assert_equal %w[RN-000002 RN-000001], folios(response.body), "ABARROTES antes que ZAPATERIA"
+    assert_equal %w[RN-000001 RN-000002 RN-000003], folios(response.body),
+                 "ABARCA, MENDOZA, ZAPATA — alfabético por lo que muestra la celda"
   end
 
   test "ordena por vendedor" do
@@ -183,6 +208,39 @@ class OrdersSortTest < ActionDispatch::IntegrationTest
     assert_operator posiciones.index("Borrador"), :<, posiciones.index("Capturado")
     assert_operator posiciones.index("Capturado"), :<, posiciones.index("Transmitido")
     assert borrador.persisted?
+  end
+
+  # Un pedido SIN partidas no produce fila en el LEFT JOIN agregado: su valor
+  # de orden era NULL y el `NULLS LAST` lo clavaba abajo en las DOS
+  # direcciones, aunque la celda mostrara `0` y `$0.00`. Es el caso de uso
+  # real: el equipo-servidor ordena por Renglones ascendente para cazar los
+  # borradores vacíos antes de transmitir, y eran justo los que no subían.
+  test "un pedido sin partidas se ordena por el 0 que muestra la celda" do
+    order!(user: @ana, client: @c1, folio: "RN-000001", items: [ [ @p1, 1 ] ])
+    vacio = Order.create!(user: @ana, business_round: @round, client: @c1,
+                          kind: "remission", status: "captured", local_folio: "RN-000002")
+    login_as "srv960"
+
+    get captured_orders_report_path(sort: "items", dir: "asc")
+    assert_equal %w[RN-000002 RN-000001], folios(response.body), "el vacío primero"
+
+    get captured_orders_report_path(sort: "items", dir: "desc")
+    assert_equal %w[RN-000001 RN-000002], folios(response.body), "y al final al invertir"
+
+    assert vacio.order_items.empty?
+  end
+
+  test "lo mismo para el total" do
+    order!(user: @ana, client: @c1, folio: "RN-000001", items: [ [ @p1, 1 ] ])
+    Order.create!(user: @ana, business_round: @round, client: @c1,
+                  kind: "remission", status: "captured", local_folio: "RN-000002")
+    login_as "srv960"
+
+    get captured_orders_report_path(sort: "total", dir: "asc")
+    assert_equal %w[RN-000002 RN-000001], folios(response.body)
+
+    get captured_orders_report_path(sort: "total", dir: "desc")
+    assert_equal %w[RN-000001 RN-000002], folios(response.body)
   end
 
   # --- Lo que protege ------------------------------------------------------

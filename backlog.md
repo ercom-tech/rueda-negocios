@@ -272,6 +272,31 @@ lentitud al teclear cantidades, es el primer lugar donde mirar. La salida
 natural sería repintar solo la fila tocada más el bloque de totales, en vez de
 la tabla entera.
 
+### El reporte de productos solo ve lo que queda en la laptop (MEDIA)
+
+`ProductSales` suma sobre `accessible_orders`, o sea sobre los pedidos que
+**hoy** están en la laptop. Pero el replace del sync-down ejecuta
+`Order.purge_transmitted!` en cada obtención de información, así que en una
+rueda de varios días el reporte solo cubre lo capturado desde la última: se
+transmite el día 1, se vuelve a obtener, y el día 2 el reporte muestra solo el
+día 2. Tras "Cerrar rueda", cero. El ERP tiene todo (9ª auditoría).
+
+**Mitigado, no resuelto** (2026-09-02): la pantalla declara que cuenta los
+pedidos finalizados que están en esta laptop, y avisa con el número cuando el
+sync-down se llevó pedidos (`SyncRun.summary["purged_orders"]`, acumulado de la
+rueda). El operador ya no puede leer un total parcial creyéndolo completo.
+
+**La solución de fondo es sacar el reporte del ERP** vía `rueda-api`: es el
+único lugar que tiene el evento entero. Tiene un costo que hay que pesar antes
+—endpoint nuevo, cambio en el contrato entre repos, y **el reporte dejaría de
+funcionar sin conexión**, justo al revés de lo que la app promete durante el
+evento—, así que quizá lo correcto sea un reporte distinto (de oficina, contra
+el ERP) y no mover este. Decidir con FECEGO qué pregunta quieren responder:
+"cómo va la rueda ahora" (esta laptop) o "cuánto se vendió en la rueda" (ERP).
+
+Alternativa intermedia sin conexión: guardar un agregado por producto antes de
+purgar, dentro de la misma transacción del sync-down.
+
 ## Definiciones con FECEGO
 
 ### Timbrar una factura con una partida de regalo al 100% (antes del 27-ago)

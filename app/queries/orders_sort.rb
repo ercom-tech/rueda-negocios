@@ -27,7 +27,13 @@ class OrdersSort
     # "hora" por la hora del día mezclaría los días del evento.
     "date" => { sql: "orders.created_at" },
     "time" => { sql: "orders.created_at" },
-    "client" => { sql: "clients.commercial_name", fallback: "clients.name", joins: :client },
+    # Espeja lo que la celda muestra: `erp_client_key — clients.name`. Ordenar
+    # por `commercial_name` mandaba el criterio a un campo INVISIBLE, y como el
+    # export lo trae como cadena vacía —no NULL— en 74 de los 124 clientes de
+    # la rueda, el `NULLS LAST` ni los tocaba: quedaban amontonados al
+    # principio y de ahí en adelante la columna se veía desordenada, con la
+    # inicial saltando (J, A, M, F). 9ª auditoría.
+    "client" => { sql: "clients.name", fallback: "clients.erp_client_key", joins: :client },
     "salesperson" => { sql: "salespeople.name", joins: { client: :salesperson } },
     # Espeja EXACTAMENTE lo que la celda muestra (`Order#folio`), incluido el
     # "(borrador)" de un pedido sin folio todavía. Ordenar por la columna cruda
@@ -36,8 +42,15 @@ class OrdersSort
     # la columna parecía no funcionar. Con el texto visible se ordenan como lo
     # que se ve, y el paréntesis los agrupa antes de las claves RN- (2026-09-02).
     "folio" => { sql: "COALESCE(NULLIF(orders.local_folio, ''), NULLIF(orders.erp_folio, ''), '(borrador)')" },
-    "items" => { sql: "matching.items_count", aggregate: true },
-    "total" => { sql: "matching.items_total", aggregate: true },
+    # `COALESCE(…, 0)` y no la columna a secas: un pedido SIN partidas no
+    # produce fila en el LEFT JOIN, así que su valor de orden era NULL y el
+    # `NULLS LAST` lo pegaba abajo se ordenara como se ordenara — mientras la
+    # celda mostraba `0` y `$0.00`. Es el mismo defecto que se corrigió en
+    # "Clave local" y que aquí se quedó sin corregir. Muerde en el caso real:
+    # el equipo-servidor ordena por Renglones ascendente justo para cazar los
+    # borradores vacíos antes de transmitir (9ª auditoría).
+    "items" => { sql: "COALESCE(matching.items_count, 0)", aggregate: true },
+    "total" => { sql: "COALESCE(matching.items_total, 0)", aggregate: true },
     # Por el FLUJO, no alfabético: alfabético da capturado/borrador/transmitido,
     # que no significa nada para quien lee el reporte.
     "status" => { sql: "CASE orders.status WHEN 'draft' THEN 0 WHEN 'captured' THEN 1 ELSE 2 END" }

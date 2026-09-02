@@ -166,8 +166,36 @@ class ReportsController < ApplicationController
     }
   end
 
+  # "Origen" al final: en pantalla el fuera de catálogo va en un bloque APARTE
+  # —mezclarlo con el catálogo sería engañoso, dice la propia vista— pero un
+  # archivo es una sola lista. Sin esta columna, ordenar por Cantidad en Excel
+  # juntaba los dos universos sin ninguna marca (9ª auditoría).
   PRODUCTS_CSV_HEADERS = [ "Código FECEGO", "Descripción", "Modelo", "No. de parte",
-                          "Cantidad", "Regalos", "SKU proveedor" ].freeze
+                          "Cantidad", "Regalos", "SKU proveedor", "Origen" ].freeze
+
+  CATALOG_ORIGIN = "Catálogo".freeze
+  GENERIC_ORIGIN = "Fuera de catálogo".freeze
+
+  # Las filas del archivo, cada una con su origen. Las dos exportaciones salen
+  # de aquí para que no puedan divergir entre sí ni de la pantalla.
+  def products_file_rows
+    (@sales.catalog_rows.map { |row| [ row, CATALOG_ORIGIN ] } +
+     @sales.generic_rows.map { |row| [ row, GENERIC_ORIGIN ] }).map do |row, origin|
+      [ row.code, row.description, row.model, row.part_number,
+       row.sold, row.gifted, row.sku, origin ]
+    end
+  end
+
+  # Nota al pie del archivo cuando el filtro deja fuera piezas del genérico. La
+  # pantalla lo avisa con un párrafo y el archivo lo omitía en silencio: quien
+  # abre el .xlsx no tenía forma de saber que faltaba algo.
+  def products_excluded_note
+    n = @sales.hidden_generic_quantity
+    return nil unless n.positive?
+
+    [ n == 1 ? "No incluye 1 pieza fuera de catálogo, excluida por el filtro." :
+               "No incluye #{number_or_blank(n)} piezas fuera de catálogo, excluidas por el filtro." ]
+  end
 
   # El BOM (`﻿`) NO es adorno: sin él, Excel en Windows abre el archivo en
   # la codificación local y "MARTILLO DEMOLEDOR 3/4" sale con los acentos rotos.
@@ -176,9 +204,13 @@ class ReportsController < ApplicationController
   def products_csv
     CSV.generate(String.new("﻿")) do |csv|
       csv << PRODUCTS_CSV_HEADERS
-      (@sales.catalog_rows + @sales.generic_rows).each do |row|
-        csv << [ row.code, row.description, row.model, row.part_number,
-                number_or_blank(row.sold), number_or_blank(row.gifted), row.sku ]
+      products_file_rows.each do |code, description, model, part_number, sold, gifted, sku, origin|
+        csv << [ code, description, model, part_number,
+                number_or_blank(sold), number_or_blank(gifted), sku, origin ]
+      end
+      if (note = products_excluded_note)
+        csv << []
+        csv << note
       end
     end
   end
@@ -212,15 +244,19 @@ class ReportsController < ApplicationController
       # FECEGO va SIEMPRE a 6 dígitos (es como lo muestra el ERP y como lo
       # teclea la gente). El No. de parte tiene el mismo riesgo. Las cantidades
       # sí van numéricas a propósito: es la ventaja del xlsx sobre el CSV.
-      types = [ :string, :string, :string, :string, :float, :float, :string ]
-      (@sales.catalog_rows + @sales.generic_rows).each do |row|
-        sheet.add_row [ row.code, row.description, row.model, row.part_number,
-                       number_or_nil(row.sold), number_or_nil(row.gifted), row.sku ],
+      types = [ :string, :string, :string, :string, :float, :float, :string, :string ]
+      products_file_rows.each do |code, description, model, part_number, sold, gifted, sku, origin|
+        sheet.add_row [ code, description, model, part_number,
+                       number_or_nil(sold), number_or_nil(gifted), sku, origin ],
                       types: types
+      end
+      if (note = products_excluded_note)
+        sheet.add_row []
+        sheet.add_row note, types: [ :string ]
       end
       # Anchos a ojo del contenido real: la descripción del ERP es larga y sin
       # esto sale la columna estándar, que la corta en todas las filas.
-      sheet.column_widths 12, 55, 14, 14, 10, 10, 16
+      sheet.column_widths 12, 55, 14, 14, 10, 10, 16, 18
       # Congelar el encabezado: son cientos de renglones y sin esto se pierde
       # de vista qué columna es cuál al bajar.
       sheet.sheet_view.pane { |pane| pane.top_left_cell = "A2"; pane.state = :frozen; pane.y_split = 1 }

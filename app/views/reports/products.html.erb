@@ -18,6 +18,23 @@
       <%= link_to "← Volver a reportes", reports_path, class: back_link_class %>
     </div>
 
+    <%# Qué cubre el reporte, dicho antes de la primera cifra. El badge de
+        arriba habla del ALCANCE POR ROL ("Todos los pedidos" = los de todos
+        los capturistas), y sin esta línea se leía como "todo lo del evento":
+        los borradores no cuentan —no son venta— y los pedidos que el sync-down
+        ya purgó de la laptop tampoco pueden contarse (9ª auditoría). %>
+    <p class="mb-6 max-w-3xl text-sm text-white/70">
+      Cuenta las piezas de los pedidos <span class="font-semibold">finalizados</span>
+      que están hoy en esta laptop. Los que siguen en borrador no aparecen.
+      <% if @sales.purged_orders.positive? %>
+        <span class="font-semibold text-white">
+          Tampoco <%= @sales.purged_orders == 1 ? "aparece 1 pedido ya transmitido que se quitó" :
+                      "aparecen #{@sales.purged_orders} pedidos ya transmitidos que se quitaron" %>
+          de esta laptop al obtener información: sus partidas están en el ERP, no aquí.
+        </span>
+      <% end %>
+    </p>
+
     <div class="w-full">
     <%# Filtros y descarga en el mismo marco dorado: son la misma decisión
         ("qué quiero ver"), y el archivo sale con lo que está en pantalla. %>
@@ -98,7 +115,8 @@
                   <%= link_to "Quitar filtros", products_report_path(per_page: @pagy.limit),
                         class: "ml-2 font-semibold text-neutral-900 underline decoration-brand-gold decoration-2 underline-offset-4" %>
                 <% else %>
-                  Todavía no hay productos vendidos.
+                  Todavía no hay productos en pedidos finalizados.
+                  <span class="block text-sm">Los pedidos en borrador no se cuentan aquí.</span>
                 <% end %>
               </td>
             </tr>
@@ -148,13 +166,22 @@
     <%# El filtro esconde el fuera de catálogo; decirlo evita que el reporte
         filtrado se lea como "esto fue todo lo que se vendió". %>
     <% if @sales.hidden_generic_quantity.positive? %>
+      <%# Concordancia a mano —verbo, sustantivo y relativo—: `pluralize` es el
+          inflector inglés, y "1 piezas" con una sola pieza es el caso más
+          común del genérico. %>
+      <% n = @sales.hidden_generic_quantity %>
       <p class="mt-4 rounded-2xl bg-brand-cream px-5 py-3 text-sm text-neutral-900">
-        Además se capturaron
-        <span class="font-semibold"><%= report_quantity(@sales.hidden_generic_quantity) %></span>
-        piezas fuera de catálogo, que no pertenecen a ningún proveedor ni marca.
+        <% if n == 1 %>
+          Además se capturó <span class="font-semibold">1 pieza</span> fuera de
+          catálogo, que no pertenece a ningún proveedor ni marca.
+        <% else %>
+          Además se capturaron
+          <span class="font-semibold"><%= report_quantity(n) %></span>
+          piezas fuera de catálogo, que no pertenecen a ningún proveedor ni marca.
+        <% end %>
         <%= link_to "Quita los filtros", products_report_path(per_page: @pagy.limit),
               class: "font-semibold underline decoration-brand-gold decoration-2 underline-offset-4" %>
-        para verlas.
+        para <%= n == 1 ? "verla" : "verlas" %>.
       </p>
     <% end %>
     </div>

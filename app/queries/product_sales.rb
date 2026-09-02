@@ -68,10 +68,33 @@ class ProductSales
   # Piezas del genérico que el filtro está dejando fuera. Se anuncia en
   # pantalla: sin eso, un reporte filtrado se lee como "esto fue todo lo que se
   # vendió" y el fuera de catálogo desaparece sin dejar rastro.
+  #
+  # Solo lo VENDIDO, como la tabla visible: el bloque del genérico no tiene
+  # columna de regalos, así que sumar aquí las bonificadas daría un número que
+  # no cuadra con lo que se ve al quitar el filtro. (Hoy es teórico —el ERP
+  # nunca ha regalado el 999999, 0 de 708 renglones de regalo— pero el aviso y
+  # la tabla tienen que salir de la misma mitad del SUM.)
   def hidden_generic_quantity
     return 0 unless filtered?
 
-    @hidden_generic_quantity ||= generic_items.sum(:quantity)
+    @hidden_generic_quantity ||= generic_items.where(gift: false).sum(:quantity)
+  end
+
+  # Pedidos que este reporte NO PUEDE VER, porque ya no están en la laptop.
+  #
+  # El replace del sync-down purga los pedidos transmitidos en cada obtención
+  # de información (`Order.purge_transmitted!`), así que en una rueda de varios
+  # días el reporte solo cubre lo capturado DESDE la última obtención: se
+  # transmite el día 1, se vuelve a obtener, y el día 2 el reporte muestra solo
+  # el día 2. El ERP tiene los dos. Sin este dato la pantalla afirmaría un
+  # total que no es el del evento, sin nada que lo delate (9ª auditoría).
+  #
+  # Se suman TODAS las corridas de la rueda, no solo la última: "Cerrar rueda"
+  # borra el historial de corridas, así que el acumulado se reinicia solo con
+  # cada rueda — que es justo el alcance que interesa.
+  def purged_orders
+    @purged_orders ||= SyncRun.where(kind: "down", status: "completed")
+                              .sum { |run| run.summary.to_h["purged_orders"].to_i }
   end
 
   private
