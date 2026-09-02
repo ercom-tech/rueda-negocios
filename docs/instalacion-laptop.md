@@ -78,9 +78,11 @@ chmod 600 ~/.ssh/config
 
 ssh -T git@github-rueda-negocios     # → "Hi ercom-tech/rueda-negocios! ..."
 
-mkdir -p ~/Projects/_fecego && cd ~/Projects/_fecego
-git clone git@github-rueda-negocios:ercom-tech/rueda-negocios.git
-git clone git@github-rueda-api:ercom-tech/rueda-api.git
+mkdir -p ~/Proyectos && cd ~/Proyectos
+# El directorio destino lleva el prefijo `fecego-`: es como está la laptop hoy
+# y como lo espera el unit de systemd de más abajo.
+git clone git@github-rueda-negocios:ercom-tech/rueda-negocios.git fecego-rueda-negocios
+git clone git@github-rueda-api:ercom-tech/rueda-api.git fecego-rueda-api
 ```
 
 (Las URLs usan el alias, no `github.com` — así git elige la llave correcta;
@@ -102,7 +104,7 @@ Mac de desarrollo).
 > `RUEDA_API_URL=http://fecegowstest:7011` (ver las Notas del final).
 
 ```bash
-cd ~/Projects/_fecego/rueda-api
+cd ~/Proyectos/fecego-rueda-api
 bundle install
 cp .env.example .env
 ```
@@ -131,7 +133,7 @@ laptop (`listen_addresses` y regla en `pg_hba.conf`).
 ## 6. rueda-negocios
 
 ```bash
-cd ~/Projects/_fecego/rueda-negocios
+cd ~/Proyectos/fecego-rueda-negocios
 bundle install
 cp .env.example .env
 ```
@@ -176,7 +178,7 @@ una consola en el evento. **`bin/dev` no sirve aquí**: levanta además el
 watcher de Tailwind, que solo hace falta al editar código; el CSS se compila al
 actualizar (`bin/rails tailwindcss:build`).
 
-`/etc/systemd/system/rueda-negocios.service` (ajusta `<usuario>`):
+`/etc/systemd/system/fecego-rueda-negocios.service` (ajusta `<usuario>`):
 
 ```ini
 [Unit]
@@ -186,7 +188,7 @@ Wants=postgresql.service
 
 [Service]
 User=<usuario>
-WorkingDirectory=/home/<usuario>/Projects/_fecego/rueda-negocios
+WorkingDirectory=/home/<usuario>/Proyectos/fecego-rueda-negocios
 ExecStart=/home/<usuario>/.rbenv/shims/bundle exec rails server -b 0.0.0.0 -p 3000
 Restart=always
 RestartSec=3
@@ -197,14 +199,23 @@ WantedBy=multi-user.target
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now rueda-negocios
-sudo systemctl status rueda-negocios
-journalctl -u rueda-negocios -f        # logs en vivo
+sudo systemctl enable --now fecego-rueda-negocios
+sudo systemctl status fecego-rueda-negocios
+journalctl -u fecego-rueda-negocios -f   # logs en vivo
 ```
 
 En *development* la app carga su `.env` sola (dotenv-rails), así que el unit no
 necesita `EnvironmentFile`. El `After=postgresql.service` espera al Postgres
 local.
+
+**La app corre en DEVELOPMENT, y eso tiene una consecuencia diaria:** el
+`ExecStart` no define `RAILS_ENV` ni el unit trae `Environment=`, así que
+**todo comando de consola en la laptop va SIN `RAILS_ENV`**. Con
+`RAILS_ENV=production` Rails apunta a `rueda_negocios_production` —otra base,
+vacía— y además exige `secret_key_base`, así que el comando falla o, peor,
+"funciona" sobre datos que no son los del evento. Si alguna vez hace falta un
+runner de solo lectura con production, `SECRET_KEY_BASE_DUMMY=1` levanta la app
+sin secreto real.
 
 **El barrido de corridas huérfanas corre en cada arranque del servicio y al
 volver al menú del servidor.** Un apagón, un Ctrl-C o un kill a media corrida
@@ -218,9 +229,14 @@ antes de tocarla, así que una tarea `rake sync:*` corriendo en otra terminal
 Antes de habilitarlo, verifica que no quede un `bin/dev` corriendo
 (`ss -tlnp | grep 3000`), o el servicio no podrá tomar el puerto.
 
-**Actualizar después:** `git pull` + `bundle install` (si cambió el Gemfile) +
+**Actualizar después:** ver **`docs/despliegue-laptop.md`**, que lleva los pasos
+con su comprobación uno por uno. En corto: `git pull` + `bundle install` +
 `bin/rails db:migrate` + `bin/rails tailwindcss:build` +
-`sudo systemctl restart rueda-negocios`.
+`sudo systemctl restart fecego-rueda-negocios`.
+
+Ninguno de esos cuatro pasos es opcional "si no cambió nada", y dos de ellos
+tumban la app entera si se saltan cuando hacían falta — está medido y explicado
+en esa guía.
 
 ## Notas
 
@@ -233,8 +249,7 @@ Antes de habilitarlo, verifica que no quede un `bin/dev` corriendo
 - ¿BD de la app también en el servidor de testing? Cambia `DB_HOST`/`DB_PORT`
   en el `.env` de rueda-negocios (el rol necesita `CREATEDB` y `pg_trgm`
   disponible) y sáltate el paso 4.
-- Para actualizar la laptop después: `git pull` en ambos repos +
-  `bundle install` + `bin/rails db:migrate` + `bin/rails tailwindcss:build`.
+- Para actualizar la laptop después: **`docs/despliegue-laptop.md`**.
 
 ## Equipos cliente (tablets/laptops de capturistas)
 

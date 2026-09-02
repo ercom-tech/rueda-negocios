@@ -9,7 +9,7 @@ aprendizajes de lo que ya se hizo.
 
 ## Prioridad alta
 
-### Desplegar lo remediado (4ª a 8ª) en la laptop y en la VM de testing
+### Desplegar lo remediado (4ª a 9ª) en la laptop y en la VM de testing
 
 **Nada está desplegado desde antes de la 4ª** (la API de testing corre
 `b43495a`, del 30-jul: ni siquiera trae el arreglo de remisiones). Con el
@@ -42,12 +42,23 @@ viejo quedó caduco — verificado en la 6ª auditoría:
 - **Imprimir el PDF de un pedido de ~20 partidas** y verificar que trae los
   cuatro totales y el importe en letra en la misma hoja. Es el check de la 8ª
   auditoría: en esa franja el papel salía sin totales y con hojas en blanco.
+- **Los pasos, con su comprobación uno por uno, están en
+  `docs/despliegue-laptop.md`.** Dos que parecen opcionales y no lo son: sin
+  `bundle install` la app NO ARRANCA (Bundler falla antes de Rails y el
+  servicio entra en bucle), y sin `systemctl restart` los initializers nuevos
+  no existen — el reload de development recarga `app/`, no
+  `config/initializers/`.
 - **Cambios visibles** que anunciar: coral `#bd5343`, favicon de tuerca,
-  rojo de avisos más oscuro, mensajes nuevos del panel y del 422; y del lote
+  rojo de avisos más oscuro, mensajes nuevos del panel y del 422; del lote
   de promociones: la flama de promoción, el coral movido al **Subtotal**, el
   botón que ahora dice **"Guardar"**, el aviso "Se muestran las primeras 50
   coincidencias" en los buscadores, y la línea "Dividir facturas cada" en el
-  PDF.
+  PDF; y del lote del 2026-09-02: el **reporte de productos** (tercera card
+  del hub, con descarga en CSV y Excel), los **encabezados ordenables** del
+  reporte de pedidos, la **desaparición del tope de 45 partidas** (el contador
+  se queda, ahora informativo y contando también los regalos) y la **tabla de
+  partidas invertida** — la más reciente arriba, con el consecutivo contando
+  hacia atrás (el PDF y el ERP siguen en 1, 2, 3).
 - Candidato aparte: no existe handshake de versión laptop↔API (`/` y
   `/health` no la exponen) — esta clase de desfase seguirá siendo invisible
   hasta que exista.
