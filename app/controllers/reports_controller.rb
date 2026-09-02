@@ -34,6 +34,7 @@ class ReportsController < ApplicationController
   def captured_orders
     @all_scope = current_user.can_see_all_orders?
     @filter    = OrdersFilter.new(params)
+    @sort      = OrdersSort.new(params)
 
     # El resumen se calcula con TODOS los filtros menos el de estatus: sus
     # tarjetas son el filtro de estatus y deben seguir mostrando el panorama
@@ -44,10 +45,13 @@ class ReportsController < ApplicationController
     @options    = filter_options
     @page_sizes = PAGE_SIZES
 
-    @pagy, @orders = pagy(@filter.apply_status(filtered)
-                                 .includes(:user, :order_items, client: :salesperson)
-                                 .order(created_at: :desc),
-                          limit: page_size)
+    # El orden se aplica ANTES de paginar (dentro de `OrdersSort#apply`), o la
+    # tabla se vería ordenada dentro de una página que siempre trae los mismos
+    # pedidos. `@products` va porque con filtro de partida las columnas
+    # Renglones y Total muestran —y por tanto ordenan por— lo que coincide.
+    listado = @sort.apply(@filter.apply_status(filtered), @products)
+                   .includes(:user, :order_items, client: :salesperson)
+    @pagy, @orders = pagy(listado, limit: page_size)
     @matching = matching_totals(@orders, @products)
   end
 

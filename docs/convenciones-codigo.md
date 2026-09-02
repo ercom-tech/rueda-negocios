@@ -309,6 +309,34 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
   si algo se coló, todo se deshace. Vale más que mover la guarda adentro del
   lock, que solo estrecha la ventana.
 
+## Tablas ordenables
+
+- **La columna de orden llega por URL: lista blanca, nunca interpolación.** Ver
+  `OrdersSort::COLUMNS`. Lo que no esté en el mapa cae al orden por omisión.
+- **Ordenar SIEMPRE antes de paginar.** Aplicar el orden a la página ya
+  recortada produce una tabla que se ve ordenada y miente: la primera página
+  sigue trayendo los mismos registros, acomodados entre sí.
+- **`joins` es INNER y esconde filas.** Ordenar por una asociación opcional
+  —el vendedor de un cliente— hacía desaparecer los pedidos que no la tienen:
+  un filtro disfrazado de orden, sin nada que lo delate. Para ordenar, siempre
+  `left_joins`.
+- **Desempate por `id` en todo orden.** Sin él, los empates salen en orden
+  arbitrario y cambian entre peticiones: un registro aparece en dos páginas y
+  otro en ninguna. `created_at` no sirve de desempate — dos altas del mismo
+  segundo empatan igual.
+- **`NULLS LAST` en las dos direcciones**, o un registro vacío encabeza la
+  tabla solo por estarlo.
+- **El orden sigue a lo que la celda MUESTRA, no a la columna de la base.**
+  Dos formas de romperlo, las dos vistas en el reporte de pedidos:
+  - con filtro de partida activo, Renglones y Total muestran lo que coincide;
+    ordenar por el total del pedido mientras se ve otro número no se entiende;
+  - la celda de "Clave local" muestra `(borrador)` cuando aún no hay folio.
+    Ordenando por la columna cruda esos pedidos quedaban en NULL y —con
+    `NULLS LAST`— clavados al final **en las dos direcciones**: al invertir el
+    orden no se movían y la columna parecía no funcionar. El SQL de orden tiene
+    que reproducir el mismo `COALESCE` que usa la vista, texto sustituto
+    incluido.
+
 ## Validación
 
 - Suite: `PARALLEL_WORKERS=1 bin/rails test`. El runner paralelo de minitest a
@@ -321,6 +349,12 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
   medio es fácil que pase por el camino equivocado.
 - `bin/rails runner - <<'RUBY' … RUBY` (heredoc con comillas): pasar el script
   como argumento en una línea se come las comillas internas.
+- **El fail-first no vale sobre un archivo sin trackear.** `git stash push
+  ruta` **ignora** los archivos nuevos (hace falta `-u`), así que la prueba
+  corre con el arreglo puesto y "falla sin el cambio" queda sin comprobar — un
+  falso negativo que da confianza injustificada justo en la comprobación que
+  existe para no tenerla. Con código recién creado, deshacer el cambio a mano
+  (copia de respaldo + edición) y confirmar que la prueba se pone roja.
 - **`node --check archivo.js` tras tocar un controller Stimulus.** El proyecto
   no necesita Node en runtime (importmap), pero está instalado y es lo único
   que caza un error de sintaxis antes del navegador — una continuación de línea

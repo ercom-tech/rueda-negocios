@@ -26,19 +26,38 @@
 
     <div class="overflow-x-auto rounded-3xl border border-black/10 bg-brand-cream text-neutral-900">
       <table class="w-full text-sm">
+        <%# Encabezados ordenables. `sort_params` lleva los filtros y el tamaño
+            de página para que el orden no los pierda; `page` se descarta en el
+            helper, porque reordenar y quedarse en la página 7 deja al usuario
+            en medio de una lista que ya no es la que veía.
+            "Hora" ordena por la misma columna que "Fecha" (`created_at`): son
+            la misma marca de tiempo partida en dos celdas. %>
+        <% sort_params = @filter.to_params.merge(per_page: @pagy.limit) %>
         <thead class="bg-black text-white">
           <tr>
             <% if @all_scope %>
-              <th class="px-4 py-3 text-left font-semibold">Capturista</th>
+              <%= sortable_header "user", "Capturista", sort: @sort, base_params: sort_params %>
             <% end %>
-            <th class="px-4 py-3 text-left font-semibold">Fecha</th>
-            <th class="hidden px-4 py-3 text-left font-semibold lg:table-cell">Hora</th>
-            <th class="px-4 py-3 text-left font-semibold">Cliente</th>
-            <th class="hidden px-4 py-3 text-left font-semibold lg:table-cell">Vendedor</th>
-            <th class="px-4 py-3 text-left font-semibold">Clave local</th>
-            <th class="px-4 py-3 text-right font-semibold">Renglones</th>
-            <th class="px-4 py-3 text-right font-semibold">Total</th>
-            <th class="px-4 py-3 text-center font-semibold">Estatus</th>
+            <%= sortable_header "date", "Fecha", sort: @sort, base_params: sort_params %>
+            <th class="hidden px-4 py-3 text-left font-semibold lg:table-cell"
+                aria-sort="<%= @sort.active?("time") ? (@sort.dir == "asc" ? "ascending" : "descending") : "none" %>">
+              <%= link_to url_for(sort_params.merge(sort: "time", dir: @sort.next_dir_for("time"), page: nil)),
+                    class: sort_header_class(@sort.active?("time")) do %>
+                Hora<%= sort_caret @sort.direction_for("time") %>
+              <% end %>
+            </th>
+            <%= sortable_header "client", "Cliente", sort: @sort, base_params: sort_params %>
+            <th class="hidden px-4 py-3 text-left font-semibold lg:table-cell"
+                aria-sort="<%= @sort.active?("salesperson") ? (@sort.dir == "asc" ? "ascending" : "descending") : "none" %>">
+              <%= link_to url_for(sort_params.merge(sort: "salesperson", dir: @sort.next_dir_for("salesperson"), page: nil)),
+                    class: sort_header_class(@sort.active?("salesperson")) do %>
+                Vendedor<%= sort_caret @sort.direction_for("salesperson") %>
+              <% end %>
+            </th>
+            <%= sortable_header "folio", "Clave local", sort: @sort, base_params: sort_params %>
+            <%= sortable_header "items", "Renglones", sort: @sort, base_params: sort_params, align: "right" %>
+            <%= sortable_header "total", "Total", sort: @sort, base_params: sort_params, align: "right" %>
+            <%= sortable_header "status", "Estatus", sort: @sort, base_params: sort_params, align: "center" %>
           </tr>
         </thead>
         <tbody>
@@ -97,8 +116,10 @@
       </table>
     </div>
 
+    <%# El orden viaja con los filtros: cambiar de página no puede reordenar
+        la tabla por debajo. %>
     <%= render "shared/paginator", pagy: @pagy, noun: "pedido",
-          base_params: @filter.to_params, page_sizes: @page_sizes %>
+          base_params: @filter.to_params.merge(@sort.to_params), page_sizes: @page_sizes %>
     </div>
   </div>
 </div>

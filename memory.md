@@ -31,6 +31,54 @@ Si es **algo por hacer**, va al backlog.
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
 
+## Ordenamiento del reporte de pedidos (2026-09-02)
+
+Las nueve columnas del reporte de pedidos capturados ordenan al hacer clic en
+su encabezado. Vive en `app/queries/orders_sort.rb`, hermano de `OrdersFilter`.
+
+**Lo que decidió el diseño:**
+
+- **La columna llega por URL, así que va contra una LISTA BLANCA**, nunca
+  interpolada. Un `?sort=` es entrada del usuario como cualquier otra, y ahí
+  es donde se cuela una inyección. Hay prueba con `?sort=...DROP TABLE...`.
+- **El orden se aplica en SQL, antes de paginar.** Ordenar la página ya
+  recortada da una tabla que *se ve* ordenada y miente: la primera página
+  seguiría trayendo los mismos 25 pedidos, solo que acomodados entre sí.
+- **Renglones y Total respetan el filtro activo.** Con un filtro de partida la
+  pantalla ya mostraba el importe de las partidas que COINCIDEN, no el del
+  pedido; ordenar por el total del pedido mientras la celda enseña otro número
+  sería incomprensible. Va con `LEFT JOIN` a un agregado, no con subquery
+  correlacionada (norma del proyecto).
+- **Estatus ordena por el FLUJO** (borrador → capturado → transmitido).
+  Alfabético daría capturado/borrador/transmitido, que no significa nada.
+- **Fecha y Hora salen de la misma columna** (`created_at`) y ordenan por ella.
+- **Desempate por id siempre.** Sin él, dos pedidos con el mismo valor pueden
+  salir en orden distinto entre páginas, y entonces uno aparece dos veces y
+  otro ninguna. `created_at` no basta: dos altas del mismo segundo empatan.
+
+**Tres defectos que cazaron las pruebas y el uso, no la lectura:**
+
+1. **`joins` es INNER: ordenar por vendedor hacía DESAPARECER los pedidos de
+   clientes sin vendedor.** Un filtro disfrazado de orden, y silencioso. Se
+   corrigió a `left_joins`. La prueba que lo destapó es la de "los nulos van al
+   final", que se escribió justo para eso.
+2. **La columna activa se distinguía solo por la flecha** — y el `hover` teñía
+   de dorado la que estaba bajo el cursor, así que a simple vista parecía la
+   activa. Ahora la activa va en dorado sólido y el hover es más tenue. Se vio
+   en la captura, no en el código.
+3. **El orden por clave local no movía los borradores** (lo reportó el
+   usuario). Un borrador no tiene folio y la celda muestra `(borrador)`, pero
+   yo ordenaba por la columna cruda: quedaban en NULL y, con `NULLS LAST`,
+   clavados al final en las DOS direcciones. Ahora el SQL reproduce el mismo
+   `COALESCE` de la vista, texto sustituto incluido — que es exactamente la
+   regla que yo había escrito el mismo día y no apliqué a esta columna.
+
+**Y una trampa metodológica que me mordió aquí:** el fail-first de ese arreglo
+salió verde porque `git stash push app/queries/orders_sort.rb` **no toca los
+archivos sin trackear** (hace falta `-u`), así que la prueba corrió con el
+arreglo puesto. Un falso negativo justo en la comprobación que existe para no
+confiarse. Con código recién creado hay que deshacer el cambio a mano.
+
 ## Se quitó el tope de 45 partidas (2026-09-02)
 
 Petición del usuario: **no era funcional en la operación del evento** — un
