@@ -6,9 +6,14 @@ se publican aparte (ver "Historial" al final).
 
 ## El método en una frase
 
-**Siete revisiones independientes en paralelo, una por dimensión, y después
-una pasada de verificación adversarial donde cada hallazgo grave se intenta
-REFUTAR contra el código en ejecución antes de publicarlo.**
+**Una revisión independiente por dimensión, todas en paralelo, y después una
+pasada de verificación adversarial donde cada hallazgo grave se intenta REFUTAR
+contra el código en ejecución antes de publicarlo.**
+
+Cuántas dimensiones se lanzan depende del alcance: el proyecto completo las
+usa todas; un lote de cuatro commits se auditó con cuatro (8ª) y el de la 9ª
+con cinco. Menos auditores sobre poco código rinde más que nueve mirando lo
+mismo.
 
 Esa segunda pasada es lo que separa un reporte útil de una lista de sospechas,
 y su historial lo demuestra: en la 3ª varios "hallazgos" no la sobrevivieron;
@@ -53,6 +58,18 @@ reporte corto y cierto vale más que uno largo y especulativo.
   pregunta no es "¿qué recorte falló?" sino "¿la conclusión se sigue del dato?"
   — si se registra como error de medición, la próxima auditoría re-mide algo
   que estaba bien y no revisa el razonamiento, que es lo que falló.
+- **Antes de tocar una pantalla, releer las convenciones que la rigen.** En la
+  9ª, cuatro hallazgos independientes fueron la misma regla ya escrita sin
+  aplicar: "el orden sigue a lo que la celda muestra" (roto en dos columnas),
+  "el dorado no sirve de trazo sobre el crema" (propagado a una pantalla nueva)
+  y el saneo de `id_param` (reescrito con `to_i`). Una de ellas tenía **dos
+  días** de escrita. El fallo no es de memoria sino de encaje: la regla estaba
+  archivada bajo "columnas calculadas" y el caso nuevo era "columna que muestra
+  otro campo".
+- **Verificar las cifras del propio auditor antes de escribirlas.** En la 9ª se
+  re-midieron las tres principales y las tres reprodujeron — pero el ejercicio
+  vale igual: es lo que separa "un agente lo dijo" de "está medido", y en la 8ª
+  un auditor llegó a citar una tabla vacía por confundir dos esquemas.
 - **Severidad honesta:** ALTA = corrompe datos, bloquea la operación sin salida
   o expone información. Si todo es alto, nada lo es.
 - **Un defecto puede ser viejo y aun así ser culpa del cambio nuevo.** El PDF
@@ -61,7 +78,7 @@ reporte corto y cierto vale más que uno largo y especulativo.
   mucho más probable. Preguntar por lo que el código nuevo hace más FRECUENTE,
   no solo por lo que rompe.
 
-## Las siete dimensiones
+## Las dimensiones
 
 ### 1. Seguridad
 Autorización y alcance por rol (que un capturista no llegue a datos ajenos ni
@@ -118,7 +135,38 @@ tras cada falla — incluida la pregunta de si le queda salida y de si alguna
 pantalla se la dice**. Estrenada en la 4ª; en la 5ª produjo el único ALTA (el
 pedido duplicado en el ERP guiado por el propio mensaje de colisión).
 
+### 8. Textos de los caminos de falla
+Estrenada en la 6ª, donde encontró los 2 ALTA. No revisa la pantalla feliz sino
+**lo que el sistema dice cuando algo sale a medias**: el mensaje nombra lo que
+de verdad pasó, dice qué hacer, enuncia todos los pasos de una vez en vez de
+irlos revelando de error en error, concuerda en número, y no usa vocabulario
+técnico (ver `docs/convenciones-visuales.md`). El peor caso que buscó —y
+encontró— es el mensaje que **guía al operador hacia el daño**: el aviso de
+colisión que lo mandaba a reintentar y duplicaba el pedido en el ERP.
+
+### 9. Riesgo de despliegue
+Se estrena en la 9ª, cuando el encargo fue auditar **lo pendiente de subir a la
+laptop**, y produjo tres ALTA por sí sola. Pregunta: qué necesita el lote para
+desplegarse (gemas, migraciones, initializers, clases de Tailwind, variables),
+**qué se rompe si falta cada paso y con qué síntoma lo ve el operador**, qué
+pasa si se despliega a medias o en mal orden entre repos, si la reversión deja
+la app funcionando, y si la guía escrita sigue siendo cierta.
+
+Rinde porque mira el software como algo que hay que **instalar**, no solo
+ejecutar: los dos ALTA principales —sin `bundle install` la app no arranca; sin
+`restart` los initializers nuevos no existen— no son defectos del código y
+ninguna otra dimensión los habría buscado.
+
 ## Historial
+
+- **9ª (2026-09-02)** — alcance: **lo pendiente de desplegar en la laptop**
+  (`bba5265..HEAD`, 5 commits, 34 archivos), con 5 auditores, uno de ellos la
+  dimensión nueva de despliegue — **6 ALTA · ~18 MEDIA · ~28 BAJA** →
+  **remediada al 100% en siete bloques** (detalle en "9ª auditoría —
+  remediación" de `memory.md`). Patrón que dejó: **cuatro hallazgos
+  independientes fueron la MISMA regla, ya escrita en el repo, sin aplicar** —
+  y tres de esas reglas se habían escrito en los días anteriores. Tener la
+  norma no basta si el caso nuevo no se parece al que la motivó.
 
 - **8ª (2026-08-24)** — solo lo posterior a la 7ª (4 commits, 23 archivos), con
   4 auditores en vez de 8 por el alcance chico — 1 **CRÍTICA** · 5 ALTA ·
