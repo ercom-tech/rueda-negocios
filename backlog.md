@@ -431,6 +431,79 @@ constante en `Promotions::Group`.
 Ojo con el orden: esto se valida DESPUÉS de desplegar y transmitir el pedido
 de prueba, así que va en el mismo viaje que el paso 4 de la guía.
 
+### Dividir el pedido al transmitir: monto divide + tope de 45 partidas
+
+**Pedido del usuario (2026-09-02).** Hoy la laptop manda **un** pedido por
+pedido local con `dividir_facturas` tal cual, y el ERP parte al **facturar**.
+Se requiere que la transmisión mande **N pedidos ya partidos**, por dos
+criterios a la vez: el monto divide y un **máximo de 45 partidas sin contar
+regalos** por pedido. (Es la contraparte de haber quitado el tope de 45 de la
+captura el 2026-09-02: el tope no desaparece, se muda a la transmisión.)
+
+**Esto es lo que hay que validar con FECEGO antes de implementar nada.** Las
+tres preguntas, con lo que dice el histórico del ERP — recorte: `vta_pedido`
+con `dividir_facturas > 0` y `baja = false`, unido a su detalle vivo, **46,075
+pedidos**:
+
+1. **¿El corte es por total con IVA o por subtotal?** "Importe máximo por
+   factura" apunta a total, pero no está confirmado y cambia dónde cae cada
+   corte. De esos pedidos, **37,952 (82%)** exceden su monto, o sea que la
+   división es el caso normal, no el borde.
+2. **¿Una partida que sola ya rebasa el monto se parte en cantidad, o se deja
+   entera y esa parte excede?** Son **6,407 (14%)** — no es un borde.
+   Recomendación: dejarla entera; partir cantidades inventa renglones que el
+   capturista no capturó y descuadra el surtido. Pero cambia lo que se factura,
+   así que lo decide FECEGO.
+3. **¿Hay tope de partes?** El peor caso del histórico daría **134 pedidos**
+   desde uno solo (total ~$268k con monto $2,000): 134 folios y 134 documentos
+   de surtido. Hoy ese costo lo absorbe facturación al final; movido a la
+   transmisión, aparece al principio y lo vive almacén. (585 pedidos del
+   recorte pasan de 45 renglones; el máximo son 149.)
+
+**Diseño propuesto** (para retomarlo cuando haya respuesta):
+
+- **Dividir en la laptop, en el sync-up, no en `rueda-api`.** La regla es de la
+  rueda, no del ERP; los datos para repartir (qué regalo cuelga de qué partida)
+  están completos aquí; y cada parte queda como un POST independiente y
+  reintentable — si dividiera la API, un fallo a la mitad dejaría a la laptop
+  sin saber cuáles partes entraron.
+- **El obstáculo real es la identidad.** La PK de negocio del ERP es
+  `id_empresa + clave_cliente + fecha_pedido + hora_pedido`, con granularidad de
+  **segundo** (`OrderCreate#find_existing`): las N partes colisionarían entre
+  sí. Cada parte lleva su hora (captura + k−1 segundos) y **esa hora se
+  persiste**, no se recalcula al transmitir — si se recalcula, un reintento tras
+  una caída puede repartir distinto y duplicar en el ERP lo que ya entró. Al
+  asignarlas hay que comprobarlas contra los demás pedidos del mismo cliente y
+  fecha en la laptop: hoy dos pedidos del mismo cliente en el mismo segundo ya
+  colisionan, y con partes cada pedido ocupa N segundos.
+- **El reparto se calcula al capturar**, no al transmitir: ahí el pedido queda
+  congelado, el capturista ve en el resumen en cuántos pedidos se parte (con 134
+  en el peor caso, no es un detalle) y el sync-up solo recorre partes.
+- **Modelo:** tabla `order_parts` (`order_id`, `sequence`, `erp_hour`,
+  `erp_folio`, `transmitted_at`) + `order_items.order_part_id`. `erp_folio` deja
+  de ser una columna del pedido y pasa a ser la lista de folios de sus partes.
+  Aparece un estado que hoy no existe: **transmitido a medias** — las guardas
+  que preguntan `erp_folio: nil` (`Sync::Up#pending`, `Order.transmitted` para
+  la purga, "Cerrar rueda") tienen que preguntar por partes pendientes, o cerrar
+  rueda borraría un pedido con partes sin transmitir.
+- **Reparto:** cada partida no-regalo con sus regalos es un **bloque
+  indivisible** — obligatorio, no estético: `consec_origen_promo` apunta a un
+  consecutivo del mismo pedido, y un regalo separado de su origen apuntaría a un
+  renglón inexistente. Parte nueva cuando el bloque llevaría a más de 45
+  no-regalos, o cuando rebasaría el monto y la parte no está vacía.
+  Consecutivos renumerados dentro de cada parte.
+- **Cada parte recalcula sus propios importes** (`subtotal`, `descto_monto`,
+  `iva_monto`, `total`): `rueda-api` valida renglón por renglón y compara el
+  encabezado contra `written_total`, así que un total heredado del pedido
+  completo saldría rechazado con 422.
+- **`dividir_facturas: 0` en el payload de cada parte**, o el ERP volvería a
+  dividir al facturar lo que ya viene partido. El monto elegido se conserva en
+  el pedido local y en el PDF, que es donde documenta la intención.
+
+Falta decidir además qué pasa con el **PDF** (uno por parte o uno solo con la
+división anotada) y cómo se ven los varios folios en el detalle del pedido y en
+el reporte de pedidos capturados.
+
 ### Cuántos regalos entrega un escalón con varios (antes del 27-ago)
 
 `vta_promocion_detalle.regalos_permitir` viene en **0** y `regalos_todo` en
