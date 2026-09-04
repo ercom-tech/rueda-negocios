@@ -4,9 +4,14 @@ Cuando el panel del servidor avisa de algo omitido, dice **cuántos** pero no
 **cuáles**: el detalle vive en el ERP, no en la laptop. Aquí están las
 consultas que lo responden, listas para pegar en `psql`.
 
-> **Estas consultas replican los criterios de `rueda-api/app/queries/export.rb`.**
-> Si el export cambia a quién deja entrar, hay que cambiarlas aquí también, o
-> pasan a mentir sin que nada avise. Cada una dice de qué método sale.
+También viven aquí las consultas que responden **qué pasó en la rueda** y que
+solo el ERP puede contestar, porque la laptop lo pierde al cerrar (lo que se
+capturó fuera de catálogo).
+
+> **Las consultas de omisión replican los criterios de
+> `rueda-api/app/queries/export.rb`.** Si el export cambia a quién deja entrar,
+> hay que cambiarlas aquí también, o pasan a mentir sin que nada avise. Cada una
+> dice de qué método sale.
 >
 > Todas usan `id_empresa = 1` y `id_rueda = 3`: ajusta la rueda.
 
@@ -147,6 +152,71 @@ WHERE rc.id_empresa = 1 AND rc.id_rueda = 3 AND rc.baja = false
                   WHERE f.id_empresa = 1 AND f.clave_cliente = rc.clave_cliente AND f.baja = false)
 ORDER BY 1;
 ```
+
+## Qué se capturó fuera de catálogo (genérico 999999)
+
+No es una consulta de omisión: es el insumo para decidir **qué productos
+merecen darse de alta en el catálogo**. Lo que el capturista tecleó a mano
+durante la rueda solo sobrevive en el ERP — la laptop lo pierde al cerrar la
+rueda.
+
+**La descripción y el número de parte viven en UNA sola columna.**
+`vta_pedido_detalle.nombre_capturado` (varchar 40) los trae juntos separados
+por espacio, porque así los manda la app (`OrderItem#erp_captured_name`) y así
+los captura el propio ERP en sus pedidos nativos con el genérico. No hay
+columna aparte, así que separarlos es **heurística, no dato**: se toma el
+último token si trae algún dígito. Acierta en 112 de 112 partidas de la
+réplica local, pero si el capturista no puso número de parte y la descripción
+termina en algo con dígito (`CABLE 12 AWG`), se lo lleva por delante. Por eso
+la consulta devuelve también la columna cruda, que es la fuente de verdad.
+
+```sql
+SELECT ped.clave_pedido                                   AS "Clave pedido",
+       ped.clave_cliente                                  AS "Clave cliente",
+       det.id_producto                                    AS "ID fecego",
+       CASE WHEN split_part(det.nombre_capturado, ' ',
+                 array_length(string_to_array(det.nombre_capturado, ' '), 1)) ~ '[0-9]'
+            THEN regexp_replace(det.nombre_capturado, '\s+\S+$', '')
+            ELSE det.nombre_capturado
+       END                                                AS "Descripción",
+       CASE WHEN split_part(det.nombre_capturado, ' ',
+                 array_length(string_to_array(det.nombre_capturado, ' '), 1)) ~ '[0-9]'
+            THEN split_part(det.nombre_capturado, ' ',
+                 array_length(string_to_array(det.nombre_capturado, ' '), 1))
+       END                                                AS "Número de parte",
+       det.nombre_capturado                               AS "Descripción + no. parte (crudo)",
+       det.cantidad                                       AS "Cantidad",
+       det.precio                                         AS "Precio unitario",
+       det.total                                          AS "Total"
+FROM fecego.vta_pedido ped
+JOIN fecego.vta_pedido_detalle det
+  ON  det.id_empresa    = ped.id_empresa
+  AND det.clave_cliente = ped.clave_cliente
+  AND det.fecha_pedido  = ped.fecha_pedido
+  AND det.hora_pedido   = ped.hora_pedido
+WHERE ped.id_empresa   = 1
+  AND ped.id_rueda    <> 0        -- todas las ruedas; = 3 para una en particular
+  AND det.id_producto  = 999999
+  AND ped.baja = false
+  AND det.baja = false
+ORDER BY ped.clave_pedido, det.consecutivo;
+```
+
+El join va por la PK de negocio (`empresa + cliente + fecha + hora`), que es
+como el ERP liga encabezado y detalle; `det.clave_pedido` existe pero no es la
+llave.
+
+Para sacarlo a CSV, la misma consulta dentro de un `\copy` (sin el punto y
+coma final):
+
+```bash
+psql -h <host-erp> -U <usuario> -d <base> \
+  -c "\copy (SELECT …) TO 'genericos-rueda.csv' WITH CSV HEADER"
+```
+
+Los dos `baja = false` excluyen lo cancelado. Para auditar **qué se capturó** y
+no **qué quedó vivo**, quítalos y agrega `ped.baja` y `det.baja` a las
+columnas.
 
 ## Un fallo de la API que no es de la app
 
