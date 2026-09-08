@@ -8,6 +8,12 @@ class Order < ApplicationRecord
   #
   # Lo que SÍ se conserva es el contador del buscador, ahora informativo.
 
+  # Prefijo del folio local cuando la rueda no trae el suyo. Era una constante
+  # en el código —todo pedido salía "RN-000123"— hasta que el folio pasó a
+  # viajar al ERP: ahí tuvo que volverse único ENTRE ruedas, y el prefijo pasó a
+  # ser dato de la rueda (`business_rounds.folio_prefix`, del ERP).
+  DEFAULT_FOLIO_PREFIX = "RN".freeze
+
   # Las observaciones viajan al ERP, que maneja texto en mayúsculas: se
   # normalizan aquí (fuente de verdad); el `uppercase` del textarea es solo
   # presentación mientras se teclea.
@@ -265,8 +271,15 @@ class Order < ApplicationRecord
 
   private
 
+  # El prefijo sale de la rueda (`business_rounds.folio_prefix`, que baja del
+  # ERP): es lo que vuelve la clave única ENTRE ruedas, y por eso el ERP la
+  # guarda para saber de qué pedido de la rueda salió cada pedido suyo.
+  #
+  # El respaldo no es un caso hipotético: toda rueda dada de alta antes de que
+  # la columna existiera lo trae vacío. Sin él, el folio saldría "-000123" y el
+  # defecto no aparecería hasta capturar el primer pedido de la rueda.
   def generate_local_folio
-    "RN-#{id.to_s.rjust(6, "0")}"
+    "#{business_round&.folio_prefix.presence || DEFAULT_FOLIO_PREFIX}-#{id.to_s.rjust(6, "0")}"
   end
 
 

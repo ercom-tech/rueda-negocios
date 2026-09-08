@@ -166,7 +166,7 @@ module Sync
       r = @data["round"]
       row = { erp_round_id: r["erp_round_id"], name: r["name"], year: r["year"],
               starts_on: r["starts_on"], ends_on: r["ends_on"],
-              location: r["location"], active: true }
+              location: r["location"], folio_prefix: r["folio_prefix"], active: true }
       insert BusinessRound, [ row ]
     end
 

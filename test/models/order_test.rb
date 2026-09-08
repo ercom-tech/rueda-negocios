@@ -34,6 +34,29 @@ class OrderTest < ActiveSupport::TestCase
     assert_match(/\ARN-\d{6}\z/, order.local_folio)
   end
 
+  test "el folio local lleva el prefijo de la rueda" do
+    @round.update!(folio_prefix: "OAX")
+    order = build_order
+    order.order_items.build(quantity: 1, unit_price: 10, discount_percent: 0, tax_rate: 0)
+    order.save!
+
+    assert order.capture!
+    assert_match(/\AOAX-\d{6}\z/, order.local_folio)
+  end
+
+  # Toda rueda dada de alta antes de que el ERP tuviera la columna trae el
+  # prefijo vacío. Sin el respaldo el folio saldría "-000123", y eso no se ve
+  # hasta capturar el primer pedido de esa rueda.
+  test "sin prefijo en la rueda, el folio cae al respaldo" do
+    @round.update!(folio_prefix: "")
+    order = build_order
+    order.order_items.build(quantity: 1, unit_price: 10, discount_percent: 0, tax_rate: 0)
+    order.save!
+
+    assert order.capture!
+    assert_match(/\A#{Order::DEFAULT_FOLIO_PREFIX}-\d{6}\z/, order.local_folio)
+  end
+
   test "capture! no procede sin partidas" do
     order = build_order
     order.save!

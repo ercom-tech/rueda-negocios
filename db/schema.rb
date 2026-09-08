@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_22_191413) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_08_013838) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -91,6 +91,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_22_191413) do
     t.datetime "created_at", null: false
     t.date "ends_on"
     t.integer "erp_round_id", null: false
+    t.string "folio_prefix"
     t.string "location"
     t.string "name", null: false
     t.date "starts_on"

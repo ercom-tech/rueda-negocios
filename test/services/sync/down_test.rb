@@ -7,7 +7,8 @@ module Sync
       digest = BCrypt::Password.create("secreto").to_s
       {
         "round"       => { "erp_round_id" => 3, "name" => "Oaxaca", "year" => 2026,
-                           "starts_on" => "2026-08-27", "ends_on" => "2026-08-28", "location" => "Oaxaca" },
+                           "starts_on" => "2026-08-27", "ends_on" => "2026-08-28", "location" => "Oaxaca",
+                           "folio_prefix" => "OAX" },
         "cfdi_uses"   => [ { "code" => "G01", "description" => "Adquisición de mercancías" } ],
         "users"       => [ { "erp_person_id" => 90092, "username" => "makita1", "password_hash" => digest,
                             "name" => "PROVEEDOR", "paternal_surname" => nil, "maternal_surname" => nil,
@@ -51,6 +52,8 @@ module Sync
                    "el precio crédito mayoreo (el que cobra la rueda) debe sincronizarse"
       assert_equal 1, ProductSupplier.count # supplier_ids 99 no es de la rueda → omitido
       assert_equal true, BusinessRound.find_by(erp_round_id: 3).active?
+      assert_equal "OAX", BusinessRound.find_by(erp_round_id: 3).folio_prefix,
+                   "el prefijo de folios de la rueda debe sincronizarse: es lo que hace única la clave del pedido"
 
       membership = BusinessRoundPerson.sole
       assert_equal 90092, membership.user.erp_person_id
@@ -75,6 +78,19 @@ module Sync
     # El buscador promete el 999999; si el dataset no lo trajo (servidor
     # viejo o baja en el ERP), el summary lo delata para que el panel avise
     # en vez de dejar la promesa en bucle (6ª auditoría).
+    # Laptop nueva contra una API que todavía no exporta el prefijo — el par que
+    # se vive en toda ventana de despliegue, porque el orden es ERP → API →
+    # laptop. El sync no debe romperse: la rueda queda sin prefijo y sus
+    # pedidos caen al respaldo de `Order::DEFAULT_FOLIO_PREFIX`.
+    test "un export sin prefijo de folios no rompe el sync" do
+      data = export_data
+      data["round"].delete("folio_prefix")
+
+      Down.new(data).run!
+
+      assert_nil BusinessRound.find_by(erp_round_id: 3).folio_prefix
+    end
+
     test "el summary delata cuando el dataset no trae el genérico" do
       assert Down.new(export_data).run!.summary[:missing_generic],
              "el export mínimo no trae el 999999"
