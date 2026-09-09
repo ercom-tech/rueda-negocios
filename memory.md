@@ -81,6 +81,27 @@ hecha contra datos que escribió nuestro propio código no comprueba nada** — 
 "acierta en 112 de 112" de la heurística del número de parte medía filas que
 nuestra app había concatenado; sobre las 5 nativas del ERP no acierta ninguna.
 
+**Las tres BAJA de bordes destaparon algo mayor que ellas.** Arreglar el
+desplazamiento de medianoche —que ponía la parte 2 en `00:00:00` del MISMO día,
+24 horas antes que la parte 1— rompió el reintento, porque `same_content?`
+buscaba el detalle con una sola `fecha_pedido` y las partes pasaron a poder
+vivir en dos días. Y al corregir eso salió la causa de fondo: **`SELECT_PARTS`
+nunca había traído `fecha_pedido`**, así que los pares (fecha, hora) iban con la
+fecha vacía.
+
+Ese defecto **ninguna prueba podía cazarlo, y no por descuido**: con
+`Sequel.mock` las filas las inventa la prueba, así que quitarle una columna a un
+SELECT que el código luego lee deja la suite entera en verde. Es un límite del
+doble, no de las pruebas escritas — la regla que sale de ahí está en
+`docs/convenciones-codigo.md`. Se descubrió corriendo el caso contra Postgres de
+verdad, que es lo que ninguna suite de este repo hace hoy.
+
+De paso quedaron dos correcciones de orden: las partes se ordenan por **folio**
+y no por hora (el folio se asigna al insertar, la hora la corre el reparto), y
+lo que **identifica** al pedido —fecha, hora y clave— se valida ANTES de tocar
+la base, porque `validate!` corre después de `find_existing` y una hora
+imposible reventaba en Postgres sin llegar nunca a la comprobación.
+
 Lo demás: el desacuerdo sobre `consec_origen_promo = 0` (el reparto lo leía
 como regalo y el insert como "sin regalo", y un payload con 0 apagaba el tope
 entero), el panel y el rake que reportaban un folio por pedido —convención rota

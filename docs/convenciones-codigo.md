@@ -409,6 +409,16 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
     que no distingue una consulta correcta de una incorrecta **no está probando
     la consulta**: si el código bajo prueba decide *qué* pedir, el stub tiene
     que responder según lo pedido.
+- **Un doble de base de datos NO puede verificar qué columnas pide un SELECT**,
+  porque las filas que devuelve las inventa la prueba. En `rueda-api`, quitarle
+  `fecha_pedido` a la consulta de partes —una columna que el código sí lee de
+  esas filas— dejaba la suite ENTERA en verde, y rompía el reintento de todo
+  pedido partido cerca de medianoche; se descubrió contra Postgres de verdad
+  (10ª auditoría). Mientras no haya pruebas contra una base real, toda consulta
+  con lista de columnas explícita necesita una prueba que **ate el SELECT a lo
+  que sus consumidores leen** — y acotada a la lista de columnas: buscar el
+  nombre en el texto entero no distingue "la traigo" de "la comparo en un
+  `WHERE`", y esa primera versión tampoco mordía.
 - **Renombres masivos con expresiones regulares: revisar el diff palabra por
   palabra.** Un `\bcoincide\b` pensado para una variable también reescribe el
   texto visible ("Ningún pedido coincide") y los comentarios. Proteger las
