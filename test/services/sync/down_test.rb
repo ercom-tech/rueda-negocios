@@ -78,6 +78,23 @@ module Sync
     # El buscador promete el 999999; si el dataset no lo trajo (servidor
     # viejo o baja en el ERP), el summary lo delata para que el panel avise
     # en vez de dejar la promesa en bucle (6ª auditoría).
+    # Silencioso por naturaleza: la rueda sin prefijo se captura y se transmite
+    # igual, y el defecto solo se descubre consultando el ERP semanas después.
+    test "el summary delata que la rueda llegó sin prefijo de folios" do
+      data = export_data
+      data["round"]["folio_prefix"] = ""
+
+      summary = Down.new(data).run!.summary
+
+      assert summary[:missing_folio_prefix], "sin prefijo, el panel tiene que avisarlo"
+    end
+
+    test "con prefijo, el summary no levanta el aviso" do
+      summary = Down.new(export_data).run!.summary
+
+      assert_not summary[:missing_folio_prefix]
+    end
+
     # Laptop nueva contra una API que todavía no exporta el prefijo — el par que
     # se vive en toda ventana de despliegue, porque el orden es ERP → API →
     # laptop. El sync no debe romperse: la rueda queda sin prefijo y sus

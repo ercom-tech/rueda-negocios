@@ -45,8 +45,14 @@
         · <%= e["clients"].to_i %> clientes
         · <%= e["users"].to_i %> usuarios
       <% else %>
-        <% sent = run.summary["transmitted"].to_a.size %>
+        <% transmitted = run.summary["transmitted"].to_a %>
+        <% sent = transmitted.size %>
+        <%# Cuántos pedidos quedaron DEL OTRO LADO: el pedido de la rueda entra
+            al ERP partido, así que quien cuente allá encuentra más de los que
+            transmitió y sin esta línea lo lee como duplicación. %>
+        <% in_erp = transmitted.sum { |t| [ t["erp_all"].to_a.size, 1 ].max } %>
         · <%= pluralize(sent, "pedido") %> <%= "transmitido".pluralize(sent) %>
+        <% if in_erp > sent %>· entraron al ERP como <%= in_erp %> pedidos<% end %>
       <% end %>
       <% if run.finished_at %>· <%= run.finished_at.localtime.strftime("%d/%m %H:%M") %><% end %>
     </span>
@@ -89,6 +95,19 @@
       <span class="font-semibold"><%= skipped_users.join(", ") %></span>.
       Pide que <%= skipped_users.size == 1 ? "le" : "les" %> restablezcan la contraseña
       en el ERP y vuelve a obtener la información.
+    </div>
+  <% end %>
+
+  <%# La rueda llegó sin prefijo de folios. No impide capturar ni transmitir
+      —por eso hace falta decirlo—: los pedidos salen con el respaldo "RN" y en
+      el ERP se pierde de qué rueda vinieron, que es justo lo que la clave vino
+      a resolver (10ª auditoría). %>
+  <% if kind == "down" && summary["missing_folio_prefix"] %>
+    <div class="mt-3 rounded-2xl bg-brand-cream px-4 py-3 text-left text-sm leading-snug text-neutral-900">
+      Esta rueda no trae <span class="font-semibold">clave de folios</span>, así que los pedidos
+      saldrán como <span class="font-semibold">RN-000123</span> y en el ERP no se sabrá de qué rueda
+      vinieron. Se puede capturar y transmitir igual. Pide que le pongan su clave en el ERP y vuelve
+      a obtener la información.
     </div>
   <% end %>
 

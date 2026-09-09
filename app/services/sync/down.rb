@@ -77,7 +77,14 @@ module Sync
         # dataset (export viejo o baja en el ERP lo dejan fuera): sin este
         # aviso, la UI lo prometía en bucle sin que nada lo delatara (6ª aud.).
         missing_generic: !Product.joins(:price).where(erp_product_id: Product::GENERIC_ERP_ID)
-                                 .where.not(prices: { tax_rate: nil }).exists? }
+                                 .where.not(prices: { tax_rate: nil }).exists?,
+        # La rueda llegó sin prefijo de folios: sus pedidos saldrán con el
+        # respaldo (`RN-000123`) y se pierde la trazabilidad que la clave vino
+        # a dar en el ERP. Es silencioso por naturaleza —el pedido se captura y
+        # se transmite igual—, así que sin este aviso solo se descubre
+        # consultando el ERP semanas después (10ª auditoría).
+        missing_folio_prefix: BusinessRound.find_by(erp_round_id: @data.dig("round", "erp_round_id"))
+                                           &.folio_prefix.blank? }
     end
 
     private

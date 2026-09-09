@@ -93,7 +93,14 @@ namespace :sync do
       run.finish_interrupted! if run.running?
     end
 
-    r[:transmitted].each { |t| puts "  ✓ #{t[:local]} → folio ERP #{t[:erp]}" }
+    # Todos los folios, no solo el primero: el pedido entra al ERP partido
+    # (catálogo cada 45, productos nuevos aparte) y quien coteje el papel
+    # firmado contra el ERP encontraría un pedido con parte de las partidas.
+    r[:transmitted].each do |t|
+      folios = Array(t[:erp_all]).presence || [ t[:erp] ]
+      suffix = folios.size > 1 ? " (se separó en #{folios.size} pedidos)" : ""
+      puts "  ✓ #{t[:local]} → folio ERP #{folios.join(', ')}#{suffix}"
+    end
     r[:failed].each      { |f| puts "  ✗ #{f[:local]} (HTTP #{f[:status]}): #{f[:error]}" }
     puts "[sync:up] transmitidos: #{r[:transmitted].size}, fallidos: #{r[:failed].size}"
     abort "[sync:up] hubo pedidos fallidos." if r[:failed].any?
