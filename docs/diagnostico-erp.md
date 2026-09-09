@@ -162,13 +162,23 @@ rueda.
 
 **La descripción y el número de parte viven en UNA sola columna.**
 `vta_pedido_detalle.nombre_capturado` (varchar 40) los trae juntos separados
-por espacio, porque así los manda la app (`OrderItem#erp_captured_name`) y así
-los captura el propio ERP en sus pedidos nativos con el genérico. No hay
-columna aparte, así que separarlos es **heurística, no dato**: se toma el
-último token si trae algún dígito. Acierta en 112 de 112 partidas de la
-réplica local, pero si el capturista no puso número de parte y la descripción
-termina en algo con dígito (`CABLE 12 AWG`), se lo lleva por delante. Por eso
-la consulta devuelve también la columna cruda, que es la fuente de verdad.
+por espacio, porque así los manda la app (`OrderItem#erp_captured_name`). No
+hay columna aparte, así que separarlos es **heurística, no dato**: se toma el
+último token si trae algún dígito.
+
+**Y la heurística solo funciona sobre lo que escribió esta app.** El "112 de
+112" que decía antes esta línea era cierto pero **circular**: esas 112 partidas
+son todas de `id_rueda = 3`, o sea las que nuestra propia app armó
+concatenando descripción + número de parte, que es justo el patrón que la
+heurística busca (10ª auditoría). Sobre las partidas del genérico **nativas del
+ERP** —5 en la réplica, `id_rueda = 0`— **ninguna trae número de parte**, y la
+única cuyo último token tiene dígito es `CODIGO 2810 CESPOL DE JULE P/LAVABO
+20`, donde el 20 es parte de la descripción: ahí la heurística lo arrancaría.
+
+En la práctica eso basta, porque el reporte existe para revisar lo que se
+capturó **en la rueda**. Pero la columna "Número de parte" no es un dato del
+ERP: es una lectura nuestra sobre un texto libre. La columna cruda es la fuente
+de verdad y por eso la consulta la devuelve también.
 
 ```sql
 SELECT ped.clave_pedido                                   AS "Clave pedido",

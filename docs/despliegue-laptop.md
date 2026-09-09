@@ -10,6 +10,20 @@ ver `docs/instalacion-laptop.md`.
 
 ## Lo que hay que saber antes de tocar nada
 
+**Primero el ERP, siempre.** Hay columnas que el ERP debe tener antes de que la
+API nueva pueda escribir: están en `rueda-api/db/erp-prerequisitos.sql`, se
+aplican en testing y en producción, y sin ellas la API responde 500 en toda
+transmisión (o al listar las ruedas, si falta `prefijo`). El orden completo es
+**ERP → rueda-api → laptop**, y las dos últimas se actualizan siempre juntas.
+Para saber si el ERP ya está listo, sin adivinar:
+
+```bash
+curl -s http://localhost:7011/health    # en el servidor de la API
+```
+
+`schema: "ok"` significa que están las cuatro columnas. Si falta alguna,
+responde 503 y las nombra.
+
 **La laptop corre en `development`.** El `ExecStart` es `rails server` pelón,
 sin `RAILS_ENV` y sin `Environment=` en el unit. Por eso **todos los comandos de
 abajo van SIN `RAILS_ENV`**: con `production` Rails apunta a
@@ -69,18 +83,37 @@ Lo mínimo, en el navegador de la laptop:
 
 Y contra el ERP, si se transmitió algo:
 
+**Un pedido de la rueda puede ser VARIOS pedidos del ERP** (las partidas de
+catálogo se cortan cada 45 y los productos nuevos van aparte), así que la
+consulta va por la clave de la rueda —la que reúne las partes—, no por un
+folio:
+
 ```sql
-SELECT consecutivo, id_producto, id_promocion, promo_porcentaje,
-       descto_porcentaje, consec_origen_promo, total
-FROM fecego.vta_pedido_detalle
-WHERE id_empresa = 1 AND clave_pedido = '<folio devuelto>'
-ORDER BY consecutivo;
+SELECT ped.clave_pedido, ped.hora_pedido, ped.renglones, ped.total,
+       det.consecutivo, det.id_producto, det.id_promocion, det.promo_porcentaje,
+       det.descto_porcentaje, det.consec_origen_promo, det.total
+FROM fecego.vta_pedido ped
+JOIN fecego.vta_pedido_detalle det
+  ON  det.id_empresa    = ped.id_empresa
+  AND det.clave_cliente = ped.clave_cliente
+  AND det.fecha_pedido  = ped.fecha_pedido
+  AND det.hora_pedido   = ped.hora_pedido
+WHERE ped.id_empresa = 1 AND ped.clave_rueda = '<la clave que muestra la laptop>'
+ORDER BY ped.hora_pedido, det.consecutivo;
 ```
 
-Los consecutivos van **1, 2, 3…** en el orden en que se capturaron (la pantalla
-los muestra al revés a propósito; el ERP no). Una partida de regalo lleva
-`promo_porcentaje = 100`, `total = 0.00` y `consec_origen_promo` apuntando a la
-partida que la detonó.
+Qué debe verse:
+
+- **Un `clave_pedido` por parte**, con horas distintas (una por parte, no
+  necesariamente consecutivas: si el cliente ya tenía un pedido en ese segundo,
+  la parte salta al siguiente libre) y la **misma `clave_rueda`**.
+- **Cada parte reinicia sus consecutivos en 1**, en el orden en que se
+  capturaron (la pantalla los muestra al revés a propósito; el ERP no).
+- Las partidas del **999999** están todas en la última parte.
+- Una partida de regalo lleva `promo_porcentaje = 100`, `total = 0.00` y
+  `consec_origen_promo` apuntando a la partida que la detonó **dentro de su
+  misma parte**.
+- El detalle del pedido en la laptop lista esos mismos folios.
 
 ## Si algo sale mal
 
@@ -90,10 +123,15 @@ bin/rails tailwindcss:build     # el CSS también hay que rehacerlo al revertir
 sudo systemctl restart fecego-rueda-negocios
 ```
 
-No queda estado que deshacer mientras el lote no traiga migraciones (las
-migraciones **no** se revierten solas: si el lote las trae, hay que decidir
-caso por caso). Las gemas de más instaladas no estorban — Bundler solo se queja
-de las que faltan.
+**Ojo con las migraciones: revertir el código NO las deshace**, y este lote
+trae cuatro (promociones, `folio_prefix`, `erp_folios`). Volver a un commit
+anterior con la base ya migrada deja a la app vieja frente a tablas que no
+conoce — y en el caso de las promociones eso rompe "Obtener información", que
+al purgar el catálogo choca con una llave foránea que su código no contempla.
+Si hay que revertir de verdad, `bin/rails db:rollback STEP=n` **antes** del
+checkout, sabiendo que eso pierde lo que esas columnas guardaban (los folios
+del ERP de los pedidos ya transmitidos, entre otras cosas). Las gemas de más
+instaladas no estorban — Bundler solo se queja de las que faltan.
 
 **Un pedido rechazado con "Error interno del servidor; no se guardó nada"** no
 es la laptop: el motivo está en el log de la API, **en el servidor**.
@@ -131,10 +169,14 @@ sudo systemctl restart fecego-rueda-api
 curl -s http://localhost:7011/health
 ```
 
-**Si el lote toca las dos puntas, la API va primero.** Una laptop nueva contra
-una API vieja se queda sin lo que la API todavía no exporta —las promociones,
-por ejemplo— y el capturista no puede compensarlo a mano. Al revés es
-tolerable: la API nueva sigue respondiendo a la laptop vieja.
+**Si el lote toca las dos puntas, la API va primero — y la laptop va detrás en
+la misma ventana.** No se opera con una versión de API y otra de laptop (regla
+con FECEGO). Una laptop nueva contra una API vieja se queda sin lo que la API
+todavía no exporta —las promociones, por ejemplo— y el capturista no puede
+compensarlo a mano. Y al revés **tampoco es inocuo desde el reparto**: la API
+nueva parte el pedido aunque venga de una laptop vieja, que guardaría un folio
+de varios sin enterarse (10ª auditoría). Mientras las dos no estén parejas: ni
+transmitir ni obtener información.
 
 Puerta de paso del lado de la API, cuando el lote toca el export:
 

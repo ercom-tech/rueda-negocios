@@ -59,13 +59,26 @@ reporte corto y cierto vale más que uno largo y especulativo.
   — si se registra como error de medición, la próxima auditoría re-mide algo
   que estaba bien y no revisa el razonamiento, que es lo que falló.
 - **Antes de tocar una pantalla, releer las convenciones que la rigen.** En la
-  9ª, cuatro hallazgos independientes fueron la misma regla ya escrita sin
-  aplicar: "el orden sigue a lo que la celda muestra" (roto en dos columnas),
+  9ª, cuatro hallazgos independientes fueron, cada uno, una regla ya escrita
+  sin aplicar: "el orden sigue a lo que la celda muestra" (roto en dos columnas),
   "el dorado no sirve de trazo sobre el crema" (propagado a una pantalla nueva)
   y el saneo de `id_param` (reescrito con `to_i`). Una de ellas tenía **dos
   días** de escrita. El fallo no es de memoria sino de encaje: la regla estaba
   archivada bajo "columnas calculadas" y el caso nuevo era "columna que muestra
   otro campo".
+- **Una comprobación hecha contra datos que produjo nuestro propio código no
+  comprueba nada.** En la 10ª, la heurística que separa descripción y número de
+  parte se validó con "acierta en 112 de 112": las 112 filas eran las que
+  nuestra app había escrito concatenando esos dos campos, o sea el patrón que
+  la heurística busca. Sobre las 5 partidas **nativas del ERP** no acierta
+  ninguna. Antes de dar una medición por buena, preguntarse **quién escribió
+  las filas que se están midiendo**.
+- **Cuando un cambio toca un camino de recuperación, releer para qué existía.**
+  La CRÍTICA de la 10ª fue eso: la búsqueda por PK de negocio parecía "el
+  camino de las laptops que no mandan la clave nueva" y era, además, la salida
+  que la 6ª auditoría había construido para la colisión — sustituirla la
+  convirtió en un 500 sin salida. Un camino viejo suele estar sosteniendo algo
+  que su nombre no dice.
 - **Verificar las cifras del propio auditor antes de escribirlas.** En la 9ª se
   re-midieron las tres principales y las tres reprodujeron — pero el ejercicio
   vale igual: es lo que separa "un agente lo dijo" de "está medido", y en la 8ª
@@ -158,6 +171,18 @@ ejecutar: los dos ALTA principales —sin `bundle install` la app no arranca; si
 ninguna otra dimensión los habría buscado.
 
 ## Historial
+
+- **10ª (2026-09-08)** — alcance: **el reparto del pedido en el ERP** (app
+  `9897324..HEAD`, API `c885ca7..HEAD`), con 5 auditores —
+  **1 CRÍTICA · 3 ALTA · 7 MEDIA · 11 BAJA** → **remediada al 100% el mismo
+  ciclo** (detalle en "10ª auditoría — remediación" de `memory.md`). La CRÍTICA
+  la encontraron **los cinco auditores por separado**, y era una **regresión de
+  la remediación de la 6ª**: al cambiar la búsqueda de idempotencia por la
+  clave de la rueda, la colisión de PK dejó de tener su 422 con salida y pasó a
+  ser un 500 en bucle con el pedido atorado. Patrón que dejó: **lo que rompió
+  no fue el código nuevo sino lo viejo que dejó de alcanzarse** — y que dos
+  veces la suite pasó en verde con el mecanismo bajo prueba anulado, las dos
+  cazadas con mutación y no con lectura.
 
 - **9ª (2026-09-02)** — alcance: **lo pendiente de desplegar en la laptop**
   (`bba5265..HEAD`, 5 commits, 34 archivos), con 5 auditores, uno de ellos la

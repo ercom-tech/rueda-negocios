@@ -31,6 +31,62 @@ Si es **algo por hacer**, va al backlog.
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
 
+## 10ª auditoría (2026-09-08) — remediación
+
+Sobre el reparto del pedido. 5 auditores, **1 CRÍTICA · 3 ALTA · 7 MEDIA ·
+11 BAJA**, remediada al 100% en cinco bloques.
+
+**La CRÍTICA fue una regresión de la 6ª auditoría, y la encontraron los cinco
+auditores por separado.** Al hacer que la búsqueda de idempotencia fuera por
+`(id_rueda, clave_rueda)`, la ruta por PK de negocio dejó de alcanzarse — y esa
+ruta no era "el camino de las laptops viejas", era **la salida** que la 6ª había
+construido: el 422 que le dice al operador qué comparar, qué cancelar y qué
+recapturar. Sin ella, todo pedido que chocara contra uno sin clave —los
+1,267,814 encabezados que el ERP ya tiene la traen NULL— o contra otro pedido
+del mismo cliente en el mismo segundo salía como **500 en cada reintento**, con
+el pedido atorado bloqueando obtener información y cerrar rueda. El reparto
+además agranda el blanco: un pedido ya no ocupa un segundo del día de su cliente
+sino uno por parte. La lección va a `docs/auditorias.md`: **cuando un cambio
+toca un camino de recuperación, releer para qué existía**.
+
+**El segundo ALTA es el mismo error de encaje que la 9ª ya había registrado.**
+`cancelled_message` nombraba un folio de N: el operador cancelaba ese, seguía la
+instrucción de descartar y recapturar, y las demás partes seguían vivas en el
+ERP. Diez líneas más arriba, en el mismo bloque, yo había arreglado exactamente
+eso en `collision_message` — con el argumento escrito— y no lo apliqué a la
+función vecina. Y `memory.md` lo daba por aplicado en ambas.
+
+**El prerequisito de esquema del ERP dejó de vivir en prosa.** Mordió dos veces
+(`id_rueda` en agosto, `clave_rueda` y `prefijo` ahora) y las dos se resolvió
+escribiéndolo en el backlog. Ahora `GET /health` comprueba las columnas y dice
+cuáles faltan, y `rueda-api/db/erp-prerequisitos.sql` es el DDL aplicable, con
+`CREATE INDEX CONCURRENTLY` — sin eso el índice toma `ACCESS EXCLUSIVE` sobre
+`vta_pedido` (1.27M filas, 788 MB) y congela la captura del ERP en producción.
+Se siguió el patrón que el repo ya tenía en `REQUIRED_ENV_VARS`, pero **sin
+abortar el boot**: un ERP reiniciándose no debe impedir que la API levante.
+
+**Dos veces la suite pasó en verde con el mecanismo bajo prueba anulado**, y
+las dos las cazó la mutación, no la lectura:
+
+- El tope de 45 podía subirse a 50 sin romper nada, porque todas las pruebas
+  leían la constante.
+- La indivisibilidad partida-regalo se podía anular entera, porque todas las
+  pruebas ponían el regalo pegado a su origen y **la app los agrega al final del
+  pedido**. Probar con el layout que el código produce de verdad, no con el que
+  resulta cómodo de escribir.
+
+De ahí sale la regla nueva de `docs/convenciones-codigo.md` sobre las pruebas
+que no pueden fallar, y una segunda para las mediciones: **una comprobación
+hecha contra datos que escribió nuestro propio código no comprueba nada** — el
+"acierta en 112 de 112" de la heurística del número de parte medía filas que
+nuestra app había concatenado; sobre las 5 nativas del ERP no acierta ninguna.
+
+Lo demás: el desacuerdo sobre `consec_origen_promo = 0` (el reparto lo leía
+como regalo y el insert como "sin regalo", y un payload con 0 apagaba el tope
+entero), el panel y el rake que reportaban un folio por pedido —convención rota
+por tercera auditoría seguida—, y el aviso de la rueda sin prefijo, que es
+silenciosa por naturaleza.
+
 ## El pedido de la rueda se parte en el ERP (2026-09-09)
 
 Segunda mitad del encargo: un pedido de la rueda debe aterrizar en el ERP como
@@ -70,7 +126,10 @@ o entran todos los pedidos o no entra ninguno.
   y conteos **se suman** sobre las partes, el contenido se compara contra las
   partidas de todas, basta que **una** esté cancelada para frenar, y el mensaje
   nombra **todos** los folios (nombrando uno, el operador cancela ese y deja
-  los otros vivos en el ERP).
+  los otros vivos en el ERP). *(Escrito así de entrada, pero solo era cierto en
+  `collision_message`: `cancelled_message` nombraba un folio de N, y la 10ª
+  auditoría lo cazó como ALTA. Corregido el 2026-09-08 — la moraleja está
+  abajo, en la remediación de esa auditoría.)*
 
 **Dos veces la suite pasó en verde con el código roto**, y las dos las cazó el
 mismo ejercicio: romper a propósito lo que se está probando (ver la regla nueva
@@ -86,8 +145,8 @@ guarda la lista, `erp_folio` sigue con el primero (lo leen `Order#folio`,
 
 ## La clave del pedido en la rueda (2026-09-08)
 
-Primera mitad del encargo de partir el pedido en el ERP (la segunda, el reparto
-en sí, sigue en `backlog.md`). El pedido debe llevar al ERP **la clave con la
+Primera mitad del encargo de partir el pedido en el ERP; la segunda —el reparto
+en sí— se implementó al día siguiente y está más abajo. El pedido debe llevar al ERP **la clave con la
 que se capturó**, para que después se pueda reconocer que varios pedidos del
 ERP salieron de uno solo de la rueda.
 
@@ -97,7 +156,10 @@ producían `RN-000001`. Ahora el prefijo es dato de la rueda
 (`cnf_rueda_negocios.prefijo`, varchar 4 del ERP) y baja por el export hasta
 `business_rounds.folio_prefix`. **La unicidad no sale de nuestro consecutivo:
 sale de que el ERP obligue a que dos ruedas no compartan prefijo** — hoy lo
-exige su aplicación, no un índice único, así que es una garantía prestada.
+exige su aplicación, no un índice único. Lo que se pierde si se repite es
+**trazabilidad**, no corrección: la búsqueda de idempotencia acota por
+`id_rueda` además de por la clave, así que un prefijo repetido no confunde dos
+pedidos (10ª auditoría, que degradó esta afirmación).
 
 **El respaldo `DEFAULT_FOLIO_PREFIX = "RN"` no es defensivo, es el estado
 actual de los datos.** La columna del ERP es `NOT NULL`, así que las ruedas

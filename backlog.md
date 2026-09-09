@@ -20,18 +20,28 @@ viejo quedó caduco — verificado en la 6ª auditoría:
   columnas `vta_pedido.id_rueda` (default 0) y
   `vta_pedido_detalle.nombre_capturado` (varchar 40), y el producto 999999
   vivo (`baja=false`). Sin la columna, la API nueva da 500 en TODO pedido.
-  **Se suman dos del 2026-09-04**, ya aplicadas en desarrollo y con el mismo
-  riesgo —sin ellas, 500 en todo pedido—: `vta_pedido.clave_rueda` (varchar 12)
-  y `cnf_rueda_negocios.prefijo` (varchar 4, NOT NULL), más el índice
-  `(id_empresa, id_rueda, clave_rueda)`. Y **capturar el prefijo de cada
+  **Se suman dos del 2026-09-04**, ya aplicadas en desarrollo: sin
+  `vta_pedido.clave_rueda` (varchar 12) son 500 en todo pedido, y sin
+  `cnf_rueda_negocios.prefijo` (varchar 4, NOT NULL) lo que revienta es
+  **listar las ruedas y el export** —o sea el sync-down entero, porque
+  `Export.round` reutiliza `Rounds.find`—, con la transmisión funcionando. Más
+  el índice `(id_empresa, id_rueda, clave_rueda)`.
+  **Todo esto está escrito en `rueda-api/db/erp-prerequisitos.sql`**, que es
+  idempotente y crea el índice con `CONCURRENTLY` (sin eso bloquea la captura
+  del ERP en producción mientras se construye). Y **capturar el prefijo de cada
   rueda**: las tres existentes lo tienen vacío, así que sus pedidos saldrían
-  con el respaldo `RN` y la clave dejaría de ser única entre ruedas.
-- **Orden (invertido respecto al plan anterior): ERP migrado → rueda-api →
-  laptop.** API nueva + laptop vieja es el único par tolerante (`id_rueda ||
-  0`, `nombre_capturado` NULL; el 422 de remisiones es visible y se destraba
-  actualizando la laptop). Al revés, la API vieja descarta EN SILENCIO la
-  descripción del genérico y la rueda del pedido, y su export deja el
-  catálogo local entero sin precio con un sync "exitoso".
+  con el respaldo `RN`; desde la 10ª auditoría el panel lo avisa tras el
+  sync-down, pero hay que hacerlo igual.
+- **Orden: ERP migrado → rueda-api → laptop, y las dos puntas se actualizan
+  SIEMPRE juntas** (regla de operación con FECEGO, confirmada 2026-09-08): no
+  se opera con una versión de API y otra de laptop. Esto importa desde el
+  reparto: la API nueva parte el pedido aunque el payload venga de una laptop
+  vieja —`OrderSplit` no depende de `clave_rueda`—, y esa laptop guardaría un
+  folio de N sin enterarse; al reintentar recibiría un mensaje de colisión que,
+  si se sigue, cancela una parte y deja las otras vivas (10ª auditoría). En el
+  sentido contrario, la API vieja descarta EN SILENCIO la descripción del
+  genérico y la rueda del pedido, y su export deja el catálogo local entero sin
+  precio con un sync "exitoso".
 - **Ventana: ni transmitir NI obtener información** hasta que ambos lados
   estén parejos. Tras actualizar la laptop, re-correr sync-down contra la
   API nueva antes de capturar.
@@ -49,8 +59,11 @@ viejo quedó caduco — verificado en la 6ª auditoría:
 - **Check del pedido partido** (2026-09-09): transmitir un pedido de **más de
   45 partidas** que incluya una del genérico y comprobar en el ERP que entraron
   **varios pedidos** —45 + resto + los genéricos aparte—, todos con la misma
-  `clave_rueda`, horas consecutivas y folios distintos; y que el detalle del
-  pedido en la laptop los lista. Después **volver a transmitir**: debe devolver
+  `clave_rueda` y con folios distintos; y que el detalle del pedido en la
+  laptop los lista. (Las horas van una por parte pero **no necesariamente
+  consecutivas**: si el cliente ya tiene un pedido en ese segundo, la parte
+  salta al siguiente libre.) `GET /health` de la API debe responder
+  `schema: ok` antes de empezar. Después **volver a transmitir**: debe devolver
   los mismos folios sin duplicar nada.
 - **Imprimir el PDF de un pedido de ~20 partidas** y verificar que trae los
   cuatro totales y el importe en letra en la misma hoja. Es el check de la 8ª
