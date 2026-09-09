@@ -109,6 +109,12 @@ module Sync
         # La rueda a la que pertenece el pedido (vta_pedido.id_rueda, columna
         # nueva del ERP 2026-08-17). Los pedidos no-rueda del ERP viven en 0.
         id_rueda:      order.business_round.erp_round_id,
+        # La clave con la que se capturó el pedido (`RN-000123`), que el ERP
+        # guarda en `vta_pedido.clave_rueda`. Es lo que permitirá reconocer
+        # que varios pedidos suyos salieron de UNO de la rueda, cuando la
+        # transmisión empiece a partirlos. Única entre ruedas gracias al
+        # prefijo, que baja del propio ERP.
+        clave_rueda:   order.local_folio,
         clave_cliente: order.client.erp_client_key,
         fecha_pedido:  captured.strftime("%Y-%m-%d"),
         hora_pedido:   captured.strftime("%H:%M:%S"),

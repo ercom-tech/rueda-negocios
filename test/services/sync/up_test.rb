@@ -129,6 +129,19 @@ module Sync
       assert_requested req
     end
 
+    # La clave con la que se capturó el pedido. Es lo que dejará reconocer en el
+    # ERP que varios de sus pedidos salieron de UNO de la rueda, cuando la
+    # transmisión empiece a partirlos: si deja de viajar, esa trazabilidad se
+    # pierde y nada falla.
+    test "el pedido transmite la clave con la que se capturó en la rueda" do
+      req = stub_request(:post, "#{API}/pedidos").with do |request|
+        JSON.parse(request.body)["clave_rueda"] == "RN-000001"
+      end.to_return(status: 201, body: { clave_pedido: "1A0007" }.to_json)
+
+      Up.new(API).run!
+      assert_requested req
+    end
+
     test "una factura transmite su monto de división de facturas" do
       tax  = ClientTaxProfile.create!(client: @client, rfc: "AAA010101AAA", business_name: "ISMAEL SA")
       cfdi = CfdiUse.create!(code: "G01", description: "ADQUISICIÓN DE MERCANCÍAS")
