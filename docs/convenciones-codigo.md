@@ -396,6 +396,19 @@ como hace `Sync::Guards`. La regla de concordancia siempre está en
   comprobación que sirve es **romper a propósito el código que se está
   probando y ver que la prueba falle** — leer el código no la caza. Vale para
   toda prueba nueva, no solo para las de sistema.
+- **Dos formas de escribir una prueba que no puede fallar nunca**, las dos
+  vistas al partir el pedido (2026-09-09), las dos con la suite en verde:
+  - **La prueba lee del código lo mismo que verifica.** Todas las del reparto
+    usaban `MAX_CATALOG_ITEMS`, así que subir el tope de 45 a 50 no rompía
+    ninguna: se adaptaban con él. Una regla de negocio con número —45 partidas,
+    6 dígitos, 40 caracteres— necesita **al menos una prueba que lo escriba
+    literal**; las demás pueden leer la constante, que se leen mejor.
+  - **El stub ignora los parámetros de la consulta.** El de las partidas
+    devolvía el detalle completo mirara la consulta las horas que mirara, así
+    que una comparación que solo mirara la primera parte pasaba igual. Un doble
+    que no distingue una consulta correcta de una incorrecta **no está probando
+    la consulta**: si el código bajo prueba decide *qué* pedir, el stub tiene
+    que responder según lo pedido.
 - **Renombres masivos con expresiones regulares: revisar el diff palabra por
   palabra.** Un `\bcoincide\b` pensado para una variable también reescribe el
   texto visible ("Ningún pedido coincide") y los comentarios. Proteger las

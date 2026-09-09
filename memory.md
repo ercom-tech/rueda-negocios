@@ -31,6 +31,59 @@ Si es **algo por hacer**, va al backlog.
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
 
+## El pedido de la rueda se parte en el ERP (2026-09-09)
+
+Segunda mitad del encargo: un pedido de la rueda debe aterrizar en el ERP como
+**varios pedidos** — las partidas de catálogo cortadas cada **45 sin contar
+regalos**, y los **productos nuevos** (el genérico 999999) en su propio pedido
+al final. Los genéricos **no se cortan**: si un pedido de 60 genéricos es
+válido, entonces 45 no es un límite del ERP sino un criterio operativo del
+pedido de catálogo. Vale la pena tenerlo presente, porque desconcierta.
+
+**Vive en `rueda-api`, no en la laptop.** Del lado de la rueda no se separa
+nada: el capturista levanta un pedido, el cliente firma un PDF y la laptop lo
+guarda entero. Repartirlo aquí habría significado N POSTs, y con ellos un
+estado nuevo —**transmitido a medias**— que se lleva por delante
+`Sync::Guards` y "Cerrar rueda", que podría borrar un pedido con partes sin
+transmitir. Insertándolo allá, todo cae dentro de la transacción que ya existía:
+o entran todos los pedidos o no entra ninguno.
+
+**Lo que se descubre solo al implementarlo:**
+
+- **`next_folio` es `MAX+1` sobre la tabla**, así que pedir los folios de las
+  tres partes antes de insertar devuelve el mismo tres veces. Se piden
+  intercalados: dentro de la transacción, el MAX ya ve lo insertado.
+- **La primera parte nunca cambia de hora, aunque su segundo esté ocupado.** Su
+  hora es la identidad del pedido para la ruta por PK de negocio; correrla lo
+  dejaría irreconocible y el reintento duplicaría. Las demás sí buscan el
+  siguiente segundo libre.
+- **El reparto agrupa por POSICIÓN, no por el campo `consecutivo` del payload.**
+  El ERP numera por posición (`insert_details` usa `i + 1`), así que un payload
+  sin ese campo —o con uno que no coincidiera— dejaba a los regalos apuntando a
+  otro renglón, con `consec_origen_promo` en 0 y sin ruido. Lo destaparon las
+  pruebas viejas, no las nuevas.
+- **La idempotencia tuvo que dejar de colgar de la hora.** Con el pedido
+  partido, buscar por PK encuentra solo la primera parte y la compara contra el
+  pedido completo: colisión, y el mensaje que manda a cancelar en el ERP y
+  recapturar. Ahora la identidad es `(id_rueda, clave_rueda)` — por eso la
+  clave del bloque anterior era el prerequisito. De ahí se sigue todo: totales
+  y conteos **se suman** sobre las partes, el contenido se compara contra las
+  partidas de todas, basta que **una** esté cancelada para frenar, y el mensaje
+  nombra **todos** los folios (nombrando uno, el operador cancela ese y deja
+  los otros vivos en el ERP).
+
+**Dos veces la suite pasó en verde con el código roto**, y las dos las cazó el
+mismo ejercicio: romper a propósito lo que se está probando (ver la regla nueva
+en `docs/convenciones-codigo.md`). Subir el tope de 45 a 50 no rompía **nada**
+porque todas las pruebas leían la constante; y mirar el contenido de una sola
+parte tampoco, porque el stub devolvía el detalle completo sin importar qué
+horas pedía la consulta — defecto que habría dado **colisión falsa en todo
+reintento legítimo** de un pedido partido.
+
+**Del lado de la laptop el cambio es mínimo**, como se pidió: `erp_folios`
+guarda la lista, `erp_folio` sigue con el primero (lo leen `Order#folio`,
+`OrdersSort` y `Sync::Guards`) y el detalle del pedido dice en cuáles quedó.
+
 ## La clave del pedido en la rueda (2026-09-08)
 
 Primera mitad del encargo de partir el pedido en el ERP (la segunda, el reparto

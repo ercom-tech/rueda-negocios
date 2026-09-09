@@ -36,8 +36,9 @@ viejo quedó caduco — verificado en la 6ª auditoría:
   estén parejos. Tras actualizar la laptop, re-correr sync-down contra la
   API nueva antes de capturar.
 - **En la laptop:** `bin/rails db:migrate` (migraciones de pid,
-  credit_wholesale_price y las de promociones) + `bin/rails
-  tailwindcss:build` (obligatorio: hay clases nuevas en cada lote).
+  credit_wholesale_price, las de promociones y las del 2026-09: `folio_prefix`
+  de la rueda y `erp_folios` del pedido) + `bin/rails tailwindcss:build`
+  (obligatorio: hay clases nuevas en cada lote).
 - **Checks post-deploy** (transmitir un pedido de prueba con una partida del
   genérico): `id_rueda ≠ 0`, `nombre_capturado` poblado (≤40), precio de
   partida = `cred_mayoreo_precio`, y los de remisión de siempre
@@ -45,6 +46,12 @@ viejo quedó caduco — verificado en la 6ª auditoría:
   `fecha_crea` = captura). **Y uno que faltaba:** transmitir una REMISIÓN con
   monto de división y comprobar `dividir_facturas ≠ 0` — es lo único que
   comprueba la corrección del 2026-08-24 contra el ERP.
+- **Check del pedido partido** (2026-09-09): transmitir un pedido de **más de
+  45 partidas** que incluya una del genérico y comprobar en el ERP que entraron
+  **varios pedidos** —45 + resto + los genéricos aparte—, todos con la misma
+  `clave_rueda`, horas consecutivas y folios distintos; y que el detalle del
+  pedido en la laptop los lista. Después **volver a transmitir**: debe devolver
+  los mismos folios sin duplicar nada.
 - **Imprimir el PDF de un pedido de ~20 partidas** y verificar que trae los
   cuatro totales y el importe en letra en la misma hoja. Es el check de la 8ª
   auditoría: en esa franja el papel salía sin totales y con hojas en blanco.
@@ -64,7 +71,10 @@ viejo quedó caduco — verificado en la 6ª auditoría:
   reporte de pedidos, la **desaparición del tope de 45 partidas** (el contador
   se queda, ahora informativo y contando también los regalos) y la **tabla de
   partidas invertida** — la más reciente arriba, con el consecutivo contando
-  hacia atrás (el PDF y el ERP siguen en 1, 2, 3).
+  hacia atrás (el PDF y el ERP siguen en 1, 2, 3); y del lote del 2026-09-09:
+  el folio local ahora lleva el **prefijo de la rueda** en vez de `RN` (los
+  pedidos ya capturados conservan el suyo), y el detalle de un pedido
+  transmitido dice **en qué pedidos del ERP quedó** cuando se separó.
 - Candidato aparte: no existe handshake de versión laptop↔API (`/` y
   `/health` no la exponen) — esta clase de desfase seguirá siendo invisible
   hasta que exista.
@@ -122,93 +132,6 @@ Guía en borrador: `rueda-api/docs/instalacion-vm-produccion.md`. Faltan los
 datos reales (hostname, usuario, IP del ERP, puerto final) y ejecutarla.
 
 ## Funcionalidad pendiente
-
-### Partir el pedido en el ERP al transmitir
-
-> **La clave de la rueda ya está hecha** (2026-09-08, `472a6a6` en la app y
-> `9c4086d` + `039cc60` en la API): el prefijo baja del ERP hasta el folio
-> local y la clave sube a `vta_pedido.clave_rueda`. El porqué de cada decisión
-> está en "La clave del pedido en la rueda" de `memory.md`. **Lo que queda de
-> este renglón es el reparto**, que se apoya en esa clave para reconocer los
-> reintentos.
-
-**Definido con FECEGO el 2026-09-03.** Un pedido de la rueda debe aterrizar en
-el ERP como **varios pedidos**, y cada uno debe guardar la clave con la que se
-capturó (`RN-000123`) para saber de dónde salió.
-
-Del lado de la rueda **no se separa nada**: el pedido local sigue siendo uno,
-la captura no cambia y el PDF que firma el cliente es el del pedido completo.
-Lo único que se toca en pantalla es mostrar en qué folios del ERP se separó.
-
-**Reglas del reparto** (las tres las confirmó el usuario):
-
-1. **Catálogo primero, nuevos al final.** Los "productos nuevos" son las
-   partidas del **genérico 999999** (fuera de catálogo), no una bandera del
-   catálogo del ERP.
-2. Las partidas de catálogo se cortan en pedidos de **máximo 45 partidas sin
-   contar regalos**.
-3. **Los genéricos NO se cortan:** van todos en un solo pedido al final,
-   sean los que sean. *(Asimetría deliberada, anotada porque desconcierta a
-   quien la lea después: si un pedido de 60 genéricos es válido, entonces 45
-   no es un límite del ERP sino un criterio operativo del pedido de catálogo.)*
-
-**Dónde se implementa: en `rueda-api`.** La app manda **un** `POST /pedidos`
-como hoy y la API inserta los N encabezados dentro de su transacción. Gana tres
-cosas frente a partir en la laptop:
-
-- **Atomicidad:** o entran todos los pedidos o no entra ninguno. Con N POSTs
-  desde la laptop, un fallo a la mitad crearía un estado *transmitido a medias*
-  que hoy no existe — y con él se caen `Sync::Guards` y "Cerrar rueda", que
-  podría borrar un pedido con partes sin transmitir.
-- **Cero cambios en captura, modelo y guardas** de la laptop.
-- El reintento sigue siendo el mismo POST con el mismo payload.
-
-**La clave de la rueda no es solo trazabilidad: resuelve la idempotencia.** Hoy
-la API reconoce un reintento por la PK de negocio `empresa + cliente + fecha +
-hora` (a segundo). Con el pedido partido eso deja de funcionar: encontraría la
-primera parte y compararía su contenido contra el pedido completo, dando
-"colisión" — el mensaje que manda a cancelar en el ERP y recapturar. Con la
-clave escrita en cada parte, la identidad es explícita: *¿existen pedidos con
-`id_rueda = R` y esta clave?* Si existen, es reintento y se devuelven sus
-folios. Por eso **conviene implementarla primero**: es chica y destraba lo
-demás.
-
-**Dependencia externa:** las columnas ya existen en desarrollo
-(`vta_pedido.clave_rueda` varchar 12 y `cnf_rueda_negocios.prefijo` varchar 4),
-pero **faltan en testing y en producción** — igual que pasó con `id_rueda`, sin
-ellas la API nueva da 500 en todo pedido. Está anotado arriba, en el renglón de
-despliegue.
-
-**Lo que hay que cuidar al repartir:**
-
-- **Partida no-regalo + sus regalos son un bloque indivisible:**
-  `consec_origen_promo` apunta a un consecutivo *del mismo pedido*, y un regalo
-  separado de su origen apuntaría a un renglón inexistente. No choca con la
-  regla 1: **ningún regalo es genérico** (0 de 708 renglones de regalo del
-  histórico salieron del 999999).
-- **Las horas.** La PK física impide que dos partes compartan `hora_pedido`:
-  parte *k* = hora del pedido + *k*−1 segundos, saltando los segundos que ya
-  ocupe otro pedido del mismo cliente en esa fecha.
-- **Cada parte recalcula sus propios importes** (`renglones`, `subtotal`,
-  `descto_monto`, `iva_monto`, `total`) y **renumera sus consecutivos** desde 1.
-  La API valida renglón por renglón y compara el encabezado contra
-  `written_total`: un total heredado del pedido completo saldría rechazado con
-  422.
-- **`dividir_facturas` viaja tal cual en cada parte** — la división por monto la
-  sigue haciendo el ERP al facturar. Efecto lateral que FECEGO ya conoce: el
-  monto se aplicará sobre cada parte y no sobre el total original, así que el
-  número de facturas no será idéntico al de hoy.
-
-**En la laptop, el cambio es mínimo:** mandar `clave_rueda` en el payload, leer
-una respuesta con **lista** de folios en vez de uno, y guardarlos — basta una
-columna `erp_folios` en `orders`, conservando `erp_folio` con el primero para no
-tocar `Order#display_folio`, `OrdersSort` ni `Sync::Guards`, que son los únicos
-tres lugares que hoy lo leen.
-
-**Descartado del diseño que se propuso el 2026-09-02**, para que no lo
-resucite quien lo lea: dividir por **monto** desde la rueda (eso se queda en el
-ERP), la tabla `order_parts` con las partidas ligadas a su parte, calcular el
-reparto al capturar, y el estado "transmitido a medias".
 
 ### Pruebas de sistema: ampliar la cobertura del JavaScript
 
