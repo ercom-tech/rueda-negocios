@@ -540,6 +540,42 @@ buscando en el ERP.
 
 ## Operación y seguridad (fase de strengthening)
 
+### Vulnerabilidades de dependencias que HOY no aplican (revisar al poner el proxy)
+
+Dependabot reporta tres en `rueda-api` (2026-09-08). **Ninguna es alcanzable
+como corre esto hoy**, y por eso no se actualizó nada: se anotan porque un
+cambio previsto de esta misma fase las vuelve reales.
+
+| CVE | Gema | Severidad | Por qué hoy no aplica |
+|---|---|---|---|
+| CVE-2026-47737 | puma 6.6.1 | Alta | PROXY Protocol v1: headers repetidos en conexiones persistentes |
+| CVE-2026-47736 | puma 6.6.1 | Alta | PROXY Protocol v1: agotamiento de memoria remoto |
+| CVE-2026-71847 | json 2.21.1 | Baja | `JSON::ResumableParser#partial_value` sobre un stream truncado |
+
+**Las dos de Puma dependen del PROXY Protocol v1, que hay que habilitar
+explícitamente** (`bind "tcp://…?proxy_protocol=v1"` o `set_remote_address`), y
+no aparece en ninguno de los dos repos: `config/puma.rb` de la API solo fija el
+puerto y el servicio arranca con `bundle exec puma -p 7011 -e testing`, sin nada
+delante. La de `json` toca una API de streaming que tampoco se usa.
+
+**Cuándo pasan a aplicar — y es un renglón de esta misma sección:** el día que
+se ponga el **borde TLS/proxy** (nginx, HAProxy o un balanceador de AWS) delante
+de `rueda-api`, lo normal es habilitar PROXY protocol para conservar la IP real
+del cliente. **Ahí las dos altas se vuelven explotables**, así que actualizar
+Puma es parte de ese trabajo, no algo aparte.
+
+Qué cuesta cada una cuando toque:
+
+- **Puma → 7.2.1**: es cambio de **major** (el `Gemfile` fija `~> 6.0`), así que
+  no es un `bundle update`: necesita su propio ciclo de pruebas y despliegue
+  aislado. La laptop no está afectada — corre puma 8.0.2, fuera del rango
+  vulnerable (`>= 5.5.0, < 7.2.1`).
+- **json → 2.21.2**: parche, gema transitiva, `bundle update json` en los dos
+  repos. Barato; se puede hacer en cualquier momento que haya un lote abierto.
+
+Sin revisar: el Dependabot de `ercom-tech/rueda-negocios` (solo se miró el de
+`rueda-api`, que fue el que avisó al hacer push).
+
 ### Punto único de falla: la laptop-servidor
 
 Definir backups (`pg_dump` a USB u otro equipo) y evaluar una laptop de
