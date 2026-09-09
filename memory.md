@@ -31,6 +31,50 @@ Si es **algo por hacer**, va al backlog.
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
 
+## La clave del pedido en la rueda (2026-09-08)
+
+Primera mitad del encargo de partir el pedido en el ERP (la segunda, el reparto
+en sí, sigue en `backlog.md`). El pedido debe llevar al ERP **la clave con la
+que se capturó**, para que después se pueda reconocer que varios pedidos del
+ERP salieron de uno solo de la rueda.
+
+**El `"RN"` dejó de ser nuestro.** Estaba fijo en `Order#generate_local_folio`,
+que es exactamente lo que impedía que la clave fuera única: dos ruedas
+producían `RN-000001`. Ahora el prefijo es dato de la rueda
+(`cnf_rueda_negocios.prefijo`, varchar 4 del ERP) y baja por el export hasta
+`business_rounds.folio_prefix`. **La unicidad no sale de nuestro consecutivo:
+sale de que el ERP obligue a que dos ruedas no compartan prefijo** — hoy lo
+exige su aplicación, no un índice único, así que es una garantía prestada.
+
+**El respaldo `DEFAULT_FOLIO_PREFIX = "RN"` no es defensivo, es el estado
+actual de los datos.** La columna del ERP es `NOT NULL`, así que las ruedas
+dadas de alta antes de que existiera la traen en **cadena vacía**, no en NULL —
+las tres que hay hoy. De ahí el `NULLIF(TRIM(r.prefijo), '')` del export: sin
+él la app recibiría `""` en vez de `nil`, `presence` no la salvaría y los
+folios saldrían `-000123`, defecto que no aparece hasta capturar el primer
+pedido de esa rueda.
+
+**En el ERP la clave va a NULL cuando no viene, no a cadena vacía.** Es
+`BLANK_DEFAULTS` al revés: aquella constante existe porque hay columnas que el
+ERP nunca deja nulas y un NULL nuestro las sacaría de sus reportes
+(`NULL = ''` no es verdadero). Con `clave_rueda` pasa lo contrario — los 1.27M
+de pedidos que ya existen la traen NULL, así que ese es su idioma para "sin
+clave", y un `''` nuestro inventaría un tercer estado. La regla general es la
+misma: **mirar cómo expresa el ERP la ausencia en esa columna, no aplicar un
+default por costumbre.**
+
+**Un límite de longitud que evita un "error interno del servidor".** Una clave
+que no cabe muere en Postgres con `value too long for type character
+varying(12)`, y el operador solo ve un 500. `CLAVE_RUEDA_LIMIT` lo convierte en
+un 422 que dice qué pasó. Al comprobarlo apareció un matiz que vale registrar:
+**el cast `::varchar(12)` trunca en silencio, el `INSERT` no** — así que una
+verificación hecha con un cast habría "demostrado" justo lo contrario.
+
+**Lo que no se puede recuperar:** un pedido transmitido por una laptop anterior
+y reintentado ahora entra por la ruta idempotente, que devuelve el folio sin
+reescribir el encabezado. Esos pedidos se quedan sin clave para siempre; la
+columna no estará poblada al 100% cuando la revisen en el ERP.
+
 ## La lista de partidas, al revés (2026-09-02)
 
 Petición del usuario: en el paso 2, la partida más reciente arriba (5,4,3,2,1

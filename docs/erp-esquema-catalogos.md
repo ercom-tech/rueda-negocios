@@ -94,7 +94,7 @@ arranca `(id_empresa, id_rueda, …)`. Joins e integridad verificados con datos
 
 | Tabla | PK | Rol / FKs |
 |---|---|---|
-| `cnf_rueda_negocios` | `(id_empresa, id_rueda)` | Cabecera del evento: `nombre varchar(50)`, `anio`, `fecha_inicio date`, `fecha_fin date`, `id_pais`, `consec_estado`, `consec_municipio`, `comentarios`, `baja`. |
+| `cnf_rueda_negocios` | `(id_empresa, id_rueda)` | Cabecera del evento: `nombre varchar(50)`, `anio`, `fecha_inicio date`, `fecha_fin date`, `id_pais`, `consec_estado`, `consec_municipio`, `comentarios`, `baja`, **`prefijo varchar(4) NOT NULL`** (2026-09-04: prefijo de los folios de la rueda — sustituye al `RN` que la app traía fijo y es lo que vuelve única la clave del pedido; **el ERP debe garantizar que no se repita entre ruedas**. Las ruedas anteriores lo traen en cadena vacía, por eso el export lo pasa por `NULLIF`). |
 | `cnf_rueda_negocios_proveedor` | `(…, id_proveedor)` | Proveedores participantes. `id_proveedor` → `com_proveedor`. |
 | `cnf_rueda_negocios_marca` | `(…, id_marca)` | Marcas participantes. `id_marca` → `com_marca`. |
 | `cnf_rueda_negocios_vendedor` | `(…, id_vendedor)` | Vendedores asignados. `id_vendedor` → `vta_vendedor` → `cnf_persona`. |

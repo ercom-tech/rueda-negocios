@@ -193,6 +193,7 @@ Desglose **por partida**: `iva_porcentaje` + `iva_monto`, `descto_porcentaje` +
 | `client_branch` (sucursal) | `sucursal` |
 | `client.salesperson.erp_salesperson_id` | `id_vendedor` |
 | `business_round.erp_round_id` | `id_rueda` (columna nueva del ERP 2026-08-17; 0 = pedido sin rueda — todo el histórico está en 0) |
+| `local_folio` | `clave_rueda` (varchar 12, columna nueva del ERP 2026-09-04; la clave con la que se capturó el pedido, única entre ruedas por el prefijo. **NULL** cuando no viene — es como el ERP expresa "sin clave" en esa columna, al revés de las ocho que van en cadena vacía) |
 | `observations` | `observaciones` (vacía → `' '`) |
 | `order_items.count` | `renglones` |
 | `dividir_facturas` (NUMERIC(18,6); importe máximo por factura al facturar, 0 = no dividir — se captura en el paso 1, en factura Y en remisión) | `dividir_facturas` |

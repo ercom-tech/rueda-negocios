@@ -20,6 +20,12 @@ viejo quedó caduco — verificado en la 6ª auditoría:
   columnas `vta_pedido.id_rueda` (default 0) y
   `vta_pedido_detalle.nombre_capturado` (varchar 40), y el producto 999999
   vivo (`baja=false`). Sin la columna, la API nueva da 500 en TODO pedido.
+  **Se suman dos del 2026-09-04**, ya aplicadas en desarrollo y con el mismo
+  riesgo —sin ellas, 500 en todo pedido—: `vta_pedido.clave_rueda` (varchar 12)
+  y `cnf_rueda_negocios.prefijo` (varchar 4, NOT NULL), más el índice
+  `(id_empresa, id_rueda, clave_rueda)`. Y **capturar el prefijo de cada
+  rueda**: las tres existentes lo tienen vacío, así que sus pedidos saldrían
+  con el respaldo `RN` y la clave dejaría de ser única entre ruedas.
 - **Orden (invertido respecto al plan anterior): ERP migrado → rueda-api →
   laptop.** API nueva + laptop vieja es el único par tolerante (`id_rueda ||
   0`, `nombre_capturado` NULL; el 422 de remisiones es visible y se destraba
@@ -117,7 +123,14 @@ datos reales (hostname, usuario, IP del ERP, puerto final) y ejecutarla.
 
 ## Funcionalidad pendiente
 
-### Partir el pedido en el ERP al transmitir, y guardar la clave de la rueda
+### Partir el pedido en el ERP al transmitir
+
+> **La clave de la rueda ya está hecha** (2026-09-08, `472a6a6` en la app y
+> `9c4086d` + `039cc60` en la API): el prefijo baja del ERP hasta el folio
+> local y la clave sube a `vta_pedido.clave_rueda`. El porqué de cada decisión
+> está en "La clave del pedido en la rueda" de `memory.md`. **Lo que queda de
+> este renglón es el reparto**, que se apoya en esa clave para reconocer los
+> reintentos.
 
 **Definido con FECEGO el 2026-09-03.** Un pedido de la rueda debe aterrizar en
 el ERP como **varios pedidos**, y cada uno debe guardar la clave con la que se
@@ -160,10 +173,11 @@ clave escrita en cada parte, la identidad es explícita: *¿existen pedidos con
 folios. Por eso **conviene implementarla primero**: es chica y destraba lo
 demás.
 
-**Dependencia externa:** FECEGO agregará una **columna nueva en `vta_pedido`**
-para la clave (como se hizo con `id_rueda` en agosto), no se reutiliza
-`pedido_externo`. Hasta que exista en testing y en producción, esto no se puede
-probar punta a punta — mismo prerequisito que ya tuvo `id_rueda`.
+**Dependencia externa:** las columnas ya existen en desarrollo
+(`vta_pedido.clave_rueda` varchar 12 y `cnf_rueda_negocios.prefijo` varchar 4),
+pero **faltan en testing y en producción** — igual que pasó con `id_rueda`, sin
+ellas la API nueva da 500 en todo pedido. Está anotado arriba, en el renglón de
+despliegue.
 
 **Lo que hay que cuidar al repartir:**
 
