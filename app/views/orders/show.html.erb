@@ -47,6 +47,13 @@
           <span class="rounded-full px-4 py-1.5 text-sm font-semibold <%= @order.status_color %>">
             <%= @order.status_label %>
           </span>
+          <%# Los folios del ERP van junto al estatus porque son lo mismo que el
+              folio del título: la identidad del pedido, del otro lado. Solo
+              aparecen cuando ya se transmitió, y dicen cuántos son porque un
+              pedido de la rueda puede haber entrado al ERP partido en varios. %>
+          <% if (erp_label = erp_folios_label(@order)) %>
+            <span class="text-sm text-white/70"><%= erp_label %></span>
+          <% end %>
         </div>
         <div class="flex flex-wrap items-center gap-3">
           <% if can_edit_order?(@order) %>

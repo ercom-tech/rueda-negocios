@@ -43,15 +43,21 @@ module Sync
         stamp = order.updated_at
         res = @api.post("pedidos", build_payload(order))
         if res.is_a?(Net::HTTPSuccess)
-          folio = JSON.parse(res.body)["clave_pedido"]
+          folios = erp_folios(res)
           # Un 2xx sin folio es una respuesta rota: marcarlo transmitido con
           # erp_folio nil lo atascaría para siempre (pending solo re-selecciona
           # captured). Mejor fallido y reintentable.
-          raise ApiClient::Error, "respuesta sin clave_pedido" if folio.to_s.strip.empty?
+          raise ApiClient::Error, "respuesta sin clave_pedido" if folios.empty?
 
+          folio = folios.first
           edited_in_flight = Order.where(id: order.id).pick(:updated_at) != stamp
-          order.update!(erp_folio: folio, transmitted_at: Time.current, status: :transmitted)
-          results[:transmitted] << { local: order.local_folio, erp: folio }
+          # `erp_folio` guarda el PRIMERO y `erp_folios` la lista: el pedido de
+          # la rueda entra al ERP partido en varios (catálogo cada 45, los
+          # productos nuevos aparte), y sin la lista el operador no tendría cómo
+          # saber en cuáles quedó.
+          order.update!(erp_folio: folio, erp_folios: folios,
+                        transmitted_at: Time.current, status: :transmitted)
+          results[:transmitted] << { local: order.local_folio, erp: folio, erp_all: folios }
 
           if edited_in_flight
             Rails.logger.warn("[sync:up] #{order.local_folio} se editó durante la transmisión; " \
@@ -178,6 +184,15 @@ module Sync
           }
         end
       }
+    end
+
+    # Los folios del ERP de la respuesta. `claves_pedido` es la lista completa;
+    # `clave_pedido` (un solo folio) se conserva para leer respuestas de una API
+    # anterior al reparto, que solo manda ese.
+    def erp_folios(res)
+      body = JSON.parse(res.body)
+      folios = body["claves_pedido"] || [ body["clave_pedido"] ]
+      folios.compact.map { |folio| folio.to_s.strip }.reject(&:empty?)
     end
 
     def parse_error(res)

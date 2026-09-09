@@ -25,4 +25,20 @@ module ApplicationHelper
   def back_link_class
     BACK_LINK_CLASS
   end
+
+  # En qué pedidos del ERP quedó este. Son varios cuando la transmisión lo
+  # partió allá —las partidas de catálogo se cortan cada 45 y los productos
+  # nuevos van aparte—, y decir cuántos es lo que explica por qué hay más de un
+  # folio; con la lista sola, el operador no sabe si son partes o un error.
+  #
+  # Concordancia escrita a mano: `pluralize` aplica reglas del inglés y aquí
+  # además hay que concordar el verbo ("se separó en 2 pedidos").
+  def erp_folios_label(order)
+    folios = order.erp_folios
+    return nil if folios.blank?
+
+    return "En el ERP: #{folios.first}" if folios.one?
+
+    "En el ERP: #{folios.join(', ')} — se separó en #{folios.size} pedidos"
+  end
 end

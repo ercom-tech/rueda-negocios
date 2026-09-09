@@ -38,6 +38,48 @@ module Sync
       assert_requested req
     end
 
+    # El pedido de la rueda entra al ERP partido en varios (catálogo cada 45,
+    # los productos nuevos aparte). La laptop guarda TODOS los folios: sin la
+    # lista, el operador no tiene cómo saber en cuáles quedó su pedido.
+    test "guarda todos los folios cuando el ERP partió el pedido" do
+      stub_request(:post, "#{API}/pedidos")
+        .to_return(status: 201, headers: { "Content-Type" => "application/json" },
+                   body: { clave_pedido: "1A0007", claves_pedido: %w[1A0007 1A0008 1A0009] }.to_json)
+
+      Up.new(API).run!
+      @order.reload
+
+      assert_equal %w[1A0007 1A0008 1A0009], @order.erp_folios
+      assert_equal "1A0007", @order.erp_folio, "el singular guarda el primero: lo leen las guardas y el orden"
+      assert @order.transmitted?
+    end
+
+    # API anterior al reparto: manda un solo folio y ninguna lista.
+    test "una respuesta con un solo folio sigue funcionando" do
+      stub_request(:post, "#{API}/pedidos")
+        .to_return(status: 201, headers: { "Content-Type" => "application/json" },
+                   body: { clave_pedido: "1A0007" }.to_json)
+
+      Up.new(API).run!
+      @order.reload
+
+      assert_equal [ "1A0007" ], @order.erp_folios
+      assert_equal "1A0007", @order.erp_folio
+    end
+
+    # Una lista vacía es una respuesta rota: marcarlo transmitido sin folio lo
+    # atascaría para siempre, porque `pending` solo re-selecciona `captured`.
+    test "una respuesta con la lista vacía deja el pedido reintentable" do
+      stub_request(:post, "#{API}/pedidos")
+        .to_return(status: 201, headers: { "Content-Type" => "application/json" },
+                   body: { claves_pedido: [] }.to_json)
+
+      result = Up.new(API).run!
+
+      assert_equal 1, result[:failed].size
+      assert @order.reload.captured?
+    end
+
     # --- Promociones -------------------------------------------------------
 
     def promotion_setup!
