@@ -146,6 +146,27 @@ datos reales (hostname, usuario, IP del ERP, puerto final) y ejecutarla.
 
 ## Funcionalidad pendiente
 
+### `rueda-api` no tiene pruebas contra Postgres (MEDIA)
+
+Toda la suite corre con `Sequel.mock`, que **inventa las filas**. Eso deja una
+familia entera de defectos fuera del alcance de cualquier prueba: en la 10ª
+auditoría, quitarle `fecha_pedido` a la consulta de partes —una columna que el
+código sí lee de esas filas— dejaba los 125 casos en verde y rompía el reintento
+de todo pedido partido cerca de medianoche. Se descubrió corriendo el caso
+contra la réplica del ERP a mano.
+
+Mitigación actual: una prueba que ata la lista de columnas del SELECT a lo que
+sus consumidores leen (`test_la_consulta_de_partes_trae_todo_lo_que_el_codigo_lee_de_ella`),
+más la verificación manual contra la réplica en cada cambio de consulta. Las dos
+dependen de que alguien se acuerde.
+
+**Lo que faltaría:** un puñado de pruebas de integración contra una base real
+—la réplica local basta— para los caminos que escriben y releen: alta de pedido
+partido, reintento, colisión. No hace falta cubrir todo: el valor está en que
+exista **una** prueba que ejecute SQL de verdad, porque es la que caza esta
+familia. A resolver: cómo levantar el esquema (¿un dump reducido de `fecego`?)
+y cómo aislarla (transacción con rollback por prueba, como ya se hace a mano).
+
 ### Pruebas de sistema: ampliar la cobertura del JavaScript
 
 **Arranque hecho (2026-08-11):** existe `test/system/` con
