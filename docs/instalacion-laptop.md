@@ -238,6 +238,66 @@ Ninguno de esos cuatro pasos es opcional "si no cambió nada", y dos de ellos
 tumban la app entera si se saltan cuando hacían falta — está medido y explicado
 en esa guía.
 
+## Respaldo de la BD de la app
+
+La laptop es el único lugar donde vive el trabajo del evento hasta que se
+transmite, y hay dos operaciones que lo destruyen sin vuelta atrás: **`db:migrate`**
+(lo único de un despliegue que `git checkout` no deshace) y **"Cerrar rueda"**,
+que purga los pedidos transmitidos y borra el historial de corridas.
+
+```bash
+cd ~/Proyectos/fecego-rueda-negocios
+set -a; source .env; set +a          # host, puerto, usuario y base, de una sola fuente
+pg_dump -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -Fc \
+        -f ~/"rueda-$(date +%Y%m%d-%H%M).dump" "$DB_NAME"
+```
+
+**La conexión se toma del `.env`, no se escribe a mano.** En la laptop es el
+Postgres local en 5432, pero el `.env` puede apuntar a otro host o puerto (ver
+la nota de abajo sobre tener la BD en el servidor de testing, y en el Mac de
+desarrollo va en 1702): con los datos fijos en el comando, el respaldo saldría
+de la base equivocada —o fallaría— y eso solo se descubre al restaurar.
+
+`-Fc` es formato custom comprimido: permite restaurar selectivamente y pesa
+menos. Para un archivo legible, `-f rueda.sql` sin el `-Fc`.
+
+**Comprobar el dump antes de confiar en él** — uno truncado pesa y no avisa:
+
+```bash
+pg_restore -l rueda-*.dump | grep -cE "TABLE DATA"   # lista las tablas, no 0
+```
+
+Si va a una USB, verificar **la copia**, no la original:
+
+```bash
+cp rueda-*.dump /media/$USER/<usb>/
+pg_restore -l /media/$USER/<usb>/rueda-*.dump > /dev/null && echo "copia OK"
+```
+
+### Restaurar
+
+Siempre en una base NUEVA, nunca encima de una con datos:
+
+```bash
+createdb -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" rueda_restore
+pg_restore -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d rueda_restore --no-owner \
+           ~/rueda-20260911-1430.dump
+DB_NAME=rueda_restore bin/rails runner 'puts Order.count'   # mirarla sin tocar la buena
+```
+
+`DB_NAME` funciona porque `config/database.yml` lo lee del entorno; por eso se
+puede apuntar la app a la copia sin editar nada.
+
+### Cuándo sacarlo
+
+- **Antes de `bin/rails db:migrate`** en cada despliegue.
+- **Al terminar cada día del evento, antes de transmitir**: es el momento en
+  que la laptop tiene trabajo que no existe en ningún otro lado.
+- **Antes de "Cerrar rueda".** Vale doble desde el reporte de productos: ese
+  reporte solo ve lo que queda en la laptop, así que el dump previo al cierre es
+  lo único que conserva el detalle local del evento completo. El ERP tiene los
+  pedidos, pero no la vista de la rueda.
+
 ## Notas
 
 - **La API ya no corre en la laptop.** `rueda-api` vive en el servidor de
@@ -250,6 +310,7 @@ en esa guía.
   en el `.env` de rueda-negocios (el rol necesita `CREATEDB` y `pg_trgm`
   disponible) y sáltate el paso 4.
 - Para actualizar la laptop después: **`docs/despliegue-laptop.md`**.
+- Antes de migrar o de cerrar rueda, sacar respaldo (ver arriba).
 
 ## Equipos cliente (tablets/laptops de capturistas)
 
