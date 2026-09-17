@@ -206,6 +206,34 @@ FECEGO a 6 dígitos (`"017768"`, string) y existe solo para mostrarse. El
 ERP espera el entero `com_producto.id_producto`, que es
 `product.erp_product_id`.
 
+## Dónde vive la factura del pedido
+
+La app no factura —eso pasa en el ERP, días después de transmitir—, pero
+cualquier pregunta sobre **qué se surtió de verdad** se contesta ahí. Dos cosas
+que cuesta encontrar:
+
+**El CFDI vive en el esquema `fecego_cfdi`, no en `fecego`.** Las tablas
+`fac_cfdi` y `fac_cfdi_detalle` existen en los DOS esquemas: las de `fecego`
+son para otro propósito y **están vacías**, así que una consulta que las use
+corre sin error y concluye que no se facturó nada. Los tipos además difieren —
+en `fecego_cfdi` los flags son `boolean`, en `fecego` son `character(1)` con
+`'t'`/`'f'`— y por eso copiar un filtro de una a otra da `operator does not
+exist: character = boolean`.
+
+**El enlace es `clave_pedido`**, tanto en la cabecera como en el detalle
+(`fac_cfdi_detalle.clave_pedido` + `id_producto`). Una factura vigente es la
+que cumple `baja = false AND cancelado = false AND pac_ok = true`: sin timbre
+del PAC no hay factura, aunque el registro exista.
+
+**Un pedido puede tener VARIAS facturas** —es lo que hace `dividir_facturas`—,
+así que lo facturado de un producto se **suma** entre ellas. En la rueda de
+Oaxaca hubo pedidos con hasta 5 facturas vigentes. Y en `vta_pedido`, el
+`facturado` (boolean) y el `factura` (varchar) de la cabecera no bastan para
+saber qué renglones salieron: dicen del pedido, no de sus partidas.
+
+La consulta que cruza pedido y factura —lo solicitado contra lo facturado, por
+marca— está en `docs/diagnostico-erp.md`.
+
 ## Pendientes (confirmar con FECEGO)
 
 1. **Campos de configuración** de la cabecera: `"c_FormaPago"`, `"c_MetodoPago"`,
