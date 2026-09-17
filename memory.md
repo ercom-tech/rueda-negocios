@@ -31,6 +31,49 @@ Si es **algo por hacer**, va al backlog.
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
 
+## El servidor resuelve un borrador ajeno (2026-09-17)
+
+Un borrador abandonado —el capturista se fue, la tablet murió— bloquea las TRES
+operaciones del panel (obtener información, transmitir y cerrar rueda), y el
+único que podía resolverlo era su dueño, que ya no está: la laptop quedaba sin
+salida en pleno evento. Ahora el rol server puede **guardarlo o descartarlo**
+desde el detalle del pedido.
+
+**Resolver no es editar, y el permiso lo dice.** `can_resolve_draft?` es
+*server* **y** *borrador*: el equipo-servidor no toca partidas ni encabezado, y
+un pedido ya capturado no entra —tiene folio, es transmisible, y borrarlo es
+otra decisión—. `can_edit_order?` se quedó intacto.
+
+**Leer y escribir dejaron de ser lo mismo.** `accessible_orders` decía qué
+pedidos ve cada quien, y las acciones que escriben usaban `current_user.orders`.
+Con esto apareció un tercer conjunto —los borradores ajenos que el server sí
+puede cambiar— y por eso existe `writable_order`: dar de escribir lo que
+`accessible_orders` da de leer habría dejado al server borrando cualquier pedido.
+
+**Guardarlo no cambia al dueño.** El folio, los reportes y la comisión siguen
+siendo del capturista: el servidor resuelve, no se apropia.
+
+**Lo que encontró validarlo en la app corriendo, y no las pruebas:**
+
+- **El mensaje del borrador vacío era un callejón sin salida para el server.**
+  Decía "Agrega al menos un producto", y él no puede agregar productos a un
+  pedido ajeno. Ahora el texto depende de quién lo lee: al dueño se le pide el
+  producto, al servidor se le dice que lo descarte. Es la regla de siempre —el
+  mensaje nombra una acción que quien lo lee tiene a la mano— rota por una
+  pantalla que ganó un segundo lector.
+- **El log de auditoría no identificaba nada:** "descartado el borrador
+  (borrador) de cap_draft". Un borrador no tiene folio y `Order#folio` devuelve
+  ese texto sustituto; con varios abandonados —el caso exacto que el rastro
+  existe para resolver— no decía cuál. Ahora usa el id cuando no hay folio.
+
+**Y una prueba que no podía fallar.** De cinco mutaciones, quitarle la condición
+del ROL al permiso dejaba la suite entera en verde: a un capturista ya lo frena
+`accessible_orders` antes de llegar ahí, así que ninguna prueba de integración
+puede ver esa segunda capa. Se cerró con una prueba del predicado directo
+(`test/controllers/can_resolve_draft_test.rb`). Regla que generaliza: **cuando
+una defensa tiene dos capas y la primera tapa a la segunda, la de atrás necesita
+su propia prueba** — si no, se puede borrar sin que nada avise.
+
 ## 10ª auditoría (2026-09-08) — remediación
 
 Sobre el reparto del pedido. 5 auditores, **1 CRÍTICA · 3 ALTA · 7 MEDIA ·

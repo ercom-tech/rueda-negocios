@@ -48,9 +48,10 @@ class OrdersController < ApplicationController
     @order = accessible_orders.find(params[:id])
   end
 
-  # Cancelar la captura: descarta el pedido (solo si aún es editable).
+  # Cancelar la captura: descarta el pedido (solo si aún es editable). El
+  # equipo-servidor puede descartar un borrador AJENO — ver `writable_order`.
   def destroy
-    order = current_user.orders.find(params[:id])
+    order = writable_order(params[:id])
     # La pantalla vieja de un pedido ya transmitido conserva el botón: sin
     # esta rama, el destroy se omitía en silencio y el flash confirmaba un
     # descarte que no ocurrió — el capturista creía cancelada una venta que
@@ -64,6 +65,10 @@ class OrdersController < ApplicationController
     # partidas abortaba el borrado y el flash de abajo confirmaba un descarte
     # que no ocurría (ver Order#discard!).
     order.discard!
+    # Queda rastro de quién resolvió un borrador que no era suyo: el capturista
+    # no se entera por ningún lado, y en la revisión posterior "¿quién borró
+    # esto?" no tiene otra respuesta.
+    log_resolved_draft(order, "descartado") unless order.user_id == current_user.id
     redirect_to root_path, notice: "Pedido descartado."
   end
 
@@ -130,16 +135,28 @@ class OrdersController < ApplicationController
 
   # Finaliza la captura (folio local) y va al resumen (paso 3).
   def capture
-    @order = current_user.orders.find(params[:id])
+    @order = writable_order(params[:id])
     return redirect_to @order, alert: "Un pedido transmitido no se puede editar." unless @order.editable?
 
+    resolving = @order.user_id != current_user.id
+
     if @order.capture!
+      log_resolved_draft(@order, "guardado") if resolving
       redirect_to summary_order_path(@order)
     else
-      # "guardar el pedido" y no "finalizar": ningún control de la pantalla
-      # dice "finalizar" desde que el botón pasó a "Guardar", y un mensaje que
-      # nombra una acción que no está a la vista no se puede seguir (8ª aud.).
-      redirect_to @order, alert: "Agrega al menos un producto antes de guardar el pedido."
+      # Un borrador vacío no se puede guardar, y qué hacer con él depende de
+      # quién lo está viendo:
+      #
+      # - el capturista agrega un producto ("guardar el pedido" y no
+      #   "finalizar": ningún control dice "finalizar" desde que el botón pasó
+      #   a "Guardar", y un mensaje que nombra una acción que no está a la
+      #   vista no se puede seguir, 8ª auditoría);
+      # - el equipo-servidor NO puede agregar productos a un pedido ajeno, así
+      #   que mandarlo a hacerlo es un callejón sin salida. Su salida es
+      #   descartarlo.
+      redirect_to @order, alert: (resolving ?
+        "Este pedido no tiene productos, así que no se puede guardar. Descártalo para que deje de bloquear las operaciones del panel." :
+        "Agrega al menos un producto antes de guardar el pedido.")
     end
   end
 
@@ -160,6 +177,18 @@ class OrdersController < ApplicationController
   # El buscador manda "CLAVE — Nombre comercial": se toma la clave y, si no
   # existe tal cual, se busca por texto (mismo criterio en el paso 1 y al
   # editar el encabezado).
+  # Rastro de la resolución de un borrador ajeno. Va al log y no a la BD: es
+  # información de auditoría para el equipo-servidor, no dato del pedido.
+  def log_resolved_draft(order, action)
+    # El id y no `folio`: un borrador todavía no tiene folio, y `folio` devuelve
+    # el texto "(borrador)" — que en el log no identifica NADA cuando hay varios
+    # abandonados, que es justo el caso que esta función existe para rastrear.
+    # Al guardarlo sí hay folio, porque `capture!` lo asigna antes.
+    identifier = order.local_folio.presence || "id #{order.id}"
+    Rails.logger.warn("[pedidos] #{current_user.username} (server) #{action} el borrador " \
+                      "#{identifier} de #{order.user.username}")
+  end
+
   def client_from_key(value)
     key = value.to_s.strip.split(/\s[–-]\s/).first.to_s.strip
     Client.find_by(erp_client_key: key) || Client.search(key).first

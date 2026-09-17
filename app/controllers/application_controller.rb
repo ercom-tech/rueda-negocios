@@ -11,7 +11,7 @@ class ApplicationController < ActionController::Base
 
   helper_method :current_user, :logged_in?, :active_round, :available_suppliers,
                 :current_supplier, :available_brands, :current_brand, :can_edit_order?,
-                :report_back_path
+                :can_resolve_draft?, :report_back_path
 
   private
 
@@ -23,6 +23,29 @@ class ApplicationController < ActionController::Base
   # El rol server puede VER cualquier pedido, pero no editarlo.
   def can_edit_order?(order)
     order.editable? && order.user_id == current_user&.id
+  end
+
+  # El equipo-servidor puede RESOLVER un borrador ajeno: guardarlo o
+  # descartarlo, tal como está. No editarlo — ni sus partidas ni su encabezado.
+  #
+  # Existe porque un borrador abandonado —el capturista se fue, la tablet
+  # murió— bloquea las TRES operaciones del panel (obtener información,
+  # transmitir y cerrar rueda) y dejaba a la laptop sin salida en pleno evento.
+  # Acotado a borradores a propósito: un pedido capturado ya tiene folio y es
+  # transmisible, y borrarlo es una decisión distinta.
+  def can_resolve_draft?(order)
+    current_user&.server? && order.draft?
+  end
+
+  # De dónde se toma un pedido que se va a ESCRIBIR. El capturista, solo los
+  # suyos; el server, además los borradores ajenos que puede resolver. No se usa
+  # `accessible_orders` (que le da todos): una cosa es lo que puede leer y otra
+  # lo que puede cambiar.
+  def writable_order(id)
+    order = accessible_orders.find(id)
+    return order if order.user_id == current_user&.id || can_resolve_draft?(order)
+
+    raise ActiveRecord::RecordNotFound
   end
 
   # Pedidos que el usuario puede LEER: el capturista los suyos, el

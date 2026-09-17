@@ -103,19 +103,6 @@ tienen ventas vivas 2025-26 (684 partidas, vendidas debajo del público — el
 $0 es omisión de captura del catálogo). El top-10 está en el reporte de la
 6ª auditoría; re-medir contra el ERP de producción antes de actuar.
 
-### El rol servidor debe poder descartar pedidos ajenos
-
-Desde el reporte "Pedidos capturados", donde ya los ve todos con dueño y
-estatus.
-
-**Urgente por dependencia:** desde 2026-08-10 las tres operaciones del panel
-(obtener información, transmitir pedidos, cerrar rueda) se bloquean si hay
-pedidos en borrador. Un borrador abandonado —capturista que se fue, tablet
-muerta— deja la laptop **sin salida**. Confirmado dentro del alcance por el
-usuario, pospuesto ese día.
-
-**Alcance:** botón + modal de confirmación en el reporte, ruta y guarda de rol.
-
 ### Empaquetado / deployment de la laptop-servidor
 
 Cómo instalar la app en el equipo del evento y servirla en la LAN.
