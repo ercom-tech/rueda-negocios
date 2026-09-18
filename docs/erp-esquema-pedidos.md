@@ -220,9 +220,12 @@ en `fecego_cfdi` los flags son `boolean`, en `fecego` son `character(1)` con
 `'t'`/`'f'`— y por eso copiar un filtro de una a otra da `operator does not
 exist: character = boolean`.
 
-**El enlace es `clave_pedido`**, tanto en la cabecera como en el detalle
-(`fac_cfdi_detalle.clave_pedido` + `id_producto`). Una factura vigente es la
-que cumple `baja = false AND cancelado = false AND pac_ok = true`: sin timbre
+**El enlace es la llave del pedido** —`clave_cliente`, `fecha_pedido`,
+`hora_pedido`—, que trae la cabecera `fac_cfdi`; el detalle se cuelga de ella
+por `id_cfdi`. Las dos tablas traen también `clave_pedido`, pero **no sirve de
+enlace**: el folio se repite en el ERP (1,774 repetidos en la empresa 1), y
+cruzando por él se le suma a un pedido la factura de otro. Una factura vigente
+es la que cumple `baja = false AND cancelado = false AND pac_ok = true`: sin timbre
 del PAC no hay factura, aunque el registro exista.
 
 **Un pedido puede tener VARIAS facturas** —es lo que hace `dividir_facturas`—,

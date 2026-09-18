@@ -249,19 +249,27 @@ facturación— y **cruza dos esquemas**.
 va a listar todo como negado y será mentira:
 
 ```sql
-SELECT count(*) AS renglones_cfdi, count(DISTINCT fd.clave_pedido) AS pedidos
+SELECT count(*) AS renglones_cfdi,
+       count(DISTINCT (f.clave_cliente, f.fecha_pedido, f.hora_pedido)) AS pedidos
 FROM fecego_cfdi.fac_cfdi_detalle fd
+JOIN fecego_cfdi.fac_cfdi f
+  ON f.id_empresa = fd.id_empresa AND f.id_cfdi = fd.id_cfdi
 JOIN fecego.vta_pedido ped
-  ON ped.id_empresa = fd.id_empresa AND ped.clave_pedido = fd.clave_pedido
+  ON  ped.id_empresa = f.id_empresa AND ped.clave_cliente = f.clave_cliente
+  AND ped.fecha_pedido = f.fecha_pedido AND ped.hora_pedido = f.hora_pedido
 WHERE ped.id_rueda = 3;                    -- ← la rueda
 ```
+
+En Oaxaca da 6,065 renglones de 512 pedidos.
 
 Los dos parámetros del reporte son **`id_rueda`** y **`id_marca`**, ambos en la
 CTE `solicitado`:
 
 ```sql
 WITH facturado AS (
-  SELECT fd.clave_pedido, fd.id_producto,
+  -- La factura se cuelga del pedido por su LLAVE (cliente, fecha, hora), que
+  -- trae la cabecera del CFDI; no por clave_pedido, que se repite en el ERP.
+  SELECT f.clave_cliente, f.fecha_pedido, f.hora_pedido, fd.id_producto,
          sum(fd.cantidad) AS cantidad, sum(fd.total) AS monto
   FROM fecego_cfdi.fac_cfdi_detalle fd
   JOIN fecego_cfdi.fac_cfdi f
@@ -269,10 +277,11 @@ WITH facturado AS (
   WHERE fd.id_empresa = 1
     AND fd.baja = false AND f.baja = false AND f.cancelado = false
     AND f.pac_ok = true                    -- timbrada: sin timbre no hay factura
-  GROUP BY 1, 2
+  GROUP BY 1, 2, 3, 4
 ),
 solicitado AS (
-  SELECT ped.clave_pedido, ped.clave_rueda, ped.clave_cliente, ped.id_vendedor, det.id_producto,
+  SELECT ped.clave_pedido, ped.clave_rueda, ped.clave_cliente, ped.fecha_pedido,
+         ped.hora_pedido, ped.id_vendedor, det.id_producto,
          sum(det.cantidad) AS cantidad, sum(det.total) AS monto
   FROM fecego.vta_pedido ped
   JOIN fecego.vta_pedido_detalle det
@@ -283,8 +292,9 @@ solicitado AS (
   WHERE ped.id_empresa = 1
     AND ped.id_rueda   = 3                 -- ← PARÁMETRO: la rueda
     AND prod.id_marca  = 22                -- ← PARÁMETRO: la marca (22 = HITOOLS)
-    AND ped.baja = false AND det.baja = false AND det.cancelado = false
-  GROUP BY 1,2,3,4,5
+    -- det.cancelado NO se filtra: en el ERP es la partida que almacén NEGÓ.
+    AND ped.baja = false AND det.baja = false
+  GROUP BY 1,2,3,4,5,6,7
 )
 SELECT s.clave_cliente                                   AS "Clave cliente",
        s.id_vendedor                                     AS "ID vendedor",
@@ -304,16 +314,32 @@ SELECT s.clave_cliente                                   AS "Clave cliente",
        s.clave_rueda                                     AS "Folio rueda"
 FROM solicitado s
 JOIN fecego.com_producto prod ON prod.id_empresa = 1 AND prod.id_producto = s.id_producto
-LEFT JOIN facturado f ON f.clave_pedido = s.clave_pedido AND f.id_producto = s.id_producto
+LEFT JOIN facturado f
+  ON  f.clave_cliente = s.clave_cliente AND f.fecha_pedido = s.fecha_pedido
+  AND f.hora_pedido = s.hora_pedido AND f.id_producto = s.id_producto
 WHERE s.cantidad <> COALESCE(f.cantidad, 0)
 ORDER BY (s.monto - COALESCE(f.monto, 0)) DESC, s.clave_cliente, s.id_producto;
 ```
 
+**Por qué la factura se cruza por la llave del pedido y no por
+`clave_pedido`.** El folio no es único en el ERP: en la empresa 1 hay 1,774
+`clave_pedido` repetidos entre pedidos distintos. Cruzando por él, la factura
+de otro pedido con el mismo folio se sumaría a este. La cabecera del CFDI trae
+la llave del pedido (`clave_cliente`, `fecha_pedido`, `hora_pedido`) y es la
+que se usa, igual que en el resto del ERP (11ª auditoría).
+
+**Por qué NO se filtra `det.cancelado`.** En el ERP, una partida con
+`cancelado = true` es una partida que **almacén negó** —todas llevan motivo en
+`id_motivo_negado`—, no una que el capturista quitó (esa va con `baja`).
+Filtrarla escondía justo lo negado de manera explícita. En Oaxaca hay 2, y
+ninguna es de HITOOLS; en el reporte de todas las marcas son $18,235.12 que no
+aparecían.
+
 **Por qué se agrupa por pedido + producto y no por partida.** Un mismo producto
-puede venir en **varias partidas del mismo pedido** —28 casos en la rueda de
-Oaxaca—, y el cruce por partida asigna lo facturado **entero a cada una**, así
-que infla lo surtido y fabrica "facturado de más" que no existen (11 con el
-cruce por partida, 9 reales).
+puede venir en **varias partidas del mismo pedido** —29 casos en la rueda de
+Oaxaca, 20 sin contar el genérico—, y el cruce por partida asigna lo facturado
+**entero a cada una**, así que infla lo surtido y fabrica "facturado de más"
+que no existen.
 
 **Lo que dice cada Estado:**
 
@@ -326,14 +352,14 @@ cruce por partida, 9 reales).
 La `Diferencia` es `solicitada − facturada`: positiva es lo negado. El signo
 solo no se lee bien en una hoja, y por eso va la columna `Estado` al lado.
 
-**El "facturado de más" es real, no un artefacto del cruce**: comprobado un
-caso con **una sola partida y una sola factura** (1,000 piezas pedidas, 1,040
-facturadas), y esos productos no tienen empaque mínimo registrado que lo
-explique. Es justo lo que el proveedor querrá revisar.
+**El "facturado de más" es real, no un artefacto del cruce**: en Oaxaca/HITOOLS
+son 57 renglones y en **los 57** lo facturado es exactamente lo que almacén
+registró como surtido (`vta_pedido_detalle.surtido`). Es decir, almacén surtió
+más de lo pedido y así se facturó. Es justo lo que el proveedor querrá revisar.
 
 **Cómo saber si el cruce está sano:** los renglones que cuadran exacto. En
-Oaxaca/HITOOLS fueron **925**, con $0.13 acumulados de diferencia por redondeo
-sobre 1,021,763 pesos. Si esa cifra sale baja, el enlace `clave_pedido` +
+Oaxaca/HITOOLS fueron **925**, con $1.33 de diferencia por redondeo (en valor absoluto) sobre
+$1,021,763.67. Si esa cifra sale baja, el enlace por la llave del pedido +
 `id_producto` no está funcionando y el reporte no sirve.
 
 Para sacarlo a Excel, la misma consulta dentro de un `\copy` (sin el punto y
@@ -347,10 +373,20 @@ psql -h <host-erp> -U <usuario> -d <base> \
 `trim_scale` está para eso: sin él las cantidades salen `6000.000000` y la hoja
 se vuelve ilegible.
 
-**Dos límites del reporte**, por si la pregunta que llega después es una de
-estas: parte de **lo solicitado**, así que un producto de la marca que se haya
-facturado sin estar en el pedido no aparece; y la columna `Folio rueda` sale
-vacía en las ruedas anteriores a `clave_rueda` (2026-09-04).
+**Los límites del reporte**, por si la pregunta que llega después es una de
+estas:
+
+- Parte de **lo solicitado**, así que un producto de la marca que se haya
+  facturado sin estar en el pedido no aparece.
+- **No resta devoluciones** (`cantidad_devuelta`) ni notas de crédito: compara
+  lo pedido contra lo facturado, por decisión del usuario (2026-09-14). Las
+  notas de crédito (CFDI tipo E) además no traen el pedido, así que no se
+  podrían cruzar.
+- Las partidas con `det.baja = true` no salen: son las que se **quitaron** del
+  pedido, no las que se negaron. En Oaxaca/HITOOLS hay 4, entre ellas las del
+  pedido 2L0008, que el coordinador borró después de transmitir.
+- La columna `Folio rueda` sale vacía en las ruedas anteriores a `clave_rueda`
+  (2026-09-04).
 
 ## Un fallo de la API que no es de la app
 
