@@ -22,7 +22,15 @@ curl -s http://localhost:7011/health    # en el servidor de la API
 ```
 
 `schema: "ok"` significa que están las cuatro columnas. Si falta alguna,
-responde 503 y las nombra.
+responde 503 y las nombra. Cómo se aplica el archivo —sin transacción, con
+`ON_ERROR_STOP`, y qué comprobar al final— está en las guías de instalación de
+`rueda-api` (`docs/instalacion-vm-*.md`, sección de actualizar).
+
+**Y el prefijo de la rueda, capturado en el ERP.** Las columnas no bastan: una
+rueda sin prefijo opera, pero sus pedidos salen como `RN-000123` y en el ERP no
+se sabe de qué rueda vinieron. El panel lo avisa después de obtener la
+información; mejor no llegar ahí. El `UPDATE` y la comprobación de que no se
+repita van al final de `erp-prerequisitos.sql`.
 
 **La laptop corre en `development`.** El `ExecStart` es `rails server` pelón,
 sin `RAILS_ENV` y sin `Environment=` en el unit. Por eso **todos los comandos de
@@ -62,12 +70,13 @@ cd ~/Proyectos/fecego-rueda-negocios
 |---|---|---|
 | 1 | `git status --short` | Vacío. Si sale `Gemfile.lock` modificado (bundler reescribe `BUNDLED WITH`), `git checkout Gemfile.lock` antes de seguir |
 | 2 | `bin/rails runner 'puts SyncRun.running.count'` | `0`. Si no, esperar: reiniciar a media corrida la mata (los jobs viven en hilos de puma) |
-| 3 | `git pull origin master` | `git log --oneline -1` coincide con la versión que se quería |
-| 4 | `bundle install` | `bundle check` → `The Gemfile's dependencies are satisfied` |
-| 5 | `bin/rails db:migrate` | Sin error. Es inofensivo aunque no haya migraciones |
-| 6 | `bin/rails tailwindcss:build` | Termina con `Done in …`. El CSS compilado **no** viaja en el repo (`app/assets/builds/` está en `.gitignore`), así que sin este paso las clases nuevas no existen. Para comprobar que una clase concreta entró, busca su **declaración** y no su nombre: en el archivo las clases van escapadas (`.min-w-\[18rem\]`) y un `grep` del nombre tal cual devuelve 0 aunque esté — p. ej. `grep -c 'min-width:18rem'` → `1` |
-| 7 | `sudo systemctl restart fecego-rueda-negocios` | `systemctl status fecego-rueda-negocios` → `active (running)`, sin reinicios acumulándose |
-| 8 | Abrir la app en el navegador | Entra al menú, sin error |
+| 3 | Respaldo de la BD (comandos en `docs/instalacion-laptop.md`, "Respaldo de la BD de la app") | `pg_restore -l "$DUMP"` lista tablas. Es la única vuelta atrás del paso 6: `git checkout` no deshace una migración |
+| 4 | `git pull origin master` | `git log --oneline -1` coincide con la versión que se quería |
+| 5 | `bundle install` | `bundle check` → `The Gemfile's dependencies are satisfied` |
+| 6 | `bin/rails db:migrate` | Sin error. Es inofensivo aunque no haya migraciones |
+| 7 | `bin/rails tailwindcss:build` | Termina con `Done in …`. El CSS compilado **no** viaja en el repo (`app/assets/builds/` está en `.gitignore`), así que sin este paso las clases nuevas no existen. Para comprobar que una clase concreta entró, busca su **declaración** y no su nombre: en el archivo las clases van escapadas (`.min-w-\[18rem\]`) y un `grep` del nombre tal cual devuelve 0 aunque esté — p. ej. `grep -c 'min-width:18rem'` → `1` |
+| 8 | `sudo systemctl restart fecego-rueda-negocios` | `systemctl status fecego-rueda-negocios` → `active (running)`, sin reinicios acumulándose |
+| 9 | Abrir la app en el navegador | Entra al menú, sin error |
 
 ## Comprobación después de desplegar
 

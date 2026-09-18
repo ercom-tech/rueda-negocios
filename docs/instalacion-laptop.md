@@ -248,9 +248,14 @@ que purga los pedidos transmitidos y borra el historial de corridas.
 ```bash
 cd ~/Proyectos/fecego-rueda-negocios
 set -a; source .env; set +a          # host, puerto, usuario y base, de una sola fuente
-pg_dump -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -Fc \
-        -f ~/"rueda-$(date +%Y%m%d-%H%M).dump" "$DB_NAME"
+DUMP=~/"rueda-$(date +%Y%m%d-%H%M).dump"
+pg_dump -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -Fc -f "$DUMP" "$DB_NAME"
 ```
+
+**El nombre va en `$DUMP` para que los comandos de abajo lean ESE archivo.**
+Con un comodín (`rueda-*.dump`) se leía el directorio actual —la app, no
+`~`— y, a partir del segundo respaldo, el comodín trae varios archivos y
+`pg_restore` solo acepta uno.
 
 **La conexión se toma del `.env`, no se escribe a mano.** En la laptop es el
 Postgres local en 5432, pero el `.env` puede apuntar a otro host o puerto (ver
@@ -264,14 +269,14 @@ menos. Para un archivo legible, `-f rueda.sql` sin el `-Fc`.
 **Comprobar el dump antes de confiar en él** — uno truncado pesa y no avisa:
 
 ```bash
-pg_restore -l rueda-*.dump | grep -cE "TABLE DATA"   # lista las tablas, no 0
+pg_restore -l "$DUMP" | grep -c "TABLE DATA"   # cuántas tablas trae: no 0
 ```
 
 Si va a una USB, verificar **la copia**, no la original:
 
 ```bash
-cp rueda-*.dump /media/$USER/<usb>/
-pg_restore -l /media/$USER/<usb>/rueda-*.dump > /dev/null && echo "copia OK"
+cp "$DUMP" /media/$USER/<usb>/
+pg_restore -l /media/$USER/<usb>/"$(basename "$DUMP")" > /dev/null && echo "copia OK"
 ```
 
 ### Restaurar
@@ -287,6 +292,20 @@ DB_NAME=rueda_restore bin/rails runner 'puts Order.count'   # mirarla sin tocar 
 
 `DB_NAME` funciona porque `config/database.yml` lo lee del entorno; por eso se
 puede apuntar la app a la copia sin editar nada.
+
+**Si la copia va a sustituir a la buena** (la base se perdió o quedó
+inservible): `DB_NAME=rueda_restore` en el `.env`, reiniciar el servicio y,
+**antes de dejar capturar**, en este orden:
+
+1. **Transmitir.** El respaldo puede traer como pendientes pedidos que ya
+   entraron al ERP después de sacarlo. No se duplican: el ERP los reconoce por
+   su clave de la rueda y devuelve sus folios.
+2. **Obtener información.** Además de refrescar el catálogo, sube el contador
+   de claves por encima de la más alta que el ERP ya tiene. El respaldo trae el
+   contador de cuando se sacó, y sin este paso un pedido nuevo podría repetir
+   la clave de uno capturado después del respaldo. Obtener información se
+   bloquea mientras haya pedidos sin transmitir: por eso va después del paso 1.
+3. **Capturar.**
 
 ### Cuándo sacarlo
 
