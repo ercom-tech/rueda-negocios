@@ -40,6 +40,21 @@
                 class: "w-full cursor-pointer rounded-lg bg-brand-gold px-4 py-2.5 text-sm font-bold text-neutral-900 transition-colors hover:bg-brand-gold-dark" %>
         <% end %>
       </div>
+
+      <%# El aviso va aquí porque es el momento en que se entregan datos: antes
+          de la contraseña. Fuera de la card —es del sitio, no del formulario— y
+          discreto: informa, no compite con el botón.
+
+          Se sirve desde `public/` de la PROPIA app, no desde el sitio de
+          FECEGO: durante el evento la laptop no tiene internet, así que un
+          enlace externo sería un enlace muerto justo cuando alguien lo tocara.
+          El nombre del archivo NO lleva versión, para que la liga siga siendo
+          la misma cuando el documento se actualice. %>
+      <p class="mt-4 max-w-md text-sm">
+        <%= link_to "Aviso de privacidad", "/aviso-de-privacidad.pdf",
+              target: "_blank", rel: "noopener",
+              class: "text-brand-cream/80 underline underline-offset-4 transition-colors hover:text-brand-cream" %>
+      </p>
     </div>
 
     <%# ── Tarjeta del evento: iguala el alto del bloque izquierdo ── %>
