@@ -10,6 +10,10 @@ module Sync
   module Guards
     module_function
 
+    # Dónde encuentra el equipo-servidor los borradores para resolverlos. Con
+    # los nombres que ve en pantalla, no con los de las rutas.
+    DRAFTS_PATH = "Reportes de venta → Pedidos capturados → Borrador".freeze
+
     # Pedidos que todavía viven solo en la laptop.
     def draft_count
       Order.draft.count
@@ -22,13 +26,20 @@ module Sync
     # Guarda del sync-up: un pedido en borrador sigue en captura y no se
     # transmite (solo se envían los finalizados), así que el operador se
     # quedaría creyendo que ya todo llegó al ERP.
+    #
+    # La salida la tiene el propio operador (11ª auditoría): el equipo-servidor
+    # puede guardar o descartar un borrador ajeno, y el aviso tiene que decirlo
+    # y decir DÓNDE. Antes solo mandaba a pedírselo al capturista, que en el
+    # caso que importa —el que dejó el borrador abierto— ya no está. Aquí
+    # guardarlo basta, porque el reintento lo transmite con los demás.
     def no_draft_orders!(error_class)
       drafts = draft_count
       return if drafts.zero?
 
       raise error_class,
             "Hay #{orders_label(drafts)} en borrador y no se #{drafts == 1 ? 'transmitiría' : 'transmitirían'}. " \
-            "Pide que #{them(drafts)} terminen o #{them(drafts)} descarten, y vuelve a intentar."
+            "#{save_or_discard(drafts)} desde #{DRAFTS_PATH} (o pide que #{them(drafts)} terminen), " \
+            "y vuelve a intentar."
     end
 
     # Guarda de las operaciones que BORRAN los pedidos de la laptop: obtener la
@@ -52,12 +63,16 @@ module Sync
     end
 
     def local_orders_message(drafts, pending, action)
+      # Aquí GUARDAR no basta: un borrador guardado queda capturado sin
+      # transmitir, y eso también bloquea. Por eso el camino dice "guárdalo y
+      # transmítelo, o descártalo", completo desde el primer aviso.
       if drafts.positive? && pending.positive?
         "Hay #{orders_label(drafts)} en borrador y #{pending} sin transmitir; se perderían #{action}. " \
-        "Pide que terminen o descarten los borradores, transmite los demás, y vuelve a intentar."
+        "Guarda o descarta #{drafts == 1 ? 'el borrador' : 'los borradores'} desde #{DRAFTS_PATH}, " \
+        "transmite los demás, y vuelve a intentar."
       elsif drafts.positive?
         "Hay #{orders_label(drafts)} en borrador y se #{would_be_lost(drafts)} #{action}. " \
-        "Pide que #{them(drafts)} terminen o #{them(drafts)} descarten, y vuelve a intentar."
+        "Desde #{DRAFTS_PATH}, #{save_and_transmit_or_discard(drafts)}; y vuelve a intentar."
       else
         # La alternativa de descartar no es adorno: un pedido atorado en la
         # colisión del 422 jamás va a transmitirse — sin ella, esta guarda
@@ -81,6 +96,14 @@ module Sync
 
     def transmit_them(count)
       count == 1 ? "Transmítelo" : "Transmítelos"
+    end
+
+    def save_or_discard(count)
+      count == 1 ? "Guárdalo o descártalo" : "Guárdalos o descártalos"
+    end
+
+    def save_and_transmit_or_discard(count)
+      count == 1 ? "guárdalo y transmítelo, o descártalo" : "guárdalos y transmítelos, o descártalos"
     end
   end
 end

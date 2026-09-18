@@ -112,9 +112,21 @@
                              "y no se guardará. ¿Continuar?",
                     confirm_label: "Sí, descartar", path: order_path(@order), method: :delete %>
             </div>
-            <%= button_to "Guardar", capture_order_path(@order),
-                  form_class: "inline-block",
-                  class: "cursor-pointer rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
+            <%# Guardar también pide confirmar, como Descartar: para el servidor
+                es IRREVERSIBLE —una vez capturado el pedido ya no es borrador y
+                deja de poder resolverlo— y lo manda al ERP en la siguiente
+                transmisión. Sin confirmación, un toque en falso sobre un pedido
+                que iba en la partida 3 de 20 lo transmitía a medias, sin firma
+                del cliente (11ª auditoría). %>
+            <div class="inline-block" data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
+              <button type="button" data-action="modal#open"
+                      class="cursor-pointer rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white transition-colors hover:bg-brand-coral-dark">Guardar</button>
+              <%= render "home/confirm_dialog", title: "Guardar pedido",
+                    message: "Se guardará el pedido en captura de #{@order.user.full_name.presence || @order.user.username} " \
+                             "tal como está y se enviará al ERP en la siguiente transmisión. " \
+                             "Después ya no podrás descartarlo. ¿Continuar?",
+                    confirm_label: "Sí, guardar", path: capture_order_path(@order), method: :post %>
+            </div>
           <% else %>
             <%= link_to "Descargar PDF", pdf_order_path(@order),
                   class: "rounded-full bg-brand-gold px-6 py-2.5 font-bold text-neutral-900 transition-colors hover:bg-brand-gold-dark" %>

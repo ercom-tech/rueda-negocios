@@ -73,6 +73,23 @@ class ServerResolvesDraftTest < ActionDispatch::IntegrationTest
     assert_match(/JUAN PEREZ/, response.body)
   end
 
+  # Guardar un borrador ajeno es IRREVERSIBLE para el servidor —deja de ser
+  # borrador y ya no puede resolverlo— y lo manda al ERP. Sin confirmación, un
+  # toque en falso transmitía un pedido a medias (11ª auditoría).
+  test "guardar un borrador ajeno pide confirmación y avisa que no tiene vuelta" do
+    order = draft_with_items!
+    login_as "srv_draft"
+
+    get order_path(order)
+
+    assert_select "h3", text: "Guardar pedido"
+    assert_match(/Sí, guardar/, response.body)
+    assert_match(/Después ya no podrás descartarlo/, response.body)
+    # El POST a capturar solo vive DENTRO del diálogo, no como botón suelto.
+    assert_select "[data-modal-target=dialog] form[action='#{capture_order_path(order)}']", count: 1
+    assert_select "form[action='#{capture_order_path(order)}']", count: 1
+  end
+
   test "en un pedido ajeno YA CAPTURADO no ofrece resolverlo" do
     order = draft_with_items!
     order.capture!

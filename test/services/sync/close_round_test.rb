@@ -43,7 +43,7 @@ module Sync
 
       error = assert_raises(CloseRound::PendingOrdersError) { CloseRound.run! }
       assert_match(/Hay 1 pedido en borrador y 1 sin transmitir/, error.message)
-      assert_match(/terminen o descarten los borradores, transmite los demás/, error.message)
+      assert_match(/Guarda o descarta (el borrador|los borradores) desde .*Borrador, transmite los demás/, error.message)
     end
 
     test "cierra: purga los transmitidos, desactiva la rueda y limpia la selección" do

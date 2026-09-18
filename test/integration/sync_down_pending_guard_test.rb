@@ -55,7 +55,7 @@ class SyncDownPendingGuardTest < ActionDispatch::IntegrationTest
     post server_sync_down_path
 
     assert_match(/Hay 1 pedido en borrador y 1 sin transmitir/, flash[:alert])
-    assert_match(/terminen o descarten los borradores, transmite los demás/, flash[:alert])
+    assert_match(/Guarda o descarta el borrador desde Reportes de venta → Pedidos capturados → Borrador, transmite los demás/, flash[:alert])
     assert_equal 0, SyncRun.down.count
   end
 
@@ -79,7 +79,7 @@ class SyncDownPendingGuardTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to root_path
     assert_match(/Hay 1 pedido en borrador y se perdería al obtener la información\./, flash[:alert])
-    assert_match(/Pide que lo terminen o lo descarten/, flash[:alert])
+    assert_match(/guárdalo y transmítelo, o descártalo/, flash[:alert])
     assert_equal 0, SyncRun.down.count
   end
 

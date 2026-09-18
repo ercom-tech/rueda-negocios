@@ -35,7 +35,7 @@ class SyncUpDraftsGuardTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to root_path
     assert_match(/Hay 1 pedido en borrador y no se transmitiría\./, flash[:alert])
-    assert_match(/Pide que lo terminen o lo descarten/, flash[:alert])
+    assert_match(/Guárdalo o descártalo desde Reportes de venta → Pedidos capturados → Borrador/, flash[:alert])
     assert_equal 0, SyncRun.up.count, "una condición previa no debe dejar una corrida fallida"
   end
 
