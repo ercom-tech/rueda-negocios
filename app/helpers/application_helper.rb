@@ -28,9 +28,9 @@ module ApplicationHelper
 
   # La existencia del producto en el buscador, a la derecha del precio.
   #
-  # Es de MATRIZ —de donde la rueda surte y factura—, no la global de las nueve
+  # Es de MATRIZ —de donde la rueda surte y factura—, no la global de las doce
   # sucursales: esa le prometería al capturista material que está en otra
-  # ciudad (1,794 productos del catálogo de la rueda, 11.6%).
+  # ciudad (1,612 productos del catálogo de la rueda, 10.4%).
   #
   # Y es una REFERENCIA, no una promesa: viene de la última obtención de
   # información, y el ERP sigue vendiendo mientras la rueda corre offline.

@@ -43,25 +43,33 @@ leía nadie: ni una consulta, ni una vista. Antes de construir una tubería,
 mirar si ya está ahí.
 
 **Lo que sí cambió fue la FUENTE, y ahí estaba la decisión.**
-`com_producto.existencia` es el total de las **nueve** sucursales (coincide con
-la suma global en 53,690 de 56,145 productos). Ahora sale de
+`com_producto.existencia` es el total de las **doce** sucursales, 11 de ellas
+con existencia (coincide con la suma global de surtido + almacenaje en 56,580 de
+56,730 productos). Ahora sale de
 `alm_multi_existencia` acotada a **matriz**, porque es de donde la rueda surte y
 factura — medido, no supuesto: los 529 pedidos de Oaxaca se crearon con
 `id_sucursal_crea = 1` y las 558 facturas salieron de ahí, ninguna de otra.
 
-La diferencia no es cosmética: **1,794 productos del catálogo de la rueda
-(11.6%) tienen existencia en otra sucursal y no en matriz**. Con la fuente
+La diferencia no es cosmética: **1,612 productos del catálogo de la rueda
+(10.4%) tienen existencia en otra sucursal y no en matriz**. Con la fuente
 vieja, a esos el capturista les habría visto "hay" mientras el material estaba
-en otra ciudad — y el reporte de lo negado acababa de cuantificar $369K en
-material pedido que no llegó.
+en otra ciudad — y el reporte de lo negado acababa de cuantificar $618K de una
+sola marca (HITOOLS en Oaxaca: negado más negado parcial) en material pedido
+que no llegó.
 
 **Qué columnas suman** (decisión de FECEGO): `existencia_surtido +
 existencia_almacenaje`, lo que está físicamente en la sucursal. Fuera
 `traspasos` (en tránsito) y sobre todo `mesas` (ya apartada para otros pedidos:
 contarla es prometer dos veces lo mismo, 476,705 piezas en matriz). Dato para
-calibrar: **incluir `almacenaje` solo rescata 4 productos** de los 4,284 que
-quedan en cero — el peso de la decisión estaba en la sucursal, no en las
-columnas.
+calibrar: **incluir `almacenaje` rescata 94 productos**, y quedan 4,280 en
+cero — el peso de la decisión estaba en la sucursal, no en las columnas.
+
+**Las cifras de la primera versión estaban mal** —1,794 (11.6%), "nueve
+sucursales", "almacenaje rescata 4"— y así llegaron a un comentario del export
+y a otro del helper. La 11ª auditoría las remidió sobre el catálogo que el
+export REALMENTE baja (`Export.products`, 15,565 sin el genérico). Una cifra
+que va a quedar escrita se saca de la misma consulta que usa el código, y
+lleva su fecha: la réplica se refresca y las cifras se mueven.
 
 **Riesgo asumido a conciencia:** la cifra se congela en el sync-down y el ERP
 sigue vendiendo mientras la rueda corre offline. Se mostró exacta por decisión
