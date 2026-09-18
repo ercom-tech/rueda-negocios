@@ -59,6 +59,7 @@ module Sync
       import_suppliers
       import_salespeople
       import_round
+      advance_folio_sequence
       import_users
       import_clients
       import_products
@@ -175,6 +176,32 @@ module Sync
               starts_on: r["starts_on"], ends_on: r["ends_on"],
               location: r["location"], folio_prefix: r["folio_prefix"], active: true }
       insert BusinessRound, [ row ]
+    end
+
+    # Adelanta la secuencia de los pedidos por encima del número más alto que
+    # el ERP ya tiene de esta rueda (`round.last_folio_number`).
+    #
+    # El folio local es prefijo + id, y el id sale de la secuencia de ESTA
+    # laptop. Una laptop instalada desde cero —la del evento murió y se
+    # reemplazó a media rueda— arrancaba en 1, y su primer pedido volvía a ser
+    # `OAX-000001`, que ya estaba en el ERP: colisión en bucle al transmitir, o
+    # —con el mismo cliente y contenido— el pedido dado por transmitido con el
+    # folio viejo y la venta perdida en silencio (11ª auditoría).
+    #
+    # Va en el sync-down porque es el paso que una laptop nueva no se puede
+    # saltar: sin él no tiene catálogo. `GREATEST` para no RETROCEDER nunca una
+    # secuencia que ya iba más adelante. `setval` no es transaccional: si el
+    # sync falla después, la secuencia queda adelantada, y lo único que se
+    # pierde son números de folio.
+    def advance_folio_sequence
+      last = @data.dig("round", "last_folio_number").to_i
+      return unless last.positive?
+
+      conn     = ActiveRecord::Base.connection
+      sequence = conn.select_value("SELECT pg_get_serial_sequence('orders', 'id')")
+      conn.select_value(
+        "SELECT setval(#{conn.quote(sequence)}, GREATEST(#{last}, (SELECT last_value FROM #{sequence})), true)"
+      )
     end
 
     # --- Usuarios (capturistas): merge + cleanup, preservando servers -----

@@ -95,6 +95,69 @@ module Sync
       assert_not summary[:missing_folio_prefix]
     end
 
+    # --- La secuencia de folios (11ª auditoría) ---------------------------
+    #
+    # `setval` NO se deshace con la transacción de la prueba: sin restaurarla,
+    # cada corrida dejaría la secuencia de la base de pruebas más adelante, y
+    # con el tiempo los folios pasarían de seis dígitos y romperían las pruebas
+    # que los esperan así.
+    def with_orders_sequence
+      conn = ActiveRecord::Base.connection
+      seq  = conn.select_value("SELECT pg_get_serial_sequence('orders', 'id')")
+      original = conn.select_value("SELECT last_value FROM #{seq}").to_i
+      yield original
+    ensure
+      conn.select_value("SELECT setval(#{conn.quote(seq)}, #{original}, true)")
+    end
+
+    # El id que recibiría el siguiente pedido, sin consumirlo.
+    def next_order_id
+      conn = ActiveRecord::Base.connection
+      seq  = conn.select_value("SELECT pg_get_serial_sequence('orders', 'id')")
+      row  = conn.select_one("SELECT last_value, is_called FROM #{seq}")
+      row["is_called"] ? row["last_value"].to_i + 1 : row["last_value"].to_i
+    end
+
+    # Una laptop instalada desde cero a media rueda arrancaba su secuencia en 1
+    # y repetía folios que el ERP ya tenía: colisión en bucle, o la venta
+    # perdida en silencio si coincidía cliente y contenido.
+    test "la secuencia de pedidos arranca por encima del folio más alto que el ERP ya tiene" do
+      with_orders_sequence do |current|
+        data = export_data
+        data["round"]["last_folio_number"] = current + 500
+
+        Down.new(data).run!
+
+        # Con `setval(..., n, true)` el siguiente id es n + 1.
+        assert_operator next_order_id, :>, current + 500, "el siguiente pedido no puede repetir un folio del ERP"
+      end
+    end
+
+    # GREATEST: una laptop que ya iba más adelante no retrocede.
+    test "la secuencia nunca retrocede" do
+      with_orders_sequence do |current|
+        data = export_data
+        data["round"]["last_folio_number"] = 1
+
+        Down.new(data).run!
+
+        assert_operator next_order_id, :>, current
+      end
+    end
+
+    # Laptop nueva contra una API anterior a este campo: el sync no se rompe.
+    test "un export sin el folio más alto no rompe el sync ni mueve la secuencia" do
+      with_orders_sequence do |current|
+        data = export_data
+        data["round"].delete("last_folio_number")
+
+        Down.new(data).run!
+
+        seq = ActiveRecord::Base.connection.select_value("SELECT pg_get_serial_sequence('orders', 'id')")
+        assert_equal current, ActiveRecord::Base.connection.select_value("SELECT last_value FROM #{seq}").to_i
+      end
+    end
+
     # Laptop nueva contra una API que todavía no exporta el prefijo — el par que
     # se vive en toda ventana de despliegue, porque el orden es ERP → API →
     # laptop. El sync no debe romperse: la rueda queda sin prefijo y sus
