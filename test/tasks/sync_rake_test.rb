@@ -1,5 +1,8 @@
 require "test_helper"
 require "rake"
+# Propio y no heredado: sin él, `stub_request` solo existía si otro archivo de
+# la suite cargaba webmock antes, y este archivo corrido solo tronaba.
+require "webmock/minitest"
 
 # Las tareas de consola registran su corrida igual que los jobs del panel.
 #
@@ -60,6 +63,41 @@ class SyncRakeTest < ActiveSupport::TestCase
     assert run.completed?
     assert_not_nil run.finished_at
     assert_equal 0, SyncRun.running.count, "no debe quedar ninguna viva"
+  end
+
+  # Los avisos del summary tienen que salir también en consola: el prefijo
+  # faltante y el genérico faltante dejan operar, así que el operador que usa
+  # el rake no se enteraba por ningún lado (11ª auditoría).
+  def minimal_export(round_overrides = {})
+    { "round" => { "erp_round_id" => 3, "name" => "Oaxaca", "year" => 2026,
+                   "starts_on" => "2026-08-27", "ends_on" => "2026-08-28",
+                   "location" => "Oaxaca" }.merge(round_overrides),
+      "cfdi_uses" => [], "users" => [], "salespeople" => [], "suppliers" => [],
+      "brands" => [], "clients" => [], "products" => [], "people" => [],
+      "divide_amounts" => [] }
+  end
+
+  def run_down_with(export)
+    stub_request(:get, "http://api.test/ruedas/3/export")
+      .to_return(status: 200, body: export.to_json, headers: { "Content-Type" => "application/json" })
+    output, = capture_io do
+      with_env("RUEDA_API_URL" => "http://api.test", "RUEDA_ID" => "3") { run_task("down") }
+    end
+    output
+  end
+
+  test "sync:down avisa en consola si la rueda no trae clave de folios ni genérico" do
+    output = run_down_with(minimal_export)
+
+    assert_match(/AVISO: esta rueda no trae clave de folios/, output)
+    assert_match(/AVISO: la información no incluyó .* \(999999\)/, output)
+  end
+
+  test "sync:down no avisa del prefijo cuando la rueda lo trae" do
+    output = run_down_with(minimal_export("folio_prefix" => "OAX"))
+
+    assert_no_match(/clave de folios/, output)
+    assert_match(/listo/, output, "la tarea tiene que haber terminado")
   end
 
   # Ctrl-C o kill no son StandardError: no pasan por los rescue de la tarea.

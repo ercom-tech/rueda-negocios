@@ -65,6 +65,19 @@ namespace :sync do
     puts "[sync:down] productos de promoción que no llegaron al catálogo: #{s[:skipped_promotion_products]}"
     puts "[sync:down] productos en más de una promoción (solo se ofrece una): #{s[:shared_promotion_products].size} #{s[:shared_promotion_products].inspect if s[:shared_promotion_products].any?}"
     puts "[sync:down] pedidos locales purgados por el reemplazo: #{s[:purged_orders]}"
+    # Los mismos dos avisos del panel: los dos dejan operar, así que nada más
+    # los delata. Faltaban aquí, y es la regla de todo dato nuevo del summary:
+    # panel Y rake (11ª auditoría).
+    if s[:missing_folio_prefix]
+      puts "[sync:down] AVISO: esta rueda no trae clave de folios, así que los pedidos saldrán como " \
+           "RN-000123 y en el ERP no se sabrá de qué rueda vinieron. Se puede capturar y transmitir " \
+           "igual. Pide que le pongan su clave en el ERP y vuelve a obtener la información."
+    end
+    if s[:missing_generic]
+      puts "[sync:down] AVISO: la información no incluyó (o vino incompleto) el producto fuera de " \
+           "catálogo (999999): nadie podrá capturar productos fuera de catálogo. Revisa que el " \
+           "servidor esté actualizado y que el 999999 esté vigente en el ERP, y vuelve a obtener la información."
+    end
     puts "[sync:down] listo. Si el panel del servidor está abierto en un navegador, recárgalo para ver esta corrida."
   end
 
