@@ -26,6 +26,31 @@ module ApplicationHelper
     BACK_LINK_CLASS
   end
 
+  # La existencia del producto en el buscador, a la derecha del precio.
+  #
+  # Es de MATRIZ —de donde la rueda surte y factura—, no la global de las nueve
+  # sucursales: esa le prometería al capturista material que está en otra
+  # ciudad (1,794 productos del catálogo de la rueda, 11.6%).
+  #
+  # Y es una REFERENCIA, no una promesa: viene de la última obtención de
+  # información, y el ERP sigue vendiendo mientras la rueda corre offline.
+  #
+  # El genérico no lleva: su producto no existe en el catálogo, así que no hay
+  # de qué haya existencia — igual que no lleva precio.
+  def stock_label(product)
+    return nil if product.generic?
+
+    quantity = product.stock
+    if quantity.nil? || quantity.to_d <= 0
+      # Sin existencia se destaca porque es lo accionable: el capturista puede
+      # ofrecer otra cosa ANTES de agregarlo. Mismo coral que los otros avisos
+      # de esta lista (5.06:1 sobre el crema, suficiente para 12 px).
+      tag.span("Sin existencia", class: "font-semibold text-brand-coral-dark")
+    else
+      "Existencia #{number_with_precision(quantity, precision: 2, strip_insignificant_zeros: true, delimiter: ',')}"
+    end
+  end
+
   # En qué pedidos del ERP quedó este. Son varios cuando la transmisión lo
   # partió allá —las partidas de catálogo se cortan cada 45 y los productos
   # nuevos van aparte—, y decir cuántos es lo que explica por qué hay más de un

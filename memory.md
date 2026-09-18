@@ -31,6 +31,50 @@ Si es **algo por hacer**, va al backlog.
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
 
+## La existencia en el buscador de productos (2026-09-17)
+
+El capturista ve la existencia del producto a la derecha del precio, para poder
+ofrecer otra cosa antes de agregarlo.
+
+**El encargo era más chico de lo que parecía: la existencia YA se transmitía.**
+`Export#products` la mandaba desde `com_producto.existencia`, `Sync::Down` la
+guardaba en `products.stock` y la columna existía desde hacía meses — pero no la
+leía nadie: ni una consulta, ni una vista. Antes de construir una tubería,
+mirar si ya está ahí.
+
+**Lo que sí cambió fue la FUENTE, y ahí estaba la decisión.**
+`com_producto.existencia` es el total de las **nueve** sucursales (coincide con
+la suma global en 53,690 de 56,145 productos). Ahora sale de
+`alm_multi_existencia` acotada a **matriz**, porque es de donde la rueda surte y
+factura — medido, no supuesto: los 529 pedidos de Oaxaca se crearon con
+`id_sucursal_crea = 1` y las 558 facturas salieron de ahí, ninguna de otra.
+
+La diferencia no es cosmética: **1,794 productos del catálogo de la rueda
+(11.6%) tienen existencia en otra sucursal y no en matriz**. Con la fuente
+vieja, a esos el capturista les habría visto "hay" mientras el material estaba
+en otra ciudad — y el reporte de lo negado acababa de cuantificar $369K en
+material pedido que no llegó.
+
+**Qué columnas suman** (decisión de FECEGO): `existencia_surtido +
+existencia_almacenaje`, lo que está físicamente en la sucursal. Fuera
+`traspasos` (en tránsito) y sobre todo `mesas` (ya apartada para otros pedidos:
+contarla es prometer dos veces lo mismo, 476,705 piezas en matriz). Dato para
+calibrar: **incluir `almacenaje` solo rescata 4 productos** de los 4,284 que
+quedan en cero — el peso de la decisión estaba en la sucursal, no en las
+columnas.
+
+**Riesgo asumido a conciencia:** la cifra se congela en el sync-down y el ERP
+sigue vendiendo mientras la rueda corre offline. Se mostró exacta por decisión
+del usuario, sin fecha ni semáforo; queda dicho aquí para que no se relea como
+descuido.
+
+**Detalles de presentación:** el cero se dice con palabras ("Sin existencia", en
+coral, porque es lo accionable), una existencia negativa —ajuste de inventario—
+se lee igual que cero, y el genérico no lleva existencia, como no lleva precio.
+El separador de la línea pasó a **guion largo**, y por eso el texto del genérico
+tuvo que dejar el suyo: con tres guiones iguales en una línea, el que separa
+datos y el que va dentro de una frase se vuelven indistinguibles.
+
 ## El servidor resuelve un borrador ajeno (2026-09-17)
 
 Un borrador abandonado —el capturista se fue, la tablet murió— bloquea las TRES

@@ -31,7 +31,11 @@
           <span>
             <span class="font-semibold text-neutral-900"><%= product.description %></span>
             <%# Solo los datos que existen: modelo/N.P vacíos no dejan rótulos
-                huérfanos ("Modelo ·"). %>
+                huérfanos ("Modelo —"). El separador es guion largo (decisión
+                del usuario 2026-09-17), y por eso el texto del genérico lleva
+                dos puntos y no guion: con tres guiones iguales en la misma
+                línea, el que separa datos y el que va dentro de una frase se
+                vuelven indistinguibles. %>
             <%# El precio mostrado es el que se cobra: crédito mayoreo (la
                 rueda vende a ese nivel desde 2026-08-17 — mostrar el público
                 aquí era un desfase de ese cambio). El genérico no tiene
@@ -41,9 +45,10 @@
                     "Código #{product.erp_code}",
                     product.model.presence && "Modelo #{product.model}",
                     product.part_number.presence && "N/P #{product.part_number}",
-                    product.generic? ? "Fuera de catálogo — descripción y precio se capturan a mano"
-                                     : number_to_currency(product.price&.credit_wholesale_price)
-                  ].compact, " · ") %>
+                    product.generic? ? "Fuera de catálogo: descripción y precio se capturan a mano"
+                                     : number_to_currency(product.price&.credit_wholesale_price),
+                    stock_label(product)
+                  ].compact, " — ") %>
             </span>
             <%# El genérico no marca repetido: varias partidas "fuera de
                 catálogo" son el uso normal, no un descuido. %>
