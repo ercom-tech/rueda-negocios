@@ -25,11 +25,74 @@ Si es **algo por hacer**, va al backlog.
 ## Índice de la bitácora
 
 - Decisiones generales del proyecto (abajo)
-- 8ª, 7ª, 6ª, 5ª y 4ª auditorías — remediación
+- 11ª, 10ª, 9ª, 8ª, 7ª, 6ª, 5ª y 4ª auditorías — remediación
 - Descubrimiento del esquema de catálogos (ERP)
 - Fase A — scaffolding · Fase B — login, menú, reportes, pedido (arcos 1–3)
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
+
+## 11ª auditoría (2026-09-18) — remediación
+
+Alcance: todo lo posterior a la 10ª **incluida su remediación** (app
+`0c1b175..HEAD`, API `6c2866f..HEAD`), 6 auditores, **0 ALTA · 12 MEDIA · ~20
+BAJA**. Remediada al 100% en nueve bloques, uno por commit.
+
+**El hallazgo más serio fue de la remediación anterior, no del código nuevo.**
+La consulta de existencias tenía doce `?` posicionales y la columna nueva entró
+al final de la lista: el filtro `x.id_sucursal` recibía `EMPRESA` y el
+`WHERE p.id_empresa` del catálogo recibía `SUCURSAL_MATRIZ`. **Funcionaba porque
+las dos constantes valen 1**, así que ni las pruebas ni la validación contra el
+ERP podían verlo: con la sucursal en 2, el catálogo entero baja VACÍO a la
+laptop sin un solo error. Se cambió a **placeholders con nombre**
+(`:empresa`, `:sucursal`) y la prueba les da valores DISTINTOS a propósito.
+De ahí salieron dos reglas nuevas en `docs/auditorias.md`.
+
+**Los nueve bloques:**
+
+1. **Parámetros cruzados** → placeholders con nombre en `Export#products`.
+2. **El folio podía repetirse al reemplazar la laptop**: el folio es la
+   secuencia local, y una laptop reinstalada a media rueda vuelve a emitir
+   `OAX-000001`, que el ERP ya tiene. Si el pedido coincidía en cliente y
+   contenido se daba por transmitido con el folio viejo —venta perdida en
+   silencio—. Ahora el export manda `last_folio_number` y el sync-down adelanta
+   la secuencia por encima de lo que el ERP ya tiene.
+3. **Los mensajes que ve el operador cuando un borrador lo bloquea** nombran la
+   salida que existe desde 2026-09-17 (resolverlo desde el panel, con la ruta
+   exacta), y **"Guardar" un borrador ajeno pide confirmación** — estaba a un
+   toque de mandar al ERP un pedido a medias, y es irreversible.
+4. **El reporte de lo negado** cruzaba la factura por `clave_pedido` (1,774
+   repetidas en la empresa 1) y filtraba `det.cancelado = false`, que en el ERP
+   **es** el negado explícito. Ahora cruza por la llave del pedido y no esconde
+   nada: $18,235 que no aparecían.
+5. **Cobertura**: tres pruebas no protegían lo que decían proteger (el stub del
+   detalle ignoraba la fecha, el SELECT de existencias sin atar, y
+   `erp_schema_test` leyendo del código lo que verifica), más el reparto de tres
+   partes y los bordes de fecha/hora.
+6. **`rake sync:down` avisa del prefijo y del genérico faltantes** — tercera vez
+   que se rompe "panel Y rake".
+7. **Despliegue**: `lock_timeout` en los `ALTER`, `ON_ERROR_STOP`, comprobación
+   y reparación del índice inválido, cómo capturar el prefijo, el paso del DDL
+   en las guías de la API, y el respaldo como paso 3 del despliegue de la
+   laptop.
+8. **Cifras remedidas** (ver la entrada de la existencia, más abajo).
+9. **Veintena de BAJA**: el candado de fila al resolver un borrador, la
+   existencia falsa de los 15 servicios, el recorte a 280 caracteres de los
+   mensajes del panel, el modal de promociones con 404 para el servidor, y
+   detalles de comentarios, concordancia y convenciones.
+
+**Lo que la auditoría confirmó a favor:** la definición de existencia es la del
+propio ERP (`alm_existencia_sucursal` coincide con surtido + almacenaje en
+48,983 de 48,986 productos) y la rueda se surte de verdad de la sucursal 1.
+
+**El patrón, y es el mismo de la 9ª:** siete hallazgos fueron reglas escritas
+esa misma semana y no aplicadas. Tener la norma no basta; lo que sí funcionó fue
+**mutar** (la mitad de los huecos de prueba salieron de romper el código a
+propósito) y **verificar contra la réplica** antes de escribir cualquier cifra.
+
+**Dos cosas quedaron fuera a propósito:** acotar el rango de años de la fecha de
+captura —rechazar un pedido con el reloj de la laptop mal lo dejaría atorado sin
+arreglo posible desde la app, y no hay ni un caso— y el texto del aviso de
+privacidad, que habla del "Portal de Clientes B2B" y le toca a quien lo redactó.
 
 ## El aviso de privacidad, en el login (2026-09-17)
 

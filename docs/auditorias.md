@@ -83,6 +83,16 @@ reporte corto y cierto vale más que uno largo y especulativo.
   re-midieron las tres principales y las tres reprodujeron — pero el ejercicio
   vale igual: es lo que separa "un agente lo dijo" de "está medido", y en la 8ª
   un auditor llegó a citar una tabla vacía por confundir dos esquemas.
+- **Auditar la remediación de la auditoría anterior, explícitamente.** La 11ª
+  lo incluyó en el alcance y de ahí salió la mitad de lo grave, empezando por
+  la consulta con los parámetros cruzados: código escrito a presión, con la
+  atención puesta en el hallazgo que resolvía y no en lo que tocaba al pasar.
+  Remediar no es un momento de menor riesgo, es uno de mayor.
+- **Una constante con el mismo valor que otra esconde el cruce.** `EMPRESA` y
+  `SUCURSAL_MATRIZ` valen 1 las dos, así que ninguna prueba ni ninguna
+  validación contra el ERP podía ver que estuvieran intercambiadas. Cuando dos
+  parámetros comparten valor, la prueba tiene que darles valores DISTINTOS a
+  propósito.
 - **Severidad honesta:** ALTA = corrompe datos, bloquea la operación sin salida
   o expone información. Si todo es alto, nada lo es.
 - **Un defecto puede ser viejo y aun así ser culpa del cambio nuevo.** El PDF
@@ -171,6 +181,18 @@ ejecutar: los dos ALTA principales —sin `bundle install` la app no arranca; si
 ninguna otra dimensión los habría buscado.
 
 ## Historial
+
+- **11ª (2026-09-18)** — alcance: **todo lo posterior a la 10ª, incluida su
+  remediación** (app `0c1b175..HEAD`, API `6c2866f..HEAD`), con 6 auditores —
+  **0 ALTA · 12 MEDIA · ~20 BAJA** → **remediada al 100% en nueve bloques**
+  (detalle en "11ª auditoría — remediación" de `memory.md`). Ningún auditor
+  encontró una ALTA y seguridad salió limpia. Lo más grave fue de código
+  propio: los doce parámetros posicionales de la consulta de existencias
+  quedaron **cruzados** y funcionaba de casualidad porque `EMPRESA` y
+  `SUCURSAL_MATRIZ` valen 1 los dos. Patrón que dejó: **el código que remedia
+  una auditoría es el que más urge auditar** —la mitad de lo grave vino de
+  ahí—, y **siete hallazgos fueron reglas escritas esa misma semana sin
+  aplicar**.
 
 - **10ª (2026-09-08)** — alcance: **el reparto del pedido en el ERP** (app
   `9897324..HEAD`, API `c885ca7..HEAD`), con 5 auditores —
