@@ -16,13 +16,14 @@
           <span>
             <span class="font-semibold text-neutral-900"><%= product.description %></span>
             <%# Solo los datos que existen: modelo/N.P vacíos no dejan rótulos
-                huérfanos ("Modelo ·"). %>
+                huérfanos ("Modelo —"). Guion largo, igual que el buscador del
+                pedido (decisión del usuario 2026-09-17). %>
             <span class="block text-xs text-neutral-600">
               <%= safe_join([
                     "Código #{product.erp_code}",
                     product.model.presence && "Modelo #{product.model}",
                     product.part_number.presence && "N/P #{product.part_number}"
-                  ].compact, " · ") %>
+                  ].compact, " — ") %>
             </span>
           </span>
         </button>

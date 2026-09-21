@@ -565,8 +565,14 @@ Sin revisar: el Dependabot de `ercom-tech/rueda-negocios` (solo se miró el de
 
 ### Punto único de falla: la laptop-servidor
 
-Definir backups (`pg_dump` a USB u otro equipo) y evaluar una laptop de
-respaldo.
+Evaluar una **laptop de respaldo**: hoy no hay segunda máquina, así que una
+falla de hardware en pleno evento deja la captura detenida.
+
+Los respaldos ya están definidos y documentados en `docs/instalacion-laptop.md`
+("Respaldo de la BD de la app"): `pg_dump -Fc` con la conexión del `.env`, su
+comprobación, la copia a USB, y cuándo sacarlo (antes de migrar, al cerrar cada
+día antes de transmitir, y antes de "Cerrar rueda"). Falta que sea **automático**
+y no un paso manual del operador.
 
 ### Endurecimiento del transporte
 

@@ -69,6 +69,21 @@ class ProductStockTest < ActionDispatch::IntegrationTest
     assert_no_match(/12\.50/, response.body)
   end
 
+  # Un servicio (mantenimiento, reparación, publicidad: 15 en el catálogo de
+  # Oaxaca) no tiene inventario, y la API lo manda sin existencia. "Sin
+  # existencia" sería falso y haría que el capturista dejara de ofrecerlo
+  # (11ª auditoría).
+  test "un servicio no muestra existencia" do
+    product!("SERVICIO DE REPARACION", stock: nil, erp_id: 972_103)
+
+    get product_options_order_path(@order, q: "REPARACION")
+
+    assert_response :success
+    assert_match(/SERVICIO DE REPARACION/, response.body)
+    assert_no_match(/Sin existencia/, response.body)
+    assert_no_match(/Existencia/, response.body)
+  end
+
   # El genérico no existe en el catálogo del ERP: no tiene precio NI existencia,
   # y prometerle una sería inventar.
   test "el genérico no muestra existencia" do

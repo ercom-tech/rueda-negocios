@@ -100,8 +100,14 @@ class PromotionsController < ApplicationController
     message
   end
 
+  # Ver el detalle es lectura, así que va por lo que el usuario puede LEER: el
+  # equipo-servidor abre el modal en pedidos ajenos (al resolver un borrador,
+  # al revisar antes de transmitir) y con `current_user.orders` recibía un 404
+  # dentro del frame. El partial ya esconde los botones a quien no puede
+  # editar (`can_edit_order?`). Aplicar y quitar siguen solo sobre los suyos.
   def set_order
-    @order = current_user.orders.find(params[:order_id])
+    scope = action_name == "show" ? accessible_orders : current_user.orders
+    @order = scope.find(params[:order_id])
   end
 
   def ensure_editable

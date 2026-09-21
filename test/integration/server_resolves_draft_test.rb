@@ -6,6 +6,38 @@ require "test_helper"
 # bloquea las TRES operaciones del panel (obtener información, transmitir y
 # cerrar rueda) y dejaba a la laptop sin salida en pleno evento: el único que
 # podía resolverlo era su dueño, que ya no está.
+# Simulacro de concurrencia con UNA sola conexión: el hook se dispara en el
+# primer punto en que la petición mira el pedido después de leerlo —al tomar el
+# candado (`lock!`) o al preguntar si es editable—, que es justo la ventana en
+# la que otro equipo puede escribir. Con la petición real serían dos
+# conexiones; aquí se escribe en la misma y el efecto es el mismo: el objeto en
+# memoria queda viejo.
+module WriteMeanwhile
+  class << self
+    attr_accessor :hook
+  end
+
+  def lock!(*, **)
+    WriteMeanwhile.fire(self)
+    super
+  end
+
+  def editable?
+    WriteMeanwhile.fire(self)
+    super
+  end
+
+  # Una sola vez: si no, el hook volvería a correr con la fila ya resuelta.
+  def self.fire(order)
+    pending = hook
+    return unless pending
+
+    self.hook = nil
+    pending.call(order)
+  end
+end
+Order.prepend(WriteMeanwhile)
+
 class ServerResolvesDraftTest < ActionDispatch::IntegrationTest
   setup do
     @server = User.create!(erp_person_id: 969_001, username: "srv_draft", password: "secret123",
@@ -38,7 +70,7 @@ class ServerResolvesDraftTest < ActionDispatch::IntegrationTest
 
   # El logger de Rails 8 es un BroadcastLogger y no admite `stub`: se le engancha
   # un destino extra y se lee lo que escribió.
-  def capturando_el_log
+  def capture_log
     buffer = StringIO.new
     extra  = ActiveSupport::Logger.new(buffer)
     Rails.logger.broadcast_to(extra)
@@ -158,21 +190,21 @@ class ServerResolvesDraftTest < ActionDispatch::IntegrationTest
     order = draft_with_items!
     login_as "srv_draft"
 
-    salida = capturando_el_log { delete order_path(order) }
+    output = capture_log { delete order_path(order) }
 
-    assert_match(/srv_draft \(server\) descartado/, salida)
-    assert_match(/id #{order.id}/, salida)
-    assert_match(/de cap_draft/, salida)
-    assert_no_match(/\(borrador\)/, salida, "eso no identifica cuál de los borradores era")
+    assert_match(/srv_draft \(server\) descartado/, output)
+    assert_match(/id #{order.id}/, output)
+    assert_match(/de cap_draft/, output)
+    assert_no_match(/\(borrador\)/, output, "eso no identifica cuál de los borradores era")
   end
 
   test "al guardarlo, el log lo nombra por su folio recién asignado" do
     order = draft_with_items!
     login_as "srv_draft"
 
-    salida = capturando_el_log { post capture_order_path(order) }
+    output = capture_log { post capture_order_path(order) }
 
-    assert_match(/guardado el borrador #{order.reload.local_folio}/, salida)
+    assert_match(/guardado el borrador #{order.reload.local_folio}/, output)
   end
 
   # --- Lo que NO puede hacer ---------------------------------------------
@@ -202,5 +234,62 @@ class ServerResolvesDraftTest < ActionDispatch::IntegrationTest
 
     assert Order.exists?(order.id)
     assert order.reload.draft?
+  end
+  # --- La carrera entre el servidor y el capturista (11ª auditoría) ---------
+
+  teardown { WriteMeanwhile.hook = nil }
+
+  # El servidor descarta el borrador en el mismo instante en que su capturista
+  # lo guarda. Sin el candado, el descarte borraba un pedido ya CAPTURADO —con
+  # folio y listo para transmitir— y el capturista se enteraba en el reporte,
+  # sin nada que explicara la venta desaparecida.
+  test "descartar no se lleva un borrador que acaban de guardar" do
+    order = draft_with_items!
+    WriteMeanwhile.hook = ->(_) { Order.where(id: order.id).update_all(status: "captured", local_folio: "RN-000777") }
+    login_as "srv_draft"
+
+    delete order_path(order)
+
+    assert Order.exists?(order.id), "el pedido guardado no se descarta"
+    assert_equal "captured", order.reload.status
+    assert_equal "RN-000777", order.local_folio
+    assert_match(/ya no es un borrador/, flash[:alert])
+  end
+
+  # El otro sentido: el servidor guarda el borrador mientras su capturista lo
+  # descarta. Sin el candado, el UPDATE no afectaba ninguna fila y la pantalla
+  # celebraba un guardado que no existe.
+  test "guardar un borrador que acaban de descartar no finge éxito" do
+    order = draft_with_items!
+    # Borrado "desde fuera" y no con `order.discard!`: descartarlo sobre el
+    # MISMO objeto lo deja marcado como borrado, y entonces `lock!` ni siquiera
+    # intenta releer (`persisted?` es falso) — el simulacro no reproduciría la
+    # carrera, que es entre dos objetos distintos.
+    WriteMeanwhile.hook = lambda do |o|
+      OrderItem.where(order_id: o.id).delete_all
+      Order.where(id: o.id).delete_all
+    end
+    login_as "srv_draft"
+
+    post capture_order_path(order)
+
+    # Lo que se comprueba es la RESPUESTA: nada de "guardado" sobre un pedido
+    # que ya no existe. No se mira la fila porque el borrado del simulacro vive
+    # en la misma transacción que la petición y el rollback lo revive; en la
+    # carrera real lo borró otra conexión y ya está confirmado.
+    assert_response :not_found
+  end
+
+  # El camino normal no cambia: el candado no estorba cuando nadie más escribe.
+  test "el servidor sigue pudiendo guardar y descartar un borrador quieto" do
+    guardado  = draft_with_items!
+    descartado = draft_with_items!
+    login_as "srv_draft"
+
+    post capture_order_path(guardado)
+    assert_equal "captured", guardado.reload.status
+
+    delete order_path(descartado)
+    assert_not Order.exists?(descartado.id)
   end
 end

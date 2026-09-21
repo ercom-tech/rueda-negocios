@@ -36,12 +36,14 @@ module ApplicationHelper
   # información, y el ERP sigue vendiendo mientras la rueda corre offline.
   #
   # El genérico no lleva: su producto no existe en el catálogo, así que no hay
-  # de qué haya existencia — igual que no lleva precio.
+  # de qué haya existencia — igual que no lleva precio. Tampoco un servicio
+  # (mantenimiento, reparación): la API lo manda sin existencia (NULL), y
+  # decirle "Sin existencia" haría que el capturista dejara de ofrecerlo.
   def stock_label(product)
-    return nil if product.generic?
+    return nil if product.generic? || product.stock.nil?
 
     quantity = product.stock
-    if quantity.nil? || quantity.to_d <= 0
+    if quantity.to_d <= 0
       # Sin existencia se destaca porque es lo accionable: el capturista puede
       # ofrecer otra cosa ANTES de agregarlo. Mismo coral que los otros avisos
       # de esta lista (5.06:1 sobre el crema, suficiente para 12 px).

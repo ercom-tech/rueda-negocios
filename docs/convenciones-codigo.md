@@ -23,7 +23,8 @@ traducirlas lo escondería.
 2. **El rol `capturista`** (`users.role`): es el término con el que FECEGO
    nombra ese puesto, y aparece en pantalla. Genera `User.capturista` y
    `capturista?`.
-3. **En `rueda-api`, lo que espeja al ERP**: `EMPRESA`, `prefijo`/`prefijo_for`,
+3. **En `rueda-api`, lo que espeja al ERP**: `EMPRESA`, `SUCURSAL_MATRIZ`,
+   `prefijo`/`prefijo_for`,
    `clave`, `id_rueda`/`for_rueda`, los alias de las CTE (`marcas`, `provs`) y
    **las llaves del payload** (`clave_cliente`, `fecha_pedido`,
    `descto_porcentaje`…). Ese repo vive pegado al esquema del ERP: traducirlos

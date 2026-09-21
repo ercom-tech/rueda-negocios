@@ -25,10 +25,10 @@ class PrivacyNoticeTest < ActionDispatch::IntegrationTest
   # El archivo tiene que existir en el repo, no solo la liga. Un enlace a un
   # PDF ausente da 404 en la laptop y nadie lo nota hasta el evento.
   test "el archivo está publicado y es un PDF de verdad" do
-    ruta = Rails.root.join("public/aviso-de-privacidad.pdf")
+    path = Rails.root.join("public/aviso-de-privacidad.pdf")
 
-    assert ruta.exist?, "falta public/aviso-de-privacidad.pdf"
-    assert_equal "%PDF", ruta.read(4), "no es un PDF"
+    assert path.exist?, "falta public/aviso-de-privacidad.pdf"
+    assert_equal "%PDF", path.read(4), "no es un PDF"
   end
 
   # El nombre no lleva versión a propósito: si la llevara, actualizar el

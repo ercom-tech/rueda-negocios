@@ -31,6 +31,48 @@ Si es **algo por hacer**, va al backlog.
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
 
+## El aviso de privacidad, en el login (2026-09-17)
+
+El PDF vive en `public/aviso-de-privacidad.pdf` y se enlaza desde la pantalla de
+login. Dos decisiones:
+
+- **Se sirve desde la propia app, no desde el sitio de FECEGO:** la laptop del
+  evento no tiene internet, así que un enlace externo estaría muerto justo
+  cuando alguien lo tocara.
+- **En el login y no en el menú:** es el momento en que el capturista entrega
+  sus datos, y es la única pantalla que se ve sin sesión.
+- **El nombre del archivo no lleva versión:** si la llevara, actualizar el
+  documento cambiaría la liga y habría que tocar la vista cada vez.
+
+Pendiente del lado de FECEGO: el texto del PDF habla del "Portal de Clientes
+B2B", no de la rueda de negocios. Se les avisó; el archivo se reemplaza sin
+tocar código.
+
+## El respaldo de la BD de la laptop (2026-09-11, corregido 2026-09-18)
+
+La laptop es el único lugar donde vive el trabajo del evento hasta que se
+transmite, y **dos operaciones lo destruyen sin vuelta atrás**: `db:migrate` —lo
+único de un despliegue que `git checkout` no deshace— y "Cerrar rueda". De ahí
+que el respaldo sea un paso del despliegue (paso 3 de la tabla) y no un consejo.
+
+**La conexión se toma del `.env`, nunca escrita a mano:** en la laptop es el
+Postgres local, pero el `.env` puede apuntar a otro host o puerto, y con los
+datos fijos el respaldo saldría de la base equivocada — algo que solo se
+descubre al restaurar.
+
+**Los comandos nacieron rotos y nadie lo notó** (11ª auditoría): buscaban
+`rueda-*.dump` en el directorio de la app cuando el archivo se escribe en `~`,
+y a partir del segundo respaldo el comodín le pasaba varios archivos a
+`pg_restore`, que solo acepta uno. Ahora el nombre queda en `$DUMP` y todos los
+comandos leen ESE archivo. Lección: un comando de operación que la guía ofrece
+se corre una vez antes de escribirlo.
+
+**Al restaurar para sustituir la base: transmitir → obtener información →
+capturar.** Obtener información sube el contador de claves por encima de lo que
+el ERP ya tiene; sin ese paso, un pedido nuevo puede repetir la clave de uno
+capturado después del respaldo. Y va después de transmitir porque obtener se
+bloquea mientras haya pedidos sin transmitir.
+
 ## La existencia en el buscador de productos (2026-09-17)
 
 El capturista ve la existencia del producto a la derecha del precio, para poder
@@ -245,7 +287,8 @@ o entran todos los pedidos o no entra ninguno.
   los otros vivos en el ERP). *(Escrito así de entrada, pero solo era cierto en
   `collision_message`: `cancelled_message` nombraba un folio de N, y la 10ª
   auditoría lo cazó como ALTA. Corregido el 2026-09-08 — la moraleja está
-  abajo, en la remediación de esa auditoría.)*
+  ARRIBA, en la remediación de esa auditoría: la bitácora va de lo más nuevo a
+  lo más viejo.)*
 
 **Dos veces la suite pasó en verde con el código roto**, y las dos las cazó el
 mismo ejercicio: romper a propósito lo que se está probando (ver la regla nueva
@@ -262,7 +305,8 @@ guarda la lista, `erp_folio` sigue con el primero (lo leen `Order#folio`,
 ## La clave del pedido en la rueda (2026-09-08)
 
 Primera mitad del encargo de partir el pedido en el ERP; la segunda —el reparto
-en sí— se implementó al día siguiente y está más abajo. El pedido debe llevar al ERP **la clave con la
+en sí— se implementó al día siguiente y está más ARRIBA (la bitácora va de lo
+más nuevo a lo más viejo). El pedido debe llevar al ERP **la clave con la
 que se capturó**, para que después se pueda reconocer que varios pedidos del
 ERP salieron de uno solo de la rueda.
 

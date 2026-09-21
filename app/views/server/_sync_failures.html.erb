@@ -20,11 +20,13 @@
     <% shown.each do |item| %>
       <li class="text-sm leading-snug text-neutral-900">
         <span class="font-semibold"><%= item["local"].presence || "(sin folio)" %></span>
-        <%# El tope existe para el cuerpo crudo de una respuesta rota, no para
-            los mensajes propios: el 422 de colisión trae la instrucción completa
-            (comparar contra el ERP y cancelar allá) y cortarla dejaría al
-            operador con la mitad del camino. %>
-        <span class="text-neutral-700">— <%= truncate(strip_tags(item["error"].to_s).squish, length: 280) %></span>
+        <%# El tope es una red, no un recorte: el cuerpo crudo de una respuesta
+            rota ya llega acotado a 200 desde `Sync::Up#parse_error`, y los
+            mensajes propios no se pueden cortar — el 422 de colisión trae la
+            instrucción completa (comparar contra el ERP y cancelar allá). Con
+            280, los mensajes que nombran varios folios (288 a 303 caracteres)
+            perdían justo el final: qué hacer (11ª auditoría). %>
+        <span class="text-neutral-700">— <%= truncate(strip_tags(item["error"].to_s).squish, length: 1_000) %></span>
       </li>
     <% end %>
   </ul>

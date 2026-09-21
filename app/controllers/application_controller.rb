@@ -49,8 +49,9 @@ class ApplicationController < ActionController::Base
   end
 
   # Pedidos que el usuario puede LEER: el capturista los suyos, el
-  # equipo-servidor todos (los transmite y los revisa). La escritura siempre va
-  # por `current_user.orders`. Vive aquí, y no repetido en cada controller, para
+  # equipo-servidor todos (los transmite y los revisa). La escritura va por
+  # `current_user.orders`, o por `writable_order` donde el servidor puede
+  # resolver un borrador ajeno. Vive aquí, y no repetido en cada controller, para
   # que la regla de visibilidad se cambie en un solo lugar.
   def accessible_orders
     current_user.can_see_all_orders? ? Order.all : current_user.orders

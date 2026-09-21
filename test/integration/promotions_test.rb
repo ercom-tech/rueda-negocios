@@ -347,4 +347,36 @@ class PromotionsTest < ActionDispatch::IntegrationTest
 
     assert_response :forbidden
   end
+  # --- El equipo-servidor abriendo el modal en un pedido ajeno (11ª aud.) ----
+
+  # El servidor ve los pedidos de todos (los revisa antes de transmitir y
+  # resuelve borradores abandonados), y la flama de la tabla abre el modal. Con
+  # el detalle acotado a `current_user.orders`, el frame recibía un 404 y el
+  # modal se quedaba vacío: el operador no podía ni leer de qué promoción se
+  # trataba.
+  test "el equipo-servidor puede leer el detalle de una promoción en un pedido ajeno" do
+    add_item(@product, 2)
+    server = User.create!(erp_person_id: 9402, username: "srv_pr", password: "secret123",
+                          role: "server", active: true)
+    login_as "srv_pr"
+
+    get order_promotion_path(@order, @promo)
+
+    assert_response :success
+    assert_match(/MAKITA - OAXACA 2026/, response.body)
+    assert_no_match(/Aplicar promoción/, response.body, "leer no es aplicar: el botón no va")
+    assert server.server?
+  end
+
+  # Y lo que no cambia: aplicar sigue siendo solo sobre los propios.
+  test "el equipo-servidor no puede aplicar una promoción a un pedido ajeno" do
+    add_item(@product, 2)
+    User.create!(erp_person_id: 9403, username: "srv_pr2", password: "secret123",
+                 role: "server", active: true)
+    login_as "srv_pr2"
+
+    post order_promotions_path(@order), params: { promotion_id: @promo.id }
+
+    assert_response :not_found
+  end
 end

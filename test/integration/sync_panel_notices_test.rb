@@ -60,6 +60,29 @@ class SyncPanelNoticesTest < ActionDispatch::IntegrationTest
     assert_no_match(/entraron al ERP como/, response.body)
   end
 
+  # El motivo del rechazo es la instrucción que el operador tiene que seguir
+  # (comparar contra el ERP, pedir que cancelen allá): el tope de 280 cortaba
+  # justo el final de los mensajes que nombran varios folios (11ª auditoría).
+  test "el panel no corta el motivo de un pedido rechazado" do
+    # El mensaje literal del 422 de la API para un pedido que entró en TRES
+    # partes: 288 caracteres. Escrito completo a propósito — con dos folios se
+    # queda en 272 y el tope de 280 no se notaba.
+    reason = "ya existen los pedidos 1A0005, 1A0006, 1A0007 de ABAISM en el ERP con distinto contenido. " \
+             "Compáralos: si son el mismo pedido, pide que cancelen los 1A0005, 1A0006, 1A0007 en el ERP. " \
+             "Después, que el capturista DESCARTE este pedido en la laptop y lo capture de nuevo para poder transmitirlo"
+    run = finished_run(kind: "up", summary: {
+                         transmitted: [],
+                         failed: [ { local: "RN-000001", status: 422, error: reason } ]
+                       })
+    run.update!(status: :failed)
+
+    get server_menu_path
+
+    assert_response :success
+    assert_match(/capture de nuevo para poder transmitirlo/, response.body,
+                 "el mensaje llega hasta el final, que es donde dice qué hacer")
+  end
+
   test "el panel avisa cuando la rueda llegó sin clave de folios" do
     finished_run(kind: "down", summary: { entities: { products: 10 }, missing_folio_prefix: true })
 

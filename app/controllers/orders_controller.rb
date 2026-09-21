@@ -51,25 +51,25 @@ class OrdersController < ApplicationController
   # Cancelar la captura: descarta el pedido (solo si aún es editable). El
   # equipo-servidor puede descartar un borrador AJENO — ver `writable_order`.
   def destroy
-    order = writable_order(params[:id])
-    # La pantalla vieja de un pedido ya transmitido conserva el botón: sin
-    # esta rama, el destroy se omitía en silencio y el flash confirmaba un
-    # descarte que no ocurrió — el capturista creía cancelada una venta que
-    # el ERP va a surtir (6ª auditoría, ALTA).
-    unless order.editable?
-      return redirect_to order_path(order),
-                         alert: "Este pedido ya se transmitió al ERP y no se puede descartar aquí."
+    with_locked_writable_order(params[:id]) do |order|
+      # La pantalla vieja de un pedido ya transmitido conserva el botón: sin
+      # esta rama, el destroy se omitía en silencio y el flash confirmaba un
+      # descarte que no ocurrió — el capturista creía cancelada una venta que
+      # el ERP va a surtir (6ª auditoría, ALTA).
+      if !order.editable?
+        redirect_to order_path(order), alert: "Este pedido ya se transmitió al ERP y no se puede descartar aquí."
+      else
+        # `discard!` y no `destroy`: con una promoción aplicada, el candado de
+        # las partidas abortaba el borrado y el flash de abajo confirmaba un
+        # descarte que no ocurría (ver Order#discard!).
+        order.discard!
+        # Queda rastro de quién resolvió un borrador que no era suyo: el
+        # capturista no se entera por ningún lado, y en la revisión posterior
+        # "¿quién borró esto?" no tiene otra respuesta.
+        log_resolved_draft(order, "descartado") unless order.user_id == current_user.id
+        redirect_to root_path, notice: "Pedido descartado."
+      end
     end
-
-    # `discard!` y no `destroy`: con una promoción aplicada, el candado de las
-    # partidas abortaba el borrado y el flash de abajo confirmaba un descarte
-    # que no ocurría (ver Order#discard!).
-    order.discard!
-    # Queda rastro de quién resolvió un borrador que no era suyo: el capturista
-    # no se entera por ningún lado, y en la revisión posterior "¿quién borró
-    # esto?" no tiene otra respuesta.
-    log_resolved_draft(order, "descartado") unless order.user_id == current_user.id
-    redirect_to root_path, notice: "Pedido descartado."
   end
 
   # Editar el encabezado del MISMO pedido (conserva las partidas). Puede cambiar
@@ -135,28 +135,30 @@ class OrdersController < ApplicationController
 
   # Finaliza la captura (folio local) y va al resumen (paso 3).
   def capture
-    @order = writable_order(params[:id])
-    return redirect_to @order, alert: "Un pedido transmitido no se puede editar." unless @order.editable?
+    with_locked_writable_order(params[:id]) do |order|
+      @order = order
+      next redirect_to(@order, alert: "Un pedido transmitido no se puede editar.") unless @order.editable?
 
-    resolving = @order.user_id != current_user.id
+      resolving = @order.user_id != current_user.id
 
-    if @order.capture!
-      log_resolved_draft(@order, "guardado") if resolving
-      redirect_to summary_order_path(@order)
-    else
-      # Un borrador vacío no se puede guardar, y qué hacer con él depende de
-      # quién lo está viendo:
-      #
-      # - el capturista agrega un producto ("guardar el pedido" y no
-      #   "finalizar": ningún control dice "finalizar" desde que el botón pasó
-      #   a "Guardar", y un mensaje que nombra una acción que no está a la
-      #   vista no se puede seguir, 8ª auditoría);
-      # - el equipo-servidor NO puede agregar productos a un pedido ajeno, así
-      #   que mandarlo a hacerlo es un callejón sin salida. Su salida es
-      #   descartarlo.
-      redirect_to @order, alert: (resolving ?
-        "Este pedido no tiene productos, así que no se puede guardar. Descártalo para que deje de bloquear las operaciones del panel." :
-        "Agrega al menos un producto antes de guardar el pedido.")
+      if @order.capture!
+        log_resolved_draft(@order, "guardado") if resolving
+        redirect_to summary_order_path(@order)
+      else
+        # Un borrador vacío no se puede guardar, y qué hacer con él depende de
+        # quién lo está viendo:
+        #
+        # - el capturista agrega un producto ("guardar el pedido" y no
+        #   "finalizar": ningún control dice "finalizar" desde que el botón
+        #   pasó a "Guardar", y un mensaje que nombra una acción que no está a
+        #   la vista no se puede seguir, 8ª auditoría);
+        # - el equipo-servidor NO puede agregar productos a un pedido ajeno,
+        #   así que mandarlo a hacerlo es un callejón sin salida. Su salida es
+        #   descartarlo.
+        redirect_to @order, alert: (resolving ?
+          "Este pedido no tiene productos, así que no se puede guardar. Descártalo para que deje de bloquear las operaciones del panel." :
+          "Agrega al menos un producto antes de guardar el pedido.")
+      end
     end
   end
 
@@ -174,9 +176,29 @@ class OrdersController < ApplicationController
 
   private
 
-  # El buscador manda "CLAVE — Nombre comercial": se toma la clave y, si no
-  # existe tal cual, se busca por texto (mismo criterio en el paso 1 y al
-  # editar el encabezado).
+  # Toma el pedido con candado de fila y vuelve a comprobar el permiso con la
+  # fila FRESCA antes de escribir. Entre que `writable_order` lo leyó y la
+  # escritura, otro equipo pudo guardarlo o descartarlo: el equipo-servidor que
+  # descartaba un borrador en el mismo instante en que su capturista lo
+  # guardaba borraba un pedido ya capturado —con folio y listo para
+  # transmitir—, y nadie se enteraba (11ª auditoría).
+  #
+  # `with_lock` relee la fila con FOR UPDATE: si ya no existe, RecordNotFound
+  # (lo mismo que un id que nunca existió); si dejó de ser un borrador que el
+  # servidor puede resolver, no se toca y se dice por qué. Y quien llegue
+  # después espera al candado y ve el estado ya resuelto.
+  def with_locked_writable_order(id)
+    order = writable_order(id)
+    order.with_lock do
+      if order.user_id == current_user.id || can_resolve_draft?(order)
+        yield order
+      else
+        redirect_to order_path(order),
+                    alert: "Este pedido ya no es un borrador: lo acaban de guardar desde otro equipo. No se cambió nada."
+      end
+    end
+  end
+
   # Rastro de la resolución de un borrador ajeno. Va al log y no a la BD: es
   # información de auditoría para el equipo-servidor, no dato del pedido.
   def log_resolved_draft(order, action)
@@ -189,6 +211,9 @@ class OrdersController < ApplicationController
                       "#{identifier} de #{order.user.username}")
   end
 
+  # El buscador manda "CLAVE — Nombre comercial": se toma la clave y, si no
+  # existe tal cual, se busca por texto (mismo criterio en el paso 1 y al
+  # editar el encabezado).
   def client_from_key(value)
     key = value.to_s.strip.split(/\s[–-]\s/).first.to_s.strip
     Client.find_by(erp_client_key: key) || Client.search(key).first
