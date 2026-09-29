@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_09_022412) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_29_200618) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -184,6 +184,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_09_022412) do
   end
 
   create_table "order_items", force: :cascade do |t|
+    t.bigint "brand_id"
     t.string "code"
     t.datetime "created_at", null: false
     t.string "description"
@@ -198,15 +199,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_09_022412) do
     t.bigint "promotion_id"
     t.bigint "promotion_tier_id"
     t.decimal "quantity", precision: 14, scale: 3, default: "1.0", null: false
+    t.bigint "supplier_id"
     t.decimal "tax_rate", precision: 5, scale: 2, default: "0.0", null: false
     t.string "unit"
     t.decimal "unit_price", precision: 14, scale: 4, default: "0.0", null: false
     t.datetime "updated_at", null: false
+    t.index ["brand_id"], name: "index_order_items_on_brand_id"
     t.index ["order_id", "position"], name: "index_order_items_on_order_id_and_position"
     t.index ["order_id"], name: "index_order_items_on_order_id"
     t.index ["product_id"], name: "index_order_items_on_product_id"
     t.index ["promotion_id"], name: "index_order_items_on_promotion_id"
     t.index ["promotion_tier_id"], name: "index_order_items_on_promotion_tier_id"
+    t.index ["supplier_id"], name: "index_order_items_on_supplier_id"
   end
 
   create_table "orders", force: :cascade do |t|
@@ -407,10 +411,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_09_022412) do
   add_foreign_key "client_tax_profiles", "clients"
   add_foreign_key "clients", "salespeople"
   add_foreign_key "login_events", "users", on_delete: :nullify
+  add_foreign_key "order_items", "brands"
   add_foreign_key "order_items", "orders"
   add_foreign_key "order_items", "products"
   add_foreign_key "order_items", "promotion_tiers"
   add_foreign_key "order_items", "promotions"
+  add_foreign_key "order_items", "suppliers"
   add_foreign_key "orders", "business_rounds"
   add_foreign_key "orders", "cfdi_uses"
   add_foreign_key "orders", "client_branches"

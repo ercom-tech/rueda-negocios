@@ -135,12 +135,23 @@ class OrderItemsController < ApplicationController
     params.require(:order_item).permit(*allowed)
   end
 
-  # Los tres campos capturados a mano del genérico, al crear. `require`: si
-  # el POST llegó aquí es el segundo paso del mini-formulario.
+  # Los campos capturados a mano del genérico, al crear. `require`: si el POST
+  # llegó aquí es el segundo paso del mini-formulario.
   def generic_overrides(product)
     return {} unless product.generic?
 
-    params.require(:generic).permit(:description, :part_number, :unit_price).to_h.symbolize_keys
+    generic = params.require(:generic).permit(:description, :part_number, :unit_price, :supplier_id, :brand_id)
+                    .to_h.symbolize_keys
+    generic.merge(supplier_id: source_id(generic[:supplier_id]), brand_id: source_id(generic[:brand_id]))
+  end
+
+  # Vacío → sin proveedor (o marca). Algo que no es un id → 0, que no es de
+  # nadie: así lo rechaza la validación con su mensaje, en vez de ignorarlo en
+  # silencio y dejar pasar una partida sin el dato que se pidió.
+  def source_id(value)
+    return nil if value.blank?
+
+    Integer(value.to_s, exception: false) || 0
   end
 
   # Morph (no replace): actualiza la tabla en sitio emparejando nodos por id,

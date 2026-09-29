@@ -31,6 +31,71 @@ Si es **algo por hacer**, va al backlog.
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
 
+## Proveedor y Marca del producto nuevo (2026-09-29)
+
+**El pedido:** en la ventanita del producto nuevo (999999), indicar a quién
+pertenece, entre los proveedores y marcas asignados al capturista. Primero se
+pidió un solo campo para los dos; al ver que un producto puede ser de un
+proveedor Y una marca, quedaron **dos campos independientes, obligatorio al
+menos uno** (decisión del usuario). En el catálogo, las marcas de los
+capturistas no están ligadas a ningún proveedor (`brands_suppliers` vacío para
+ARATY, HITOOLS y YELLOW TAIL), así que uno no se deduce del otro.
+
+**Se queda en la laptop (opción A del usuario).** El detalle del pedido del ERP
+no tiene columna de proveedor ni de marca; mandarlo exigía una columna nueva allá
+(como `nombre_capturado`), el cambio en `rueda-api` y el DDL. Sirve a los
+reportes del evento: `order_items.supplier_id` y `brand_id`, cualquiera de los
+dos, ambos o ninguno.
+
+**A quién le toca, medido en Oaxaca:** 62 usuarios tienen una sola asignación
+(ya sale elegida), 12 tienen dos, y **18 tienen 24 proveedores y 3 marcas** —las
+cuentas `fecego01…15`, `joel2`, `paola.ramirez2`, `sergio.faibre2`—. Por ellas el
+combo lleva buscador con más de 6 opciones, los proveedores salen por **nombre
+comercial** ("FAMA", no "FAMA TECHNOLOGY FOUNDRY S.A. DE C.V.",
+`Supplier#display_name`) y en **orden alfabético** (el del ERP no ayuda a
+encontrar nada).
+
+**Nombre comercial en TODA pantalla** (homologado el mismo día, a pedido del
+usuario): la ventanita decía "STIHL" y la barra de arriba "STIHL S.A. DE C.V." en
+la misma pantalla. `Supplier#display_name` es ahora EL nombre del proveedor en la
+píldora de contexto, los filtros de los dos reportes, el aviso "Importes de las
+partidas de…" y el nombre del archivo descargado; las listas, en orden
+alfabético. `Brand#display_name` existe solo para que la píldora —que muestra
+proveedor o marca— no tenga que distinguirlos. Un `.name` nuevo de proveedor en
+pantalla reabre la diferencia.
+
+**Tres reglas que no son obvias:**
+
+- **Preselección solo con UNA asignación en total**, no "un campo con una
+  opción": con un proveedor y una marca eso atribuía la partida a los dos sin
+  que nadie lo decidiera.
+- **Lo valida el modelo** (`generic_source_assigned`, `on: :create`): cada valor
+  viaja en un campo oculto y un POST forjado podría traer el proveedor de otro.
+  Un valor que no es id se convierte en 0 y se rechaza con mensaje, en vez de
+  ignorarse y dejar pasar la partida sin el dato. `on: :create` porque las
+  partidas del genérico anteriores no lo tienen.
+- **En la fila**, solo texto bajo la descripción ("Proveedor: MAKITA · Marca:
+  HITOOLS"). Para cambiarlo se quita la partida y se recaptura.
+
+**Lo que cambió en los reportes, y es lo más delicado:**
+
+- **Reporte de productos:** antes, con cualquier filtro de proveedor o marca, el
+  genérico desaparecía entero ("no pertenece a ningún proveedor"). Ahora muestra
+  lo atribuido a ese proveedor o marca, y el aviso cuenta solo lo que el filtro
+  deja fuera (de otro, o sin ninguno).
+- **Reporte de pedidos:** la condición de "qué partida coincide" pasó de ser
+  **por producto** (`product_id IN (…)`, repetida en el filtro, el resumen, los
+  totales por pedido y el orden) a **una condición por partida** que arma solo
+  `OrdersFilter#matching_items_sql`, con una rama para el genérico. Con texto de
+  producto, en el genérico se busca lo que el capturista tecleó. Los cuatro
+  consumidores reciben la misma condición: si divergieran, el resumen diría una
+  cosa y la tabla otra.
+
+**De paso, en tablet:** el buscador lleva un ancho mínimo de 24rem. Con el
+Cotizador sin badge, en 768 px cabían los tres en una línea y el buscador se
+apretaba a ~350 px — y con él la ventanita, que desde el ajuste del Cotizador mide
+lo que el buscador. Solo se vio en la captura con el combo nuevo abierto.
+
 ## Botón "Producto nuevo" junto al buscador (2026-09-29)
 
 **El pedido:** llegar a la ventanita del producto fuera de catálogo (999999)

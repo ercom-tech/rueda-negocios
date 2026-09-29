@@ -49,13 +49,13 @@ class ProductSales
   # (`squish.upcase` en OrderItem#normalize_generic_fields), así que
   # "martillo  x" y "MARTILLO X " caen en el mismo renglón.
   #
-  # No pertenece a ningún proveedor ni marca, así que con un filtro activo NO
-  # aparece: contaminaría el total de un proveedor con venta que no es suya.
+  # Con un filtro de proveedor o marca, solo lo que el capturista le atribuyó
+  # a ESE proveedor o marca al agregarlo (2026-09-29). Antes del campo, el
+  # genérico no era de nadie y con un filtro desaparecía entero; las partidas
+  # capturadas antes siguen sin proveedor y siguen quedando fuera.
   def generic_rows
-    return [] if filtered?
-
     @generic_rows ||=
-      generic_items.group(:description, :part_number)
+      visible_generic_items.group(:description, :part_number)
                    .pluck(:description, :part_number, Arel.sql(SOLD_SQL), Arel.sql(GIFTED_SQL))
                    .map do |description, part_number, sold, gifted|
                      Row.new(code: format("%06d", Product::GENERIC_ERP_ID), description: description,
@@ -77,7 +77,8 @@ class ProductSales
   def hidden_generic_quantity
     return 0 unless filtered?
 
-    @hidden_generic_quantity ||= generic_items.where(gift: false).sum(:quantity)
+    @hidden_generic_quantity ||=
+      generic_items.where(gift: false).sum(:quantity) - visible_generic_items.where(gift: false).sum(:quantity)
   end
 
   # Pedidos que este reporte NO PUEDE VER, porque ya no están en la laptop.
@@ -105,6 +106,16 @@ class ProductSales
 
   def generic_items
     items.where(product_id: Product.where(erp_product_id: Product::GENERIC_ERP_ID).select(:id))
+  end
+
+  # Las del genérico que el filtro deja ver: las de ESE proveedor o marca.
+  # Con los dos filtros a la vez no coincide ninguna —la partida lleva uno u
+  # otro—, igual que en el catálogo es la intersección.
+  def visible_generic_items
+    scope = generic_items
+    scope = scope.where(supplier_id: @supplier_id) if @supplier_id.present?
+    scope = scope.where(brand_id: @brand_id) if @brand_id.present?
+    scope
   end
 
   # El universo de productos que el filtro autoriza. El genérico queda fuera

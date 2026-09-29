@@ -9,6 +9,12 @@ class OrderItem < ApplicationRecord
   belongs_to :product, optional: true
   belongs_to :promotion,      optional: true
   belongs_to :promotion_tier, optional: true
+  # A quién pertenece un producto nuevo (genérico 999999): uno de los dos o
+  # ninguno. Las partidas de catálogo lo saben por su producto. Solo vive en
+  # la laptop —el ERP no tiene dónde guardarlo— y sirve a los reportes del
+  # evento (2026-09-29).
+  belongs_to :supplier, optional: true
+  belongs_to :brand,    optional: true
 
   # Bandera de "este cambio lo está haciendo el sistema, no el capturista":
   # la pone `Promotions::Group` al aplicar y al quitar una promoción. Sin
@@ -29,6 +35,10 @@ class OrderItem < ApplicationRecord
   validate :unit_price_positive
   validate :discount_within_limits
   validate :generic_description_fits_erp, if: :generic?
+  # `on: :create`: la regla nació el 2026-09-29, y las partidas del genérico
+  # capturadas antes no la tienen. Editar su descripción o su precio en la fila
+  # no debe exigirles algo que nadie les pidió.
+  validate :generic_source_assigned, on: :create, if: :generic?
   # `on: :create`: la regla es sobre AGREGAR a un grupo ya congelado. Un pedido
   # con la promoción aplicada tiene que seguir siendo editable por los caminos
   # que la promoción sí permite. (Este comentario describía el tope de 45
@@ -163,6 +173,42 @@ class OrderItem < ApplicationRecord
     errors.add(:base, "La descripción y el número de parte viajan juntos al ERP y no caben: " \
                       "#{over == 1 ? 'sobra 1 carácter' : "sobran #{over} caracteres"} " \
                       "(máximo #{ERP_CAPTURED_NAME_LIMIT} entre ambos).")
+  end
+
+  # --- De quién es el producto nuevo --------------------------------------
+
+  # Lo que se ve en la fila: "Proveedor: MAKITA · Marca: HITOOLS", o solo el
+  # que tenga. nil si no tiene ninguno (las partidas anteriores al campo).
+  def source_label
+    parts = []
+    parts << "Proveedor: #{supplier.display_name}" if supplier
+    parts << "Marca: #{brand.name}" if brand
+    parts.join(" · ").presence
+  end
+
+  # Proveedor y marca son dos campos independientes (en el catálogo, las marcas
+  # de los capturistas no están ligadas a ningún proveedor, así que uno no se
+  # deduce del otro). Obligatorio AL MENOS UNO cuando el capturista tiene a
+  # quién atribuirlo (decisión del usuario, 2026-09-29); sin asignaciones no
+  # se exige ni se admite.
+  #
+  # "Lo que el combo ofrece, el modelo lo valida": cada valor viaja en un
+  # campo oculto, y un POST forjado podría traer el proveedor de otro.
+  def generic_source_assigned
+    round     = order.business_round
+    suppliers = order.user.suppliers_in(round).map(&:id)
+    brands    = order.user.brands_in(round).map(&:id)
+
+    if supplier_id && suppliers.exclude?(supplier_id)
+      errors.add(:base, "El proveedor no está entre tus asignaciones de la rueda.")
+    end
+    if brand_id && brands.exclude?(brand_id)
+      errors.add(:base, "La marca no está entre tus asignaciones de la rueda.")
+    end
+    return if supplier_id || brand_id
+    return if suppliers.empty? && brands.empty?
+
+    errors.add(:base, "Selecciona el proveedor o la marca del producto.")
   end
 
   # --- Promociones -------------------------------------------------------

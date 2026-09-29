@@ -50,6 +50,42 @@
       </div>
     </div>
 
+    <%# Proveedor y Marca: a quién pertenece el producto nuevo (2026-09-29).
+        Dos campos independientes —en el catálogo, las marcas de los
+        capturistas no están ligadas a ningún proveedor—, y cada uno aparece
+        solo si el capturista tiene asignaciones de ese tipo. Obligatorio AL
+        MENOS UNO (lo exige el modelo, `generic_source_assigned`). Si el
+        capturista tiene UNA sola asignación en total, ya sale elegida, como el
+        filtro del reporte. No "un campo con una opción": con un proveedor y una
+        marca eso atribuiría la partida a los dos sin que nadie lo decidiera.
+        Con más de 6 opciones, el combo trae buscador (las cuentas del personal de FECEGO tienen 24
+        proveedores). Se queda en la laptop: el ERP no tiene dónde guardarlo. %>
+    <% round            = order.business_round %>
+    <% supplier_options = order.user.supplier_options_in(round) %>
+    <% brand_options    = order.user.brand_options_in(round) %>
+    <% missing_source   = item.present? && item.supplier_id.nil? && item.brand_id.nil? %>
+    <% only_one         = supplier_options.size + brand_options.size == 1 %>
+    <% fields = [
+         [ "Proveedor", "generic[supplier_id]", supplier_options, item ? item.supplier_id : nil ],
+         [ "Marca",     "generic[brand_id]",    brand_options,    item ? item.brand_id    : nil ]
+       ].select { |(_, _, options, _)| options.any? } %>
+    <% if fields.any? %>
+      <div class="grid gap-3 <%= "sm:grid-cols-2" if fields.many? %>">
+        <% fields.each do |label, name, options, chosen| %>
+          <div>
+            <span class="mb-1 block text-xs font-semibold uppercase tracking-wide text-neutral-700"><%= label %></span>
+            <%= render "shared/custom_select", name: name, label: label, options: options,
+                  filterable: options.size > 6,
+                  selected: item ? chosen : (only_one ? options.first.last : nil),
+                  invalid: missing_source %>
+          </div>
+        <% end %>
+      </div>
+      <% if fields.many? %>
+        <p class="-mt-1 text-xs text-neutral-600">Elige al menos uno de los dos.</p>
+      <% end %>
+    <% end %>
+
     <div class="flex justify-end gap-3">
       <button type="button" data-action="autocomplete#cancelGenericForm"
               class="cursor-pointer rounded-full bg-neutral-700 px-6 py-2.5 font-bold text-white transition-colors hover:bg-neutral-600">

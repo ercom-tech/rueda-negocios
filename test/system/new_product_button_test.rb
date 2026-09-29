@@ -123,4 +123,73 @@ class NewProductButtonTest < ApplicationSystemTestCase
 
     assert_text "Producto fuera de catálogo (999999)"
   end
+
+  # "Proveedor / Marca" (2026-09-29). El combo vive dentro de la ventanita,
+  # que vive dentro del panel del buscador: tres controles de Stimulus que
+  # escuchan clics, y el del buscador cierra su panel con un clic "fuera".
+  # Solo con clics reales se ve si elegir una opción cierra la ventanita.
+  test "con varias asignaciones se elige el proveedor o la marca en la ventanita" do
+    supplier = Supplier.create!(erp_supplier_id: 970_402, name: "MAKITA")
+    brand    = Brand.create!(erp_brand_id: 970_402, name: "HITOOLS")
+    BusinessRoundPerson.create!(business_round: @order.business_round, user: @user, position: 1, supplier: supplier)
+    BusinessRoundPerson.create!(business_round: @order.business_round, user: @user, position: 2, brand: brand)
+    sign_in @user
+    visit order_path(@order)
+
+    click_button "Producto nuevo"
+    fill_in "Descripción", with: "CESPOL DE HULE"
+    fill_in "Precio unitario", with: "80"
+
+    # Sin elegir: no se agrega y se dice por qué, sin perder lo tecleado.
+    click_button "Agregar al pedido"
+    assert_text "Selecciona el proveedor o la marca del producto."
+    assert_field "Descripción", with: "CESPOL DE HULE"
+    assert_equal 0, @order.order_items.count
+
+    # Dentro de la ventanita: con varias asignaciones, la barra superior tiene
+    # sus propios combos "Proveedor" y "Marca" (las píldoras de contexto).
+    within("#product-search-results") do
+      find("button[aria-label='Marca']").click
+      find("button[role=option]", text: "HITOOLS").click
+    end
+    assert_field "Descripción", with: "CESPOL DE HULE" # elegir no cerró la ventanita
+
+    click_button "Agregar al pedido"
+
+    assert_text "Partidas: 1"
+    item = @order.order_items.sole
+    assert_equal brand.id, item.brand_id
+    assert_nil item.supplier_id, "el proveedor era opcional: con la marca basta"
+    assert_selector "#order_item_#{item.id}", text: "Marca: HITOOLS"
+  end
+
+  # Las cuentas del personal de FECEGO tienen 24 proveedores: sin buscador, el
+  # combo era una lista corrida. Se prueba que el filtro deja elegir tecleando.
+  test "con muchos proveedores el combo trae buscador" do
+    suppliers = (1..8).map do |n|
+      Supplier.create!(erp_supplier_id: 970_410 + n, name: "PROVEEDOR #{n} S.A. DE C.V.",
+                       commercial_name: "PROVEEDOR #{n}")
+    end
+    suppliers.each_with_index do |supplier, index|
+      BusinessRoundPerson.create!(business_round: @order.business_round, user: @user,
+                                  position: index + 1, supplier: supplier)
+    end
+    sign_in @user
+    visit order_path(@order)
+
+    click_button "Producto nuevo"
+    fill_in "Descripción", with: "BROCA"
+    fill_in "Precio unitario", with: "10"
+    within("#product-search-results") do
+      find("button[aria-label='Proveedor']").click
+      find("[data-select-target=filter]").send_keys("proveedor 7")
+      assert_selector "button[role=option]", text: "PROVEEDOR 7", visible: true
+      assert_no_selector "button[role=option]", text: "PROVEEDOR 3", visible: true
+      find("button[role=option]", text: "PROVEEDOR 7").click
+    end
+    click_button "Agregar al pedido"
+
+    assert_text "Partidas: 1"
+    assert_equal suppliers[6].id, @order.order_items.sole.supplier_id
+  end
 end

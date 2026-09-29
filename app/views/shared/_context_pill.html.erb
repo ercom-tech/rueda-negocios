@@ -1,6 +1,6 @@
 <%#
   Pill de contexto de la barra superior (Proveedor / Marca).
-  Locals: label ("Proveedor"), items (array de modelos con name/id),
+  Locals: label ("Proveedor"), items (array de modelos con display_name/id),
           current (el activo o nil), url (PATCH del cambio), param (name del hidden).
   - 0 items  → no se muestra nada
   - 1 item   → etiqueta estática
@@ -14,7 +14,8 @@
           un <label>, así que sin esto los combos de Proveedor y Marca se
           anunciaban ambos "— Selecciona —" (5ª auditoría). %>
       <%= render "shared/custom_select", name: param, include_blank: false, label: label,
-            options: items.map { |i| [i.name, i.id] }, selected: current&.id,
+            options: items.map { |i| [i.display_name, i.id] }.sort_by { |name, _| name.downcase },
+            selected: current&.id,
             input_data: { action: "change->form-submit#submit" },
             button_class: "flex items-center gap-1 font-semibold text-neutral-800",
             panel_class: "absolute right-0 top-full z-30 mt-1 w-max max-w-[80vw] whitespace-nowrap max-h-72 overflow-auto rounded-2xl border border-black/10 bg-brand-cream shadow-xl" %>
@@ -25,6 +26,6 @@
   <% end %>
 <% elsif items.any? %>
   <span class="rounded-full bg-brand-cream px-5 py-2.5 text-neutral-800">
-    <%= label %>: <span class="font-semibold"><%= current&.name %></span>
+    <%= label %>: <span class="font-semibold"><%= current&.display_name %></span>
   </span>
 <% end %>

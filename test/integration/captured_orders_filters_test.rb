@@ -253,7 +253,7 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
     login_as("srv990")
 
     summary = OrdersFilter.new(supplier_id: @makita.id)
-                          .then { |f| f.apply_without_status(Order.all).totals_by_status(f.matching_products) }
+                          .then { |f| f.apply_without_status(Order.all).totals_by_status(f.matching_items_sql) }
     assert_equal 1, summary["captured"][:count]
     assert_in_delta 116, summary["captured"][:total], 0.01, "solo la partida MAKITA"
 

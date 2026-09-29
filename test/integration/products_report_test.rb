@@ -380,7 +380,7 @@ class ProductsReportTest < ActionDispatch::IntegrationTest
     get products_report_path(supplier_id: @supplier.id)
 
     assert_match(/Además se capturó <span class="font-semibold">1 pieza<\/span>/, response.body)
-    assert_match(/no pertenece a ningún proveedor/, response.body)
+    assert_match(/que no es de este filtro/, response.body)
     assert_match(/para verla\./, response.body)
     assert_no_match(/se capturaron 1 piezas/, response.body)
   end
@@ -393,7 +393,7 @@ class ProductsReportTest < ActionDispatch::IntegrationTest
     get products_report_path(supplier_id: @supplier.id)
 
     assert_match(/Además se capturaron/, response.body)
-    assert_match(/piezas fuera de catálogo, que no pertenecen/, response.body)
+    assert_match(/piezas fuera de catálogo que no son de este filtro/, response.body)
     assert_match(/para verlas\./, response.body)
   end
 

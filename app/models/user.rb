@@ -54,6 +54,18 @@ class User < ApplicationRecord
     ids.filter_map { |id| by_id[id] }
   end
 
+  # Opciones de los combos "Proveedor" y "Marca" del producto nuevo (999999):
+  # pares [nombre, id] en orden ALFABÉTICO. El orden de asignación del ERP
+  # (FAMA, ARROW HART, APEX…) no ayuda a encontrar nada en las cuentas del
+  # personal de FECEGO, que tienen 24 proveedores.
+  def supplier_options_in(round)
+    suppliers_in(round).map { |supplier| [ supplier.display_name, supplier.id ] }.sort_by { |name, _| name.downcase }
+  end
+
+  def brand_options_in(round)
+    brands_in(round).map { |brand| [ brand.name, brand.id ] }.sort_by { |name, _| name.downcase }
+  end
+
   # Universo de productos que el capturista puede vender en la rueda: los de
   # TODOS sus proveedores asignados ∪ los de sus marcas (regla del usuario,
   # 2026-07-26) ∪ el genérico 999999, que es de todos. Sin membresía → solo

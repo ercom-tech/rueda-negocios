@@ -82,6 +82,12 @@
     <% else %>
       <%= item.description %>
     <% end %>
+    <%# De quién es el producto nuevo. Solo texto: para cambiarlo se quita la
+        partida y se captura de nuevo (decisión del usuario, 2026-09-29).
+        `neutral-600` sobre crema, el tono ya validado para texto secundario. %>
+    <% if item.generic? && (source = item.source_label) %>
+      <span class="mt-1 block text-xs text-neutral-600"><%= source %></span>
+    <% end %>
   </td>
   <td class="<%= order.order_items.any?(&:generic?) ? "px-3 py-2" : "hidden px-3 py-2 lg:table-cell" %>">
     <% if editable && item.generic? %>

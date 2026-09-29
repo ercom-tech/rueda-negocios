@@ -12,10 +12,15 @@
 #
 # Proveedor, marca y producto NO son del pedido sino de sus partidas
 # ("pedidos que traen al menos una partida de MAKITA"). Los tres se reducen a
-# un conjunto de productos (`matching_products`) y se aplican con un `IN` sobre
-# `order_items.product_id`, nunca con un `JOIN` a `order_items`: unir
-# duplicaría el pedido por cada partida que coincida e inflaría el importe del
-# resumen, que ya hace su propio join para sumar.
+# UNA condición sobre `order_items` (`matching_items_sql`) que usan el filtro,
+# el resumen, los totales por pedido y el orden — nunca un `JOIN` a
+# `order_items`: unir duplicaría el pedido por cada partida que coincida e
+# inflaría el importe del resumen, que ya hace su propio join para sumar.
+#
+# Es condición POR PARTIDA y no por producto desde el 2026-09-29: un producto
+# nuevo (999999) pertenece al proveedor o la marca que eligió el capturista al
+# agregarlo, y eso vive en la partida. Con la condición por producto, el
+# genérico —que no es de nadie— quedaba fuera de todo filtro.
 #
 # Con uno de esos filtros activo, los importes que se muestran son los de las
 # PARTIDAS QUE COINCIDEN, no los del pedido completo (decisión del usuario,
@@ -61,14 +66,33 @@ class OrdersFilter
     scope.select(:id)
   end
 
+  # La condición SQL sobre `order_items` de "esta partida cumple los filtros de
+  # partida", o nil si no hay ninguno. Dos ramas:
+  #
+  # - catálogo: el producto está en `matching_products`;
+  # - producto nuevo (999999), solo con proveedor o marca en el filtro: la
+  #   partida lleva ese proveedor o esa marca. Con texto de producto, además
+  #   tiene que coincidir con lo que el capturista TECLEÓ (descripción o no.
+  #   de parte), porque el nombre del genérico en el catálogo no dice nada.
+  #
+  # Sin proveedor ni marca, el texto solo busca en el catálogo, como siempre
+  # (y el 999999 se sigue hallando por su código).
+  def matching_items_sql
+    return nil unless items?
+
+    branches = [ sanitize([ "order_items.product_id IN (?)", matching_products ]) ]
+    branches << generic_items_sql if supplier_id || brand_id
+    "(#{branches.join(' OR ')})"
+  end
+
   def apply_without_status(scope)
     scope = scope.where(user_id: user_id)     if user_id
     scope = scope.where(client_id: client_id) if client_id
     scope = scope.joins(:client).where(clients: { salesperson_id: salesperson_id }) if salesperson_id
     scope = scope.where(created_at: day_start(from)..)      if from
     scope = scope.where(created_at: ...day_start(to + 1))   if to
-    if (products = matching_products)
-      scope = scope.where(id: OrderItem.where(product_id: products).select(:order_id))
+    if (items_sql = matching_items_sql)
+      scope = scope.where(id: OrderItem.where(Arel.sql(items_sql)).select(:order_id))
     end
     scope
   end
@@ -81,7 +105,7 @@ class OrdersFilter
     # Los nombres se resuelven aquí y no en la vista: la plantilla los buscaba
     # recorriendo el array de opciones del combo, duplicando la misma búsqueda
     # para proveedor y para marca.
-    named = [ supplier_id && Supplier.find_by(id: supplier_id)&.name,
+    named = [ supplier_id && Supplier.find_by(id: supplier_id)&.display_name,
               brand_id && Brand.find_by(id: brand_id)&.name ].compact
     label = "Importes de las partidas"
     label += " de #{SpanishText.list(named)}" if named.any?
@@ -109,6 +133,25 @@ class OrdersFilter
   end
 
   private
+
+  # Rama del producto nuevo en `matching_items_sql`. Proveedor Y marca a la vez
+  # no puede coincidir nunca (la partida lleva uno u otro), igual que en el
+  # catálogo es la intersección.
+  def generic_items_sql
+    conditions = [ sanitize([ "order_items.product_id IN (?)",
+                              Product.where(erp_product_id: Product::GENERIC_ERP_ID).select(:id) ]) ]
+    conditions << sanitize([ "order_items.supplier_id = ?", supplier_id ]) if supplier_id
+    conditions << sanitize([ "order_items.brand_id = ?", brand_id ]) if brand_id
+    if product_q
+      like = "%#{ActiveRecord::Base.sanitize_sql_like(product_q)}%"
+      conditions << sanitize([ "(order_items.description ILIKE ? OR order_items.part_number ILIKE ?)", like, like ])
+    end
+    "(#{conditions.join(' AND ')})"
+  end
+
+  def sanitize(fragment)
+    ActiveRecord::Base.sanitize_sql_array(fragment)
+  end
 
   # Los parámetros vienen de la URL: pueden llegar como arreglo o hash
   # (`?user_id[]=1`), y ahí `to_i`/`strip` reventaban con 500. Se acepta solo

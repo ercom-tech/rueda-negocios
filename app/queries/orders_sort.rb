@@ -99,18 +99,19 @@ class OrdersSort
     { sort: key, dir: dir }
   end
 
-  # Aplica el orden al scope. `products` (ids) llega cuando hay filtro de
-  # partida activo: entonces "Renglones" y "Total" son los de las partidas que
+  # Aplica el orden al scope. `items_sql` (la condición de
+  # `OrdersFilter#matching_items_sql`) llega cuando hay filtro de partida
+  # activo: entonces "Renglones" y "Total" son los de las partidas que
   # COINCIDEN —que es lo que la pantalla muestra—, no los del pedido completo.
   # Ordenar por el total del pedido mientras se ve otro número sería
   # incomprensible.
-  def apply(scope, products = nil)
+  def apply(scope, items_sql = nil)
     column = COLUMNS.fetch(key)
     # LEFT y no INNER: `joins` esconde las filas sin la asociación, así que
     # ordenar por vendedor hacía DESAPARECER los pedidos de clientes sin
     # vendedor asignado — un filtro disfrazado de orden, y silencioso.
     scope  = scope.left_joins(column[:joins]) if column[:joins]
-    scope  = scope.joins(aggregate_join(products)) if column[:aggregate]
+    scope  = scope.joins(aggregate_join(items_sql)) if column[:aggregate]
 
     # Desempate por id: sin él, dos pedidos con el mismo valor pueden salir en
     # orden distinto entre páginas y un mismo pedido aparecer dos veces o
@@ -130,17 +131,9 @@ class OrdersSort
   # LEFT JOIN a un agregado y no subquery correlacionada, que es la norma del
   # proyecto para agregados. LEFT y no INNER: un pedido sin partidas —un
   # borrador recién creado— tiene que seguir apareciendo.
-  def aggregate_join(products)
-    total_sql = if products
-      ActiveRecord::Base.sanitize_sql_array([ Order::MATCHING_ITEMS_TOTAL_SQL, products ])
-    else
-      Order::ITEMS_TOTAL_SQL
-    end
-    count_sql = if products
-      ActiveRecord::Base.sanitize_sql_array([ "COUNT(*) FILTER (WHERE order_items.product_id IN (?))", products ])
-    else
-      "COUNT(*)"
-    end
+  def aggregate_join(items_sql)
+    total_sql = items_sql ? Order.matching_items_total_sql(items_sql) : Order::ITEMS_TOTAL_SQL
+    count_sql = items_sql ? "COUNT(*) FILTER (WHERE #{items_sql})" : "COUNT(*)"
 
     Arel.sql(<<~SQL.squish)
       LEFT JOIN (

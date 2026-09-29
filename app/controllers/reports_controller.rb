@@ -40,19 +40,19 @@ class ReportsController < ApplicationController
     # tarjetas son el filtro de estatus y deben seguir mostrando el panorama
     # completo para poder saltar entre ellas.
     filtered    = @filter.apply_without_status(orders_scope)
-    @products   = @filter.matching_products
-    @summary    = filtered.totals_by_status(@products)
+    @items_sql  = @filter.matching_items_sql
+    @summary    = filtered.totals_by_status(@items_sql)
     @options    = filter_options
     @page_sizes = PAGE_SIZES
 
     # El orden se aplica ANTES de paginar (dentro de `OrdersSort#apply`), o la
     # tabla se vería ordenada dentro de una página que siempre trae los mismos
-    # pedidos. `@products` va porque con filtro de partida las columnas
+    # pedidos. `@items_sql` va porque con filtro de partida las columnas
     # Renglones y Total muestran —y por tanto ordenan por— lo que coincide.
-    ordered = @sort.apply(@filter.apply_status(filtered), @products)
+    ordered = @sort.apply(@filter.apply_status(filtered), @items_sql)
                    .includes(:user, :order_items, client: :salesperson)
     @pagy, @orders = pagy(ordered, limit: page_size)
-    @matching = matching_totals(@orders, @products)
+    @matching = matching_totals(@orders, @items_sql)
   end
 
   # Reporte de productos: piezas vendidas por producto en la rueda. Mismo
@@ -144,7 +144,7 @@ class ReportsController < ApplicationController
       salespeople: Salesperson.order(:name).map { |s| [ "#{s.erp_salesperson_id} — #{s.name}", s.id ] },
       # Proveedores y marcas del universo de quien mira: al capturista no se le
       # ofrecen opciones que jamás podrían aparecer en sus pedidos.
-      suppliers: (@all_scope ? Supplier.order(:name) : available_suppliers).map { |s| [ s.name, s.id ] },
+      suppliers: supplier_options,
       brands: (@all_scope ? Brand.order(:name) : available_brands).map { |b| [ b.name, b.id ] }
     }.compact
   end
@@ -152,10 +152,10 @@ class ReportsController < ApplicationController
   # Importe y renglones POR PEDIDO de la página, contando solo las partidas que
   # coinciden con el filtro de proveedor/marca/producto. Una sola consulta para
   # los 25 pedidos visibles, en vez de recalcular en Ruby pedido por pedido.
-  def matching_totals(orders, products)
-    return nil if products.nil? || orders.empty?
+  def matching_totals(orders, items_sql)
+    return nil if items_sql.nil? || orders.empty?
 
-    OrderItem.where(order_id: orders.map(&:id), product_id: products)
+    OrderItem.where(order_id: orders.map(&:id)).where(Arel.sql(items_sql))
              .group(:order_id)
              .pluck(:order_id, Arel.sql("COUNT(*)"),
                     Arel.sql("COALESCE(SUM(#{Order::ITEM_TOTAL_SQL}), 0)"))
@@ -166,7 +166,7 @@ class ReportsController < ApplicationController
   # universo de quien mira — mismo criterio que los del reporte de pedidos.
   def product_report_options
     {
-      suppliers: (@all_scope ? Supplier.order(:name) : available_suppliers).map { |s| [ s.name, s.id ] },
+      suppliers: supplier_options,
       brands: (@all_scope ? Brand.order(:name) : available_brands).map { |b| [ b.name, b.id ] }
     }
   end
@@ -273,10 +273,18 @@ class ReportsController < ApplicationController
   # pisen en la carpeta de Descargas.
   def products_filename(extension)
     parts = [ "productos" ]
-    parts << Supplier.find_by(id: @supplier_id)&.name if @supplier_id
+    parts << Supplier.find_by(id: @supplier_id)&.display_name if @supplier_id
     parts << Brand.find_by(id: @brand_id)&.name if @brand_id
     parts << Time.current.strftime("%Y-%m-%d")
     "#{parts.compact.join('-').parameterize}.#{extension}"
+  end
+
+  # Proveedores de los combos de filtro: por nombre comercial y en orden
+  # alfabético, igual que la ventanita del producto nuevo y la barra de arriba.
+  def supplier_options
+    (@all_scope ? Supplier.all : available_suppliers)
+      .map { |supplier| [ supplier.display_name, supplier.id ] }
+      .sort_by { |name, _| name.downcase }
   end
 
   def require_round

@@ -159,9 +159,11 @@
           page_sizes: @page_sizes %>
 
     <%# ── Fuera de catálogo ─────────────────────────────────────────────
-        Bloque APARTE, no mezclado con la tabla: el genérico no pertenece a
-        ningún proveedor ni marca, así que compararlo con productos de
-        catálogo en el mismo orden sería engañoso. Se agrupa por lo que el
+        Bloque APARTE, no mezclado con la tabla: el genérico no es un producto
+        del catálogo —no tiene código, marca ni SKU propios—, así que
+        compararlo con ellos en el mismo orden sería engañoso. Con un filtro
+        de proveedor o marca muestra solo lo que el capturista le atribuyó a
+        ese proveedor o marca al agregarlo (2026-09-29). Se agrupa por lo que el
         capturista tecleó, que es lo que identifica cada cosa vendida. %>
     <% if @sales.generic_rows.any? %>
       <section class="mt-8">
@@ -208,11 +210,13 @@
       <p class="mt-4 rounded-2xl bg-brand-cream px-5 py-3 text-sm text-neutral-900">
         <% if n == 1 %>
           Además se capturó <span class="font-semibold">1 pieza</span> fuera de
-          catálogo, que no pertenece a ningún proveedor ni marca.
+          catálogo que no es de este filtro: es de otro proveedor o marca, o se
+          capturó sin ninguno.
         <% else %>
           Además se capturaron
           <span class="font-semibold"><%= report_quantity(n) %></span>
-          piezas fuera de catálogo, que no pertenecen a ningún proveedor ni marca.
+          piezas fuera de catálogo que no son de este filtro: son de otro
+          proveedor o marca, o se capturaron sin ninguno.
         <% end %>
         <%= link_to "Quitar filtros", products_report_path(per_page: @pagy.limit),
               class: "font-semibold underline decoration-brand-coral-dark decoration-2 underline-offset-4" %>

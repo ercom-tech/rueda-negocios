@@ -172,9 +172,11 @@ class Order < ApplicationRecord
 
   ITEMS_TOTAL_SQL = "COALESCE(SUM(#{ITEM_TOTAL_SQL}), 0)".freeze
 
-  # Igual, pero sumando SOLO las partidas de los productos recibidos (?).
-  MATCHING_ITEMS_TOTAL_SQL =
-    "COALESCE(SUM(CASE WHEN order_items.product_id IN (?) THEN #{ITEM_TOTAL_SQL} ELSE 0 END), 0)".freeze
+  # Igual, pero sumando SOLO las partidas que cumplen `items_sql` (la
+  # condición de `OrdersFilter#matching_items_sql`).
+  def self.matching_items_total_sql(items_sql)
+    "COALESCE(SUM(CASE WHEN #{items_sql} THEN #{ITEM_TOTAL_SQL} ELSE 0 END), 0)"
+  end
 
   # Descartar el pedido COMPLETO (botón "Descartar" del paso 2, y el mismo
   # camino cuando se llega desde el reporte de capturados).
@@ -227,13 +229,14 @@ class Order < ApplicationRecord
   # los que no tengan pedidos: las tarjetas del reporte son también el filtro
   # de estatus y deben mostrarse completas.
   #
-  # `products` (subconsulta de ids) restringe la suma a las partidas de esos
-  # productos: con un filtro de proveedor/marca/producto activo, el importe que
-  # se reporta es el de las partidas que coinciden, no el del pedido completo.
+  # `items_sql` (la condición de `OrdersFilter#matching_items_sql`) restringe
+  # la suma a las partidas que coinciden: con un filtro de proveedor/marca/
+  # producto activo, el importe que se reporta es el de esas partidas, no el
+  # del pedido completo.
   # Va como CASE dentro del SUM y no como condición del join, para que el
   # conteo de pedidos no cambie y los pedidos sin partidas sigan apareciendo.
-  def self.totals_by_status(products = nil)
-    amount_sql = products ? sanitize_sql_array([ MATCHING_ITEMS_TOTAL_SQL, products ]) : ITEMS_TOTAL_SQL
+  def self.totals_by_status(items_sql = nil)
+    amount_sql = items_sql ? matching_items_total_sql(items_sql) : ITEMS_TOTAL_SQL
 
     rows = reorder(nil).left_joins(:order_items).group(:status)
                        .pluck(Arel.sql("orders.status"),

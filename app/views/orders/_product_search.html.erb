@@ -16,8 +16,14 @@
       a toda la fila: con los botones en su propia línea (tablet vertical), el
       panel se abría debajo de ellos, separado del campo donde se escribe.
       Así cae pegado al buscador y, mientras está abierto, encima de los
-      botones, como cualquier lista desplegable (2026-09-29). %>
-  <div class="relative min-w-[16rem] flex-1">
+      botones, como cualquier lista desplegable (2026-09-29).
+
+      El mínimo de 24rem es lo que manda los botones a su propia línea en
+      tablet vertical: con uno menor cabían los tres y el buscador se apretaba
+      a ~350 px — y con él la ventanita del producto nuevo, que mide lo que el
+      buscador. `min(…, 100%)` para que en una pantalla más angosta que 24rem
+      no se desborde. %>
+  <div class="relative min-w-[min(24rem,100%)] flex-1">
   <%# Gris del manual de identidad (pill "# Pedido" de la referencia paso2) —
       el mismo neutral-400 de los pills grises del sitio. %>
   <div class="flex items-center gap-3 rounded-full bg-neutral-400 px-5 py-3 text-neutral-900 focus-within:ring-2 focus-within:ring-brand-gold">
