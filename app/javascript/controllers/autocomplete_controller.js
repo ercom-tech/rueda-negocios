@@ -156,6 +156,17 @@ export default class extends Controller {
     this.inputTarget.focus()
   }
 
+  // Botón "Producto nuevo": abre el mini-formulario del genérico. Si ya está
+  // abierto con captura a medias, no se envía nada —la respuesta lo
+  // reemplazaría por uno vacío y se perdería lo tecleado—: solo se regresa el
+  // foco al formulario, que es lo que el capturista está buscando.
+  openGeneric(event) {
+    if (!this.protectedForm) return
+
+    event.preventDefault()
+    this.resultsTarget.querySelector("[data-autocomplete-keep] input[type='text']")?.focus()
+  }
+
   // Cancelar explícito del mini-formulario: la única ruta que descarta la
   // captura a medias, a propósito.
   cancelGenericForm() {

@@ -364,6 +364,16 @@ puede verificar el ERP; cuesta una regla más en el modelo de permisos.
 remediación con migración, y su escenario exige que primero falle la red **y**
 que el capturista decida descartar justo ese pedido.
 
+### El 999999 sin precio se sigue ofreciendo en el buscador (BAJA)
+
+Si el genérico baja sin precio (export viejo, o dado de baja en el ERP), el
+panel ya avisa que falta y el botón "Producto nuevo" no aparece — los dos usan
+`Product.capturable_generic`. Pero **buscar `999999` todavía lo ofrece**, y la
+partida nace con **IVA 0%** (`to_order_item_attributes` cae a `tax_rate || 0`),
+que no es la tasa del ERP. Solo pasa con un sync-down incompleto que el panel ya
+delata, por eso no se arregló junto con el botón (2026-09-29). Salida probable:
+que `product_universe` use el mismo criterio para el genérico.
+
 ### Dos asperezas visuales del reporte de productos (BAJA)
 
 Salieron de la 9ª auditoría y se dejaron fuera de la remediación a propósito:

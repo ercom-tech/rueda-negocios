@@ -31,6 +31,38 @@ Si es **algo por hacer**, va al backlog.
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
 
+## Botón "Producto nuevo" junto al buscador (2026-09-29)
+
+**El pedido:** llegar a la ventanita del producto fuera de catálogo (999999)
+con un botón a la derecha del buscador, en vez de tener que buscar `999999`.
+FECEGO les llama "productos nuevos".
+
+**Cómo quedó:** el botón manda **la misma petición** que elegir el 999999 en las
+sugerencias (el POST sin `generic` responde el formulario), así que la ventana,
+su validación y su Cancelar son los de siempre, sin un segundo camino que
+mantener. Buscar `999999` sigue funcionando. Negro y no dorado: va sobre el
+marco dorado de la card, donde un botón dorado desaparece.
+
+**Tres cosas que salieron al hacerlo:**
+
+- **Tocarlo con la ventanita a medio llenar la vaciaba:** la respuesta la
+  reemplaza por una en blanco. Por el buscador no pasaba —las búsquedas se
+  bloquean con captura a medias—, pero el botón era un camino nuevo a la misma
+  pérdida. Con captura a medias, `autocomplete#openGeneric` frena el envío y
+  solo devuelve el foco al formulario.
+- **Solo aparece si el 999999 es capturable**, con el MISMO criterio con que el
+  panel avisa que falta: se sacó a `Product.capturable_generic` y el sync-down lo
+  usa también. Con dos criterios, el panel podía decir "nadie podrá capturar
+  fuera de catálogo" mientras el botón lo ofrecía. El buscador todavía no lo usa
+  (ver backlog).
+- **La barra fija de totales tapaba la ventanita.** La barra está en z-40 y el
+  panel del buscador en z-20: en tablet con poca altura (el teclado en pantalla
+  la quita) cubría "Cancelar" y "Agregar al pedido". El panel subió a z-[45],
+  por debajo de los modales. Es un defecto de la barra del mismo día, que el
+  botón volvía más probable, y ninguna de sus pruebas lo vio porque ninguna abría
+  el panel. Regla que deja: **una capa fija nueva se prueba contra las capas
+  flotantes que ya existen**, no solo contra la página.
+
 ## Barra fija de totales en la captura (2026-09-29)
 
 **El pedido:** con muchas partidas, para ver los totales había que bajar hasta

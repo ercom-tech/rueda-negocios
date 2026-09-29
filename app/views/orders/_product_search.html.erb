@@ -8,9 +8,13 @@
      data-autocomplete-url-value="<%= product_options_order_path(order) %>"
      data-autocomplete-autofocus-value="true"
      data-action="click@window->autocomplete#hide turbo:submit-end->autocomplete#reset">
+  <%# Buscador + botón "Producto nuevo". El buscador toma el ancho que quede;
+      si no caben en una línea (tablet vertical), el botón baja a la suya
+      antes que cortarse. %>
+  <div class="flex flex-wrap gap-2">
   <%# Gris del manual de identidad (pill "# Pedido" de la referencia paso2) —
       el mismo neutral-400 de los pills grises del sitio. %>
-  <div class="flex items-center gap-3 rounded-full bg-neutral-400 px-5 py-3 text-neutral-900 focus-within:ring-2 focus-within:ring-brand-gold">
+  <div class="flex min-w-[16rem] flex-1 items-center gap-3 rounded-full bg-neutral-400 px-5 py-3 text-neutral-900 focus-within:ring-2 focus-within:ring-brand-gold">
     <div class="flex min-w-0 flex-1 items-center gap-3">
       <svg class="h-5 w-5 shrink-0 text-neutral-700" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
       <input type="text" autocomplete="off"
@@ -30,11 +34,39 @@
       Partidas: <%= order.items_count %>
     </span>
   </div>
+  <%# "Producto nuevo" (genérico 999999, fuera de catálogo): atajo a la MISMA
+      ventanita que se abre eligiendo el 999999 en las sugerencias. Manda la
+      misma petición —el POST sin `generic` responde el formulario—, así que
+      no hay un segundo camino que mantener. Buscar 999999 sigue sirviendo.
+
+      Solo si el genérico bajó en condiciones de capturarse: sin él, el panel
+      ya avisa, y un botón que abre una ventana que no puede guardar es peor.
+
+      Negro y no dorado: va sobre el marco dorado de la card, donde un botón
+      dorado desaparece (convenciones-visuales, el "Limpiar" de los filtros).
+
+      `openGeneric` frena el envío si la ventanita ya tiene captura a medias:
+      la respuesta la reemplazaría por una vacía y se perdería lo tecleado. %>
+  <% if (generic = Product.capturable_generic.first) %>
+    <%= button_to order_order_items_path(order, product_id: generic.id),
+          form: { class: "flex shrink-0" },
+          data: { action: "click->autocomplete#openGeneric" },
+          class: "inline-flex cursor-pointer items-center gap-2 rounded-full bg-black px-5 py-3 font-bold text-white transition-colors hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold" do %>
+      <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+      Producto nuevo
+    <% end %>
+  <% end %>
+  </div>
   <%# Sin `role="listbox"`: el partial ENTERO se inyecta aquí dentro, y un
       listbox solo admite hijos option/group — el aviso de corte y los
       mensajes de estado quedaban dentro. El role vive en el <ul> de
       sugerencias, que sí contiene solo opciones (8ª auditoría). %>
+  <%# z-[45]: por ENCIMA de la barra fija de totales (z-40) y por debajo de
+      los modales (z-50). Lo que se abre aquí —sugerencias o la ventanita del
+      999999— es con lo que el capturista está trabajando: con la barra
+      encima, en tablet con poca altura tapaba "Cancelar" y "Agregar al
+      pedido" (2026-09-29). %>
   <div id="product-search-results"
        data-autocomplete-target="results"
-       class="absolute inset-x-0 top-full z-20 mt-1"></div>
+       class="absolute inset-x-0 top-full z-[45] mt-1"></div>
 </div>

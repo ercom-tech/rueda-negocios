@@ -77,8 +77,7 @@ module Sync
         # La captura fuera de catálogo depende de que el genérico venga en el
         # dataset (export viejo o baja en el ERP lo dejan fuera): sin este
         # aviso, la UI lo prometía en bucle sin que nada lo delatara (6ª aud.).
-        missing_generic: !Product.joins(:price).where(erp_product_id: Product::GENERIC_ERP_ID)
-                                 .where.not(prices: { tax_rate: nil }).exists?,
+        missing_generic: !Product.capturable_generic.exists?,
         # La rueda llegó sin prefijo de folios: sus pedidos saldrán con el
         # respaldo (`RN-000123`) y se pierde la trazabilidad que la clave vino
         # a dar en el ERP. Es silencioso por naturaleza —el pedido se captura y

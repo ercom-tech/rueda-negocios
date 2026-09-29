@@ -16,6 +16,15 @@ class Product < ApplicationRecord
     erp_product_id == GENERIC_ERP_ID
   end
 
+  # El genérico en condiciones de capturarse: con precio y tasa de IVA. Sin
+  # ellos la partida no puede nacer. Un solo lugar para el criterio: lo usan el
+  # aviso del sync-down (`missing_generic`) y el botón "Producto nuevo" del
+  # buscador — si cada uno tuviera el suyo, el panel podría decir que falta
+  # mientras el botón lo ofrece, o al revés.
+  scope :capturable_generic, lambda {
+    joins(:price).where(erp_product_id: GENERIC_ERP_ID).where.not(prices: { tax_rate: nil })
+  }
+
   has_many :product_suppliers, dependent: :destroy
   has_many :suppliers, through: :product_suppliers
 
