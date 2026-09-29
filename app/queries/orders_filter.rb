@@ -84,7 +84,7 @@ class OrdersFilter
     named = [ supplier_id && Supplier.find_by(id: supplier_id)&.name,
               brand_id && Brand.find_by(id: brand_id)&.name ].compact
     label = "Importes de las partidas"
-    label += " de #{named.to_sentence(two_words_connector: ' y ', last_word_connector: ' y ')}" if named.any?
+    label += " de #{SpanishText.list(named)}" if named.any?
     # El producto se busca por texto, así que no se enuncia igual: un código
     # suelto ("de \"037857\"") se lee como si fuera un proveedor.
     label += " que coinciden con \"#{product_q}\"" if product_q

@@ -64,7 +64,7 @@ class OrderItemsController < ApplicationController
       render turbo_stream: [
         form_stream,
         turbo_stream.replace("flash", partial: "shared/flash",
-                                      locals: { alert: item.errors.full_messages.to_sentence })
+                                      locals: { alert: SpanishText.sentences(item.errors.full_messages) })
       ]
     end
   end
@@ -79,7 +79,7 @@ class OrderItemsController < ApplicationController
       render turbo_stream: [
         *detail_streams,
         turbo_stream.replace("flash", partial: "shared/flash",
-                                      locals: { alert: item.errors.full_messages.to_sentence })
+                                      locals: { alert: SpanishText.sentences(item.errors.full_messages) })
       ]
     end
   end
@@ -93,7 +93,7 @@ class OrderItemsController < ApplicationController
       return render turbo_stream: [
         *detail_streams,
         turbo_stream.replace("flash", partial: "shared/flash",
-                                      locals: { alert: item.errors.full_messages.to_sentence })
+                                      locals: { alert: SpanishText.sentences(item.errors.full_messages) })
       ]
     end
     # Quitar una partida intermedia dejaba huecos en el consecutivo.

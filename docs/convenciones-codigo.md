@@ -38,7 +38,7 @@ excepción: variables locales, métodos y constantes que no espejan nada del ERP
 —van en inglés aunque el comentario de arriba esté en español, que es
 justamente cuando se cuelan.
 
-## Textos: `pluralize` es el inflector inglés
+## Textos: `pluralize` y `to_sentence` son del inglés
 
 `pluralize(n, "palabra")` y `String#pluralize` aplican reglas del **inglés**.
 Con la mayoría del vocabulario del proyecto acierta por casualidad (*pedido →
@@ -50,6 +50,21 @@ Antes de usarlo con una palabra nueva, comprobarla
 necesita concordar además en verbo o artículo— escribir la concordancia a mano,
 como hace `Sync::Guards`. La regla de concordancia siempre está en
 `docs/convenciones-visuales.md`; esto es la trampa de la herramienta.
+
+**`to_sentence` junta con " and ".** La app no tiene traducción de sus
+conectores, así que `["A", "B"].to_sentence` da `"A and B"` — y así llegó a la
+pantalla de captura: "Escribe el precio unitario (mayor a cero). and Escribe
+la descripción del producto." (2026-09-29). Para juntar textos que ve el
+usuario, **`SpanishText`**:
+
+- `SpanishText.list(nombres)` → "A, B y C" (con la "e" ante /i/: "TALADRO e
+  IMPACTO");
+- `SpanishText.sentences(mensajes)` → los mensajes de validación, que ya son
+  oraciones con su punto, separados por un espacio. Como lista se leían mal
+  aunque el conector estuviera en español.
+
+No se arregló cambiando el idioma de la app a español: arreglaría esto, pero
+movería también fechas, números y mensajes de Rails que hoy funcionan.
 
 ## Dónde vive cada cosa
 

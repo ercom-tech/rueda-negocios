@@ -34,6 +34,17 @@ class GenericItemTest < ActionDispatch::IntegrationTest
     assert_match(/40 caracteres entre ambos/, response.body)
   end
 
+  # El caso que vio el usuario (2026-09-29): con descripción y precio vacíos a
+  # la vez, los dos motivos salían unidos por un " and " — el `to_sentence` de
+  # Rails junta con reglas del inglés.
+  test "con varios motivos, el aviso los junta como oraciones y en español" do
+    add_generic(description: "", unit_price: "")
+
+    assert_match(/Escribe el precio unitario \(mayor a cero\)\. Escribe la descripción del producto\./,
+                 response.body)
+    assert_no_match(/ and /, response.body)
+  end
+
   test "el segundo paso crea la partida con lo capturado, en mayúsculas" do
     assert_difference "OrderItem.count", 1 do
       add_generic(description: "cespol de hule", part_number: "abc-1")

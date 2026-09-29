@@ -61,7 +61,7 @@ class PromotionsController < ApplicationController
   def apply_safely(group)
     group.apply!
   rescue ActiveRecord::RecordInvalid => e
-    @apply_error = e.record.errors.full_messages.to_sentence
+    @apply_error = SpanishText.sentences(e.record.errors.full_messages)
     false
   end
 
@@ -94,7 +94,7 @@ class PromotionsController < ApplicationController
     if group.missing_gifts.any?
       # "guardar el pedido": el botón de la pantalla dice "Guardar", no
       # "Finalizar" — el mensaje tiene que nombrar el control que se ve.
-      message += " No se pudo agregar #{group.missing_gifts.to_sentence}: " \
+      message += " No se pudo agregar #{SpanishText.list(group.missing_gifts)}: " \
                  "avísale al equipo del servidor antes de guardar el pedido."
     end
     message

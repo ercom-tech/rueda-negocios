@@ -179,6 +179,21 @@ class PromotionsTest < ActionDispatch::IntegrationTest
     assert_match(/Total <span class="tabular-nums">\$5,985\.60/, bar)
   end
 
+  # Dos regalos que no se pudieron agregar (sin precio en el ERP): el aviso los
+  # nombra en español. `to_sentence` de Rails decía "A and B".
+  test "el aviso de regalos que no entraron los nombra en español" do
+    uno = make_product("EXHIBIDOR HERRAJES", 0)
+    dos = make_product("EXHIBIDOR DE LINEA", 0)
+    @promo.promotion_tiers.last.promotion_gifts.create!(product: uno, quantity: 1)
+    @promo.promotion_tiers.last.promotion_gifts.create!(product: dos, quantity: 1)
+    add_item(@product, 6)   # 6,000 → escalón del regalo
+
+    post order_promotions_path(@order), params: { promotion_id: @promo.id }
+
+    assert_match(/No se pudo agregar 1 × EXHIBIDOR HERRAJES y 1 × EXHIBIDOR DE LINEA:/, response.body)
+    assert_no_match(/ and /, response.body)
+  end
+
   test "la promoción pasa por encima del tope de descuento del producto" do
     add_item(@product, 6)
 
