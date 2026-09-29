@@ -87,7 +87,16 @@ class NewProductButtonTest < ApplicationSystemTestCase
     click_button "Producto nuevo"
     assert_selector "#generic_description"
     assert_selector "[data-totals-bar-target=bar]", visible: true
-    execute_script("window.scrollTo(0, 250)")
+    # Se acomodan los botones de la ventanita en la franja inferior, donde vive
+    # la barra — y no con un scroll fijo: la posición depende del acomodo de
+    # la fila del buscador (con o sin botones en su propia línea), y con un
+    # número fijo la prueba quedó mirando fuera de la pantalla en cuanto el
+    # acomodo cambió.
+    execute_script(<<~JS)
+      const cancel = [...document.querySelectorAll("#product-search-results button")]
+        .find((b) => b.textContent.trim() === "Cancelar")
+      window.scrollBy(0, cancel.getBoundingClientRect().bottom - window.innerHeight + 24)
+    JS
 
     [ "Cancelar", "Agregar al pedido" ].each do |label|
       hit = evaluate_script(<<~JS)

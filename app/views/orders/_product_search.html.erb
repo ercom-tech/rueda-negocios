@@ -8,13 +8,19 @@
      data-autocomplete-url-value="<%= product_options_order_path(order) %>"
      data-autocomplete-autofocus-value="true"
      data-action="click@window->autocomplete#hide turbo:submit-end->autocomplete#reset">
-  <%# Buscador + botón "Producto nuevo". El buscador toma el ancho que quede;
-      si no caben en una línea (tablet vertical), el botón baja a la suya
-      antes que cortarse. %>
+  <%# Buscador + botones. El buscador toma el ancho que quede; si no caben en
+      una línea (tablet vertical), los botones bajan a la suya antes que
+      cortarse. %>
   <div class="flex flex-wrap gap-2">
+  <%# El panel de resultados se ancla a ESTE contenedor, el del buscador, y no
+      a toda la fila: con los botones en su propia línea (tablet vertical), el
+      panel se abría debajo de ellos, separado del campo donde se escribe.
+      Así cae pegado al buscador y, mientras está abierto, encima de los
+      botones, como cualquier lista desplegable (2026-09-29). %>
+  <div class="relative min-w-[16rem] flex-1">
   <%# Gris del manual de identidad (pill "# Pedido" de la referencia paso2) —
       el mismo neutral-400 de los pills grises del sitio. %>
-  <div class="flex min-w-[16rem] flex-1 items-center gap-3 rounded-full bg-neutral-400 px-5 py-3 text-neutral-900 focus-within:ring-2 focus-within:ring-brand-gold">
+  <div class="flex items-center gap-3 rounded-full bg-neutral-400 px-5 py-3 text-neutral-900 focus-within:ring-2 focus-within:ring-brand-gold">
     <div class="flex min-w-0 flex-1 items-center gap-3">
       <svg class="h-5 w-5 shrink-0 text-neutral-700" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
       <input type="text" autocomplete="off"
@@ -30,9 +36,23 @@
         porque el capturista lo usa para saber por dónde va en un pedido largo.
         Cuenta TODAS las partidas, regalos incluidos: tiene que cuadrar con lo
         que se ve en la tabla de abajo. %>
-    <span class="shrink-0 text-sm font-semibold">
+    <span id="order-items-count" class="shrink-0 text-sm font-semibold">
       Partidas: <%= order.items_count %>
     </span>
+  </div>
+  <%# Sin `role="listbox"`: el partial ENTERO se inyecta aquí dentro, y un
+      listbox solo admite hijos option/group — el aviso de corte y los
+      mensajes de estado quedaban dentro. El role vive en el <ul> de
+      sugerencias, que sí contiene solo opciones (8ª auditoría).
+
+      z-[45]: por ENCIMA de la barra fija de totales (z-40) y por debajo de
+      los modales (z-50). Lo que se abre aquí —sugerencias o la ventanita del
+      999999— es con lo que el capturista está trabajando: con la barra
+      encima, en tablet con poca altura tapaba "Cancelar" y "Agregar al
+      pedido" (2026-09-29). %>
+  <div id="product-search-results"
+       data-autocomplete-target="results"
+       class="absolute inset-x-0 top-full z-[45] mt-1"></div>
   </div>
   <%# "Producto nuevo" (genérico 999999, fuera de catálogo): atajo a la MISMA
       ventanita que se abre eligiendo el 999999 en las sugerencias. Manda la
@@ -47,6 +67,10 @@
 
       `openGeneric` frena el envío si la ventanita ya tiene captura a medias:
       la respuesta la reemplazaría por una vacía y se perdería lo tecleado. %>
+  <%# Los botones van JUNTOS en su propio grupo: si en tablet vertical no caben
+      en la línea del buscador, bajan los dos a la siguiente, alineados a la
+      derecha (`ml-auto`), en vez de separarse uno arriba y otro abajo. %>
+  <div class="ml-auto flex shrink-0 gap-2">
   <% if (generic = Product.capturable_generic.first) %>
     <%= button_to order_order_items_path(order, product_id: generic.id),
           form: { class: "flex shrink-0" },
@@ -56,17 +80,19 @@
       Producto nuevo
     <% end %>
   <% end %>
+  <%# "Cotizador": pantalla y función por definir (2026-09-29). Mientras tanto,
+      deshabilitado SIN badge (el usuario lo pidió sin "Próximamente"): la
+      variante "sin badge" de convenciones-visuales, `opacity-60` en el botón
+      completo. Un botón que se viera activo y no hiciera nada se leería como
+      falla. El `disabled` se conserva: es comportamiento. %>
+  <button type="button" disabled aria-disabled="true"
+          class="inline-flex cursor-not-allowed items-center gap-2 rounded-full bg-black px-5 py-3 font-bold text-white opacity-60">
+    <span class="inline-flex items-center gap-2">
+      <svg class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 15.75V18m-7.5-6.75h.008v.008H8.25v-.008Zm0 2.25h.008v.008H8.25V13.5Zm0 2.25h.008v.008H8.25v-.008Zm0 2.25h.008v.008H8.25V18Zm2.498-6.75h.007v.008h-.007v-.008Zm0 2.25h.007v.008h-.007V13.5Zm0 2.25h.007v.008h-.007v-.008Zm0 2.25h.007v.008h-.007V18Zm2.504-6.75h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V13.5Zm0 2.25h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V18Zm2.498-6.75h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V13.5ZM8.25 6h7.5v2.25h-7.5V6ZM12 2.25c-1.892 0-3.758.11-5.593.322C5.307 2.7 4.5 3.65 4.5 4.757V19.5a2.25 2.25 0 0 0 2.25 2.25h10.5a2.25 2.25 0 0 0 2.25-2.25V4.757c0-1.108-.806-2.057-1.907-2.185A48.507 48.507 0 0 0 12 2.25Z" /></svg>
+      Cotizador
+    </span>
+  </button>
   </div>
-  <%# Sin `role="listbox"`: el partial ENTERO se inyecta aquí dentro, y un
-      listbox solo admite hijos option/group — el aviso de corte y los
-      mensajes de estado quedaban dentro. El role vive en el <ul> de
-      sugerencias, que sí contiene solo opciones (8ª auditoría). %>
-  <%# z-[45]: por ENCIMA de la barra fija de totales (z-40) y por debajo de
-      los modales (z-50). Lo que se abre aquí —sugerencias o la ventanita del
-      999999— es con lo que el capturista está trabajando: con la barra
-      encima, en tablet con poca altura tapaba "Cancelar" y "Agregar al
-      pedido" (2026-09-29). %>
-  <div id="product-search-results"
-       data-autocomplete-target="results"
-       class="absolute inset-x-0 top-full z-[45] mt-1"></div>
+  </div>
+
 </div>

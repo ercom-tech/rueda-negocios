@@ -66,8 +66,10 @@ class OrderItemsCounterTest < ActionDispatch::IntegrationTest
     # Sobre el TEXTO DEL CONTADOR, no sobre el HTML entero: un
     # `assert_no_match(/\/\s*45/, response.body)` daba falso positivo en cuanto
     # un digest de asset traía "/…45".
-    contador = css_select("#product-search span").map(&:text).join(" ").squish
-    assert_equal "Partidas: 3", contador
+    # Por su id y no por "todos los span del buscador": desde que el bloque
+    # lleva botones al lado, esos span traían también "Cotizador Próximamente".
+    counter = css_select("#order-items-count").map(&:text).join(" ").squish
+    assert_equal "Partidas: 3", counter
   end
 
   # Cuenta TODAS las partidas, regalos incluidos, para cuadrar con la tabla.
