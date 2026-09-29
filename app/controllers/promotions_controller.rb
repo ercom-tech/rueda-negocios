@@ -124,6 +124,7 @@ class PromotionsController < ApplicationController
     [
       turbo_stream.replace("order-detail", method: :morph, partial: "orders/items_table", locals: { order: @order }),
       turbo_stream.replace("order-totals", method: :morph, partial: "orders/totals", locals: { order: @order }),
+      turbo_stream.replace("order-totals-bar-content", method: :morph, partial: "orders/totals_bar_content", locals: { order: @order }),
       turbo_stream.replace("product-search", method: :morph, partial: "orders/product_search", locals: { order: @order })
     ]
   end

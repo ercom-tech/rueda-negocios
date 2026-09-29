@@ -31,6 +31,67 @@ Si es **algo por hacer**, va al backlog.
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
 
+## Barra fija de totales en la captura (2026-09-29)
+
+**El pedido:** con muchas partidas, para ver los totales había que bajar hasta
+el final. Lo que pidieron fue repetir la tarjeta de totales en el encabezado,
+a la derecha de vendedor y dirección de entrega.
+
+**Por qué no se hizo así** (objeción del usuario): con pocas partidas los
+cuatro importes quedaban dos veces en la misma pantalla. Y desde que la lista va
+al revés (2026-09-02) el capturista vive arriba, junto al buscador — por eso los
+querían ahí.
+
+**Lo que se hizo:** una píldora compacta, fija al pie de la pantalla y centrada
+al ancho de su contenido, con el número de partidas, el Subtotal (en coral, como
+en la tarjeta) y el Total. La primera versión iba de lado a lado; el usuario la
+pidió compacta y centrada, y con razón: a todo lo ancho tapaba de orilla a
+orilla los renglones que se están leyendo, incluidos el bote de basura y el
+total de cada partida. Su contenedor sí va de lado a lado (es lo que la centra
+sin `transform`) y por eso lleva `pointer-events-none`: sin él, las orillas
+vacías se comerían los toques sobre la tabla. La flecha apunta hacia ABAJO,
+porque tocarla baja a la tarjeta.
+
+**Negra con filete dorado, no crema** (tercera vuelta, también del usuario): en
+crema se perdía sobre las partidas, que son crema — contraste 1:1 contra lo que
+tapaba, con la sombra como única separación. Negro sobre crema da 18.1:1 y el
+filete dorado (13.06:1 sobre negro) cubre los tramos en que pasa sobre algo
+negro. Es excepción a "toda superficie flotante va en crema", registrada en
+`docs/convenciones-visuales.md` con la regla general que deja: una capa
+flotante se distingue de **lo que tapa**, no del fondo del sitio. Las dos
+versiones anteriores se revisaron en captura y ninguna prueba ni captura lo
+habría señalado como defecto: hizo falta mirarla sobre las partidas, que es
+donde vive.
+
+**Accesibilidad:** sin `aria-label` en el botón. Sustituiría al contenido, y el
+lector de pantalla anunciaría "ver los totales" sin decir las cifras; la acción
+va como texto oculto al final. **Aparece
+solo cuando la tarjeta de totales no se ve completa**, así que los importes
+nunca se ven dos veces, y con pocas partidas no aparece nunca. Tocarla lleva a
+la tarjeta completa, con descuento e IVA. Se descartaron: meter los importes en
+la barra negra del título (también repite, y en tablet vertical ya va apretada),
+subir observaciones y totales arriba de la tabla (separa el buscador de la
+tabla, el camino más usado) y darle scroll propio a la tabla (scroll dentro de
+scroll en tablet).
+
+**Tres decisiones de implementación que no se ven:**
+
+- Se observa **la tarjeta** con IntersectionObserver, no la posición del scroll:
+  la tabla cambia de alto con cada alta y el morph la repinta; lo único que
+  importa es si la tarjeta está en pantalla. "Se ve" = **completa** (≥ 99%): con
+  solo el Subtotal asomando, el Total no se ve.
+- El target `card` va **en el partial** de la tarjeta, no en la vista: morph
+  sincroniza los atributos con el HTML nuevo y uno puesto desde fuera se borraría
+  al primer repintado.
+- El observador se crea de forma **perezosa**: Stimulus puede avisar de los
+  targets antes de `connect()`, y un observador que aún no existe dejaría la
+  barra sin aparecer nunca, sin error.
+
+Se repinta con el **mismo stream** que la tarjeta en `OrderItemsController` y
+`PromotionsController`; una acción nueva que cambie totales tiene que repintar
+las dos. Pendiente de mirar en la tablet real: la barra con el **teclado en
+pantalla** abierto (en Chrome headless no se puede reproducir).
+
 ## 11ª auditoría (2026-09-18) — remediación
 
 Alcance: todo lo posterior a la 10ª **incluida su remediación** (app

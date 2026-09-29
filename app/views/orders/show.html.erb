@@ -1,6 +1,6 @@
 <% content_for :title, "Levantamiento de pedido · Rueda de Negocios" %>
 
-<div class="relative min-h-screen w-full overflow-hidden bg-black">
+<div class="relative min-h-screen w-full overflow-hidden bg-black" data-controller="totals-bar">
   <%# Patrón de herramientas a todo lo ancho (mismo shell que el home) %>
   <div class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.18]"
        style="background-image: url('<%= image_path "tools_pattern_white.svg" %>');"></div>
@@ -228,5 +228,47 @@
       </div>
 
     </section>
+  </div>
+
+  <%# ── Barra fija de totales: aparece solo cuando la tarjeta no se ve ──
+      Nace oculta: la primera lectura del observador decide. Así, con pocas
+      partidas no parpadea al cargar.
+
+      `fixed` fuera de la card: el `overflow-hidden` del shell no recorta un
+      fijo, pero un `transform` en cualquier ancestro sí lo rompería (misma
+      regla que los modales), y este wrapper no escala. z-40, por DEBAJO de
+      los diálogos (z-50): un modal abierto tiene que tapar la barra, no al
+      revés. El margen inferior suma el área segura del iPad.
+
+      Píldora centrada al ancho de su contenido (decisión del usuario
+      2026-09-29): a todo lo ancho tapaba de orilla a orilla justo los
+      renglones que se están leyendo, incluidos el bote de basura y el total
+      de cada partida. El contenedor sí va de lado a lado —es lo que centra sin
+      `transform`—, así que lleva `pointer-events-none`: sin eso, sus orillas
+      vacías se comerían los toques sobre la tabla de abajo. Solo el botón los
+      recibe.
+
+      NEGRA con filete dorado, no crema: es la excepción registrada en
+      convenciones-visuales. En crema se perdía sobre las partidas, que son
+      crema —la sombra era lo único que la separaba—. El filete cubre el caso
+      en que el negro solo no basta: al pasar sobre el `thead` negro o sobre
+      el fondo del sitio. %>
+  <div data-totals-bar-target="bar" hidden
+       class="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-6"
+       style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));">
+    <%# Sin `aria-label`: sustituiría al contenido, y el lector de pantalla
+        anunciaría la acción sin las cifras. La acción va como texto oculto
+        al final. %>
+    <button type="button" data-action="totals-bar#reveal"
+            class="pointer-events-auto inline-flex max-w-full items-center gap-4 rounded-full border-2 border-brand-gold bg-black py-2 pl-5 pr-3 text-left text-sm shadow-xl transition-colors hover:bg-neutral-900">
+      <%= render "orders/totals_bar_content", order: @order %>
+      <%# Flecha hacia ABAJO: tocar la barra baja hasta la tarjeta, que está al
+          final de la página. Heroicons outline chevron-down, trazo 1.5. %>
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+           stroke="currentColor" aria-hidden="true" class="h-5 w-5 shrink-0 text-brand-gold">
+        <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+      </svg>
+      <span class="sr-only">Ver los totales completos del pedido</span>
+    </button>
   </div>
 </div>

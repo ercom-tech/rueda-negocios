@@ -151,6 +151,7 @@ class OrderItemsController < ApplicationController
     [
       turbo_stream.replace("order-detail", method: :morph, partial: "orders/items_table", locals: { order: @order }),
       turbo_stream.replace("order-totals", method: :morph, partial: "orders/totals", locals: { order: @order }),
+      turbo_stream.replace("order-totals-bar-content", method: :morph, partial: "orders/totals_bar_content", locals: { order: @order }),
       # El buscador también: su contador de partidas cambia con cada alta y
       # cada baja, y se actualiza sin recargar la página.
       turbo_stream.replace("product-search", method: :morph, partial: "orders/product_search", locals: { order: @order })

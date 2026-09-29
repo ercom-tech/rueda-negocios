@@ -15,7 +15,11 @@
     `border-black/15` daba 1.41:1 sobre crema y era lo único que lo separaba
     del bloque de arriba. `tabular-nums` en los cuatro importes para que las
     comas decimales queden en columna entre renglones. %>
-<div id="order-totals" class="w-full overflow-hidden rounded-2xl border border-black/10 bg-brand-cream text-sm text-neutral-900 lg:w-80">
+<%# `card` para la barra fija (ver totals_bar_controller): observa ESTA
+    tarjeta para saber si se ve. Va en el partial y no en la vista porque morph
+    sincroniza los atributos con el HTML nuevo — puesto desde fuera, el primer
+    repintado lo borraría. %>
+<div id="order-totals" data-totals-bar-target="card" class="w-full overflow-hidden rounded-2xl border border-black/10 bg-brand-cream text-sm text-neutral-900 lg:w-80">
   <div class="flex justify-between bg-brand-coral px-5 py-3 font-bold text-white"><span>Subtotal</span><span class="tabular-nums"><%= number_to_currency(order.subtotal) %></span></div>
   <div class="flex justify-between px-5 py-2"><span>Descuento</span><span class="tabular-nums"><%= number_to_currency(order.discount_total) %></span></div>
   <div class="flex justify-between px-5 py-2"><span>IVA</span><span class="tabular-nums"><%= number_to_currency(order.tax_total) %></span></div>

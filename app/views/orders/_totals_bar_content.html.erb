@@ -1,0 +1,29 @@
+<%# Lo que dice la barra fija de totales (ver `totals_bar_controller`). Locals:
+    order. Id propio para el Turbo replace: la barra se repinta junto con la
+    tarjeta de totales en cada alta, corrección o promoción, y es el CONTENIDO
+    lo que se reemplaza — no la barra, cuyo estado (visible u oculta) lo lleva
+    el controller.
+
+    Solo Subtotal y Total, no los cuatro importes: son las dos cifras que el
+    capturista le canta al cliente; el descuento y el IVA están a un toque, en
+    la tarjeta completa. El Subtotal va en coral, igual que en la tarjeta
+    (decisión del usuario 2026-08-24): el ojo ya lo busca con ese color.
+
+    Texto claro: la píldora es negra (ver la nota en orders/show).
+
+    Concordancia escrita a mano: `pluralize` es el inflector inglés. %>
+<% count = order.order_items.size %>
+<%# `span` y no `div`: vive dentro de un <button>, que solo admite contenido
+    en línea. %>
+<%# Una sola línea mientras quepa; en pantalla angosta se parte en renglones
+    antes que cortarse (`flex-wrap`), pero cada cifra queda entera con su
+    rótulo (`whitespace-nowrap`). %>
+<span id="order-totals-bar-content" class="flex flex-wrap items-center gap-x-5 gap-y-1">
+  <span class="whitespace-nowrap font-semibold text-white/70"><%= count %> <%= count == 1 ? "partida" : "partidas" %></span>
+  <span class="whitespace-nowrap rounded-full bg-brand-coral px-3.5 py-1 font-bold text-white">
+    Subtotal <span class="tabular-nums"><%= number_to_currency(order.subtotal) %></span>
+  </span>
+  <span class="whitespace-nowrap text-base font-bold text-white">
+    Total <span class="tabular-nums"><%= number_to_currency(order.total) %></span>
+  </span>
+</span>

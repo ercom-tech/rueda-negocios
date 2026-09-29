@@ -166,6 +166,19 @@ class PromotionsTest < ActionDispatch::IntegrationTest
 
   # El tope del producto (9%) es la brida del descuento MANUAL: si topara a la
   # promoción, la de MAKITA al 14% no se podría aplicar nunca.
+  # La barra fija de totales se repinta con la tarjeta: aplicar una promoción
+  # cambia el subtotal y el total, y una barra con la cifra de antes le
+  # cantaría al cliente un importe que ya no es.
+  test "aplicar una promoción repinta también la barra de totales" do
+    add_item(@product, 6)   # 6,000 → 14%: total 6,000 × 0.86 × 1.16 = 5,985.60
+
+    post order_promotions_path(@order), params: { promotion_id: @promo.id }
+
+    assert_match(/target="order-totals-bar-content"/, response.body)
+    bar = response.body[/<turbo-stream[^>]*target="order-totals-bar-content".*?<\/turbo-stream>/m]
+    assert_match(/Total <span class="tabular-nums">\$5,985\.60/, bar)
+  end
+
   test "la promoción pasa por encima del tope de descuento del producto" do
     add_item(@product, 6)
 

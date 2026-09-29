@@ -69,6 +69,17 @@ simulación va con el modelo y con el par medido: el "2.31:1" que decía antes
 esta línea no se reproduce con ninguna lectura, y sin decir contra qué
 superficie era imposible comprobarlo (8ª auditoría).
 
+**Excepción: la barra fija de totales** (`orders/show`) es **negra con filete
+dorado**, no crema, aunque sea una superficie flotante. La regla del crema
+existe para que el contenido se lea sobre el fondo negro del sitio; esta barra
+hace lo contrario: flota sobre las partidas, que SON crema. En crema su contraste
+contra lo que tapa era 1:1 y la sombra era lo único que la separaba — se perdía
+(visto por el usuario, 2026-09-29). Negro sobre crema da **18.1:1**. El filete
+dorado cubre los casos en que pasa sobre algo negro (el `thead`, el fondo del
+sitio): dorado sobre negro da **13.06:1**. Y la regla que sale de aquí es
+general: **una capa flotante se distingue de lo que tapa, no del fondo del
+sitio** — antes de darle color, mirar sobre qué va a pasar.
+
 **`bg-white/10` es para fondo OSCURO, no para el marco dorado de los filtros.**
 Un botón secundario con esa clase dentro de la barra dorada se lava hasta
 volverse ilegible — el blanco sobre dorado claro no tiene dónde apoyarse. Ahí
