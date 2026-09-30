@@ -223,7 +223,7 @@ exist: character = boolean`.
 **El enlace es la llave del pedido** —`clave_cliente`, `fecha_pedido`,
 `hora_pedido`—, que trae la cabecera `fac_cfdi`; el detalle se cuelga de ella
 por `id_cfdi`. Las dos tablas traen también `clave_pedido`, pero **no sirve de
-enlace**: el folio se repite en el ERP (1,774 repetidos en la empresa 1), y
+enlace**: el folio se repite en el ERP (1,782 repetidos en la empresa 1, réplica con datos al 2026-09-23), y
 cruzando por él se le suma a un pedido la factura de otro. Una factura vigente
 es la que cumple `baja = false AND cancelado = false AND pac_ok = true`: sin timbre
 del PAC no hay factura, aunque el registro exista.
@@ -241,7 +241,7 @@ marca— está en `docs/diagnostico-erp.md`.
 
 El pedido **tal como lo capturó el proveedor**, guardado en el ERP al recibirlo.
 Existe porque ninguna otra copia sobrevive: en el ERP el pedido lo edita
-después el equipo de ventas (en Oaxaca, 415 de 528 pedidos ya no tienen el
+después el equipo de ventas (en Oaxaca, réplica con datos al 2026-09-23: 415 de 528 pedidos ya no tienen el
 total que se capturó), y en la laptop se borra al obtener información o cerrar
 la rueda.
 

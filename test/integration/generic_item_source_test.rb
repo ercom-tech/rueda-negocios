@@ -4,10 +4,10 @@ require "test_helper"
 #
 # El capturista indica, entre sus proveedores y marcas asignados en la rueda, a
 # quién pertenece lo que capturó fuera de catálogo: dos campos, obligatorio al
-# menos uno. Con una sola asignación en total ya sale elegida. Se queda en la
-# laptop —el ERP no tiene dónde guardarlo— y sirve a los dos reportes del
-# evento, que antes escondían el genérico en cuanto se filtraba por proveedor
-# o marca.
+# menos uno. Con una sola asignación en total ya sale elegida. No va al pedido
+# del ERP —no tiene dónde guardarlo— pero sí a su evidencia, y sirve a los dos
+# reportes del evento, que antes escondían el genérico en cuanto se filtraba
+# por proveedor o marca.
 class GenericItemSourceTest < ActionDispatch::IntegrationTest
   STREAM = { "Accept" => "text/vnd.turbo-stream.html" }.freeze
 

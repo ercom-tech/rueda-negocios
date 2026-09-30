@@ -109,8 +109,9 @@ class ProductSales
   end
 
   # Las del genérico que el filtro deja ver: las de ESE proveedor o marca.
-  # Con los dos filtros a la vez no coincide ninguna —la partida lleva uno u
-  # otro—, igual que en el catálogo es la intersección.
+  # Con los dos filtros a la vez, las atribuidas a LOS DOS —una partida puede
+  # llevar proveedor, marca o ambos—, igual que en el catálogo es la
+  # intersección.
   def visible_generic_items
     scope = generic_items
     scope = scope.where(supplier_id: @supplier_id) if @supplier_id.present?

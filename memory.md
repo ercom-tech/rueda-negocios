@@ -36,9 +36,11 @@ Si es **algo por hacer**, va al backlog.
 **El pedido:** guardar en el ERP una copia de cada pedido **tal como se
 recibió**, como evidencia para aclaraciones y reportes. En la laptop se borra al
 obtener información o cerrar la rueda, y en el ERP ventas lo edita. Lo que lo
-justifica, medido al reconstruir Oaxaca: **415 de 528 pedidos ya no tienen en el
-ERP el total que se capturó** (414 de ellos cuadran con sus partidas de hoy: se
-modificaron, no es un error del cruce).
+justifica, medido al reconstruir Oaxaca (réplica con datos al 2026-09-23): **415 de 528 pedidos ya no
+tienen en el ERP el total que se capturó**, y los 415 cuadran con sus partidas no
+borradas de hoy: se modificaron, no es un error del cruce. *(Aquí decía "414 de
+ellos": salía excluyendo las partidas negadas, justo el filtro que el reporte de
+lo negado declara incorrecto — 12ª auditoría.)*
 
 **Decisiones del usuario:** en la base del ERP (`fecego.vta_pedido_rueda` y
 `vta_pedido_rueda_detalle`, sin "original" en el nombre); **tablas completas +
@@ -86,15 +88,18 @@ Oaxaca** desde el respaldo de la laptop.
 pertenece, entre los proveedores y marcas asignados al capturista. Primero se
 pidió un solo campo para los dos; al ver que un producto puede ser de un
 proveedor Y una marca, quedaron **dos campos independientes, obligatorio al
-menos uno** (decisión del usuario). En el catálogo, las marcas de los
-capturistas no están ligadas a ningún proveedor (`brands_suppliers` vacío para
-ARATY, HITOOLS y YELLOW TAIL), así que uno no se deduce del otro.
+menos uno** (decisión del usuario): uno no se deduce del otro. *(Corregido en la
+12ª auditoría: aquí decía que las marcas no están ligadas a ningún proveedor, con
+`brands_suppliers` vacía como prueba — pero esa tabla nunca la llena el sync. En el
+ERP, `com_proveedor_has_marca` liga HITOOLS a 24 proveedores; ARATY y YELLOW TAIL
+a ninguno. La decisión se sostiene: con 24 no hay cómo deducirlo.)*
 
-**Se queda en la laptop (opción A del usuario).** El detalle del pedido del ERP
+**No va al pedido del ERP (opción A del usuario).** El detalle del pedido del ERP
 no tiene columna de proveedor ni de marca; mandarlo exigía una columna nueva allá
 (como `nombre_capturado`), el cambio en `rueda-api` y el DDL. Sirve a los
 reportes del evento: `order_items.supplier_id` y `brand_id`, cualquiera de los
-dos, ambos o ninguno.
+dos, ambos o ninguno. *(Desde la evidencia del día siguiente sí llega al ERP, pero
+a `vta_pedido_rueda_detalle`, no al pedido.)*
 
 **A quién le toca, medido en Oaxaca:** 62 usuarios tienen una sola asignación
 (ya sale elegida), 12 tienen dos, y **18 tienen 24 proveedores y 3 marcas** —las
@@ -267,7 +272,7 @@ De ahí salieron dos reglas nuevas en `docs/auditorias.md`.
    salida que existe desde 2026-09-17 (resolverlo desde el panel, con la ruta
    exacta), y **"Guardar" un borrador ajeno pide confirmación** — estaba a un
    toque de mandar al ERP un pedido a medias, y es irreversible.
-4. **El reporte de lo negado** cruzaba la factura por `clave_pedido` (1,774
+4. **El reporte de lo negado** cruzaba la factura por `clave_pedido` (1,774 al 2026-09-18
    repetidas en la empresa 1) y filtraba `det.cancelado = false`, que en el ERP
    **es** el negado explícito. Ahora cruza por la llave del pedido y no esconde
    nada: $18,235 que no aparecían.
@@ -366,7 +371,8 @@ La diferencia no es cosmética: **1,612 productos del catálogo de la rueda
 (10.4%) tienen existencia en otra sucursal y no en matriz**. Con la fuente
 vieja, a esos el capturista les habría visto "hay" mientras el material estaba
 en otra ciudad — y el reporte de lo negado acababa de cuantificar $618K de una
-sola marca (HITOOLS en Oaxaca: negado más negado parcial) en material pedido
+sola marca (HITOOLS en Oaxaca: negado más negado parcial, al 2026-09-17; $545K
+con datos al 2026-09-23, porque se siguió facturando) en material pedido
 que no llegó.
 
 **Qué columnas suman** (decisión de FECEGO): `existencia_surtido +

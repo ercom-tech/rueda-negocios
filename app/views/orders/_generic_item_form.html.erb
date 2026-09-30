@@ -51,15 +51,16 @@
     </div>
 
     <%# Proveedor y Marca: a quién pertenece el producto nuevo (2026-09-29).
-        Dos campos independientes —en el catálogo, las marcas de los
-        capturistas no están ligadas a ningún proveedor—, y cada uno aparece
+        Dos campos independientes —uno no se deduce del otro: en el ERP,
+        HITOOLS está ligada a 24 proveedores y ARATY a ninguno—, y cada uno aparece
         solo si el capturista tiene asignaciones de ese tipo. Obligatorio AL
         MENOS UNO (lo exige el modelo, `generic_source_assigned`). Si el
         capturista tiene UNA sola asignación en total, ya sale elegida, como el
         filtro del reporte. No "un campo con una opción": con un proveedor y una
         marca eso atribuiría la partida a los dos sin que nadie lo decidiera.
         Con más de 6 opciones, el combo trae buscador (las cuentas del personal de FECEGO tienen 24
-        proveedores). Se queda en la laptop: el ERP no tiene dónde guardarlo. %>
+        proveedores). No va al pedido del ERP —no tiene dónde guardarlo—, pero
+        sí a su evidencia (`vta_pedido_rueda_detalle`). %>
     <% round            = order.business_round %>
     <% supplier_options = order.user.supplier_options_in(round) %>
     <% brand_options    = order.user.brand_options_in(round) %>

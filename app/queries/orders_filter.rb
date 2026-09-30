@@ -134,9 +134,10 @@ class OrdersFilter
 
   private
 
-  # Rama del producto nuevo en `matching_items_sql`. Proveedor Y marca a la vez
-  # no puede coincidir nunca (la partida lleva uno u otro), igual que en el
-  # catálogo es la intersección.
+  # Rama del producto nuevo en `matching_items_sql`. Con proveedor Y marca en
+  # el filtro coinciden las partidas atribuidas a LOS DOS —una partida puede
+  # llevar proveedor, marca o ambos—, igual que en el catálogo es la
+  # intersección.
   def generic_items_sql
     conditions = [ sanitize([ "order_items.product_id IN (?)",
                               Product.where(erp_product_id: Product::GENERIC_ERP_ID).select(:id) ]) ]

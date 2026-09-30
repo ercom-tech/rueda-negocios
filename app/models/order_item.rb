@@ -9,10 +9,11 @@ class OrderItem < ApplicationRecord
   belongs_to :product, optional: true
   belongs_to :promotion,      optional: true
   belongs_to :promotion_tier, optional: true
-  # A quién pertenece un producto nuevo (genérico 999999): uno de los dos o
-  # ninguno. Las partidas de catálogo lo saben por su producto. Solo vive en
-  # la laptop —el ERP no tiene dónde guardarlo— y sirve a los reportes del
-  # evento (2026-09-29).
+  # A quién pertenece un producto nuevo (genérico 999999): proveedor, marca,
+  # ambos o ninguno. Las partidas de catálogo lo saben por su producto. No va
+  # al pedido del ERP —`vta_pedido_detalle` no tiene dónde guardarlo—, pero sí
+  # a su evidencia (`vta_pedido_rueda_detalle.id_proveedor`/`id_marca`), y
+  # sirve a los reportes del evento (2026-09-29).
   belongs_to :supplier, optional: true
   belongs_to :brand,    optional: true
 
@@ -186,9 +187,10 @@ class OrderItem < ApplicationRecord
     parts.join(" · ").presence
   end
 
-  # Proveedor y marca son dos campos independientes (en el catálogo, las marcas
-  # de los capturistas no están ligadas a ningún proveedor, así que uno no se
-  # deduce del otro). Obligatorio AL MENOS UNO cuando el capturista tiene a
+  # Proveedor y marca son dos campos independientes: uno no se deduce del
+  # otro. En el ERP (`com_proveedor_has_marca`), HITOOLS está ligada a 24
+  # proveedores y ARATY y YELLOW TAIL a ninguno — y el sync ni siquiera baja
+  # esa relación (`brands_suppliers` queda vacía). Obligatorio AL MENOS UNO cuando el capturista tiene a
   # quién atribuirlo (decisión del usuario, 2026-09-29); sin asignaciones no
   # se exige ni se admite.
   #

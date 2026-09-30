@@ -260,7 +260,8 @@ JOIN fecego.vta_pedido ped
 WHERE ped.id_rueda = 3;                    -- ← la rueda
 ```
 
-En Oaxaca da 6,065 renglones de 512 pedidos.
+En Oaxaca da 6,208 renglones de 519 pedidos (réplica con datos al 2026-09-23; crece mientras se
+sigue facturando).
 
 Los dos parámetros del reporte son **`id_rueda`** y **`id_marca`**, ambos en la
 CTE `solicitado`:
@@ -322,7 +323,7 @@ ORDER BY (s.monto - COALESCE(f.monto, 0)) DESC, s.clave_cliente, s.id_producto;
 ```
 
 **Por qué la factura se cruza por la llave del pedido y no por
-`clave_pedido`.** El folio no es único en el ERP: en la empresa 1 hay 1,774
+`clave_pedido`.** El folio no es único en el ERP: en la empresa 1 hay 1,782 (réplica con datos al 2026-09-23)
 `clave_pedido` repetidos entre pedidos distintos. Cruzando por él, la factura
 de otro pedido con el mismo folio se sumaría a este. La cabecera del CFDI trae
 la llave del pedido (`clave_cliente`, `fecha_pedido`, `hora_pedido`) y es la
@@ -353,13 +354,13 @@ La `Diferencia` es `solicitada − facturada`: positiva es lo negado. El signo
 solo no se lee bien en una hoja, y por eso va la columna `Estado` al lado.
 
 **El "facturado de más" es real, no un artefacto del cruce**: en Oaxaca/HITOOLS
-son 57 renglones y en **los 57** lo facturado es exactamente lo que almacén
+son 58 renglones (réplica con datos al 2026-09-23) y en **los 58** lo facturado es exactamente lo que almacén
 registró como surtido (`vta_pedido_detalle.surtido`). Es decir, almacén surtió
 más de lo pedido y así se facturó. Es justo lo que el proveedor querrá revisar.
 
 **Cómo saber si el cruce está sano:** los renglones que cuadran exacto. En
-Oaxaca/HITOOLS fueron **925**, con $1.33 de diferencia por redondeo (en valor absoluto) sobre
-$1,021,763.67. Si esa cifra sale baja, el enlace por la llave del pedido +
+Oaxaca/HITOOLS son **952**, con $1.40 de diferencia por redondeo (en valor absoluto) sobre
+$1,082,552.18 (réplica con datos al 2026-09-23; crecen mientras se sigue facturando). Si esa cifra sale baja, el enlace por la llave del pedido +
 `id_producto` no está funcionando y el reporte no sirve.
 
 Para sacarlo a Excel, la misma consulta dentro de un `\copy` (sin el punto y
@@ -416,8 +417,10 @@ WHERE ev.id_empresa = 1
 ORDER BY abs(ev.total - ped.total) DESC;
 ```
 
-En Oaxaca da 415 de 528 pedidos. Que el total de hoy **cuadre con las partidas
-de hoy** (414 de 415) dice que el pedido se modificó, no que el cruce esté mal.
+En Oaxaca da 415 de 528 pedidos (réplica con datos al 2026-09-23). Que el total de hoy **cuadre con
+las partidas de hoy** —los 415, sumando las partidas no borradas (`baja =
+false`), negadas incluidas— dice que el pedido se modificó, no que el cruce esté
+mal.
 Para ver QUÉ cambió en uno, sus partidas capturadas:
 
 ```sql
