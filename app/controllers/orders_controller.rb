@@ -187,14 +187,21 @@ class OrdersController < ApplicationController
   # (lo mismo que un id que nunca existió); si dejó de ser un borrador que el
   # servidor puede resolver, no se toca y se dice por qué. Y quien llegue
   # después espera al candado y ve el estado ya resuelto.
+  #
+  # El pedido se toma de lo que el usuario puede LEER (`accessible_orders`) y
+  # no de `writable_order`, que corre fuera del candado: con la pantalla de un
+  # borrador ajeno abierta un rato, si el capturista lo guardaba, el servidor
+  # recibía "No encontramos esa pantalla" en vez del aviso — que solo salía en
+  # la ventana de milisegundos dentro del candado (12ª auditoría). El permiso
+  # se decide adentro, con la fila fresca, igual para los dos casos.
   def with_locked_writable_order(id)
-    order = writable_order(id)
+    order = accessible_orders.find(id)
     order.with_lock do
       if order.user_id == current_user.id || can_resolve_draft?(order)
         yield order
       else
         redirect_to order_path(order),
-                    alert: "Este pedido ya no es un borrador: lo acaban de guardar desde otro equipo. No se cambió nada."
+                    alert: "Este pedido ya no es un borrador: lo guardaron desde otro equipo. No se cambió nada."
       end
     end
   end

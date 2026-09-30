@@ -58,7 +58,7 @@ class GenericItemFlowTest < ApplicationSystemTestCase
     # Elegirlo NO agrega: abre el mini-formulario en el panel del buscador.
     fill_in "Busca por código, nombre, modelo o No. de parte", with: "999999"
     click_button "Capturar"
-    assert_text "Producto fuera de catálogo"
+    assert_text "Producto nuevo — fuera de catálogo"
 
     fill_in "Descripción", with: "CESPOL DE HULE"
     fill_in "No. de parte (opcional)", with: "ABC-1"

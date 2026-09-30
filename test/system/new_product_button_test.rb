@@ -26,7 +26,7 @@ class NewProductButtonTest < ApplicationSystemTestCase
 
     click_button "Producto nuevo"
 
-    assert_text "Producto fuera de catálogo (999999)"
+    assert_text "Producto nuevo — fuera de catálogo (999999)"
     assert_equal "generic_description", page.evaluate_script("document.activeElement.id"),
                  "el foco tiene que caer en Descripción, no quedarse en el botón"
 
@@ -121,7 +121,7 @@ class NewProductButtonTest < ApplicationSystemTestCase
     fill_in "Busca por código, nombre, modelo o No. de parte", with: "999999"
     click_button "Capturar"
 
-    assert_text "Producto fuera de catálogo (999999)"
+    assert_text "Producto nuevo — fuera de catálogo (999999)"
   end
 
   # "Proveedor / Marca" (2026-09-29). El combo vive dentro de la ventanita,
@@ -191,5 +191,42 @@ class NewProductButtonTest < ApplicationSystemTestCase
 
     assert_text "Partidas: 1"
     assert_equal suppliers[6].id, @order.order_items.sole.supplier_id
+  end
+
+  # Tras "Selecciona el proveedor…", el aviso rojo queda fijo arriba. Si el
+  # combo se abre hacia arriba (poco espacio abajo), su filtro quedaba DEBAJO
+  # del aviso, justo cuando el capturista iba a corregir (12ª auditoría).
+  test "el aviso rojo no tapa el filtro del combo" do
+    # El caso real: tablet vertical y las cuentas del personal de FECEGO, con
+    # 24 proveedores — el combo es alto y se abre hacia arriba hasta el aviso.
+    # En 1024 px no pasa: ahí el aviso, centrado, no alcanza al panel.
+    (1..24).each do |n|
+      supplier = Supplier.create!(erp_supplier_id: 970_420 + n, name: "PROVEEDOR #{n}")
+      BusinessRoundPerson.create!(business_round: @order.business_round, user: @user, position: n, supplier: supplier)
+    end
+    page.driver.browser.manage.window.resize_to(768, 1024)
+    sign_in @user
+    visit order_path(@order)
+    click_button "Producto nuevo"
+    fill_in "Descripción", with: "CESPOL"
+    fill_in "Precio unitario", with: "10"
+    click_button "Agregar al pedido"
+    assert_text "Selecciona el proveedor del producto."
+
+    within("#product-search-results") { find("button[aria-label='Proveedor']").click }
+    filter = find("#product-search-results [data-select-target=filter]", visible: true)
+
+    covered = evaluate_script(<<~JS)
+      (() => {
+        const el = document.querySelector("#product-search-results [data-select-target=filter]")
+        const r = el.getBoundingClientRect()
+        const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+        return !(hit === el || el.contains(hit))
+      })()
+    JS
+    refute covered, "el aviso tapa el filtro del combo"
+    assert filter.visible?
+  ensure
+    page.driver.browser.manage.window.resize_to(1400, 1000)
   end
 end

@@ -29,7 +29,7 @@ class GenericItemTest < ActionDispatch::IntegrationTest
            headers: { "Accept" => "text/vnd.turbo-stream.html" }
     end
 
-    assert_match(/Producto fuera de catálogo/, response.body)
+    assert_match(/Producto nuevo — fuera de catálogo/, response.body)
     assert_match(/generic\[description\]/, response.body)
     assert_match(/40 caracteres entre ambos/, response.body)
   end

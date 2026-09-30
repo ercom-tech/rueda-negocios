@@ -95,18 +95,25 @@ export default class extends Controller {
   }
 
   // El borde real contra el que se recorta el panel: el primer ancestro que
-  // no deja desbordar, o el viewport si no hay ninguno.
+  // no deja desbordar, o el viewport si no hay ninguno. Arriba, además, el
+  // aviso fijo (#flash) cuando está a la vista: un combo que se abría hacia
+  // arriba quedaba con su filtro debajo del aviso rojo de "Selecciona el
+  // proveedor…", justo cuando el capturista iba a corregir (12ª auditoría).
   get clippingBounds() {
+    let bounds = { top: 0, bottom: window.innerHeight }
     let node = this.panelTarget.parentElement
     while (node && node !== document.body) {
       const style = getComputedStyle(node)
       if (style.overflow !== "visible" || style.overflowY !== "visible") {
         const rect = node.getBoundingClientRect()
-        return { top: Math.max(rect.top, 0), bottom: Math.min(rect.bottom, window.innerHeight) }
+        bounds = { top: Math.max(rect.top, 0), bottom: Math.min(rect.bottom, window.innerHeight) }
+        break
       }
       node = node.parentElement
     }
-    return { top: 0, bottom: window.innerHeight }
+    const flash = document.getElementById("flash")?.getBoundingClientRect()
+    if (flash && flash.height > 0) bounds.top = Math.max(bounds.top, flash.bottom)
+    return bounds
   }
 
   choose(event) {

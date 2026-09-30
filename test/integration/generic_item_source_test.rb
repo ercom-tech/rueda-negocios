@@ -258,6 +258,45 @@ class GenericItemSourceTest < ActionDispatch::IntegrationTest
     assert_no_match(/SOLO MAKITA/, response.body)
   end
 
+  # Agregar un filtro no puede ENSANCHAR el resultado: "cespol" solo no
+  # hallaba el producto nuevo "CESPOL DE HULE" y "cespol" + su proveedor sí.
+  # Y "999999" + proveedor no hallaba lo que "999999" solo sí (12ª auditoría).
+  test "el filtro de texto encuentra al producto nuevo con o sin proveedor" do
+    user = capturista!("cap_mono", @makita)
+    cespol = tagged_order(user, supplier: @makita, description: "CESPOL DE HULE")
+    login_as "cap_mono"
+
+    [ { product_q: "cespol" }, { product_q: "cespol", supplier_id: @makita.id },
+      { product_q: "999999" }, { product_q: "999999", supplier_id: @makita.id } ].each do |filter|
+      get captured_orders_report_path(filter)
+      assert_match(/#{cespol.local_folio}/, response.body, filter.inspect)
+    end
+  end
+
+  # Un id que no cabe en un bigint no revienta el reporte: da "sin
+  # resultados", como antes de la condición por partida.
+  test "un id enorme en la URL del reporte no da error" do
+    capturista!("cap_enorme", @makita)
+    login_as "cap_enorme"
+
+    get captured_orders_report_path(supplier_id: "99999999999999999999")
+
+    assert_response :success
+  end
+
+  # El mensaje nombra solo los campos que el capturista tiene en pantalla.
+  test "el mensaje pide solo el campo que se muestra" do
+    solo_proveedores = capturista!("cap_solo_prov", @makita, @fandeli)
+    login_as "cap_solo_prov"
+    add_generic(order_of(solo_proveedores))
+    assert_match(/Selecciona el proveedor del producto\./, response.body)
+
+    solo_marcas = capturista!("cap_solo_marca", @hitools, Brand.create!(erp_brand_id: 966_102, name: "ARATY"))
+    login_as "cap_solo_marca"
+    add_generic(order_of(solo_marcas))
+    assert_match(/Selecciona la marca del producto\./, response.body)
+  end
+
   # Con texto de producto, en el genérico se busca lo que el capturista tecleó.
   test "el texto del filtro busca en la descripción capturada del producto nuevo" do
     user = capturista!("cap_txt", @makita)

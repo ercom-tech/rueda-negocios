@@ -10,7 +10,10 @@
     generic-form da el foco a Descripción en connect(). %>
 <div data-controller="generic-form" data-autocomplete-keep
      class="rounded-2xl border border-black/10 bg-brand-cream p-5 shadow-xl">
-  <p class="text-sm font-bold text-neutral-900">Producto fuera de catálogo (999999)</p>
+  <%# "Producto nuevo" como el botón que la abre; "fuera de catálogo" y el
+      código, como la fila y el reporte (12ª auditoría: el botón y el título
+      no se llamaban igual). %>
+  <p class="text-sm font-bold text-neutral-900">Producto nuevo — fuera de catálogo (999999)</p>
   <%# El tope no es nuestro: descripción y parte viajan juntos al ERP en un
       campo de 40 caracteres (nombre_capturado). Decirlo aquí evita el
       ping-pong con el mensaje de validación. %>

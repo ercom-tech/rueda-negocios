@@ -209,17 +209,20 @@ class ServerResolvesDraftTest < ActionDispatch::IntegrationTest
 
   # --- Lo que NO puede hacer ---------------------------------------------
 
-  test "el servidor no puede descartar un pedido ajeno ya capturado" do
+  # Sí se llega desde la pantalla: el servidor la tenía abierta cuando el
+  # borrador era borrador, y el capturista lo guardó mientras tanto. Antes
+  # daba "No encontramos esa pantalla"; ahora dice qué pasó (12ª auditoría).
+  test "el servidor no puede descartar un pedido ajeno ya capturado, y se le dice por qué" do
     order = draft_with_items!
     order.capture!
     login_as "srv_draft"
 
-    # 404 y no un mensaje: a este endpoint no se llega desde la pantalla, solo
-    # a mano. Es la misma respuesta que daba `current_user.orders.find`.
     delete order_path(order)
 
-    assert_response :not_found
+    assert_redirected_to order_path(order)
+    assert_match(/ya no es un borrador: lo guardaron desde otro equipo/, flash[:alert])
     assert Order.exists?(order.id)
+    assert order.reload.captured?
   end
 
   test "un capturista no puede tocar el borrador de otro capturista" do

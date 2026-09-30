@@ -75,13 +75,15 @@ class OrdersFilter
   #   tiene que coincidir con lo que el capturista TECLEÓ (descripción o no.
   #   de parte), porque el nombre del genérico en el catálogo no dice nada.
   #
-  # Sin proveedor ni marca, el texto solo busca en el catálogo, como siempre
-  # (y el 999999 se sigue hallando por su código).
+  # La rama del producto nuevo corre con CUALQUIER filtro de partida, también
+  # con solo texto: si no, agregar un filtro ensanchaba el resultado —"cespol"
+  # solo no hallaba el producto nuevo "CESPOL DE HULE" y "cespol" + su
+  # proveedor sí— (12ª auditoría).
   def matching_items_sql
     return nil unless items?
 
     branches = [ sanitize([ "order_items.product_id IN (?)", matching_products ]) ]
-    branches << generic_items_sql if supplier_id || brand_id
+    branches << generic_items_sql
     "(#{branches.join(' OR ')})"
   end
 
@@ -143,7 +145,11 @@ class OrdersFilter
                               Product.where(erp_product_id: Product::GENERIC_ERP_ID).select(:id) ]) ]
     conditions << sanitize([ "order_items.supplier_id = ?", supplier_id ]) if supplier_id
     conditions << sanitize([ "order_items.brand_id = ?", brand_id ]) if brand_id
-    if product_q
+    # El texto busca en lo que el capturista TECLEÓ. Si además coincide con el
+    # propio 999999 (su código, "999999"), todos los productos nuevos cuentan:
+    # así "999999" + proveedor encuentra los de ese proveedor, igual que
+    # "999999" solo los encuentra todos.
+    if product_q && !Product.search(product_q).where(erp_product_id: Product::GENERIC_ERP_ID).exists?
       like = "%#{ActiveRecord::Base.sanitize_sql_like(product_q)}%"
       conditions << sanitize([ "(order_items.description ILIKE ? OR order_items.part_number ILIKE ?)", like, like ])
     end

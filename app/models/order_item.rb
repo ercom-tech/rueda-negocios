@@ -210,7 +210,14 @@ class OrderItem < ApplicationRecord
     return if supplier_id || brand_id
     return if suppliers.empty? && brands.empty?
 
-    errors.add(:base, "Selecciona el proveedor o la marca del producto.")
+    # Nombra solo los campos que el capturista TIENE en pantalla: a quien solo
+    # tiene proveedores, pedirle "el proveedor o la marca" nombraba un campo
+    # que no existe (12ª auditoría).
+    field = if brands.empty? then "el proveedor"
+    elsif suppliers.empty? then "la marca"
+    else "el proveedor o la marca"
+    end
+    errors.add(:base, "Selecciona #{field} del producto.")
   end
 
   # --- Promociones -------------------------------------------------------

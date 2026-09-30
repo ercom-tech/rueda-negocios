@@ -15,7 +15,7 @@ export default class extends Controller {
     this._panel = this.element.closest("[role]")
     this._prevRole = this._panel?.getAttribute("role")
     this._panel?.setAttribute("role", "dialog")
-    this._panel?.setAttribute("aria-label", "Producto fuera de catálogo")
+    this._panel?.setAttribute("aria-label", "Producto nuevo, fuera de catálogo")
     this._combo = document.querySelector('[aria-controls="product-search-results"]')
     this._combo?.setAttribute("aria-expanded", "true")
   }
