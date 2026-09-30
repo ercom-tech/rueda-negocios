@@ -279,6 +279,8 @@ Oaxaca** (528 pedidos). Se hace una vez, con las tablas ya creadas.
    Oaxaca es de antes de las últimas migraciones). Nunca sobre la base en uso:
 
    ```bash
+   cd ~/Proyectos/fecego-rueda-negocios
+   set -a; source .env; set +a      # host, puerto y usuario de la base
    createdb -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" rueda_evidencia
    pg_restore -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d rueda_evidencia --no-owner rueda-AAAAMMDD-HHMM.dump
    DB_NAME=rueda_evidencia bin/rails db:migrate
@@ -291,10 +293,12 @@ Oaxaca** (528 pedidos). Se hace una vez, con las tablas ya creadas.
    DB_NAME=rueda_evidencia OUT=evidencia-oaxaca.json bin/rails evidence:export
    ```
 
-3. **En la VM de la API, cotejar en seco y luego importar** (con origen
-   `respaldo`):
+3. **Copiar el archivo a la VM de la API** (por ejemplo con `scp`) y ahí
+   **cotejar en seco y luego importar** (con origen `respaldo`):
 
    ```bash
+   cd ~/fecego-rueda-api
+   set -a; source .env; set +a      # sin esto, en producción no arranca
    FILE=evidencia-oaxaca.json DRY_RUN=1 bundle exec rake evidence:import
    FILE=evidencia-oaxaca.json bundle exec rake evidence:import
    ```

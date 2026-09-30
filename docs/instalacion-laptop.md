@@ -294,7 +294,8 @@ DB_NAME=rueda_restore bin/rails runner 'puts Order.count'   # mirarla sin tocar 
 puede apuntar la app a la copia sin editar nada.
 
 **Si la copia va a sustituir a la buena** (la base se perdió o quedó
-inservible): `DB_NAME=rueda_restore` en el `.env`, reiniciar el servicio y,
+inservible): `DB_NAME=rueda_restore` en el `.env`, **migrarla**
+(`DB_NAME=rueda_restore bin/rails db:migrate`), reiniciar el servicio y,
 **antes de dejar capturar**, en este orden:
 
 1. **Transmitir.** El respaldo puede traer como pendientes pedidos que ya
