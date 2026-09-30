@@ -299,7 +299,20 @@ inservible): `DB_NAME=rueda_restore` en el `.env`, reiniciar el servicio y,
 
 1. **Transmitir.** El respaldo puede traer como pendientes pedidos que ya
    entraron al ERP después de sacarlo. No se duplican: el ERP los reconoce por
-   su clave de la rueda y devuelve sus folios.
+   su clave de la rueda y devuelve sus folios **si la laptop manda lo mismo que
+   el ERP recibió**, aunque ventas lo haya editado después (lo comprueba contra
+   la evidencia, `vta_pedido_rueda`).
+
+   Si el respaldo trae **otra versión** —el pedido se editó en la laptop perdida
+   antes de transmitirse—, sale rechazado con *"el ERP ya recibió este pedido de
+   la rueda … con otro contenido"*. El ERP tiene la versión buena: **descártalo
+   en la laptop y no canceles nada en el ERP.** Con un pedido transmitido antes
+   de que existiera la evidencia, el rechazo sale con el mensaje de colisión, que
+   pide cancelar en el ERP; **en una restauración no se sigue**: se hace lo
+   mismo, descartar en la laptop.
+
+   Y lo que se capturó **después** del respaldo y nunca se transmitió no está en
+   ningún lado: hay que capturarlo de nuevo, desde el papel firmado.
 2. **Obtener información.** Además de refrescar el catálogo, sube el contador
    de claves por encima de la más alta que el ERP ya tiene. El respaldo trae el
    contador de cuando se sacó, y sin este paso un pedido nuevo podría repetir
