@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_29_200618) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_30_054725) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -215,6 +215,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_29_200618) do
 
   create_table "orders", force: :cascade do |t|
     t.bigint "business_round_id", null: false
+    t.datetime "captured_at"
     t.bigint "cfdi_use_id"
     t.bigint "client_branch_id"
     t.bigint "client_id", null: false

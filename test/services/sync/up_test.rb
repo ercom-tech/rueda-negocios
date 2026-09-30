@@ -184,6 +184,64 @@ module Sync
       assert_requested req
     end
 
+    # --- Lo que viaja SOLO para la evidencia del ERP (2026-09-29) ----------
+
+    def sent_payload
+      body = nil
+      stub_request(:post, "#{API}/pedidos").with { |request| body = JSON.parse(request.body) }
+                                           .to_return(status: 201, body: { clave_pedido: "1A0007" }.to_json)
+      Up.new(API).run!
+      body
+    end
+
+    # Quién capturó y cuándo: el pedido del ERP no tiene dónde ponerlo, y sin
+    # ello la evidencia (`vta_pedido_rueda`) no respondería "¿quién lo capturó
+    # y a qué hora lo guardó?".
+    test "el payload lleva quién capturó el pedido y cuándo" do
+      @user.update!(name: "JUAN", paternal_surname: "PEREZ")
+      created = Time.zone.parse("2026-08-27 10:00:00")
+      saved   = Time.zone.parse("2026-08-27 10:12:30")
+      @order.update_columns(created_at: created, captured_at: saved)
+
+      body = sent_payload
+
+      assert_equal "makita1", body["capturista_usuario"]
+      assert_equal "JUAN PEREZ", body["capturista_nombre"]
+      assert_equal created.localtime.iso8601, body["creado_en_laptop"]
+      assert_equal saved.localtime.iso8601, body["guardado_en_laptop"]
+    end
+
+    # Un pedido guardado antes de la columna no tiene la hora: va vacía, no
+    # inventada con `updated_at` (que cambia por cosas que no son guardar).
+    test "sin hora de guardado, viaja vacía" do
+      @order.update_columns(captured_at: nil)
+
+      assert_nil sent_payload["guardado_en_laptop"]
+    end
+
+    test "cada partida lleva cómo se vio en pantalla" do
+      item = sent_payload["items"].first
+
+      assert_equal "3", item["codigo"]
+      assert_equal "Rotomartillo", item["descripcion"]
+      assert_equal "PZA", item["unidad"]
+      assert_equal false, item["regalo"]
+    end
+
+    # A quién atribuyó el capturista un producto nuevo, con los ids del ERP —
+    # que es donde se consulta la evidencia—, no los de la laptop.
+    test "el producto nuevo lleva su proveedor y su marca con los ids del ERP" do
+      generic  = Product.create!(erp_product_id: Product::GENERIC_ERP_ID, description: "AJUSTE", unit: "PZA")
+      supplier = Supplier.create!(erp_supplier_id: 4455, name: "MAKITA")
+      brand    = Brand.create!(erp_brand_id: 22, name: "HITOOLS")
+      @order.order_items.first.update_columns(product_id: generic.id, supplier_id: supplier.id, brand_id: brand.id)
+
+      item = sent_payload["items"].first
+
+      assert_equal 4455, item["id_proveedor"]
+      assert_equal 22, item["id_marca"]
+    end
+
     test "una factura transmite su monto de división de facturas" do
       tax  = ClientTaxProfile.create!(client: @client, rfc: "AAA010101AAA", business_name: "ISMAEL SA")
       cfdi = CfdiUse.create!(code: "G01", description: "ADQUISICIÓN DE MERCANCÍAS")

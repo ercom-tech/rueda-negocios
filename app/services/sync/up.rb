@@ -86,25 +86,9 @@ module Sync
       results
     end
 
-    private
-
-    def pending
-      Order.captured.where(erp_folio: nil)
-           .includes(:user, { order_items: :product }, :client_tax_profile, :cfdi_use,
-                     :client_receipt_profile, :client_branch, client: :salesperson)
-    end
-
-    # Consecutivo de la primera partida de cada promoción en el pedido, que
-    # es a la que apuntan sus regalos (`consec_origen_promo`). Se calcula una
-    # vez por pedido: buscarla dentro del map sería un barrido por regalo.
-    def gift_origins(order)
-      order.order_items.each_with_index.each_with_object({}) do |(item, index), origins|
-        next if item.gift? || item.promotion_id.nil?
-
-        origins[item.promotion_id] ||= index + 1
-      end
-    end
-
+    # Público: además de la transmisión, lo usa `rake evidence:export` para
+    # reconstruir la evidencia del ERP desde un respaldo de la laptop con
+    # EXACTAMENTE el mismo paquete que se habría transmitido.
     def build_payload(order)
       # Hora local de captura (el ERP maneja horas locales; created_at es UTC).
       captured = order.created_at.localtime
@@ -112,6 +96,14 @@ module Sync
 
       {
         capturista_erp_person_id: order.user.erp_person_id,
+        # Solo para la EVIDENCIA del pedido en el ERP (`vta_pedido_rueda`,
+        # 2026-09-29): el pedido del ERP no tiene dónde ponerlos, y sin ellos
+        # la evidencia no diría quién capturó ni cuándo. Una API anterior los
+        # ignora.
+        capturista_usuario: order.user.username,
+        capturista_nombre:  order.user.full_name.presence,
+        creado_en_laptop:   order.created_at.localtime.iso8601,
+        guardado_en_laptop: order.captured_at&.localtime&.iso8601,
         # La rueda a la que pertenece el pedido (vta_pedido.id_rueda, columna
         # nueva del ERP 2026-08-17). Los pedidos no-rueda del ERP viven en 0.
         id_rueda:      order.business_round.erp_round_id,
@@ -169,6 +161,17 @@ module Sync
             # apuntaría a la partida equivocada sin que nada lo delatara.
             consec_origen_promo: (gift_origins[it.promotion_id] if it.gift?),
             id_producto:       it.product&.erp_product_id,
+            # Solo para la evidencia: la partida como se vio en pantalla (la
+            # descripción del catálogo en ese momento, o lo tecleado en un
+            # producto nuevo), si es regalo, y a quién se atribuyó un producto
+            # nuevo — con los ids del ERP, que es donde se consulta.
+            codigo:            it.code,
+            descripcion:       it.description,
+            numero_parte:      it.part_number,
+            unidad:            it.unit,
+            regalo:            it.gift?,
+            id_proveedor:      it.supplier&.erp_supplier_id,
+            id_marca:          it.brand&.erp_brand_id,
             # Solo el genérico (fuera de catálogo) viaja con su descripción
             # capturada; en el resto va nil → NULL, la forma nativa del ERP
             # (8.4M de partidas normales lo llevan NULL).
@@ -184,6 +187,25 @@ module Sync
           }
         end
       }
+    end
+
+    private
+
+    def pending
+      Order.captured.where(erp_folio: nil)
+           .includes(:user, { order_items: :product }, :client_tax_profile, :cfdi_use,
+                     :client_receipt_profile, :client_branch, client: :salesperson)
+    end
+
+    # Consecutivo de la primera partida de cada promoción en el pedido, que
+    # es a la que apuntan sus regalos (`consec_origen_promo`). Se calcula una
+    # vez por pedido: buscarla dentro del map sería un barrido por regalo.
+    def gift_origins(order)
+      order.order_items.each_with_index.each_with_object({}) do |(item, index), origins|
+        next if item.gift? || item.promotion_id.nil?
+
+        origins[item.promotion_id] ||= index + 1
+      end
     end
 
     # Los folios del ERP de la respuesta. `claves_pedido` es la lista completa;

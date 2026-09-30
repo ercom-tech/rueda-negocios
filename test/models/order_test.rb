@@ -195,4 +195,24 @@ class OrderTest < ActiveSupport::TestCase
     assert_nil order.reload.client_tax_profile_id
     assert_nil order.cfdi_use_id
   end
+
+  # Viaja a la evidencia del ERP: cuándo lo guardó el capturista por última vez.
+  test "guardar el pedido registra cuándo, y volver a guardarlo lo actualiza" do
+    user   = User.create!(erp_person_id: 991_001, username: "cap_cuando", password: "x", role: "capturista")
+    round  = BusinessRound.create!(erp_round_id: 991_001, name: "R", active: true)
+    client = Client.create!(erp_client_key: "CUA01", name: "C")
+    order  = Order.create!(user: user, business_round: round, client: client, kind: "remission")
+    order.order_items.create!(position: 1, quantity: 1, unit_price: 10, tax_rate: 0, discount_percent: 0,
+                              code: "1", description: "X", unit: "PZA")
+
+    travel_to Time.zone.parse("2026-08-27 10:00:00") do
+      order.capture!
+    end
+    assert_equal Time.zone.parse("2026-08-27 10:00:00"), order.reload.captured_at
+
+    travel_to Time.zone.parse("2026-08-27 11:30:00") do
+      order.capture!
+    end
+    assert_equal Time.zone.parse("2026-08-27 11:30:00"), order.reload.captured_at
+  end
 end
