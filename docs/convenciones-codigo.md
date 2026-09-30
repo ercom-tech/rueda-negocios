@@ -435,6 +435,15 @@ movería también fechas, números y mensajes de Rails que hoy funcionan.
   que sus consumidores leen** — y acotada a la lista de columnas: buscar el
   nombre en el texto entero no distingue "la traigo" de "la comparo en un
   `WHERE`", y esa primera versión tampoco mordía.
+- **Una prueba de pantalla que pasa sin el arreglo no reprodujo el defecto:
+  MEDIR la geometría antes de ajustarla.** En la 12ª, dos pruebas nuevas pasaban
+  con y sin el arreglo porque la ventana no era la del caso real: la barra de
+  totales solo tapa el renglón nuevo con menos de ~600 px de alto útil (tablet
+  horizontal menos la barra del navegador), y el aviso rojo solo tapa el filtro
+  del combo a 768 px de ancho y con 24 opciones (a 1024, centrado, no lo
+  alcanza). Lo que sirvió fue una prueba desechable que recorre tamaños e
+  imprime las posiciones (`getBoundingClientRect`, `elementFromPoint`), y
+  después fijar la prueba real en el tamaño que sí reproduce.
 - **Renombres masivos con expresiones regulares: revisar el diff palabra por
   palabra.** Un `\bcoincide\b` pensado para una variable también reescribe el
   texto visible ("Ningún pedido coincide") y los comentarios. Proteger las

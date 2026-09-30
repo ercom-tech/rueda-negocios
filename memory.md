@@ -25,11 +25,62 @@ Si es **algo por hacer**, va al backlog.
 ## Índice de la bitácora
 
 - Decisiones generales del proyecto (abajo)
-- 11ª, 10ª, 9ª, 8ª, 7ª, 6ª, 5ª y 4ª auditorías — remediación
+- 12ª, 11ª, 10ª, 9ª, 8ª, 7ª, 6ª, 5ª y 4ª auditorías — remediación
 - Descubrimiento del esquema de catálogos (ERP)
 - Fase A — scaffolding · Fase B — login, menú, reportes, pedido (arcos 1–3)
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
+
+## 12ª auditoría (2026-09-30) — remediación
+
+Alcance: el arco de la evidencia y los ajustes de captura **más la remediación
+de la 11ª** (app `2e29183..877d666`, API `82ca178..ffc1f17`), 6 auditores,
+**1 ALTA · 7 MEDIA · ~20 BAJA**. Remediada al 100% en siete bloques, uno por
+commit.
+
+**La ALTA: una guía mía llevaba al daño.** La restauración de un respaldo decía
+que al transmitir "nada se duplica". Pero la API reconocía un reintento solo si
+el contenido era igual a lo que el ERP tiene HOY, y ventas edita los pedidos
+(415 de 528 en Oaxaca): el reintento de un pedido editado caía en el 422 de
+colisión, cuyo mensaje manda a cancelar en el ERP y recapturar — el operador
+cancelaba la versión buena. No era solo la restauración: una respuesta que
+tardó, seguida de un reintento, llegaba igual. **Arreglo de raíz:** antes de
+llamarlo colisión, la API consulta la evidencia de ESE pedido (clave, cliente,
+fecha, hora y folio). Igual a lo que manda la laptop → reintento exitoso;
+distinta → mensaje nuevo que dice "no lo canceles en el ERP ni lo captures de
+nuevo… descártalo en la laptop"; sin evidencia → como antes. Reproducido con
+RN-000459 contra la réplica, antes y después. **La evidencia, que nació como
+copia para aclaraciones, resultó ser también lo que le faltaba a la
+idempotencia: saber qué se recibió, no solo qué hay.**
+
+**Las MEDIA, casi todas de despliegue:**
+
+- `rake` estaba en el grupo de pruebas: el comando de la guía para importar la
+  evidencia no corría en producción.
+- Las tablas de evidencia se creaban sin permisos: con un usuario de la API que
+  no fuera superusuario, toda transmisión fallaba, y `/health` lo diagnosticaba
+  como "falta la tabla". Ahora el DDL da permiso a quien ya escribe en
+  `vta_pedido`, y `/health` revisa el permiso de escritura de las cuatro tablas.
+- Restaurar un respaldo anterior a una migración dejaba todo en 500: la guía no
+  migraba la copia.
+- La barra de totales tapaba el renglón recién agregado en tablet horizontal:
+  ahora reserva su espacio (`scroll-padding-bottom`) mientras se ve.
+- Comentarios que contradecían el código ("uno u otro", "solo vive en la
+  laptop"), un hecho falso (las marcas SÍ están ligadas a proveedores en
+  `com_proveedor_has_marca`: HITOOLS a 24) y cifras sin fecha que ya no se
+  reproducían.
+
+**Las BAJA que valió la pena:** el filtro que no era monótono (agregar un filtro
+ampliaba el resultado), el folio más alto de Oaxaca que daba 0 porque sus claves
+solo viven en la evidencia (ahora 782), el 404 del servidor con una pantalla
+vieja, la concordancia de los rake y 14 mutaciones que ninguna prueba cazaba.
+
+**El patrón:** la ALTA y cuatro MEDIA eran de despliegue y recuperación, no de
+código. Todo se había probado contra una réplica donde se corre como
+superusuario y con las gemas de desarrollo; producción es otra máquina. Quedó
+como regla en `docs/auditorias.md`. Y dos pruebas de pantalla pasaban con y sin
+el arreglo hasta que se midió la geometría del caso real (regla nueva en
+`docs/convenciones-codigo.md`).
 
 ## La evidencia del pedido en el ERP (2026-09-29/30)
 

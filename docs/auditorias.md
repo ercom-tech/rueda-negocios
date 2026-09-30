@@ -93,6 +93,13 @@ reporte corto y cierto vale más que uno largo y especulativo.
   validación contra el ERP podía ver que estuvieran intercambiadas. Cuando dos
   parámetros comparten valor, la prueba tiene que darles valores DISTINTOS a
   propósito.
+- **Probar el despliegue como corre producción, no como corre la réplica.** En
+  la 12ª, tres hallazgos solo existían fuera de la máquina de desarrollo: `rake`
+  en el grupo de pruebas (la VM instala sin él), tablas nuevas sin `GRANT` (el
+  usuario de desarrollo es superusuario) y `dotenv` que no existe en
+  producción. Se reprodujeron con `BUNDLE_WITHOUT=development:test`, con un rol
+  desechable sin privilegios y sin exportar `APP_ENV`. La dimensión de
+  despliegue tiene que pedir esas tres condiciones explícitamente.
 - **Severidad honesta:** ALTA = corrompe datos, bloquea la operación sin salida
   o expone información. Si todo es alto, nada lo es.
 - **Un defecto puede ser viejo y aun así ser culpa del cambio nuevo.** El PDF
@@ -181,6 +188,21 @@ ejecutar: los dos ALTA principales —sin `bundle install` la app no arranca; si
 ninguna otra dimensión los habría buscado.
 
 ## Historial
+
+- **12ª (2026-09-30)** — alcance: **el arco de la evidencia y los ajustes de
+  captura, más la remediación de la 11ª** (app `2e29183..877d666`, API
+  `82ca178..ffc1f17`), con 6 auditores — **1 ALTA · 7 MEDIA · ~20 BAJA** →
+  **remediada al 100% en siete bloques** (detalle en "12ª auditoría —
+  remediación" de `memory.md`). La ALTA la encontraron dos auditores por
+  separado y era una guía mía: la de restaurar un respaldo prometía que nada se
+  duplicaba, y el aviso de colisión que salía mandaba a cancelar en el ERP la
+  versión buena de un pedido que ventas ya había editado. Se arregló de raíz en
+  la API: el reintento se compara también contra lo que el ERP RECIBIÓ (la
+  evidencia), no solo contra lo que tiene hoy. Patrón que dejó: **la ALTA y
+  cuatro de las MEDIA eran de despliegue y recuperación, no de código** —guías
+  que prometían de más, un `rake` que no corría en producción, tablas sin
+  permisos para un usuario que no fuera superusuario—: todo se había probado en
+  una réplica donde se corre como superusuario y con las gemas de desarrollo.
 
 - **11ª (2026-09-18)** — alcance: **todo lo posterior a la 10ª, incluida su
   remediación** (app `0c1b175..HEAD`, API `6c2866f..HEAD`), con 6 auditores —
