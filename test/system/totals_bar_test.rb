@@ -12,8 +12,8 @@ class TotalsBarTest < ApplicationSystemTestCase
     @user  = User.create!(erp_person_id: 970_301, username: "cap_bar", password: "secret123",
                           role: "capturista", active: true)
     round  = BusinessRound.create!(erp_round_id: 970_301, name: "Rueda barra", active: true)
-    supplier = Supplier.create!(erp_supplier_id: 970_301, name: "PROVEEDOR BARRA")
-    BusinessRoundPerson.create!(business_round: round, user: @user, position: 1, supplier: supplier)
+    @supplier = Supplier.create!(erp_supplier_id: 970_301, name: "PROVEEDOR BARRA")
+    BusinessRoundPerson.create!(business_round: round, user: @user, position: 1, supplier: @supplier)
     client = Client.create!(erp_client_key: "BAR01", name: "Cliente barra")
     @order = Order.create!(user: @user, business_round: round, client: client, kind: "remission")
   end
@@ -134,5 +134,59 @@ class TotalsBarTest < ApplicationSystemTestCase
     assert_selector "[data-totals-bar-target=bar]", visible: :hidden
   ensure
     page.driver.browser.manage.window.resize_to(1400, 1000)
+  end
+
+  # ¿Lo que está en el centro de este elemento es el elemento mismo, o algo que
+  # lo tapa (la barra)?
+  def uncovered?(css)
+    evaluate_script(<<~JS)
+      (() => {
+        const el = document.querySelector(#{css.to_json})
+        const r = el.getBoundingClientRect()
+        const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+        return hit === el || el.contains(hit)
+      })()
+    JS
+  end
+
+  # En tablet horizontal, la partida recién agregada quedaba pegada al borde
+  # de abajo —justo donde flota la barra— y la barra le tapaba la Cantidad, el
+  # campo que el capturista corrige enseguida. Pasaba en CADA alta (12ª
+  # auditoría).
+  test "la partida recién agregada no queda debajo de la barra" do
+    items!(30)
+    product = Product.create!(erp_product_id: 970_399, description: "BISAGRA DE LIBRO", unit: "PZA", max_discount: 0)
+    Price.create!(product: product, credit_wholesale_price: 50, tax_rate: 16)
+    ProductSupplier.create!(product: product, supplier: @supplier)
+    # Ventana de 1024×700: la zona visible queda en ~560 px, la de una tablet
+    # horizontal menos la barra del navegador. Con más de ~600 el renglón
+    # nuevo ya no cae bajo la barra y la prueba no vería el defecto.
+    page.driver.browser.manage.window.resize_to(1024, 700)
+    sign_in @user
+    visit order_path(@order)
+    assert bar.visible?
+
+    fill_in "Busca por código, nombre, modelo o No. de parte", with: "BISAGRA"
+    click_button "BISAGRA DE LIBRO", match: :first
+    assert_selector "tbody tr", count: 31
+
+    new_item = @order.order_items.order(:position).last
+    sleep 0.6 # el scroll suave del renglón nuevo
+    assert uncovered?("#quantity_order_item_#{new_item.id}"), "la barra tapa la Cantidad del renglón nuevo"
+  ensure
+    page.driver.browser.manage.window.resize_to(1400, 1000)
+  end
+
+  # Al tocar la barra, la página baja y la barra se oculta con el foco
+  # adentro: el foco caía al <body> y el siguiente Tab empezaba desde arriba.
+  test "después de tocar la barra el foco queda en la tarjeta de totales" do
+    items!(40)
+    sign_in @user
+    visit order_path(@order)
+
+    bar.click
+    assert_selector "[data-totals-bar-target=bar]", visible: :hidden
+
+    assert_equal "order-totals", evaluate_script("document.activeElement.id")
   end
 end

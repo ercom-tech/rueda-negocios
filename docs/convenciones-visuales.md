@@ -80,6 +80,16 @@ sitio): dorado sobre negro da **13.06:1**. Y la regla que sale de aquí es
 general: **una capa flotante se distingue de lo que tapa, no del fondo del
 sitio** — antes de darle color, mirar sobre qué va a pasar.
 
+**Una capa FIJA reserva su espacio en la página, o tapa lo que el navegador
+acaba de traer a la vista.** La barra de totales flotaba sobre el renglón
+recién agregado —el `scrollIntoView` lo dejaba pegado al borde de abajo, justo
+debajo de ella— y le tapaba la Cantidad en cada alta en tablet horizontal; al
+recorrer la tabla con Tab, algunos campos quedaban debajo (12ª auditoría). La
+salida es `scroll-padding-bottom` en `<html>` con el alto de la capa mientras se
+ve (`totals_bar_controller#reservePageSpace`): el navegador lo descuenta al
+llevar algo a la vista y al mover el foco. Y si la capa se oculta con el foco
+adentro, el foco se entrega a lo que la reemplaza — si no, cae al `<body>`.
+
 **`bg-white/10` es para fondo OSCURO, no para el marco dorado de los filtros.**
 Un botón secundario con esa clase dentro de la barra dorada se lava hasta
 volverse ilegible — el blanco sobre dorado claro no tiene dónde apoyarse. Ahí

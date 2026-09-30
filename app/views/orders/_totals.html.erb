@@ -19,7 +19,9 @@
     tarjeta para saber si se ve. Va en el partial y no en la vista porque morph
     sincroniza los atributos con el HTML nuevo — puesto desde fuera, el primer
     repintado lo borraría. %>
-<div id="order-totals" data-totals-bar-target="card" class="w-full overflow-hidden rounded-2xl border border-black/10 bg-brand-cream text-sm text-neutral-900 lg:w-80">
+<%# `tabindex="-1"`: la barra le pasa el foco al llevar a ella (ver
+    totals_bar_controller#reveal); sin él, un div no puede recibirlo. %>
+<div id="order-totals" data-totals-bar-target="card" tabindex="-1" class="outline-none w-full overflow-hidden rounded-2xl border border-black/10 bg-brand-cream text-sm text-neutral-900 lg:w-80">
   <div class="flex justify-between bg-brand-coral px-5 py-3 font-bold text-white"><span>Subtotal</span><span class="tabular-nums"><%= number_to_currency(order.subtotal) %></span></div>
   <div class="flex justify-between px-5 py-2"><span>Descuento</span><span class="tabular-nums"><%= number_to_currency(order.discount_total) %></span></div>
   <div class="flex justify-between px-5 py-2"><span>IVA</span><span class="tabular-nums"><%= number_to_currency(order.tax_total) %></span></div>

@@ -21,6 +21,7 @@ export default class extends Controller {
   disconnect() {
     this._observer?.disconnect()
     this._observer = null
+    this.reservePageSpace(false)
   }
 
   // La tarjeta se repinta con morph, que conserva el nodo; pero si algún día
@@ -47,11 +48,25 @@ export default class extends Controller {
 
   toggle(entry) {
     this.barTarget.hidden = entry.isIntersecting && entry.intersectionRatio >= this.constructor.FULLY_VISIBLE
+    this.reservePageSpace(!this.barTarget.hidden)
   }
 
-  // Tocar la barra lleva a la tarjeta completa, con descuento e IVA.
+  // Mientras la barra se ve, la página reserva abajo su alto
+  // (`scroll-padding-bottom`): el navegador lo descuenta al llevar algo a la
+  // vista —el renglón recién agregado (`scroll-to`), y el campo al que se
+  // llega con Tab—, así que lo deja ARRIBA de la barra y no debajo. Sin esto,
+  // en tablet horizontal la barra tapaba la Cantidad del renglón nuevo en cada
+  // alta (12ª auditoría).
+  reservePageSpace(reserve) {
+    document.documentElement.style.scrollPaddingBottom = reserve ? `${this.barTarget.offsetHeight}px` : ""
+  }
+
+  // Tocar la barra lleva a la tarjeta completa, con descuento e IVA. El foco
+  // va a la tarjeta: la barra se oculta con el foco adentro, y sin esto caía
+  // al <body> y el siguiente Tab empezaba desde arriba de la página.
   reveal() {
     const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    this.cardTarget.focus({ preventScroll: true })
     this.cardTarget.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "end" })
   }
 }
