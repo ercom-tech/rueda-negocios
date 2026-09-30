@@ -21,8 +21,11 @@ Para saber si el ERP ya está listo, sin adivinar:
 curl -s http://localhost:7011/health    # en el servidor de la API
 ```
 
-`schema: "ok"` significa que están las cuatro columnas. Si falta alguna,
-responde 503 y las nombra. Cómo se aplica el archivo —sin transacción, con
+`schema: "ok"` significa que están las cuatro columnas y las dos tablas de la
+evidencia (`vta_pedido_rueda` y su detalle). Si falta algo, responde 503 y lo
+nombra; una tabla que falta entera se nombra como tabla. Sin las tablas de la
+evidencia **toda transmisión falla**: la evidencia se escribe en la misma
+transacción que el pedido. Cómo se aplica el archivo —sin transacción, con
 `ON_ERROR_STOP`, y qué comprobar al final— está en las guías de instalación de
 `rueda-api` (`docs/instalacion-vm-*.md`, sección de actualizar).
 

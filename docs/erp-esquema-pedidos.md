@@ -237,6 +237,77 @@ saber qué renglones salieron: dicen del pedido, no de sus partidas.
 La consulta que cruza pedido y factura —lo solicitado contra lo facturado, por
 marca— está en `docs/diagnostico-erp.md`.
 
+## La evidencia del pedido: `vta_pedido_rueda` (2026-09-29)
+
+El pedido **tal como lo capturó el proveedor**, guardado en el ERP al recibirlo.
+Existe porque ninguna otra copia sobrevive: en el ERP el pedido lo edita
+después el equipo de ventas (en Oaxaca, 415 de 528 pedidos ya no tienen el
+total que se capturó), y en la laptop se borra al obtener información o cerrar
+la rueda.
+
+| Tabla | Un renglón por |
+|---|---|
+| `fecego.vta_pedido_rueda` | Pedido de la **rueda** (no por parte del ERP): encabezado como se capturó, capturista, fechas de la laptop, importes, `claves_pedido` (los folios del ERP en que se partió), `origen` y el paquete íntegro en `payload` (jsonb) |
+| `fecego.vta_pedido_rueda_detalle` | Partida, con su **consecutivo de captura** (no el del reparto): producto como se vio en pantalla, importes, promoción, `regalo`, y `id_proveedor`/`id_marca` del producto nuevo |
+
+Llave: `(id_empresa, id_rueda, clave_rueda)`. Para llegar al pedido del ERP:
+`vta_pedido.clave_pedido = ANY(claves_pedido)` con el mismo `clave_cliente`
+(el folio solo no basta: se repite, ver "Dónde vive la factura del pedido").
+
+**Reglas:**
+
+- **Se escribe en la MISMA transacción que el pedido** (`OrderEvidence`, en
+  rueda-api): o entran los dos o ninguno. Por eso sin las tablas **toda
+  transmisión falla**, y `/health` las exige.
+- **Tal como llegó:** los valores del paquete, no los que el ERP termina
+  guardando — una remisión se guarda en el ERP con el RFC genérico y aquí con
+  el que mandó la laptop; el total, sin el redondeo del ERP.
+- **Una sola vez:** ni un reintento ni una segunda recepción de la misma clave
+  la reescriben. La primera es la que cuenta.
+- **Sin candado en la base** (decisión del usuario, 2026-09-29): nada de la
+  aplicación la modifica, pero la base no lo impide. Si hiciera falta, un
+  trigger que rechace `UPDATE`/`DELETE`.
+- **`origen`:** `transmision` (lo normal) o `respaldo` (reconstruida desde un
+  respaldo de la laptop, abajo).
+
+### Reconstruirla desde un respaldo de la laptop
+
+Para las ruedas transmitidas antes de que existiera la tabla — hoy, **solo
+Oaxaca** (528 pedidos). Se hace una vez, con las tablas ya creadas.
+
+1. **Restaurar el respaldo en una base NUEVA** y migrarla (el respaldo de
+   Oaxaca es de antes de las últimas migraciones). Nunca sobre la base en uso:
+
+   ```bash
+   createdb -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" rueda_evidencia
+   pg_restore -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d rueda_evidencia --no-owner rueda-AAAAMMDD-HHMM.dump
+   DB_NAME=rueda_evidencia bin/rails db:migrate
+   ```
+
+2. **Exportar** los pedidos transmitidos, con el mismo paquete que la
+   transmisión:
+
+   ```bash
+   DB_NAME=rueda_evidencia OUT=evidencia-oaxaca.json bin/rails evidence:export
+   ```
+
+3. **En la VM de la API, cotejar en seco y luego importar** (con origen
+   `respaldo`):
+
+   ```bash
+   FILE=evidencia-oaxaca.json DRY_RUN=1 bundle exec rake evidence:import
+   FILE=evidencia-oaxaca.json bundle exec rake evidence:import
+   ```
+
+   El cotejo revisa que cada folio exista para su cliente y que la fecha y la
+   hora de la captura sean las del ERP **al segundo**. Con Oaxaca: 0 avisos. Si
+   aparecieran avisos de hora, el respaldo o la zona horaria de la máquina que
+   exportó no son los de la transmisión — revisar antes de importar.
+
+4. **Borrar la base restaurada** (`dropdb … rueda_evidencia`).
+
+Importar dos veces no duplica nada: la segunda corrida reporta "ya_existian".
+
 ## Pendientes (confirmar con FECEGO)
 
 1. **Campos de configuración** de la cabecera: `"c_FormaPago"`, `"c_MetodoPago"`,

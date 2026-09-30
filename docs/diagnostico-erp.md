@@ -388,6 +388,47 @@ estas:
 - La columna `Folio rueda` sale vacía en las ruedas anteriores a `clave_rueda`
   (2026-09-04).
 
+## Lo que capturó el proveedor contra lo que tiene hoy el ERP
+
+Con la evidencia (`vta_pedido_rueda`, ver `docs/erp-esquema-pedidos.md`) se
+responde lo que antes no tenía respuesta: qué pedidos cambiaron en el ERP
+después de capturarse. Por pedido de la rueda, contra su PRIMER folio del ERP
+(en Oaxaca ninguno se partió; con reparto, sumar las partes):
+
+```sql
+SELECT ev.clave_rueda                     AS "Folio rueda",
+       ev.claves_pedido                   AS "Folios ERP",
+       ev.clave_cliente                   AS "Cliente",
+       ev.capturista_usuario              AS "Capturista",
+       ev.partidas                        AS "Partidas capturadas",
+       round(ev.total, 2)                 AS "Total capturado",
+       round(ped.total, 2)                AS "Total hoy en el ERP",
+       round(ev.total - ped.total, 2)     AS "Diferencia",
+       ped.baja                           AS "Cancelado en el ERP"
+FROM fecego.vta_pedido_rueda ev
+JOIN fecego.vta_pedido ped
+  ON  ped.id_empresa = ev.id_empresa
+  AND ped.clave_pedido = ev.claves_pedido[1]
+  AND ped.clave_cliente = ev.clave_cliente   -- el folio se repite: el cliente lo desambigua
+WHERE ev.id_empresa = 1
+  AND ev.id_rueda = 3                        -- ← PARÁMETRO: la rueda
+  AND round(ev.total, 2) <> round(ped.total, 2)
+ORDER BY abs(ev.total - ped.total) DESC;
+```
+
+En Oaxaca da 415 de 528 pedidos. Que el total de hoy **cuadre con las partidas
+de hoy** (414 de 415) dice que el pedido se modificó, no que el cruce esté mal.
+Para ver QUÉ cambió en uno, sus partidas capturadas:
+
+```sql
+SELECT consecutivo, lpad(id_producto::text, 6, '0') AS producto, descripcion,
+       trim_scale(cantidad) AS cantidad, trim_scale(precio) AS precio,
+       descto_porcentaje, round(total, 2) AS total, regalo
+FROM fecego.vta_pedido_rueda_detalle
+WHERE id_empresa = 1 AND id_rueda = 3 AND clave_rueda = 'RN-000083'   -- ← el pedido
+ORDER BY consecutivo;
+```
+
 ## Un fallo de la API que no es de la app
 
 Si un pedido se rechaza con *"Error interno del servidor; no se guardó nada"*,

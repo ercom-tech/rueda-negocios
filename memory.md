@@ -31,6 +31,55 @@ Si es **algo por hacer**, va al backlog.
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
 
+## La evidencia del pedido en el ERP (2026-09-29/30)
+
+**El pedido:** guardar en el ERP una copia de cada pedido **tal como se
+recibió**, como evidencia para aclaraciones y reportes. En la laptop se borra al
+obtener información o cerrar la rueda, y en el ERP ventas lo edita. Lo que lo
+justifica, medido al reconstruir Oaxaca: **415 de 528 pedidos ya no tienen en el
+ERP el total que se capturó** (414 de ellos cuadran con sus partidas de hoy: se
+modificaron, no es un error del cruce).
+
+**Decisiones del usuario:** en la base del ERP (`fecego.vta_pedido_rueda` y
+`vta_pedido_rueda_detalle`, sin "original" en el nombre); **tablas completas +
+el paquete en jsonb** (las columnas para consultar con SQL normal, el JSON para
+lo que nadie pensó hoy); **sin trigger de candado** por ahora; y **reconstruir
+Oaxaca** desde el respaldo de la laptop.
+
+**Cómo quedó** (detalle en `docs/erp-esquema-pedidos.md`):
+
+- `OrderEvidence` (rueda-api) la escribe en la **misma transacción** que el
+  pedido: o entran los dos o ninguno. Por eso `/health` exige las tablas y sin
+  ellas toda transmisión falla.
+- **Un renglón por pedido de la rueda** con sus folios del ERP; partidas con su
+  consecutivo de captura. **Los valores del paquete**, no los del ERP (el RFC de
+  una remisión, el total sin redondear). **Una sola vez**: ni el reintento ni una
+  segunda recepción la reescriben.
+- La laptop manda datos solo para la evidencia (capturista, descripciones como
+  se vieron, proveedor/marca del producto nuevo con ids del ERP, fechas). Para
+  "cuándo se guardó" nació `orders.captured_at`; los pedidos anteriores la dejan
+  vacía en vez de inventarla con `updated_at`.
+- **Reconstrucción:** `rake evidence:export` (laptop, sobre un respaldo
+  restaurado) reusa `Sync::Up#build_payload` — el mismo paquete de la
+  transmisión — y `rake evidence:import` (API) la guarda con `origen =
+  'respaldo'` y la coteja contra el ERP. Los 528 de Oaxaca cuadraron **al
+  segundo** en fecha y hora: esa es la prueba de que el paquete reconstruido es
+  el que se transmitió.
+
+**Tres cosas que salieron al hacerla:**
+
+- **Los textos van en `text`, no en el varchar del ERP:** la evidencia comparte
+  transacción con el pedido, y un texto que no cupiera tumbaría la transmisión.
+  Mismo motivo para el **consecutivo de respaldo** (la posición): un NULL en la
+  llave primaria tumbaba la transacción entera.
+- **Una prueba vieja exigía que ningún insert llevara el total sin redondear**;
+  la evidencia lo lleva a propósito. Se acotó al pedido del ERP.
+- **`/health` y el ERP real:** las pruebas simulaban un ERP que solo tenía las
+  columnas exigidas. En el real, `information_schema` trae TODAS las de la tabla,
+  así que "falta la tabla entera" solo pasa si no existe. Las pruebas ahora
+  simulan eso — y de paso salió un error de concordancia del arreglo de la 11ª
+  ("le faltan lo que").
+
 ## Proveedor y Marca del producto nuevo (2026-09-29)
 
 **El pedido:** en la ventanita del producto nuevo (999999), indicar a quién

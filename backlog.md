@@ -28,7 +28,13 @@ viejo quedó caduco — verificado en la 6ª auditoría:
   el índice `(id_empresa, id_rueda, clave_rueda)`.
   **Todo esto está escrito en `rueda-api/db/erp-prerequisitos.sql`**, que es
   idempotente y crea el índice con `CONCURRENTLY` (sin eso bloquea la captura
-  del ERP en producción mientras se construye). Y **capturar el prefijo de cada
+  del ERP en producción mientras se construye). **Desde el 2026-09-29 crea
+  también las tablas de la evidencia** (`vta_pedido_rueda` y su detalle): sin
+  ellas toda transmisión falla, porque la evidencia va en la misma transacción
+  que el pedido. Después, **una sola vez, importar la evidencia de Oaxaca**
+  desde el respaldo de la laptop (`rake evidence:export` en la laptop,
+  `rake evidence:import` en la API; procedimiento en
+  `docs/erp-esquema-pedidos.md`). Y **capturar el prefijo de cada
   rueda**: las tres existentes lo tienen vacío, así que sus pedidos saldrían
   con el respaldo `RN`; desde la 10ª auditoría el panel lo avisa tras el
   sync-down, pero hay que hacerlo igual.
@@ -47,7 +53,8 @@ viejo quedó caduco — verificado en la 6ª auditoría:
   API nueva antes de capturar.
 - **En la laptop:** `bin/rails db:migrate` (migraciones de pid,
   credit_wholesale_price, las de promociones y las del 2026-09: `folio_prefix`
-  de la rueda y `erp_folios` del pedido) + `bin/rails tailwindcss:build`
+  de la rueda, `erp_folios` del pedido, `supplier_id`/`brand_id` de la
+  partida y `captured_at` del pedido) + `bin/rails tailwindcss:build`
   (obligatorio: hay clases nuevas en cada lote).
 - **Checks post-deploy** (transmitir un pedido de prueba con una partida del
   genérico): `id_rueda ≠ 0`, `nombre_capturado` poblado (≤40), precio de
