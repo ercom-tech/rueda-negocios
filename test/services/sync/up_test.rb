@@ -228,6 +228,14 @@ module Sync
       assert_equal false, item["regalo"]
     end
 
+    # Un regalo viaja marcado como tal: con `regalo: false` fijo, la evidencia
+    # registraba todo regalo como partida cobrada (12ª auditoría).
+    test "un regalo viaja marcado como regalo" do
+      @order.order_items.first.update_columns(gift: true)
+
+      assert_equal true, sent_payload["items"].first["regalo"]
+    end
+
     # A quién atribuyó el capturista un producto nuevo, con los ids del ERP —
     # que es donde se consulta la evidencia—, no los de la laptop.
     test "el producto nuevo lleva su proveedor y su marca con los ids del ERP" do

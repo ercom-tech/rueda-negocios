@@ -51,6 +51,33 @@ class NewProductButtonVisibilityTest < ActionDispatch::IntegrationTest
     assert_no_match(/Producto nuevo/, response.body)
   end
 
+  # Con precio pero SIN tasa de IVA tampoco: la partida nacería con IVA 0%, y
+  # el aviso del panel (`missing_generic`) usa el mismo criterio.
+  test "con el 999999 sin tasa de IVA el botón no aparece" do
+    product = Product.create!(erp_product_id: Product::GENERIC_ERP_ID, description: "AJUSTE", unit: "PZA")
+    Price.create!(product: product, credit_wholesale_price: 0, tax_rate: nil)
+    login_as "cap_btn_vis"
+
+    get order_path(@order)
+
+    assert_no_match(/Producto nuevo/, response.body)
+    assert_not Product.capturable_generic.exists?
+  end
+
+  # La barra de totales muestra el TOTAL (con IVA), no el subtotal otra vez:
+  # la prueba de sistema usa IVA 0 y no podía distinguirlos (12ª auditoría).
+  test "la barra de totales muestra el total con IVA" do
+    @order.order_items.create!(position: 1, quantity: 1, unit_price: 100, tax_rate: 16, discount_percent: 0,
+                               code: "000001", description: "MARTILLO", unit: "PZA")
+    login_as "cap_btn_vis"
+
+    get order_path(@order)
+    bar = response.body[/<span id="order-totals-bar-content".*?<\/span>\s*<\/span>\s*<\/span>/m]
+
+    assert_match(/Subtotal <span class="tabular-nums">\$100\.00/, bar)
+    assert_match(/Total <span class="tabular-nums">\$116\.00/, bar)
+  end
+
   # Mismo alcance que el buscador: solo el dueño, mientras se puede editar.
   test "en un pedido ajeno el botón no aparece" do
     generic!

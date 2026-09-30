@@ -149,6 +149,18 @@ class GenericItemSourceTest < ActionDispatch::IntegrationTest
     assert_match(/El proveedor no está entre tus asignaciones/, response.body)
   end
 
+  # Lo mismo con la marca: la de proveedor ya tenía prueba y la de marca no.
+  test "una marca que no es de sus asignaciones se rechaza" do
+    user = capturista!("cap_forja_marca", @makita, @hitools)
+    otra = Brand.create!(erp_brand_id: 966_199, name: "AJENA")
+    login_as "cap_forja_marca"
+
+    assert_no_difference "OrderItem.count" do
+      add_generic(order_of(user), brand: otra.id)
+    end
+    assert_match(/La marca no está entre tus asignaciones/, response.body)
+  end
+
   # Un valor que no es un id no se ignora en silencio: dejaría pasar la partida
   # sin el dato que se pidió.
   test "un valor que no se entiende se rechaza sin error del sistema" do

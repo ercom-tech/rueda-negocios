@@ -83,6 +83,24 @@ class TotalsBarTest < ApplicationSystemTestCase
     assert_equal "página", under
   end
 
+  # "Se ve" es la tarjeta COMPLETA: con solo el Subtotal asomando, el Total no
+  # se ve y la barra tiene que seguir. Con un umbral bajo, se escondía al
+  # primer pixel de la tarjeta (12ª auditoría).
+  test "con solo el borde de la tarjeta a la vista, la barra sigue" do
+    items!(40)
+    sign_in @user
+    visit order_path(@order)
+    assert bar.visible?
+
+    execute_script(<<~JS)
+      const card = document.getElementById("order-totals")
+      window.scrollBy(0, card.getBoundingClientRect().top - window.innerHeight + 30)
+    JS
+    sleep 0.3
+
+    assert bar.visible?, "con 30 px de la tarjeta a la vista, el Total no se ve"
+  end
+
   # Nunca los importes dos veces: al llegar a la tarjeta, la barra se va.
   test "al bajar hasta la tarjeta de totales la barra se esconde" do
     items!(40)

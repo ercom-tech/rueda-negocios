@@ -243,6 +243,20 @@ class OrdersSortTest < ActionDispatch::IntegrationTest
     assert_equal %w[RN-000001 RN-000002], folios(response.body)
   end
 
+  # Con filtro de proveedor, Renglones muestra las partidas QUE COINCIDEN, y el
+  # orden tiene que seguir a ese número, no al del pedido completo. Sin el
+  # `FILTER` del conteo, RN-000001 (3 partidas, 1 del proveedor) iba antes que
+  # RN-000002 (2, las dos del proveedor) — con la celda diciendo 1 y 2 (12ª).
+  test "con filtro de proveedor, Renglones ordena por las partidas que coinciden" do
+    order!(user: @ana, client: @c1, folio: "RN-000001", items: [ [ @p1, 1 ], [ @p2, 1 ], [ @p2, 1 ] ])
+    order!(user: @ana, client: @c1, folio: "RN-000002", items: [ [ @p1, 1 ], [ @p1, 1 ] ])
+    login_as "srv960"
+
+    get captured_orders_report_path(sort: "items", dir: "desc", supplier_id: @sup.id)
+
+    assert_equal %w[RN-000002 RN-000001], folios(response.body)
+  end
+
   # --- Lo que protege ------------------------------------------------------
 
   # El parámetro viene de la URL: si se interpolara, aquí habría inyección.
