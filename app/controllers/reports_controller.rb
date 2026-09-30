@@ -145,7 +145,7 @@ class ReportsController < ApplicationController
       # Proveedores y marcas del universo de quien mira: al capturista no se le
       # ofrecen opciones que jamás podrían aparecer en sus pedidos.
       suppliers: supplier_options,
-      brands: (@all_scope ? Brand.order(:name) : available_brands).map { |b| [ b.name, b.id ] }
+      brands: Brand.display_options(@all_scope ? Brand.all : available_brands)
     }.compact
   end
 
@@ -167,7 +167,7 @@ class ReportsController < ApplicationController
   def product_report_options
     {
       suppliers: supplier_options,
-      brands: (@all_scope ? Brand.order(:name) : available_brands).map { |b| [ b.name, b.id ] }
+      brands: Brand.display_options(@all_scope ? Brand.all : available_brands)
     }
   end
 
@@ -282,9 +282,7 @@ class ReportsController < ApplicationController
   # Proveedores de los combos de filtro: por nombre comercial y en orden
   # alfabético, igual que la ventanita del producto nuevo y la barra de arriba.
   def supplier_options
-    (@all_scope ? Supplier.all : available_suppliers)
-      .map { |supplier| [ supplier.display_name, supplier.id ] }
-      .sort_by { |name, _| name.downcase }
+    Supplier.display_options(@all_scope ? Supplier.all : available_suppliers)
   end
 
   def require_round

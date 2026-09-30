@@ -1,4 +1,5 @@
 class Brand < ApplicationRecord
+  include DisplayOptions
   # Marca (com_marca).
 
   has_many :products, dependent: :nullify

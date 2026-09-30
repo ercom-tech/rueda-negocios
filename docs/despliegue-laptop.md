@@ -127,6 +127,21 @@ Qué debe verse:
   misma parte**.
 - El detalle del pedido en la laptop lista esos mismos folios.
 
+**Y su evidencia** (`vta_pedido_rueda`): sin ella, el despliegue quedó a medias
+— faltan las tablas o sus permisos, y toda transmisión habría fallado:
+
+```sql
+SELECT ev.clave_rueda, ev.claves_pedido, ev.capturista_usuario, ev.partidas, ev.total,
+       det.consecutivo, det.descripcion, det.id_proveedor, det.id_marca, det.regalo
+FROM fecego.vta_pedido_rueda ev
+JOIN fecego.vta_pedido_rueda_detalle det USING (id_empresa, id_rueda, clave_rueda)
+WHERE ev.id_empresa = 1 AND ev.clave_rueda = '<la clave que muestra la laptop>'
+ORDER BY det.consecutivo;
+```
+
+Un renglón por partida, con los folios de las partes en `claves_pedido`, el
+capturista, y en las partidas del 999999 el proveedor o la marca que se eligió.
+
 ## Si algo sale mal
 
 ```bash
@@ -135,15 +150,26 @@ bin/rails tailwindcss:build     # el CSS también hay que rehacerlo al revertir
 sudo systemctl restart fecego-rueda-negocios
 ```
 
-**Ojo con las migraciones: revertir el código NO las deshace**, y este lote
-trae cuatro (promociones, `folio_prefix`, `erp_folios`). Volver a un commit
-anterior con la base ya migrada deja a la app vieja frente a tablas que no
-conoce — y en el caso de las promociones eso rompe "Obtener información", que
-al purgar el catálogo choca con una llave foránea que su código no contempla.
-Si hay que revertir de verdad, `bin/rails db:rollback STEP=n` **antes** del
-checkout, sabiendo que eso pierde lo que esas columnas guardaban (los folios
-del ERP de los pedidos ya transmitidos, entre otras cosas). Las gemas de más
-instaladas no estorban — Bundler solo se queja de las que faltan.
+**Revertir el código NO deshace las migraciones.** Qué hacer depende de QUÉ
+migraciones traiga el lote:
+
+- **Columnas nuevas y nullable** (las del lote del 2026-09-29/30:
+  `supplier_id`/`brand_id` de las partidas y `captured_at` del pedido): **el
+  checkout basta, sin rollback.** El código anterior ignora las columnas que no
+  conoce — comprobado en la 12ª auditoría: sin migraciones pendientes,
+  `capture!` y "Obtener información" corren completos. Un `db:rollback` aquí
+  solo borraría, sin necesidad, el proveedor y la marca de los productos nuevos.
+- **Tablas o llaves foráneas que el código viejo no contempla** (las de
+  promociones, en su momento): ahí la app vieja choca con ellas —"Obtener
+  información" fallaba al purgar el catálogo—, y hace falta `bin/rails
+  db:rollback STEP=n` **antes** del checkout, sabiendo que se pierde lo que esas
+  columnas guardaban. Mejor: restaurar el respaldo del paso 3.
+
+**Y se revierten las DOS puntas, no solo la laptop.** Con la API nueva y la
+laptop vieja, cada pedido que se transmita deja su evidencia en el ERP sin
+capturista, sin fechas de la laptop y sin las descripciones — y como la
+evidencia se escribe una sola vez, así se queda. Las gemas de más instaladas no
+estorban — Bundler solo se queja de las que faltan.
 
 **Un pedido rechazado con "Error interno del servidor; no se guardó nada"** no
 es la laptop: el motivo está en el log de la API, **en el servidor**.

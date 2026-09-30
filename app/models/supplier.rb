@@ -1,4 +1,5 @@
 class Supplier < ApplicationRecord
+  include DisplayOptions
   # Proveedor (com_proveedor).
 
   has_and_belongs_to_many :brands, join_table: :brands_suppliers

@@ -9,7 +9,7 @@ aprendizajes de lo que ya se hizo.
 
 ## Prioridad alta
 
-### Desplegar lo remediado (4ª a 9ª) en la laptop y en la VM de testing
+### Desplegar en la laptop y en la VM de testing (todo lo remediado de la 4ª a la 12ª, más la evidencia)
 
 **Nada está desplegado desde antes de la 4ª** (la API de testing corre
 `b43495a`, del 30-jul: ni siquiera trae el arreglo de remisiones). Con el
@@ -62,7 +62,11 @@ viejo quedó caduco — verificado en la 6ª auditoría:
   (`consec_remision ≠ 0`, `rfc = XAXX010101000`, `c_UsoCFDI = S01`,
   `fecha_crea` = captura). **Y uno que faltaba:** transmitir una REMISIÓN con
   monto de división y comprobar `dividir_facturas ≠ 0` — es lo único que
-  comprueba la corrección del 2026-08-24 contra el ERP.
+  comprueba la corrección del 2026-08-24 contra el ERP. **Y la evidencia**
+  (desde el 2026-09-30): ese pedido de prueba tiene que dejar su renglón en
+  `vta_pedido_rueda` y sus partidas en `vta_pedido_rueda_detalle` —con el
+  proveedor o la marca de la partida del 999999—; la consulta está en
+  `docs/despliegue-laptop.md`.
 - **Check del pedido partido** (2026-09-09): transmitir un pedido de **más de
   45 partidas** que incluya una del genérico y comprobar en el ERP que entraron
   **varios pedidos** —45 + resto + los genéricos aparte—, todos con la misma

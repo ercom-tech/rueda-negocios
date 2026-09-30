@@ -14,7 +14,7 @@
           un <label>, así que sin esto los combos de Proveedor y Marca se
           anunciaban ambos "— Selecciona —" (5ª auditoría). %>
       <%= render "shared/custom_select", name: param, include_blank: false, label: label,
-            options: items.map { |i| [i.display_name, i.id] }.sort_by { |name, _| name.downcase },
+            options: items.first.class.display_options(items),
             selected: current&.id,
             input_data: { action: "change->form-submit#submit" },
             button_class: "flex items-center gap-1 font-semibold text-neutral-800",

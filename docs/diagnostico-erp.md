@@ -410,7 +410,8 @@ FROM fecego.vta_pedido_rueda ev
 JOIN fecego.vta_pedido ped
   ON  ped.id_empresa = ev.id_empresa
   AND ped.clave_pedido = ev.claves_pedido[1]
-  AND ped.clave_cliente = ev.clave_cliente   -- el folio se repite: el cliente lo desambigua
+  AND ped.clave_cliente = ev.clave_cliente   -- el folio se repite: cliente y rueda
+  AND ped.id_rueda = ev.id_rueda             -- lo desambiguan (99 pares folio+cliente repetidos)
 WHERE ev.id_empresa = 1
   AND ev.id_rueda = 3                        -- ← PARÁMETRO: la rueda
   AND round(ev.total, 2) <> round(ped.total, 2)

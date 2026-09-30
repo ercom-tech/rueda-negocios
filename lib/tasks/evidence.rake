@@ -28,8 +28,12 @@ namespace :evidence do
     end
 
     File.write(out, JSON.pretty_generate(records))
-    sin_folio = records.count { |record| record[:claves].empty? }
-    puts "[evidence:export] #{records.size} pedidos de #{ActiveRecord::Base.connection.current_database} → #{out}"
-    puts "[evidence:export] AVISO: #{sin_folio} sin folio del ERP" if sin_folio.positive?
+    without_folio = records.count { |record| record[:claves].empty? }
+    count = records.size
+    puts "[evidence:export] #{count} #{count == 1 ? 'pedido' : 'pedidos'} de " \
+         "#{ActiveRecord::Base.connection.current_database} → #{out}"
+    if without_folio.positive?
+      puts "[evidence:export] AVISO: #{without_folio} #{without_folio == 1 ? 'pedido' : 'pedidos'} sin folio del ERP"
+    end
   end
 end

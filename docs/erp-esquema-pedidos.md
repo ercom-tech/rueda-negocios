@@ -310,7 +310,14 @@ Oaxaca** (528 pedidos). Se hace una vez, con las tablas ya creadas.
 
 4. **Borrar la base restaurada** (`dropdb … rueda_evidencia`).
 
-Importar dos veces no duplica nada: la segunda corrida reporta "ya_existian".
+Importar dos veces no duplica nada: la segunda corrida reporta que ya tenían
+evidencia.
+
+**Oaxaca: 528 en la evidencia, 529 en el ERP con `id_rueda = 3`.** El que falta
+es 5J0001 (PEGAFE, 26-ago), un pedido de prueba —"PEDIDO DE PRUEBA JOEL…" en sus
+observaciones— anterior a los de la laptop y que nunca salió de ella. No tiene
+evidencia porque no es de la rueda, pero SÍ entra en los reportes que filtran
+por `id_rueda = 3`, como el de lo negado.
 
 ## Pendientes (confirmar con FECEGO)
 

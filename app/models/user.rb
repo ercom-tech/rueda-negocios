@@ -59,11 +59,11 @@ class User < ApplicationRecord
   # (FAMA, ARROW HART, APEX…) no ayuda a encontrar nada en las cuentas del
   # personal de FECEGO, que tienen 24 proveedores.
   def supplier_options_in(round)
-    suppliers_in(round).map { |supplier| [ supplier.display_name, supplier.id ] }.sort_by { |name, _| name.downcase }
+    Supplier.display_options(suppliers_in(round))
   end
 
   def brand_options_in(round)
-    brands_in(round).map { |brand| [ brand.name, brand.id ] }.sort_by { |name, _| name.downcase }
+    Brand.display_options(brands_in(round))
   end
 
   # Universo de productos que el capturista puede vender en la rueda: los de
