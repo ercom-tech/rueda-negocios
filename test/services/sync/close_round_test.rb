@@ -72,6 +72,23 @@ module Sync
       assert_nil SyncRun.latest("up")
     end
 
+    # Son precios de la rueda que se cierra: la siguiente arranca con los del ERP.
+    test "cierra: borra los precios cargados desde archivo" do
+      PriceOverride.create!(erp_round_id: @round.erp_round_id, erp_product_id: 3021, unit_price: 6900)
+
+      CloseRound.run!
+
+      assert_equal 0, PriceOverride.count
+    end
+
+    test "si no cierra, los precios cargados se quedan" do
+      PriceOverride.create!(erp_round_id: @round.erp_round_id, erp_product_id: 3021, unit_price: 6900)
+      order(status: "draft")
+
+      assert_raises(CloseRound::PendingOrdersError) { CloseRound.run! }
+      assert_equal 1, PriceOverride.count
+    end
+
     test "no cierra si hay una corrida de sync en curso" do
       SyncRun.create!(kind: "up", started_at: Time.current)
 

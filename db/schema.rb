@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_30_054725) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_08_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -240,6 +240,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_054725) do
     t.index ["client_tax_profile_id"], name: "index_orders_on_client_tax_profile_id"
     t.index ["local_folio"], name: "index_orders_on_local_folio", unique: true
     t.index ["user_id"], name: "index_orders_on_user_id"
+  end
+
+  create_table "price_overrides", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "erp_product_id", null: false
+    t.integer "erp_round_id", null: false
+    t.string "loaded_by"
+    t.string "source_filename"
+    t.decimal "unit_price", precision: 14, scale: 2, null: false
+    t.datetime "updated_at", null: false
+    t.index ["erp_round_id", "erp_product_id"], name: "index_price_overrides_on_erp_round_id_and_erp_product_id", unique: true
+    t.check_constraint "unit_price > 0::numeric", name: "price_overrides_unit_price_positive"
   end
 
   create_table "prices", force: :cascade do |t|

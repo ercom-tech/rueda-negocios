@@ -114,7 +114,7 @@ class OrdersController < ApplicationController
     @order = current_user.orders.find(params[:id])
     universe = current_user.product_universe(active_round)
     found = params[:q].present? ?
-      universe.search(params[:q]).includes(:price).limit(Product::SEARCH_LIMIT + 1).to_a : []
+      universe.search(params[:q]).includes(:price, :price_override).limit(Product::SEARCH_LIMIT + 1).to_a : []
     truncated = found.size > Product::SEARCH_LIMIT
     @products = found.first(Product::SEARCH_LIMIT)
     no_membership = current_user.business_round_people.where(business_round: active_round).none?

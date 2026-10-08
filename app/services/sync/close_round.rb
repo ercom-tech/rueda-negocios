@@ -51,6 +51,9 @@ module Sync
         Guards.no_local_orders!(PendingOrdersError, "al cerrar la rueda")
 
         SyncRun.delete_all
+        # Los precios cargados son de ESTA rueda. "Obtener información" los
+        # respeta —para eso existen—; cerrar la rueda es su fin.
+        PriceOverride.delete_all
         BusinessRound.update_all(active: false)
         Setting.instance.update!(selected_round_erp_id: nil, selected_round_name: nil)
         removed

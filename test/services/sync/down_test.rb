@@ -80,6 +80,18 @@ module Sync
     # en vez de dejar la promesa en bucle (6ª auditoría).
     # Silencioso por naturaleza: la rueda sin prefijo se captura y se transmite
     # igual, y el defecto solo se descubre consultando el ERP semanas después.
+    # Para eso existen: cambiar el precio sin volver a tocar el ERP. Si
+    # "Obtener información" los borrara, el cambio se perdería sin aviso.
+    test "los precios cargados desde archivo sobreviven y siguen aplicando" do
+      PriceOverride.create!(erp_round_id: 3, erp_product_id: 3, unit_price: 399)
+
+      Down.new(export_data).run!
+
+      assert_equal 1, PriceOverride.count
+      assert_equal 429.44, Price.sole.credit_wholesale_price, "el precio del ERP no se toca"
+      assert_equal 399, Product.sole.to_order_item_attributes[:unit_price]
+    end
+
     test "el summary delata que la rueda llegó sin prefijo de folios" do
       data = export_data
       data["round"]["folio_prefix"] = ""

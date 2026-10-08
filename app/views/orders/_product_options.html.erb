@@ -36,7 +36,9 @@
                 dos puntos y no guion: con tres guiones iguales en la misma
                 línea, el que separa datos y el que va dentro de una frase se
                 vuelven indistinguibles. %>
-            <%# El precio mostrado es el que se cobra: crédito mayoreo (la
+            <%# El precio mostrado es el que se cobra (`Product#capture_price`:
+                el cargado desde archivo si hay, si no crédito mayoreo). Crédito
+                mayoreo y no el público (la
                 rueda vende a ese nivel desde 2026-08-17 — mostrar el público
                 aquí era un desfase de ese cambio). El genérico no tiene
                 precio de lista: se captura a mano. %>
@@ -46,7 +48,7 @@
                     product.model.presence && "Modelo #{product.model}",
                     product.part_number.presence && "N/P #{product.part_number}",
                     product.generic? ? "Fuera de catálogo: descripción y precio se capturan a mano"
-                                     : number_to_currency(product.price&.credit_wholesale_price),
+                                     : number_to_currency(product.capture_price),
                     stock_label(product)
                   ].compact, " — ") %>
             </span>

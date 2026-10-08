@@ -5,6 +5,12 @@ class Product < ApplicationRecord
 
   has_one :price, dependent: :destroy
 
+  # Precio cargado desde archivo para la rueda activa (ver PriceOverride). Por
+  # código y sin FK: sobrevive a que el sync-down recree el producto. El scope
+  # no depende de la instancia, así que se puede precargar con `includes`.
+  has_one :price_override, -> { for_active_round },
+          primary_key: :erp_product_id, foreign_key: :erp_product_id, inverse_of: false
+
   # Código FECEGO del producto "fuera de catálogo" ("AJUSTE DE MERCANCIA" en
   # el ERP): cualquier capturista puede usarlo, sin membresía de proveedor ni
   # marca, capturando descripción, no. de parte y precio a mano (decisión
@@ -93,6 +99,19 @@ class Product < ApplicationRecord
     SQL
   }
 
+  # El precio unitario con que se captura. ÚNICO lugar de la regla: lo usan el
+  # snapshot de la partida y el buscador, y si cada uno tuviera la suya el
+  # buscador anunciaría un precio y la partida nacería con otro.
+  #
+  # 1. El cargado desde archivo en el panel del servidor (2026-10-08), si hay.
+  # 2. Si no, crédito mayoreo (decisión FECEGO 2026-08-17): el nivel al que
+  #    vende la rueda. Un producto con crédito mayoreo en $0 en el ERP queda
+  #    invendible con aviso ("producto sin precio") — el dato se corrige allá,
+  #    que es su dueño; no hay fallback a otro nivel.
+  def capture_price
+    price_override&.unit_price || price&.credit_wholesale_price
+  end
+
   # Snapshot para crear una partida de pedido.
   def to_order_item_attributes
     {
@@ -101,11 +120,7 @@ class Product < ApplicationRecord
       description: description,
       part_number: part_number,
       unit:        unit,
-      # Crédito mayoreo (decisión FECEGO 2026-08-17): el nivel al que vende
-      # la rueda. Un producto con crédito mayoreo en $0 en el ERP queda
-      # invendible con aviso ("producto sin precio") — el dato se corrige
-      # allá, que es su dueño; no hay fallback a otro nivel.
-      unit_price:  price&.credit_wholesale_price || 0,
+      unit_price:  capture_price || 0,
       tax_rate:    price&.tax_rate || 0
     }
   end
