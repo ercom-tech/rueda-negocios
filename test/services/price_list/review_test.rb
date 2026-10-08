@@ -67,6 +67,16 @@ module PriceList
       assert_equal [ 3, 9 ], review([], problems:).problems.map(&:line)
     end
 
+    test "lo que no se aplica va junto, en orden de archivo y con su motivo" do
+      problems = [ Reader::Problem.new(line: 6, code_text: "ABC", reason: "El código no es válido: deben ser hasta 6 dígitos.") ]
+      result = review([ [ 9999, 5 ], [ 3021, 6900 ], [ 3021, 7000 ] ], problems:)
+
+      assert_equal [ [ 2, "009999", "No está en el catálogo de esta rueda." ],
+                     [ 3, "003021", "Viene repetido con precios distintos (líneas 3 y 4)." ],
+                     [ 6, "ABC", "El código no es válido: deben ser hasta 6 dígitos." ] ],
+                   result.rejected.map { |r| [ r.line, r.code_text, r.reason ] }
+    end
+
     test "señala las variaciones de más de 50% en cualquier dirección" do
       product(3023, "ORILLADORA", 1000)
       product(3024, "HACHA", 1000)

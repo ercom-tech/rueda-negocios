@@ -1,0 +1,127 @@
+<% content_for :title, "Revisar precios · Rueda de Negocios" %>
+<% review = @review %>
+<% applicable = review.changes.size %>
+<% large = review.large_variations %>
+<% rejected = review.rejected %>
+<% drafts = review.drafts_with_old_price %>
+
+<div class="relative min-h-screen w-full overflow-hidden bg-black">
+  <div class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.18]"
+       style="background-image: url('<%= image_path "tools_pattern_white.svg" %>');"></div>
+
+  <div class="relative z-10 flex min-h-screen flex-col px-6 py-6 sm:px-10 lg:px-[5%] lg:py-8">
+    <%= render "shared/top_bar" %>
+
+    <div class="mt-8 mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex flex-wrap items-center gap-3">
+        <h1 class="text-3xl font-extrabold text-white sm:text-4xl">Revisar precios</h1>
+        <span class="rounded-full bg-brand-gold px-3 py-1 text-xs font-semibold text-neutral-900"><%= @upload.filename %></span>
+      </div>
+      <%= link_to "← Volver a cambiar precios", server_prices_path, class: back_link_class %>
+    </div>
+
+    <div class="flex flex-col gap-6 pb-10">
+      <%# ── Resumen y acción ───────────────────────────────────────────
+          Nada se ha escrito todavía: lo dice la primera línea, porque es lo
+          que el operador necesita saber antes de leer las cifras. %>
+      <section class="rounded-3xl bg-brand-gold p-2 shadow-lg" data-controller="modal"
+               data-action="keydown@window->modal#closeOnEsc">
+        <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-black px-6 py-3">
+          <h2 class="text-lg font-bold text-white">Todavía no se ha cambiado nada</h2>
+          <div class="flex flex-wrap items-center gap-2">
+            <%= link_to "Descargar revisión (CSV)", server_price_review_path(@upload.token, format: :csv),
+                  class: "rounded-full bg-white/10 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/20" %>
+            <% if applicable.positive? %>
+              <button type="button" data-action="modal#open"
+                      class="rounded-full bg-brand-coral px-5 py-2 text-sm font-bold text-white transition-colors hover:bg-brand-coral-dark">
+                Aplicar <%= applicable == 1 ? "1 cambio" : "#{applicable.to_fs(:delimited)} cambios" %>
+              </button>
+            <% end %>
+          </div>
+        </div>
+        <div class="mt-2 rounded-2xl bg-brand-cream px-6 py-5 text-neutral-900">
+          <dl class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <% [ [ "Cambian", applicable ], [ "Quedan igual", review.unchanged.size ],
+                 [ "No se aplican", rejected.size ], [ "Variación de más de 50%", large.size ] ].each do |label, count| %>
+              <div class="rounded-xl border border-black/10 bg-white/60 px-4 py-3">
+                <dt class="text-sm text-neutral-700"><%= label %></dt>
+                <dd class="text-2xl font-extrabold tabular-nums"><%= count.to_fs(:delimited) %></dd>
+              </div>
+            <% end %>
+          </dl>
+          <ul class="mt-4 flex flex-col gap-1 text-neutral-800">
+            <% if applicable.zero? %>
+              <li class="font-semibold">No hay precios que cambiar: todos los del archivo ya son los vigentes o no se pueden aplicar.</li>
+            <% end %>
+            <% if large.any? %>
+              <li>
+                <span class="font-semibold"><%= large.size == 1 ? "1 precio cambia" : "#{large.size.to_fs(:delimited)} precios cambian" %> más de 50%.</span>
+                Se aplican igual: revísalos abajo por si hay un error en el archivo.
+              </li>
+            <% end %>
+            <% if drafts.positive? %>
+              <li>
+                <span class="font-semibold"><%= drafts == 1 ? "Hay 1 pedido en borrador" : "Hay #{drafts} pedidos en borrador" %></span>
+                con partidas al precio anterior. No se cambian: si deben llevar el precio nuevo, quita la partida y agrégala otra vez.
+              </li>
+            <% end %>
+            <li class="text-neutral-700">Los precios ya cargados de otros archivos se conservan; en un código repetido gana este archivo.</li>
+          </ul>
+        </div>
+        <% if applicable.positive? %>
+          <%= render "home/confirm_dialog", title: "Aplicar precios",
+                message: "Se #{applicable == 1 ? 'cambiará 1 precio' : "cambiarán #{applicable.to_fs(:delimited)} precios"}. " \
+                         "Las partidas nuevas se capturarán con el precio del archivo. ¿Continuar?",
+                confirm_label: "Sí, aplicar", path: server_price_review_apply_path(@upload.token) %>
+        <% end %>
+      </section>
+
+      <% if large.any? %>
+        <section>
+          <h2 class="mb-3 text-lg font-bold text-white">Variación de más de 50%</h2>
+          <%= render "prices/changes_table", changes: large, label: "Precios con variación de más de 50%" %>
+        </section>
+      <% end %>
+
+      <% if rejected.any? %>
+        <section>
+          <h2 class="mb-3 text-lg font-bold text-white">No se aplican</h2>
+          <div class="overflow-x-auto rounded-2xl bg-brand-cream text-neutral-900" tabindex="0" role="region" aria-label="Renglones que no se aplican">
+            <table class="w-full text-sm">
+              <thead class="bg-black text-white">
+                <tr>
+                  <th class="px-4 py-3 text-right font-semibold">Línea</th>
+                  <th class="px-4 py-3 text-left font-semibold">Código</th>
+                  <th class="min-w-[18rem] px-4 py-3 text-left font-semibold">Motivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% rejected.each do |row| %>
+                  <tr class="border-t border-black/10">
+                    <td class="px-4 py-2 text-right tabular-nums text-neutral-600"><%= row.line %></td>
+                    <td class="px-4 py-2 font-semibold tabular-nums"><%= row.code_text.presence || "—" %></td>
+                    <td class="min-w-[18rem] px-4 py-2"><%= row.reason %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      <% end %>
+
+      <%# Cerrada de entrada: con miles de renglones taparía lo de arriba, que es
+          lo que pide atención. El CSV la trae completa. %>
+      <% if applicable.positive? %>
+        <details class="group">
+          <summary class="mb-3 inline-flex cursor-pointer items-center gap-2 text-lg font-bold text-white">
+            <svg class="h-5 w-5 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+            </svg>
+            Todos los que cambian (<%= applicable.to_fs(:delimited) %>)
+          </summary>
+          <%= render "prices/changes_table", changes: review.changes, label: "Precios que cambian" %>
+        </details>
+      <% end %>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,103 @@
+<% content_for :title, "Cambiar precios · Rueda de Negocios" %>
+
+<div class="relative min-h-screen w-full overflow-hidden bg-black">
+  <div class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.18]"
+       style="background-image: url('<%= image_path "tools_pattern_white.svg" %>');"></div>
+
+  <div class="relative z-10 flex min-h-screen flex-col px-6 py-6 sm:px-10 lg:px-[5%] lg:py-8">
+    <%= render "shared/top_bar" %>
+
+    <div class="mt-8 mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-extrabold text-white sm:text-4xl">Cambiar precios</h1>
+        <p class="mt-2 max-w-3xl text-white/70">
+          Los precios del archivo reemplazan al del ERP <span class="font-semibold text-white">solo en esta laptop y
+          solo en esta rueda</span>. Las partidas que ya están en un pedido conservan su precio.
+        </p>
+      </div>
+      <%= link_to "← Volver al menú", root_path, class: back_link_class %>
+    </div>
+
+    <div class="flex flex-col gap-6 pb-10">
+      <%# ── Subir archivo ──────────────────────────────────────────── %>
+      <section class="rounded-3xl bg-brand-gold p-2 shadow-lg">
+        <div class="rounded-2xl bg-black px-6 py-3">
+          <h2 class="text-lg font-bold text-white">Subir archivo</h2>
+        </div>
+        <div class="mt-2 rounded-2xl bg-brand-cream px-6 py-5 text-neutral-900">
+          <p class="mb-4 text-neutral-700">
+            Excel (.xlsx) o CSV con las columnas <span class="font-semibold">CODIGO</span> y
+            <span class="font-semibold">PRECIO</span> (sin IVA), como el layout de ejemplo.
+            Antes de aplicar verás qué cambia.
+          </p>
+          <%= form_with url: server_prices_review_path, multipart: true,
+                class: "flex flex-wrap items-center gap-3" do %>
+            <%= file_field_tag :file, accept: ".xlsx,.csv", required: true,
+                  aria: { label: "Archivo de precios" },
+                  class: "min-w-0 flex-1 rounded-xl border border-black/20 bg-white px-3 py-2 text-sm text-neutral-900 " \
+                         "file:mr-3 file:rounded-full file:border-0 file:bg-neutral-700 file:px-4 file:py-1.5 " \
+                         "file:text-sm file:font-semibold file:text-white" %>
+            <%= submit_tag "Revisar archivo",
+                  class: "rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
+          <% end %>
+        </div>
+      </section>
+
+      <%# ── Precios cargados ───────────────────────────────────────────
+          Por archivo: es como el operador piensa en lo que cargó. Los archivos
+          se suman y en un código repetido gana el último, así que cada archivo
+          cuenta los precios que HOY vienen de él. %>
+      <section class="rounded-3xl bg-brand-gold p-2 shadow-lg" data-controller="modal"
+               data-action="keydown@window->modal#closeOnEsc">
+        <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-black px-6 py-3">
+          <h2 class="text-lg font-bold text-white">
+            Precios cargados
+            <span class="ml-2 rounded-full bg-brand-gold px-3 py-0.5 text-sm font-semibold text-neutral-900 tabular-nums">
+              <%= @loaded.count.to_fs(:delimited) %>
+            </span>
+          </h2>
+          <% if @files.any? %>
+            <button type="button" data-action="modal#open"
+                    class="rounded-full bg-neutral-700 px-5 py-2 text-sm font-bold text-white transition-colors hover:bg-neutral-600">
+              Quitar precios cargados
+            </button>
+          <% end %>
+        </div>
+        <div class="mt-2 overflow-x-auto rounded-2xl bg-brand-cream text-neutral-900">
+          <% if @files.empty? %>
+            <p class="px-6 py-8 text-center text-neutral-700">
+              Todavía no hay precios cargados: se captura con los precios del ERP.
+            </p>
+          <% else %>
+            <table class="w-full text-sm">
+              <thead class="bg-black text-white">
+                <tr>
+                  <th class="px-4 py-3 text-left font-semibold">Archivo</th>
+                  <th class="px-4 py-3 text-right font-semibold">Precios vigentes</th>
+                  <th class="px-4 py-3 text-left font-semibold">Cargó</th>
+                  <th class="px-4 py-3 text-left font-semibold whitespace-nowrap">Última carga</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @files.each do |filename, count, updated_at, loaded_by| %>
+                  <tr class="border-t border-black/10">
+                    <td class="px-4 py-3 font-semibold"><%= filename.presence || "—" %></td>
+                    <td class="px-4 py-3 text-right tabular-nums"><%= count.to_fs(:delimited) %></td>
+                    <td class="px-4 py-3"><%= loaded_by.presence || "—" %></td>
+                    <td class="px-4 py-3 whitespace-nowrap tabular-nums"><%= l(updated_at.in_time_zone, format: "%d/%m/%Y %H:%M") %></td>
+                  </tr>
+                <% end %>
+              </tbody>
+            </table>
+          <% end %>
+        </div>
+        <% if @files.any? %>
+          <%= render "home/confirm_dialog", title: "Quitar precios cargados",
+                message: "Se quitarán los #{@loaded.count.to_fs(:delimited)} precios cargados y se volverá a capturar " \
+                         "con los del ERP. Las partidas que ya están en un pedido conservan su precio. ¿Continuar?",
+                confirm_label: "Sí, quitar", path: server_prices_destroy_path, method: :delete %>
+        <% end %>
+      </section>
+    </div>
+  </div>
+</div>

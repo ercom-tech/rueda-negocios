@@ -82,13 +82,13 @@ module PriceList
 
       assert_equal [ 3026 ], reader.rows.map(&:code)
       assert_equal [
-        [ 2, "3021", "No trae precio." ],
-        [ 3, "3022", "El precio tiene que ser mayor a cero." ],
-        [ 4, "3023", "El precio tiene que ser mayor a cero." ],
+        [ 2, "003021", "No trae precio." ],
+        [ 3, "003022", "El precio tiene que ser mayor a cero." ],
+        [ 4, "003023", "El precio tiene que ser mayor a cero." ],
         [ 5, "1234567", "El código no es válido: deben ser hasta 6 dígitos." ],
         [ 6, "ABC", "El código no es válido: deben ser hasta 6 dígitos." ],
-        [ 7, "3024", "El precio no es un número." ],
-        [ 8, "3025", "El precio es demasiado grande." ]
+        [ 7, "003024", "El precio no es un número." ],
+        [ 8, "003025", "El precio es demasiado grande." ]
       ], reader.problems.map { |p| [ p.line, p.code_text, p.reason ] }
     end
 
@@ -109,6 +109,48 @@ module PriceList
 
       error = assert_raises(Error) { read(path) }
       assert_equal "No se pudo leer el archivo. Ábrelo en Excel y guárdalo de nuevo como .xlsx.", error.message
+    end
+
+    # Así sale un "CSV" de Excel en Windows en México: Windows-1252, con el
+    # acento de CÓDIGO en un byte que no es UTF-8.
+    test "lee el CSV de Excel en Windows-1252, con acentos en el encabezado" do
+      path = File.join(@dir, "precios.csv").tap { |p| File.binwrite(p, "C\xD3DIGO,PRECIO\r\n003021,6900\r\n".b) }
+
+      assert_equal [ [ 3021, BigDecimal("6900") ] ], read(path).rows.map { |r| [ r.code, r.price ] }
+    end
+
+    test "lee el CSV con BOM y con punto y coma de separador" do
+      path = File.join(@dir, "precios.csv").tap { |p| File.binwrite(p, "\xEF\xBB\xBFCODIGO;PRECIO\n3021;6900\n".b) }
+
+      assert_equal [ 3021 ], read(path).rows.map(&:code)
+    end
+
+    # Antes reventaba como pantalla de error: roo lee el CSV hasta que se le
+    # piden las celdas, fuera del rescate.
+    test "un CSV mal formado da el mensaje de qué hacer, no una pantalla de error" do
+      error = assert_raises(Error) { read(csv("CODIGO,PRECIO\n\"3021,10\n")) }
+      assert_equal Reader::UNREADABLE, error.message
+    end
+
+    test "un zip que no es libro de Excel da el mensaje de qué hacer" do
+      path = File.join(@dir, "precios.xlsx")
+      Zip::File.open(path, create: true) { |zip| zip.get_output_stream("x.txt") { |f| f.write("hola") } }
+
+      error = assert_raises(Error) { read(path) }
+      assert_equal Reader::UNREADABLE, error.message
+    end
+
+    # Pasó el 2026-10-08: el servidor corría sin la gema cargada, y el rescate
+    # de "todo" le dijo al operador que su archivo estaba dañado. Una falla del
+    # sistema tiene que verse como tal.
+    test "una falla del sistema no se disfraza de archivo dañado" do
+      path = xlsx([ [ 3021, 6900 ] ])
+      original = Roo::Spreadsheet.method(:open)
+      Roo::Spreadsheet.define_singleton_method(:open) { |*| raise NameError, "uninitialized constant Roo" }
+
+      assert_raises(NameError) { read(path) }
+    ensure
+      Roo::Spreadsheet.define_singleton_method(:open, original)
     end
 
     test "rechaza un archivo demasiado grande" do

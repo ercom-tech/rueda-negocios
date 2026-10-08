@@ -1,0 +1,34 @@
+<%# Tabla de precios que cambian. Locals: changes, label (aria). Los importes a
+    la derecha con tabular-nums; la variación grande lleva badge además del
+    número: el signo solo no basta para que salte a la vista. %>
+<div class="overflow-x-auto rounded-2xl bg-brand-cream text-neutral-900" tabindex="0" role="region" aria-label="<%= label %>">
+  <table class="w-full text-sm">
+    <thead class="bg-black text-white">
+      <tr>
+        <th class="px-4 py-3 text-right font-semibold">Línea</th>
+        <th class="px-4 py-3 text-left font-semibold">Código</th>
+        <th class="min-w-[18rem] px-4 py-3 text-left font-semibold">Descripción</th>
+        <th class="px-4 py-3 text-right font-semibold whitespace-nowrap">Precio actual</th>
+        <th class="px-4 py-3 text-right font-semibold whitespace-nowrap">Precio nuevo</th>
+        <th class="px-4 py-3 text-right font-semibold">Variación</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% changes.each do |change| %>
+        <tr class="border-t border-black/10">
+          <td class="px-4 py-2 text-right tabular-nums text-neutral-600"><%= change.line %></td>
+          <td class="px-4 py-2 font-semibold tabular-nums"><%= format("%06d", change.code) %></td>
+          <td class="min-w-[18rem] px-4 py-2"><%= change.description %></td>
+          <td class="px-4 py-2 text-right tabular-nums"><%= change.current_price ? number_to_currency(change.current_price) : "Sin precio" %></td>
+          <td class="px-4 py-2 text-right font-semibold tabular-nums"><%= number_to_currency(change.new_price) %></td>
+          <td class="px-4 py-2 text-right tabular-nums whitespace-nowrap">
+            <%= PriceList::ReviewExport.variation(change) || "—" %>
+            <% if change.large_variation? %>
+              <span class="ml-1 rounded-full bg-neutral-700 px-2 py-0.5 text-xs font-semibold text-white">Revisar</span>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

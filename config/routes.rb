@@ -21,6 +21,16 @@ Rails.application.routes.draw do
     get   "menu",       action: :menu,         as: :menu          # estado del menú (lo pide el panel)
   end
 
+  # Cambiar precios desde un archivo (panel del servidor): subir → revisar →
+  # aplicar. La revisión vive bajo una ficha (`token`) mientras se decide.
+  scope "server/prices", as: :server, controller: :prices do
+    get    "/",              action: :index,       as: :prices
+    post   "review",         action: :review,      as: :prices_review
+    get    "review/:token",  action: :show_review, as: :price_review
+    post   "review/:token/apply", action: :apply,  as: :price_review_apply
+    delete "/",              action: :destroy,     as: :prices_destroy
+  end
+
   # Reportes de venta (hub de reportes).
   get "reports", to: "reports#index", as: :reports
   get "reports/captured-orders", to: "reports#captured_orders", as: :captured_orders_report

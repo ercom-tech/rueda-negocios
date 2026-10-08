@@ -1,9 +1,6 @@
 require "csv"
 
 module PriceList
-  # Error que se le muestra tal cual al operador: el archivo no se pudo usar.
-  class Error < StandardError; end
-
   # Lee el archivo de precios (.xlsx o .csv) que se carga en el panel del
   # servidor (2026-10-08) y lo deja en renglones limpios, sin consultar nada:
   # comparar contra el catálogo es trabajo de `Review`.
@@ -40,37 +37,69 @@ module PriceList
       end
       raise Error, "El archivo pesa más de 5 MB. Revisa que sea la lista de precios." if File.size(@path) > MAX_BYTES
 
-      sheet = open_sheet(extension)
-      header_line, code_col, price_col = locate_header(sheet)
-      last = sheet.last_row.to_i
-      if last - header_line > MAX_ROWS
+      table = extension == "csv" ? read_csv : read_xlsx
+      header_index, code_col, price_col = locate_header(table)
+      if table.size - header_index - 1 > MAX_ROWS
         raise Error, "El archivo trae más de #{MAX_ROWS.to_fs(:delimited)} renglones. Revisa que sea la lista de precios."
       end
 
-      ((header_line + 1)..last).each { |line| read_line(line, sheet.cell(line, code_col), sheet.cell(line, price_col)) }
+      table.each_with_index.drop(header_index + 1).each do |cells, index|
+        read_line(index + 1, cells[code_col], cells[price_col])
+      end
       self
     end
 
     private
 
-    # Roo levanta excepciones de bajo nivel (zip, XML, CSV) con un archivo
-    # dañado o que solo tiene la extensión: al operador le sirve saber qué
-    # hacer, no cuál de ellas fue.
-    def open_sheet(extension)
-      book = Roo::Spreadsheet.open(@path, extension: extension.to_sym)
-      book.sheet(0)
-    rescue StandardError => e
-      Rails.logger.warn("[price_list] no se pudo abrir #{@filename}: #{e.class}: #{e.message}")
-      raise Error, "No se pudo leer el archivo. Ábrelo en Excel y guárdalo de nuevo como .xlsx."
+    UNREADABLE = "No se pudo leer el archivo. Ábrelo en Excel y guárdalo de nuevo como .xlsx.".freeze
+
+    # El archivo se lee COMPLETO aquí, a una tabla en memoria: roo lee
+    # perezosamente, y un archivo dañado reventaba después, fuera de este
+    # rescate, como pantalla de error. Y se rescata SOLO lo que significa
+    # "archivo dañado": rescatar todo convertía una falla del sistema (la gema
+    # sin cargar, 2026-10-08) en "guárdalo de nuevo", y mandaba a revisar un
+    # archivo que estaba bien.
+    #
+    # Celda por celda desde la columna A, para que el índice de cada columna
+    # sea el de Excel sin depender de dónde empiecen los datos.
+    def read_xlsx
+      sheet = Roo::Spreadsheet.open(@path, extension: :xlsx).sheet(0)
+      return [] unless sheet.last_row
+
+      columns = 1..sheet.last_column.to_i
+      (1..sheet.last_row).map { |line| columns.map { |col| sheet.cell(line, col) } }
+    rescue Zip::Error, Nokogiri::XML::SyntaxError, ArgumentError => e
+      # ArgumentError: así avisa roo de un zip que no es libro de Excel
+      # ("missing required workbook file").
+      unreadable!(e)
     end
 
-    def locate_header(sheet)
-      first = sheet.first_row.to_i
-      (first...(first + HEADER_SEARCH_ROWS)).each do |line|
-        cells = Array(sheet.row(line)).map { |cell| normalize(cell) }
-        code_col  = cells.index { |c| c.start_with?("CODIGO") }
-        price_col = cells.index { |c| c.include?("PRECIO") }
-        return [ line, code_col + 1, price_col + 1 ] if code_col && price_col
+    # El CSV lo lee Ruby directo, no roo, para aceptar lo que Excel produce en
+    # México: "CSV" de Excel en Windows sale en Windows-1252 (CÓDIGO con acento
+    # en un byte que no es UTF-8), a veces con BOM, y según la configuración
+    # regional con ";" en vez de ",".
+    def read_csv
+      text = File.binread(@path).delete_prefix("\xEF\xBB\xBF".b)
+      text = text.dup.force_encoding(Encoding::UTF_8)
+      text = text.force_encoding(Encoding::Windows_1252).encode(Encoding::UTF_8) unless text.valid_encoding?
+      first_line = text.lines.first.to_s
+      separator = first_line.count(";") > first_line.count(",") ? ";" : ","
+      CSV.parse(text, col_sep: separator)
+    rescue CSV::MalformedCSVError, EncodingError => e
+      unreadable!(e)
+    end
+
+    def unreadable!(error)
+      Rails.logger.warn("[price_list] no se pudo leer #{@filename}: #{error.class}: #{error.message}")
+      raise Error, UNREADABLE
+    end
+
+    def locate_header(table)
+      table.first(HEADER_SEARCH_ROWS).each_with_index do |cells, index|
+        names = cells.map { |cell| normalize(cell) }
+        code_col  = names.index { |c| c.start_with?("CODIGO") }
+        price_col = names.index { |c| c.include?("PRECIO") }
+        return [ index, code_col, price_col ] if code_col && price_col
       end
       raise Error, "No encontré las columnas CODIGO y PRECIO. La primera fila del archivo tiene que " \
                    "llevar esos encabezados, como en el layout de ejemplo."
@@ -81,8 +110,10 @@ module PriceList
     def read_line(line, raw_code, raw_price)
       return if blank?(raw_code) && blank?(raw_price)
 
-      code_text = raw_code.is_a?(Float) && raw_code == raw_code.floor ? raw_code.to_i.to_s : raw_code.to_s.strip
       code  = parse_code(raw_code)
+      # Como lo muestra el ERP (6 dígitos) cuando es un código; si no, tal cual
+      # venía, para que se encuentre en el archivo.
+      code_text = code ? format("%06d", code) : raw_code.to_s.strip
       price = parse_price(raw_price)
       reason =
         if code.nil? then "El código no es válido: deben ser hasta 6 dígitos."

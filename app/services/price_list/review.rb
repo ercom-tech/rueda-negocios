@@ -38,6 +38,19 @@ module PriceList
 
     def large_variations = changes.select(&:large_variation?)
 
+    # Todo lo del archivo que NO se va a aplicar, con su motivo y en el orden
+    # del archivo: lo que el operador tiene que ir a corregir.
+    def rejected
+      (problems +
+       conflicts.map do |c|
+         Reader::Problem.new(line: c.lines.first, code_text: format("%06d", c.code),
+                             reason: "Viene repetido con precios distintos (líneas #{SpanishText.list(c.lines.map(&:to_s))}).")
+       end +
+       not_in_round.map do |r|
+         Reader::Problem.new(line: r.line, code_text: format("%06d", r.code), reason: "No está en el catálogo de esta rueda.")
+       end).sort_by(&:line)
+    end
+
     # Borradores con alguna partida de estos productos a un precio distinto del
     # nuevo. No se tocan —el precio de una partida es el que se le ofreció al
     # cliente—, pero el operador tiene que saber que existen.
@@ -93,7 +106,7 @@ module PriceList
         row = same_code.first
         product = products[code]
         if code == Product::GENERIC_ERP_ID
-          @problems << Reader::Problem.new(line: row.line, code_text: product&.erp_code || code.to_s,
+          @problems << Reader::Problem.new(line: row.line, code_text: format("%06d", code),
                                            reason: "El 999999 no lleva precio de lista: se captura a mano en cada partida.")
         elsif product.nil?
           @not_in_round << row
