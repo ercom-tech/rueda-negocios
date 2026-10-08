@@ -112,16 +112,19 @@ class Product < ApplicationRecord
     price_override&.unit_price || price&.credit_wholesale_price
   end
 
-  # Snapshot para crear una partida de pedido.
+  # Snapshot para crear una partida de pedido. Con precio de archivo, la
+  # partida guarda además el del ERP que reemplazó: es su rastro.
   def to_order_item_attributes
     {
-      product:     self,
-      code:        erp_code,
-      description: description,
-      part_number: part_number,
-      unit:        unit,
-      unit_price:  capture_price || 0,
-      tax_rate:    price&.tax_rate || 0
+      product:         self,
+      code:            erp_code,
+      description:     description,
+      part_number:     part_number,
+      unit:            unit,
+      unit_price:      capture_price || 0,
+      tax_rate:        price&.tax_rate || 0,
+      price_from_file: price_override.present?,
+      erp_unit_price:  (price&.credit_wholesale_price if price_override)
     }
   end
 end

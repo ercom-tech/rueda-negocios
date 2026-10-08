@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_08_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_08_180000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -189,11 +189,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_08_120000) do
     t.datetime "created_at", null: false
     t.string "description"
     t.decimal "discount_percent", precision: 5, scale: 2, default: "0.0", null: false
+    t.decimal "erp_unit_price", precision: 14, scale: 4
     t.boolean "gift", default: false, null: false
     t.decimal "manual_discount_percent", precision: 5, scale: 2
     t.bigint "order_id", null: false
     t.string "part_number"
     t.integer "position", default: 1, null: false
+    t.boolean "price_from_file", default: false, null: false
     t.bigint "product_id"
     t.decimal "promotion_discount_percent", precision: 5, scale: 2
     t.bigint "promotion_id"

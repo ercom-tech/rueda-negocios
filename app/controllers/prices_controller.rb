@@ -14,11 +14,13 @@ class PricesController < ApplicationController
   before_action :pause_writes_during_sync, only: %i[review apply destroy]
 
   def index
-    @loaded = PriceOverride.for_active_round
-    @files = @loaded.group(:source_filename)
-                    .order(Arel.sql("MAX(updated_at) DESC"))
-                    .pluck(:source_filename, Arel.sql("COUNT(*)"), Arel.sql("MAX(updated_at)"),
-                           Arel.sql("STRING_AGG(DISTINCT loaded_by, ', ')"))
+    respond_to do |format|
+      format.html { load_summary }
+      format.csv do
+        send_data PriceList::LoadedExport.csv, type: "text/csv; charset=utf-8",
+                  filename: "precios-cargados-#{Date.current.iso8601}.csv"
+      end
+    end
   end
 
   # Subir: se lee de una vez para rechazar aquí un archivo inservible, y se
@@ -78,6 +80,15 @@ class PricesController < ApplicationController
   end
 
   private
+
+  # Lo que la pantalla muestra: cuántos precios vigentes vienen de cada archivo.
+  def load_summary
+    @loaded = PriceOverride.for_active_round
+    @files = @loaded.group(:source_filename)
+                    .order(Arel.sql("MAX(updated_at) DESC"))
+                    .pluck(:source_filename, Arel.sql("COUNT(*)"), Arel.sql("MAX(updated_at)"),
+                           Arel.sql("STRING_AGG(DISTINCT loaded_by, ', ')"))
+  end
 
   def require_active_round
     return if BusinessRound.active.exists?

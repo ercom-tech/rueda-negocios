@@ -13,7 +13,20 @@ class PriceOverrideTest < ActiveSupport::TestCase
 
   test "sin precio cargado se captura a crédito mayoreo" do
     assert_equal 6500, @product.capture_price
-    assert_equal 6500, @product.to_order_item_attributes[:unit_price]
+    attributes = @product.to_order_item_attributes
+    assert_equal 6500, attributes[:unit_price]
+    assert_equal false, attributes[:price_from_file]
+    assert_nil attributes[:erp_unit_price]
+  end
+
+  # El rastro: la partida guarda que su precio vino del archivo y cuál era el
+  # del ERP en ese momento.
+  test "con precio cargado la partida guarda el origen y el precio del ERP" do
+    override
+
+    attributes = @product.reload.to_order_item_attributes
+    assert_equal true, attributes[:price_from_file]
+    assert_equal 6500, attributes[:erp_unit_price]
   end
 
   test "el precio cargado reemplaza al crédito mayoreo en la partida" do

@@ -228,6 +228,24 @@ module Sync
       assert_equal false, item["regalo"]
     end
 
+    # Rastro del precio de archivo (2026-10-08): la API no tiene columna para
+    # él, pero guarda el paquete completo en la evidencia.
+    test "una partida con precio de archivo lleva el precio del ERP que reemplazó" do
+      @order.order_items.first.update_columns(price_from_file: true, erp_unit_price: 92.5)
+
+      item = sent_payload["items"].first
+      assert_equal true, item["precio_archivo"]
+      assert_equal 92.5, item["precio_erp"].to_d
+      assert_equal 100, item["precio"].to_d, "el precio que se cobra sigue siendo el de la partida"
+    end
+
+    test "una partida con precio del ERP lo dice y no inventa otro" do
+      item = sent_payload["items"].first
+
+      assert_equal false, item["precio_archivo"]
+      assert_nil item["precio_erp"]
+    end
+
     # Un regalo viaja marcado como tal: con `regalo: false` fijo, la evidencia
     # registraba todo regalo como partida cobrada (12ª auditoría).
     test "un regalo viaja marcado como regalo" do

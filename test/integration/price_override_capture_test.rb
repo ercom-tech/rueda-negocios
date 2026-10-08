@@ -30,6 +30,19 @@ class PriceOverrideCaptureTest < ActionDispatch::IntegrationTest
   test "la partida nace con el precio cargado" do
     post order_order_items_path(@order), params: { product_id: @product.id }, as: :turbo_stream
 
-    assert_equal 512.30, @order.order_items.sole.unit_price
+    item = @order.order_items.sole
+    assert_equal 512.30, item.unit_price
+    assert item.price_from_file
+    assert_equal 429.44, item.erp_unit_price
+  end
+
+  # La partida guarda su origen al nacer: quitar el archivo después no le
+  # reescribe la historia.
+  test "quitar los precios después no cambia una partida ya agregada" do
+    post order_order_items_path(@order), params: { product_id: @product.id }, as: :turbo_stream
+    PriceOverride.delete_all
+
+    item = @order.order_items.sole.reload
+    assert_equal [ 512.30, true ], [ item.unit_price, item.price_from_file ]
   end
 end

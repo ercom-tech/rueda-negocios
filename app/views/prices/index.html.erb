@@ -57,10 +57,14 @@
             </span>
           </h2>
           <% if @files.any? %>
+            <div class="flex flex-wrap items-center gap-2">
+            <%= link_to "Descargar (CSV)", server_prices_path(format: :csv),
+                  class: "rounded-full bg-white/10 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/20" %>
             <button type="button" data-action="modal#open"
                     class="rounded-full bg-neutral-700 px-5 py-2 text-sm font-bold text-white transition-colors hover:bg-neutral-600">
               Quitar precios cargados
             </button>
+            </div>
           <% end %>
         </div>
         <div class="mt-2 overflow-x-auto rounded-2xl bg-brand-cream text-neutral-900">

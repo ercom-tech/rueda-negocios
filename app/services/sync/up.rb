@@ -172,6 +172,12 @@ module Sync
             regalo:            it.gift?,
             id_proveedor:      it.supplier&.erp_supplier_id,
             id_marca:          it.brand&.erp_brand_id,
+            # Si el precio vino de un archivo cargado en el panel del servidor
+            # y cuál era el del ERP (2026-10-08). La API no tiene columna para
+            # ellos: quedan en `vta_pedido_rueda.payload`, que guarda el
+            # paquete completo.
+            precio_archivo:    it.price_from_file,
+            precio_erp:        it.erp_unit_price,
             # Solo el genérico (fuera de catálogo) viaja con su descripción
             # capturada; en el resto va nil → NULL, la forma nativa del ERP
             # (8.4M de partidas normales lo llevan NULL).

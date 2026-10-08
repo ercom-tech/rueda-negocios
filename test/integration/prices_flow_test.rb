@@ -105,6 +105,23 @@ class PricesFlowTest < ActionDispatch::IntegrationTest
     assert_equal "No se aplica: No está en el catálogo de esta rueda.", lines[3].last
   end
 
+  test "los precios cargados se descargan producto por producto, contra el del ERP" do
+    PriceOverride.create!(erp_round_id: 974_001, erp_product_id: 974_101, unit_price: 6900,
+                          source_filename: "stihl.xlsx", loaded_by: "srv_po")
+    PriceOverride.create!(erp_round_id: 974_001, erp_product_id: 974_999, unit_price: 10)
+    PriceOverride.create!(erp_round_id: 1, erp_product_id: 974_102, unit_price: 5)
+
+    get server_prices_path(format: :csv)
+
+    assert_response :success
+    assert_match(/precios-cargados-/, response.headers["Content-Disposition"])
+    lines = CSV.parse(response.body)
+    assert_equal PriceList::LoadedExport::HEADERS, lines.first
+    assert_equal [ "974101", "MOTOSIERRA", "6500.0", "6900.0", "+6.2%", "stihl.xlsx", "srv_po" ], lines[1].first(7)
+    assert_equal [ "974999", nil, nil, "10.0", nil ], lines[2].first(5), "un código fuera del catálogo sale sin descripción"
+    assert_equal 3, lines.size, "solo los de la rueda activa"
+  end
+
   test "un archivo inservible se rechaza al subirlo, con qué hacer" do
     post server_prices_review_path, params: { file: upload("hola\n", name: "precios.csv") }
 
