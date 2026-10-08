@@ -270,6 +270,18 @@ Llave: `(id_empresa, id_rueda, clave_rueda)`. Para llegar al pedido del ERP:
 - **`origen`:** `transmision` (lo normal) o `respaldo` (reconstruida desde un
   respaldo de la laptop, abajo).
 
+**Precios cargados desde archivo (2026-10-08):** cuando el precio de una
+partida vino de "Cambiar precios" (panel del servidor), el paquete lo dice en
+cada partida —`precio_archivo` y `precio_erp`, el crédito mayoreo que
+reemplazó—. No hay columna para ellos: viven solo en `payload`.
+
+```sql
+SELECT ev.clave_rueda, it->>'codigo' AS codigo,
+       (it->>'precio')::numeric AS precio, (it->>'precio_erp')::numeric AS precio_erp
+FROM fecego.vta_pedido_rueda ev, jsonb_array_elements(ev.payload->'items') it
+WHERE ev.id_empresa = 1 AND ev.id_rueda = <rueda> AND (it->>'precio_archivo')::boolean;
+```
+
 ### Reconstruirla desde un respaldo de la laptop
 
 Para las ruedas transmitidas antes de que existiera la tabla — hoy, **solo

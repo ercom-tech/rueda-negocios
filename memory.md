@@ -25,11 +25,74 @@ Si es **algo por hacer**, va al backlog.
 ## Índice de la bitácora
 
 - Decisiones generales del proyecto (abajo)
+- Cambiar precios desde un archivo (2026-10-08)
 - 12ª, 11ª, 10ª, 9ª, 8ª, 7ª, 6ª, 5ª y 4ª auditorías — remediación
 - Descubrimiento del esquema de catálogos (ERP)
 - Fase A — scaffolding · Fase B — login, menú, reportes, pedido (arcos 1–3)
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
+
+## Cambiar precios desde un archivo (2026-10-08)
+
+**Qué:** tarjeta "Cambiar precios" en el panel del servidor. El personal de la
+rueda sube un archivo (layout de FECEGO: `CODIGO` + `PRECIO LISTA S/IVA`, .xlsx
+o .csv), revisa qué cambiaría y lo aplica. El precio del archivo **reemplaza al
+crédito mayoreo** como precio unitario de captura, sin tocar el ERP ni volver a
+obtener la información.
+
+**Decisiones y su porqué:**
+
+- **Tabla aparte (`price_overrides`), no sobre `prices`.** "Obtener
+  información" borra y recarga el catálogo completo: sobrescribir el precio
+  del ERP se habría perdido en la siguiente descarga, sin aviso. Va **por
+  código y rueda, sin FK**, porque el sync-down recrea los productos con otros
+  ids. El sync-down no la toca; **"Cerrar rueda" la vacía** (son precios de
+  ESA rueda).
+- **Una sola regla de precio: `Product#capture_price`** (archivo si hay, si no
+  crédito mayoreo). La usan la partida y el buscador; con dos lecturas, el
+  buscador anunciaría un precio y la partida nacería con otro.
+- **Los archivos se SUMAN** (decisión del usuario): uno nuevo solo toca sus
+  códigos y en un código repetido gana el último. Así se carga un archivo por
+  proveedor sin borrar los anteriores; "Quitar precios cargados" vuelve a los
+  del ERP.
+- **Sin piso:** basta con que sea mayor a cero (decisión del usuario). La base
+  lo respalda con un CHECK. El 999999 no admite precio cargado: se captura a
+  mano.
+- **Subir → revisar → aplicar.** La revisión no escribe nada y compara contra
+  el precio con que HOY se captura (no contra el del ERP). "Aplicar" vuelve a
+  leer y revisar el archivo contra el catálogo de ese momento. El archivo se
+  guarda en `tmp/price_lists/<ficha>` entre los dos pasos (la cookie no lo
+  aguanta y el navegador no lo reenvía) y se barre al día.
+- **Lo que no se aplica se dice con línea y motivo:** sin precio, en cero,
+  código inválido, fuera del catálogo de la rueda, y **un código repetido con
+  precios distintos** (no se adivina cuál es el bueno). Las variaciones de más
+  de ±50% se señalan pero se aplican: solo el operador sabe si es error.
+- **Las partidas ya agregadas no cambian.** El precio de una partida es el que
+  se le ofreció al cliente; la revisión avisa cuántos borradores tienen
+  partidas al precio anterior.
+- **Rastro sin tocar la API ni el ERP:** cada partida guarda al nacer
+  `price_from_file` y `erp_unit_price` (el del ERP que reemplazó); viajan como
+  `precio_archivo`/`precio_erp` y quedan en `vta_pedido_rueda.payload`, porque
+  la API ignora las llaves que no conoce y guarda el paquete completo.
+- **No se tocaron pantallas existentes** (regla del usuario): todo vive en la
+  tarjeta y sus pantallas. La única excepción aceptada es que el buscador de
+  la captura muestre el precio que se cobra — mismo diseño, otro número. Una
+  leyenda "(precio de rueda)" en el buscador se quitó a petición del usuario.
+
+**Lo que costó:**
+
+- **El archivo de ejemplo dio "No se pudo leer el archivo" en el servidor del
+  usuario** porque corría desde antes de agregar la gema `roo`, y el lector
+  rescataba TODO como "archivo dañado": una falla del sistema se presentó como
+  culpa del archivo. Revisándolo salió otro peor: roo lee perezosamente, y un
+  CSV mal formado reventaba DESPUÉS del rescate, como pantalla de error. Ahora
+  el archivo se lee completo dentro del rescate, que solo atrapa errores de
+  archivo (`Zip::Error`, `Nokogiri::XML::SyntaxError`, `ArgumentError` de roo,
+  `CSV::MalformedCSVError`, `EncodingError`). El CSV lo lee Ruby directo:
+  Excel en Windows lo guarda en Windows-1252, a veces con BOM y con `;`.
+- **`upsert_all` con `update_only` no toca `updated_at`**: al cargar un
+  segundo archivo se perdía cuándo cambió cada precio. Fechas explícitas y
+  `record_timestamps: false`.
 
 ## 12ª auditoría (2026-09-30) — remediación
 

@@ -93,6 +93,16 @@ movería también fechas, números y mensajes de Rails que hoy funcionan.
   capa flotante nueva que se despliegue hacia abajo tiene que medir el espacio
   y voltearse o acotarse (ver `select#position`), no confiar en que la página
   crezca. En pantalla baja aplica a casi todos los combos, no solo al último.
+- **Un rescate que traduce errores a un mensaje al usuario atrapa SOLO los
+  errores de su caso**, nunca `StandardError`. El lector de "Cambiar precios"
+  rescataba todo como "archivo dañado", y una gema sin cargar en el servidor
+  se le presentó al operador como "guárdalo de nuevo" — con el archivo sano
+  (2026-10-08). Lo que no es del caso se deja subir: se ve como falla y queda
+  en el log.
+- **Una librería que lee perezosamente lee FUERA de tu rescate.** roo no abre
+  el CSV al llamar `open`, sino al pedir la primera celda: el `rescue` del
+  `open` no atrapaba un CSV mal formado, que salía como pantalla de error.
+  Forzar la lectura completa dentro del bloque protegido.
 - **Todo parámetro de URL que se use para consultar pasa por
   `ParamSanitizing`.** Un `?id[]=1` llega como **arreglo** y un `?id[x]=1` como
   `ActionController::Parameters`: sobre cualquiera de los dos, `to_i` levanta
@@ -205,6 +215,10 @@ movería también fechas, números y mensajes de Rails que hoy funcionan.
   precisión de la columna sale como `ActiveRecord::RangeError`, que ningún
   rescue atrapa; y en una respuesta Turbo Stream el usuario ni siquiera ve el
   error: la pantalla no se repinta y parece que "no pasó nada".
+- **`upsert_all` con `update_only` NO toca `updated_at`** en las filas que ya
+  existían: la fecha de la carga anterior se queda, y se pierde cuándo cambió
+  el dato. Pasar las fechas explícitas, `updated_at` en `update_only` y
+  `record_timestamps: false`.
 - **Un enum no se puede validar en el modelo:** asignarle un valor desconocido
   levanta `ArgumentError` antes de que corra ninguna validación. Se sanea en
   los `params` (a nil) y se deja que lo recoja el `validates presence`.

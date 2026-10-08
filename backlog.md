@@ -54,8 +54,17 @@ viejo quedó caduco — verificado en la 6ª auditoría:
 - **En la laptop:** `bin/rails db:migrate` (migraciones de pid,
   credit_wholesale_price, las de promociones y las del 2026-09: `folio_prefix`
   de la rueda, `erp_folios` del pedido, `supplier_id`/`brand_id` de la
-  partida y `captured_at` del pedido) + `bin/rails tailwindcss:build`
-  (obligatorio: hay clases nuevas en cada lote).
+  partida y `captured_at` del pedido; las del 2026-10-08: `price_overrides`
+  y `price_from_file`/`erp_unit_price` de la partida) + `bin/rails
+  tailwindcss:build` (obligatorio: hay clases nuevas en cada lote).
+  **`bundle install` y reiniciar el servicio son obligatorios en este lote:**
+  entra la gema `roo` (leer el Excel de "Cambiar precios"), y un servidor que
+  arrancó sin ella responde "No se pudo leer el archivo" a cualquier archivo
+  (pasó en desarrollo el 2026-10-08).
+- **Check de "Cambiar precios"** (2026-10-08): en el panel del servidor, subir
+  el layout de FECEGO, revisar, aplicar, agregar una partida de un producto del
+  archivo (debe nacer con el precio nuevo) y "Quitar precios cargados" al
+  terminar la prueba. No necesita nada en el ERP ni en la API.
 - **Checks post-deploy** (transmitir un pedido de prueba con una partida del
   genérico): `id_rueda ≠ 0`, `nombre_capturado` poblado (≤40), precio de
   partida = `cred_mayoreo_precio`, y los de remisión de siempre

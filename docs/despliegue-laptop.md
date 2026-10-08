@@ -52,6 +52,10 @@ abajo van SIN `RAILS_ENV`**: con `production` Rails apunta a
   falla en `Bundler.setup`, antes de cargar Rails, y con `Restart=always` el
   servicio entra en bucle. En las tablets se ve "No se puede acceder a este
   sitio" y nada en la app dice por qué — hay que ir a `journalctl`.
+- **Sin `systemctl restart`, las gemas nuevas tampoco.** Bundler las carga al
+  arrancar: el servidor viejo sigue vivo con el código nuevo pero sin la gema.
+  Con `roo` (2026-10-08), "Cambiar precios" respondía "No se pudo leer el
+  archivo" a un archivo sano.
 - **Sin `systemctl restart`, los initializers nuevos no existen.** El reload de
   development recarga `app/`, pero **no** `config/initializers/`. Un MIME sin
   registrar hace que la pantalla que lo usa dé 500 — y como todo lo demás sí
@@ -90,6 +94,9 @@ Lo mínimo, en el navegador de la laptop:
   sube y la partida aparece donde debe.
 - **Panel del servidor**: "Obtener información" termina en "✓ Listo" y el panel
   se destraba **solo**, sin recargar (el estado se consulta cada 3 s).
+- **Panel del servidor → Cambiar precios**: subir el layout de precios,
+  revisar y aplicar; una partida nueva de un producto del archivo nace con el
+  precio nuevo. Al terminar, "Quitar precios cargados".
 - Si el lote trae cambios en el PDF, **imprimir un pedido de ~20 partidas** y
   verificar que los cuatro totales y el importe en letra caen en la misma hoja.
 
@@ -154,8 +161,11 @@ sudo systemctl restart fecego-rueda-negocios
 migraciones traiga el lote:
 
 - **Columnas nuevas y nullable** (las del lote del 2026-09-29/30:
-  `supplier_id`/`brand_id` de las partidas y `captured_at` del pedido): **el
-  checkout basta, sin rollback.** El código anterior ignora las columnas que no
+  `supplier_id`/`brand_id` de las partidas y `captured_at` del pedido; y las
+  del 2026-10-08: la tabla `price_overrides` y `price_from_file`/
+  `erp_unit_price` de las partidas, con valor por omisión): **el checkout
+  basta, sin rollback.** Los precios ya cargados se quedan en su tabla, pero
+  el código anterior no la lee: se captura con los del ERP. El código anterior ignora las columnas que no
   conoce — comprobado en la 12ª auditoría: sin migraciones pendientes,
   `capture!` y "Obtener información" corren completos. Un `db:rollback` aquí
   solo borraría, sin necesidad, el proveedor y la marca de los productos nuevos.
