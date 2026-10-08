@@ -33,6 +33,10 @@ gem "prawn-table", "~> 0.2"
 # la laptop desconectada en pleno evento.
 gem "csv", "~> 3.3"
 gem "caxlsx", "~> 4.1"
+# LEER el .xlsx de precios que se carga en el panel del servidor (caxlsx solo
+# escribe). Ruby puro sobre rubyzip + nokogiri, que ya vienen: nada que
+# instalar aparte en la laptop.
+gem "roo", "~> 3.0"
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 gem "bcrypt", "~> 3.1.7"
