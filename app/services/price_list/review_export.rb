@@ -12,7 +12,7 @@ module PriceList
 
     def csv(review)
       rows =
-        review.changes.map { |c| change_row(c, c.large_variation? ? "Cambia (variación mayor a 50%)" : "Cambia") } +
+        review.changes.map { |c| change_row(c, review.large?(c) ? "Cambia (variación mayor a #{percent(review.threshold)})" : "Cambia") } +
         review.unchanged.map { |c| change_row(c, "Queda igual") } +
         review.rejected.map { |r| [ r.line, r.code_text, nil, nil, nil, nil, "No se aplica: #{r.reason}" ] }
 
@@ -26,6 +26,8 @@ module PriceList
       [ change.line, format("%06d", change.code), change.description,
         change.current_price&.to_s("F"), change.new_price.to_s("F"), variation(change), result ]
     end
+
+    def percent(fraction) = "#{(fraction * 100).to_i}%"
 
     def variation(change)
       return if change.variation.nil?

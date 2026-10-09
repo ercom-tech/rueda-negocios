@@ -90,6 +90,8 @@ module PriceList
         [ 7, "003024", "El precio no es un número." ],
         [ 8, "003025", "El precio es demasiado grande." ]
       ], reader.problems.map { |p| [ p.line, p.code_text, p.reason ] }
+      assert_equal %i[no_price no_price no_price invalid_code invalid_code invalid_price invalid_price],
+                   reader.problems.map(&:kind), "el tipo agrupa los motivos para el desglose"
     end
 
     test "un código con decimales no es un código" do

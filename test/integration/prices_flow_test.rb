@@ -48,6 +48,16 @@ class PricesFlowTest < ActionDispatch::IntegrationTest
     assert_equal 0, PriceOverride.count
   end
 
+  # El segundo renglón de cada tarjeta es un dato, como el importe del reporte.
+  test "las tarjetas dicen hacia dónde se mueven los precios y por qué no se aplican" do
+    token = review!("CODIGO,PRECIO\n974101,6900\n974102,900\n999,5\n3021,\n")
+
+    get server_price_review_path(token)
+    assert_select "a", text: /Cambian\s+2\s+1 sube · 1 baja/
+    assert_select "a", text: /No se aplican\s+2\s+1 fuera de la rueda · 1 sin precio/
+    assert_select "a", text: /Quedan igual\s+0\s+Mismo precio que hoy/
+  end
+
   # Las tarjetas son el filtro, como en el reporte de pedidos: por omisión la
   # tabla trae lo que se aplica; cada tarjeta la cambia a su grupo.
   test "las tarjetas filtran la tabla al grupo elegido" do
@@ -72,6 +82,33 @@ class PricesFlowTest < ActionDispatch::IntegrationTest
 
     get server_price_review_path(token, group: "inventado")
     assert_select "a[aria-current=true]", text: /Cambian/
+  end
+
+  # El umbral solo decide qué se SEÑALA, y viaja en tarjetas, paginador y CSV
+  # para no regresar al de omisión al moverse.
+  test "el umbral de variación se elige y se conserva" do
+    token = review!("CODIGO,PRECIO\n974101,7800\n974102,1100\n") # +20% y +10%
+
+    get server_price_review_path(token)
+    assert_select "a span", text: "Variación de más de 50%"
+    assert_select "a", text: /Variación de más de 50%\s+0/
+
+    get server_price_review_path(token, threshold: 10, group: "large")
+    assert_select "a span", text: "Variación de más de 10%"
+    assert_select "tbody tr", count: 1, message: "solo el +20%: +10% no pasa de 10"
+    assert_select "tbody td", text: "MOTOSIERRA"
+    assert_select "a[href*='threshold=10']", minimum: 4, message: "las tarjetas lo conservan"
+    assert_select "a[href*='.csv'][href*='threshold=10']"
+
+    get server_price_review_path(token, threshold: "37")
+    assert_select "a span", text: "Variación de más de 50%", message: "lo que no está en la lista cae al de omisión"
+
+    get server_price_review_path(token, threshold: [ "10" ])
+    assert_response :success
+
+    get server_price_review_path(token, format: :csv, threshold: 10)
+    assert_equal "Cambia (variación mayor a 10%)", CSV.parse(response.body)[1].last
+    assert_equal "Cambia", CSV.parse(response.body)[2].last
   end
 
   test "la tabla se pagina y una página que no existe regresa a la primera" do

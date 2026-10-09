@@ -10,6 +10,11 @@ class PricesController < ApplicationController
   # va a aplicar) es la vista por omisión, como el Total del reporte.
   REVIEW_GROUPS = %w[large rejected unchanged changes].freeze
   DEFAULT_GROUP = "changes".freeze
+  # Umbrales de variación que el operador puede elegir en la revisión, en
+  # porcentaje. Lista cerrada y no un número libre: en tablet se teclea mal, y
+  # cualquier otro valor en la URL cae al de omisión.
+  THRESHOLDS = [ 10, 20, 30, 50, 100 ].freeze
+  DEFAULT_THRESHOLD = 50
 
   before_action :require_server
   before_action :require_active_round
@@ -50,7 +55,8 @@ class PricesController < ApplicationController
   # son también el filtro (`group`) y UNA tabla paginada con el grupo elegido.
   def show_review
     @upload = find_upload or return
-    @review = PriceList::Review.new(@upload.read)
+    @threshold = threshold
+    @review = PriceList::Review.new(@upload.read, threshold: BigDecimal(@threshold) / 100)
 
     respond_to do |format|
       format.html do
@@ -70,7 +76,8 @@ class PricesController < ApplicationController
   rescue Pagy::OverflowError
     # Una página que ya no existe (marcador viejo): a la primera del mismo
     # grupo, rearmada con lo ya saneado y no con los parámetros crudos.
-    redirect_to server_price_review_path(@upload.token, group: @group, per_page: page_size)
+    redirect_to server_price_review_path(@upload.token, group: @group, per_page: page_size,
+                                         threshold: (@threshold unless @threshold == DEFAULT_THRESHOLD))
   end
 
   # Se vuelve a leer y a revisar el archivo: se aplica contra el catálogo de
@@ -114,6 +121,12 @@ class PricesController < ApplicationController
     when "unchanged" then @review.unchanged
     else @review.changes
     end
+  end
+
+  # El umbral elegido; lo que no esté en la lista cae al de omisión.
+  def threshold
+    value = params[:threshold].to_s
+    THRESHOLDS.map(&:to_s).include?(value) ? value.to_i : DEFAULT_THRESHOLD
   end
 
   def page_size

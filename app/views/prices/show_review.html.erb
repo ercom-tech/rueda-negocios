@@ -10,7 +10,11 @@
 <% applicable = review.changes.size %>
 <% large      = review.large_variations.size %>
 <% drafts     = review.drafts_with_old_price %>
-<% base_params = { token: @upload.token, per_page: @pagy.limit } %>
+<%# El umbral viaja en todos los enlaces —tarjetas, paginador, CSV— para que
+    cambiar de grupo o de página no lo regrese al de omisión. Se omite cuando
+    es el de omisión: URLs limpias. %>
+<% threshold_param = (@threshold unless @threshold == PricesController::DEFAULT_THRESHOLD) %>
+<% base_params = { token: @upload.token, per_page: @pagy.limit, threshold: threshold_param }.compact %>
 <% card_class = "block rounded-2xl px-5 py-4 transition-transform hover:scale-[1.015]" %>
 <% rejected_group = @group == "rejected" %>
 
@@ -33,7 +37,23 @@
           diálogo cuelga de este wrapper, que no se transforma. %>
       <div class="flex flex-wrap items-center gap-2" data-controller="modal"
            data-action="keydown@window->modal#closeOnEsc">
-        <%= link_to server_price_review_path(@upload.token, format: :csv),
+        <%# Umbral de variación: decide qué se SEÑALA (tarjeta, badge, CSV),
+            nunca qué se aplica. Combo de la app con el estilo del secundario
+            sobre fondo negro; el panel a lo ancho de su contenido y pegado a
+            la derecha, como el de los pills de contexto. %>
+        <%= form_with url: server_price_review_path(@upload.token), method: :get,
+              data: { controller: "form-submit" } do %>
+          <%= hidden_field_tag :group, @group unless @group == "changes" %>
+          <%= hidden_field_tag :per_page, @pagy.limit %>
+          <%= render "shared/custom_select", name: "threshold", selected: @threshold, include_blank: false,
+                options: PricesController::THRESHOLDS.map { |t| [ "Variación: #{t}%", t ] },
+                label: "Umbral de variación", input_data: { action: "change->form-submit#submit" },
+                button_class: "flex items-center gap-2 rounded-full bg-white/10 px-5 py-2.5 text-sm font-semibold " \
+                              "text-white transition-colors hover:bg-white/20",
+                panel_class: "absolute right-0 top-full z-30 mt-1 w-max whitespace-nowrap overflow-auto " \
+                             "rounded-2xl border border-black/10 bg-brand-cream text-sm shadow-xl" %>
+        <% end %>
+        <%= link_to server_price_review_path(@upload.token, format: :csv, threshold: threshold_param),
               title: "Descargar la revisión como CSV", aria: { label: "Descargar la revisión en CSV" },
               class: "flex items-center gap-2 rounded-full bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/20" do %>
           <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
@@ -63,7 +83,7 @@
         No hay precios que cambiar: todos los del archivo ya son los vigentes o no se pueden aplicar.
       <% end %>
       <% if large.positive? %>
-        <%= large == 1 ? "1 precio cambia" : "#{large.to_fs(:delimited)} precios cambian" %> más de 50%:
+        <%= large == 1 ? "1 precio cambia" : "#{large.to_fs(:delimited)} precios cambian" %> más de <%= @threshold %>%:
         se aplican igual, revísalos por si hay un error en el archivo.
       <% end %>
       <% if drafts.positive? %>
@@ -75,11 +95,15 @@
 
     <%# ── Tarjetas = filtro. Volver a picar la activa regresa a "Cambian". ── %>
     <div class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <% [ [ "large", "Variación de más de 50%", large, "Se aplican: revísalos" ],
-           [ "rejected", "No se aplican", review.rejected.size, "Con su línea y su motivo" ],
-           [ "unchanged", "Quedan igual", review.unchanged.size, "Ya son los vigentes" ] ].each do |group, label, count, note| %>
+      <%# Segundo renglón: un dato que el número grande no dice —hacia dónde se
+          mueven los precios, por qué no se aplican—, como el importe en las
+          tarjetas del reporte. %>
+      <% [ [ "large", "Variación de más de #{@threshold}%", large, price_directions_label(review.directions(review.large_variations)) ],
+           [ "rejected", "No se aplican", review.rejected.size, rejected_kinds_label(review.rejected_kinds) ],
+           [ "unchanged", "Quedan igual", review.unchanged.size, "Mismo precio que hoy" ] ].each do |group, label, count, note| %>
         <% active = @group == group %>
-        <%= link_to server_price_review_path(@upload.token, group: (active ? nil : group), per_page: @pagy.limit),
+        <%= link_to server_price_review_path(@upload.token, group: (active ? nil : group), per_page: @pagy.limit,
+                                             threshold: threshold_param),
               aria: { current: (active ? "true" : nil) },
               class: "#{card_class} bg-brand-cream text-neutral-900 #{'ring-4 ring-brand-gold' if active}" do %>
           <div class="flex items-center justify-between gap-3">
@@ -91,14 +115,14 @@
         <% end %>
       <% end %>
 
-      <%= link_to server_price_review_path(@upload.token, per_page: @pagy.limit),
+      <%= link_to server_price_review_path(@upload.token, per_page: @pagy.limit, threshold: threshold_param),
             aria: { current: (@group == "changes" ? "true" : nil) },
             class: "#{card_class} bg-brand-coral text-white #{'ring-4 ring-brand-gold' if @group == 'changes'}" do %>
         <div class="flex items-center justify-between gap-3">
           <span class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">Cambian</span>
           <span class="text-3xl font-extrabold tabular-nums"><%= applicable.to_fs(:delimited) %></span>
         </div>
-        <p class="mt-2 text-lg font-bold">Se aplican</p>
+        <p class="mt-2 text-lg font-bold"><%= price_directions_label(review.directions(review.changes)) %></p>
       <% end %>
     </div>
 
@@ -135,7 +159,7 @@
                   <%= PriceList::ReviewExport.variation(row) || "—" %>
                   <%# En "Cambian" el badge separa las grandes de las demás; en
                       su propio grupo todas lo son y sobraría. %>
-                  <% if @group == "changes" && row.large_variation? %>
+                  <% if @group == "changes" && @review.large?(row) %>
                     <span class="ml-1 rounded-full bg-neutral-700 px-2 py-0.5 text-xs font-semibold text-white">Revisar</span>
                   <% end %>
                 </td>

@@ -17,7 +17,9 @@ module PriceList
     HEADER_SEARCH_ROWS = 10
 
     Row     = Data.define(:line, :code, :price)
-    Problem = Data.define(:line, :code_text, :reason)
+    # `kind` agrupa los motivos para el desglose de la revisión ("3 fuera de la
+    # rueda · 17 sin precio") sin depender de la redacción de `reason`.
+    Problem = Data.define(:line, :code_text, :reason, :kind)
 
     attr_reader :rows, :problems
 
@@ -115,13 +117,14 @@ module PriceList
       # venía, para que se encuentre en el archivo.
       code_text = code ? format("%06d", code) : raw_code.to_s.strip
       price = parse_price(raw_price)
-      reason =
-        if code.nil? then "El código no es válido: deben ser hasta 6 dígitos."
-        elsif price.nil? then blank?(raw_price) ? "No trae precio." : "El precio no es un número."
-        elsif !price.positive? then "El precio tiene que ser mayor a cero."
-        elsif price >= OrderItem::MAX_UNIT_PRICE then "El precio es demasiado grande."
+      kind, reason =
+        if code.nil? then [ :invalid_code, "El código no es válido: deben ser hasta 6 dígitos." ]
+        elsif price.nil? && blank?(raw_price) then [ :no_price, "No trae precio." ]
+        elsif price.nil? then [ :invalid_price, "El precio no es un número." ]
+        elsif !price.positive? then [ :no_price, "El precio tiene que ser mayor a cero." ]
+        elsif price >= OrderItem::MAX_UNIT_PRICE then [ :invalid_price, "El precio es demasiado grande." ]
         end
-      return @problems << Problem.new(line:, code_text:, reason:) if reason
+      return @problems << Problem.new(line:, code_text:, reason:, kind:) if reason
 
       @rows << Row.new(line:, code:, price:)
     end

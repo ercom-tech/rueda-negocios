@@ -62,13 +62,15 @@ module PriceList
     end
 
     test "conserva los problemas del archivo, en orden de línea" do
-      problems = [ Reader::Problem.new(line: 9, code_text: "1", reason: "b"), Reader::Problem.new(line: 3, code_text: "2", reason: "a") ]
+      problems = [ Reader::Problem.new(line: 9, code_text: "1", reason: "b", kind: :no_price),
+                   Reader::Problem.new(line: 3, code_text: "2", reason: "a", kind: :no_price) ]
 
       assert_equal [ 3, 9 ], review([], problems:).problems.map(&:line)
     end
 
     test "lo que no se aplica va junto, en orden de archivo y con su motivo" do
-      problems = [ Reader::Problem.new(line: 6, code_text: "ABC", reason: "El código no es válido: deben ser hasta 6 dígitos.") ]
+      problems = [ Reader::Problem.new(line: 6, code_text: "ABC", reason: "El código no es válido: deben ser hasta 6 dígitos.",
+                                      kind: :invalid_code) ]
       result = review([ [ 9999, 5 ], [ 3021, 6900 ], [ 3021, 7000 ] ], problems:)
 
       assert_equal [ [ 2, "009999", "No está en el catálogo de esta rueda." ],
@@ -83,6 +85,30 @@ module PriceList
       result = review([ [ 3021, 6500 * 1.5 + 1 ], [ 3022, 499 ], [ 3023, 1500 ], [ 3024, 500 ] ])
 
       assert_equal [ 3021, 3022 ], result.large_variations.map(&:code), "exactamente 50% no se señala"
+    end
+
+    test "cuenta cuántos suben y cuántos bajan" do
+      product(3023, "ORILLADORA", 0)
+      result = review([ [ 3021, 6900 ], [ 3022, 900 ], [ 3023, 50 ] ])
+
+      assert_equal({ up: 2, down: 1 }, result.directions(result.changes), "el que no tenía precio sube")
+    end
+
+    test "desglosa lo que no se aplica por tipo, del más frecuente al menos" do
+      problems = [ Reader::Problem.new(line: 2, code_text: "1", reason: "x", kind: :invalid_code),
+                   Reader::Problem.new(line: 3, code_text: "2", reason: "x", kind: :no_price),
+                   Reader::Problem.new(line: 4, code_text: "3", reason: "x", kind: :no_price) ]
+      result = review([ [ 9999, 5 ], [ 9998, 5 ], [ 9997, 5 ] ], problems:)
+
+      assert_equal [ [ :not_in_round, 3 ], [ :no_price, 2 ], [ :invalid_code, 1 ] ], result.rejected_kinds
+    end
+
+    test "el umbral de variación lo elige quien revisa" do
+      result = Review.new(reader([ [ 3021, 6500 * 1.15 ], [ 3022, 1300 ] ]), threshold: BigDecimal("0.2"))
+
+      assert_equal [ 3022 ], result.large_variations.map(&:code), "15% no pasa de 20; 30% sí"
+      assert result.large?(result.changes.find { |c| c.code == 3022 })
+      assert_equal 2, result.changes.size, "el umbral solo señala: se aplican todos"
     end
 
     test "un producto sin precio no tiene variación que señalar" do
