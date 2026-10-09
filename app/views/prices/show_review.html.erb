@@ -53,7 +53,7 @@
           <%= hidden_field_tag :per_page, @pagy.limit %>
           <%= render "shared/custom_select", name: "threshold", selected: @threshold, include_blank: false,
                 options: PricesController::THRESHOLDS.map { |t| [ "Variación: #{t}%", t ] },
-                label: "Umbral de variación", input_data: { action: "change->form-submit#submit" },
+                label: "Variación: #{@threshold}%", input_data: { action: "change->form-submit#submit" },
                 button_class: "flex items-center gap-2 rounded-full bg-white/10 px-5 py-2.5 text-sm font-semibold " \
                               "text-white transition-colors hover:bg-white/20",
                 panel_class: "absolute right-0 top-full z-30 mt-1 w-max whitespace-nowrap overflow-auto " \
@@ -124,7 +124,9 @@
             aria: { current: (@group == "changes" ? "true" : nil) },
             class: "#{card_class} bg-brand-coral text-white #{'ring-4 ring-brand-gold' if @group == 'changes'}" do %>
         <div class="flex items-center justify-between gap-3">
-          <span class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">Cambian</span>
+          <%# coral-dark y no `bg-white/20`: blanco de 12 px sobre el coral
+              aclarado daba 3.35:1, bajo el 4.5 de AA (13ª auditoría). %>
+          <span class="rounded-full bg-brand-coral-dark px-3 py-1 text-xs font-semibold">Cambian</span>
           <span class="text-3xl font-extrabold tabular-nums"><%= applicable.to_fs(:delimited) %></span>
         </div>
         <p class="mt-2 text-lg font-bold"><%= price_directions_label(review.directions(review.changes)) %></p>
@@ -183,7 +185,9 @@
       </table>
     </div>
 
-    <%= render "shared/paginator", pagy: @pagy, noun: "precio",
+    <%# En "No se aplican" son renglones rechazados, no precios (muchos ni lo
+        traen). "rechazo" y "precio" pluralizan bien con `pluralize`. %>
+    <%= render "shared/paginator", pagy: @pagy, noun: (@group == "rejected" ? "rechazo" : "precio"),
           base_params: base_params.merge(group: (@group unless @group == "changes")).compact,
           page_sizes: @page_sizes %>
   </div>

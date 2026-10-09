@@ -25,6 +25,7 @@ class PricesHelperTest < ActionView::TestCase
                  rejected_kinds_label([ [ :no_price, 17 ], [ :not_in_round, 3 ] ])
     assert_equal "2 códigos inválidos · 1 repetido con otro precio · 4 más",
                  rejected_kinds_label([ [ :invalid_code, 2 ], [ :conflict, 1 ], [ :generic, 3 ], [ :no_price, 1 ] ])
+    assert_equal "1 fuera de catálogo (999999)", rejected_kinds_label([ [ :generic, 1 ] ])
     assert_equal "Ninguno", rejected_kinds_label([])
   end
 end

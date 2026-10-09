@@ -32,7 +32,7 @@ module PricesHelper
     invalid_code:  [ "código inválido", "códigos inválidos" ],
     not_in_round:  [ "fuera de la rueda", "fuera de la rueda" ],
     conflict:      [ "repetido con otro precio", "repetidos con otro precio" ],
-    generic:       [ "del 999999", "del 999999" ]
+    generic:       [ "fuera de catálogo (999999)", "fuera de catálogo (999999)" ]
   }.freeze
 
   # "3 fuera de la rueda · 17 sin precio": los dos motivos más frecuentes, y

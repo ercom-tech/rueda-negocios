@@ -338,6 +338,26 @@ class PricesFlowTest < ActionDispatch::IntegrationTest
     get root_path
 
     assert_select "a[href=?]", server_prices_path, count: 0
-    assert_select "[aria-disabled=true]", text: /Cambiar\s*precios/
+    assert_select "[aria-disabled=true]", text: /Cambiar\s*precios\s*Espera a que termine de obtener información o de transmitir\./
+  end
+
+  # Apagada sin decir por qué parecía descompuesta (13ª auditoría).
+  test "sin la información de la rueda, la tarjeta dice qué hacer primero" do
+    @round.update!(active: false)
+
+    get root_path
+
+    assert_select "[aria-disabled=true]", text: /Cambiar\s*precios\s*Primero obtén la información de la rueda\./
+  end
+
+  test "el combo de umbral se anuncia con su valor, el badge Cambian alcanza AA y los rechazos se cuentan como rechazos" do
+    token = review!
+
+    get server_price_review_path(token, threshold: 20)
+    assert_select "button[aria-label=?]", "Variación: 20%"
+    assert_select "span.bg-brand-coral-dark", text: "Cambian"
+
+    get server_price_review_path(token, group: "rejected")
+    assert_match(/1 rechazo\b/, response.body)
   end
 end
