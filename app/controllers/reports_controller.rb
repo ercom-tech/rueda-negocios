@@ -128,8 +128,7 @@ class ReportsController < ApplicationController
   end
 
   def page_size
-    size = params[:per_page].to_i
-    PAGE_SIZES.include?(size) ? size : PAGE_SIZES.first
+    ParamSanitizing.page_size(params[:per_page], PAGE_SIZES)
   end
 
   # Opciones de los combos. Los catálogos de una rueda son chicos (decenas de

@@ -111,12 +111,17 @@ module PriceList
       assert_equal 2, result.changes.size, "el umbral solo señala: se aplican todos"
     end
 
-    test "un producto sin precio no tiene variación que señalar" do
+    # Sin precio de antes no hay variación con que medirlo, y ahí pasaba sin
+    # ruido un precio mal leído (13ª auditoría): se señala siempre, con
+    # cualquier umbral.
+    test "un precio que aparece desde $0 se señala siempre" do
       product(3023, "ORILLADORA", 0)
 
-      change = review([ [ 3023, 100 ] ]).changes.sole
+      result = Review.new(reader([ [ 3023, 100 ] ]), threshold: BigDecimal("1"))
+      change = result.changes.sole
       assert_nil change.variation
-      assert_not change.large_variation?
+      assert result.large?(change)
+      assert_equal [ 3023 ], result.large_variations.map(&:code)
     end
 
     test "sin rueda activa no hay contra qué revisar" do
@@ -126,8 +131,8 @@ module PriceList
       assert_match(/No hay una rueda cargada/, error.message)
     end
 
-    test "cuenta los borradores con partidas a un precio distinto del nuevo" do
-      user   = User.create!(erp_person_id: 9501, username: "cap_pl", password: "x", role: "capturista")
+    test "dice qué borradores tienen partidas a un precio distinto del nuevo, de quién y de qué cliente" do
+      user   = User.create!(erp_person_id: 9501, username: "cap_pl", password: "x", role: "capturista", name: "ANA")
       client = Client.create!(erp_client_key: "PL01", name: "Cliente")
       draft = ->(status: "draft") { Order.create!(user:, business_round: @round, client:, kind: "remission", status:) }
       item  = ->(order, product, price) { order.order_items.create!(product.to_order_item_attributes.merge(quantity: 1, unit_price: price)) }
@@ -140,7 +145,27 @@ module PriceList
       item.(draft.(), @blower, 1000)                              # producto que no cambia
       item.(draft.(status: "captured").tap { _1.update_column(:local_folio, "RN-1") }, @saw, 6500) # no es borrador
 
-      assert_equal 2, review([ [ 3021, 6900 ] ]).drafts_with_old_price
+      drafts = review([ [ 3021, 6900 ] ]).stale_drafts
+      assert_equal [ [ "ANA", "Cliente", 1, 0 ], [ "ANA", "Cliente", 1, 0 ] ],
+                   drafts.map { |d| [ d.capturista, d.client, d.items, d.locked ] }
+    end
+
+    # El precio de un regalo no mueve el total (va al 100%): avisar de él
+    # mandaba a quitar partidas que el candado de promoción no deja quitar.
+    test "los regalos no cuentan y las partidas con promoción se cuentan aparte" do
+      user   = User.create!(erp_person_id: 9502, username: "cap_pl2", password: "x", role: "capturista")
+      client = Client.create!(erp_client_key: "PL02", name: "Otro")
+      promo  = Promotion.create!(erp_promotion_id: 9501, code: "P", name: "P", starts_on: 1.week.ago, ends_on: 1.week.from_now)
+      order  = Order.create!(user:, business_round: @round, client:, kind: "remission")
+      gift   = order.order_items.create!(@saw.to_order_item_attributes.merge(quantity: 1))
+      gift.update_columns(gift: true)
+      promoted = order.order_items.create!(@saw.to_order_item_attributes.merge(quantity: 2))
+      promoted.update_columns(promotion_id: promo.id)
+      order.order_items.create!(@saw.to_order_item_attributes.merge(quantity: 3))
+
+      draft = review([ [ 3021, 6900 ] ]).stale_drafts.sole
+      assert_equal [ "cap_pl2", "Otro", 2, 1 ], [ draft.capturista, draft.client, draft.items, draft.locked ],
+                   "sin el regalo; de las dos que quedan, una con promoción"
     end
 
     # --- apply! -----------------------------------------------------------
@@ -177,6 +202,21 @@ module PriceList
       assert_equal [ 7100, "martes.xlsx", "b" ], [ override.unit_price, override.source_filename, override.loaded_by ]
       assert_operator override.updated_at, :>, first.updated_at, "updated_at dice cuándo se cambió"
       assert_equal first.created_at, override.created_at
+    end
+
+    # Comprobar y escribir eran dos sentencias: un "Cerrar rueda" colado entre
+    # ellas dejaba precios de una rueda ya cerrada (13ª auditoría).
+    test "aplica bajo el candado de las corridas" do
+      result = review([ [ 3021, 6900 ] ])
+      locked = false
+      original = SyncRun.method(:exclusively)
+      SyncRun.define_singleton_method(:exclusively) { |&block| original.call { locked = true; block.call } }
+
+      result.apply!(filename: "x.xlsx", loaded_by: "a")
+      assert locked
+      assert_equal 1, PriceOverride.count
+    ensure
+      SyncRun.define_singleton_method(:exclusively, original)
     end
 
     test "no aplica mientras corre un sync" do

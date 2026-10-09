@@ -32,6 +32,14 @@ module ParamSanitizing
   end
 
   # Texto libre: recortado, o nil.
+  # Tamaño de página: solo uno de los permitidos. Un `?per_page[]=50` llega
+  # como arreglo y el `to_i` que había en cada controlador levantaba
+  # NoMethodError (13ª auditoría).
+  def page_size(value, sizes)
+    size = id(value)
+    sizes.include?(size) ? size : sizes.first
+  end
+
   def text(value)
     value.strip.presence if value.is_a?(String)
   end

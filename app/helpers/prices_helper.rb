@@ -11,6 +11,20 @@ module PricesHelper
     parts.any? ? parts.join(" · ") : "Ninguno"
   end
 
+  # Aviso de los borradores con partidas al precio anterior, dicho para quien
+  # puede actuar: a qué capturista avisarle y de qué cliente es el pedido (el
+  # servidor no puede editar borradores ajenos). Hasta 3 nombres; el resto,
+  # "y N más".
+  def stale_drafts_sentence(drafts)
+    who = drafts.first(3).map { |d| "#{d.capturista} (#{d.client})" }
+    who << "#{drafts.size - 3} más" if drafts.size > 3
+    locked = drafts.sum(&:locked)
+    [ "#{drafts.size == 1 ? 'Hay 1 pedido en borrador' : "Hay #{drafts.size} pedidos en borrador"} con partidas " \
+      "al precio anterior: #{SpanishText.list(who)}.",
+      "No cambian solas: pide a cada capturista que las quite y las agregue otra vez" +
+        (locked.positive? ? "; las que tienen promoción aplicada, después de quitar la promoción." : ".") ].join(" ")
+  end
+
   # Singular y plural de cada tipo de motivo: `pluralize` es del inglés.
   REJECTED_KIND_LABELS = {
     no_price:      [ "sin precio", "sin precio" ],

@@ -127,6 +127,47 @@ module PriceList
       assert_equal [ BigDecimal("1234.5") ], read(csv("CODIGO,PRECIO LISTA S/IVA\n3021,\"$1,234.50\"\n")).rows.map(&:price)
     end
 
+    # Una sola forma, sea cual sea el separador del CSV (decisión del usuario,
+    # 13ª auditoría). Antes se borraban todas las comas: "2058,97" se leía
+    # como 205897.
+    test "el precio va con punto decimal y coma de miles" do
+      reader = read(csv("CODIGO,PRECIO LISTA S/IVA\n3021,\"1,234.50\"\n3022,\"$12,345\"\n3023,99.9\n"))
+      assert_equal %w[1234.5 12345.0 99.9], reader.rows.map { |r| r.price.to_s("F") }
+
+      reader = read(csv("CODIGO;PRECIO LISTA S/IVA\n3021;1,234.50\n3022;2058.97\n"))
+      assert_equal %w[1234.5 2058.97], reader.rows.map { |r| r.price.to_s("F") }, "también con punto y coma"
+    end
+
+    test "la coma decimal y las formas ambiguas se rechazan en vez de adivinar" do
+      reader = read(csv("CODIGO;PRECIO LISTA S/IVA\n3021;2058,97\n3022;1.234,50\n3023;12,34,5\n3024;1,23\n"))
+
+      assert_empty reader.rows
+      assert_equal [ "El precio no es un número: usa punto para decimales y coma para miles (1,234.50)." ] * 4,
+                   reader.problems.map(&:reason)
+    end
+
+    test "un archivo con solo el encabezado se rechaza" do
+      [ "CODIGO,PRECIO LISTA S/IVA\n", "CODIGO,PRECIO LISTA S/IVA\n,\n\n" ].each do |text|
+        error = assert_raises(Error) { read(csv(text)) }
+        assert_equal "El archivo no trae renglones de precios.", error.message
+      end
+    end
+
+    # Un XML con entidades anidadas desborda la pila de nokogiri: no es
+    # StandardError y salía como pantalla de error (13ª auditoría).
+    test "un xlsx con entidades anidadas da el mensaje de qué hacer" do
+      path = xlsx([ [ 3021, 6900 ] ])
+      entities = (1..9).map { |i| "<!ENTITY l#{i} \"#{"&l#{i - 1};" * 10}\">" }.join
+      bomb = "<?xml version=\"1.0\"?><!DOCTYPE w [<!ENTITY l0 \"lol\">#{entities}]>"
+      Zip::File.open(path) do |zip|
+        xml = zip.read("xl/worksheets/sheet1.xml").sub(/\A<\?xml[^>]*\?>/, bomb).sub("<sheetData>", "<sheetData>&l9;")
+        zip.get_output_stream("xl/worksheets/sheet1.xml") { |f| f.write(xml) }
+      end
+
+      error = assert_raises(Error) { read(path) }
+      assert_equal Reader::UNREADABLE, error.message
+    end
+
     test "redondea a 2 decimales, como la partida" do
       assert_equal [ BigDecimal("10.13") ], read(csv("CODIGO,PRECIO LISTA S/IVA\n3021,10.125\n")).rows.map(&:price)
     end
@@ -149,7 +190,7 @@ module PriceList
         [ 4, "003023", "El precio tiene que ser mayor a cero." ],
         [ 5, "1234567", "El código no es válido: deben ser hasta 6 dígitos." ],
         [ 6, "ABC", "El código no es válido: deben ser hasta 6 dígitos." ],
-        [ 7, "003024", "El precio no es un número." ],
+        [ 7, "003024", "El precio no es un número: usa punto para decimales y coma para miles (1,234.50)." ],
         [ 8, "003025", "El precio es demasiado grande." ]
       ], reader.problems.map { |p| [ p.line, p.code_text, p.reason ] }
       assert_equal %i[no_price no_price no_price invalid_code invalid_code invalid_price invalid_price],

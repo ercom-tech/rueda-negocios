@@ -19,7 +19,11 @@ module PriceList
     Change = Data.define(:line, :code, :description, :current_price, :new_price) do
       # nil cuando el producto no tenía precio: no hay contra qué comparar.
       def variation = current_price&.positive? ? new_price / current_price - 1 : nil
-      def large_variation?(threshold = LARGE_VARIATION) = !variation.nil? && variation.abs > threshold
+
+      # Un precio que aparece de la nada (el producto estaba en $0 o sin
+      # precio) se señala SIEMPRE: no hay variación con que medirlo, y era
+      # justo donde un precio mal leído pasaba sin ruido (13ª auditoría).
+      def large_variation?(threshold = LARGE_VARIATION) = variation.nil? || variation.abs > threshold
     end
     # Un código que el archivo trae con precios distintos: no se adivina cuál.
     Conflict = Data.define(:code, :lines, :prices)
@@ -73,31 +77,59 @@ module PriceList
     # Borradores con alguna partida de estos productos a un precio distinto del
     # nuevo. No se tocan —el precio de una partida es el que se le ofreció al
     # cliente—, pero el operador tiene que saber que existen.
-    def drafts_with_old_price
-      new_price = changes.to_h { |c| [ c.code, c.new_price ] }
-      return 0 if new_price.empty?
+    #
+    # Con QUIÉN y de qué cliente: el servidor no puede editar borradores ajenos,
+    # así que el aviso solo sirve si dice a qué capturista avisarle (13ª
+    # auditoría). Los regalos no cuentan: van al 100% de descuento y su precio
+    # no mueve el total. `locked` son las partidas con promoción aplicada, que
+    # no se pueden quitar sin quitar antes la promoción.
+    StaleDraft = Data.define(:capturista, :client, :items, :locked)
 
-      OrderItem.joins(:order, :product)
-               .where(orders: { status: "draft" }, products: { erp_product_id: new_price.keys })
-               .pluck("orders.id", "products.erp_product_id", :unit_price)
-               .select { |_, code, price| price != new_price[code] }
-               .map(&:first).uniq.size
+    def stale_drafts
+      new_price = changes.to_h { |c| [ c.code, c.new_price ] }
+      return [] if new_price.empty?
+
+      stale = OrderItem.joins(:order, :product)
+                       .where(orders: { status: "draft" }, products: { erp_product_id: new_price.keys }, gift: false)
+                       .pluck("orders.id", "products.erp_product_id", :unit_price, :promotion_id)
+                       .select { |_, code, price, _| price != new_price[code] }
+                       .group_by(&:first)
+      orders = Order.where(id: stale.keys).includes(:user, :client).order(:id)
+      orders.map do |order|
+        items = stale[order.id]
+        StaleDraft.new(capturista: order.user.full_name.presence || order.user.username, client: order.client.name,
+                       items: items.size, locked: items.count { |*, promotion_id| promotion_id })
+      end
     end
 
     # Escribe los cambios. Vuelve a mirar las condiciones que pudieron cambiar
     # desde la revisión: que la rueda siga siendo la misma y que no esté
     # corriendo un sync (que recrea el catálogo con el que se comparó).
+    #
+    # Bajo el MISMO candado que las corridas y "Cerrar rueda": comprobar y
+    # escribir eran dos sentencias, y un cierre colado entre ellas dejaba
+    # precios con la rueda ya cerrada, que reaparecían si se volvía a obtener
+    # (13ª auditoría).
     def apply!(filename:, loaded_by:)
-      if SyncRun.running.exists?
-        raise Error, "Se está obteniendo información o transmitiendo pedidos. Espera a que termine para cambiar precios."
+      SyncRun.exclusively do
+        if SyncRun.running.exists?
+          raise Error, "Se está obteniendo información o transmitiendo pedidos. Espera a que termine para cambiar precios."
+        end
+        unless BusinessRound.active.where(erp_round_id: round.erp_round_id).exists?
+          raise Error, "La rueda cambió desde que se revisó el archivo. Vuelve a subirlo."
+        end
+        write_changes!(filename, loaded_by)
       end
-      unless BusinessRound.active.where(erp_round_id: round.erp_round_id).exists?
-        raise Error, "La rueda cambió desde que se revisó el archivo. Vuelve a subirlo."
-      end
+    end
+
+    private
+
+    def write_changes!(filename, loaded_by)
       return 0 if changes.empty?
 
-      # Fechas explícitas: con `update_only`, Rails NO toca `updated_at` en las
-      # filas que ya existían, y se perdía cuándo se cambió cada precio.
+      # Fechas explícitas con el reloj de la app: así `updated_at` dice cuándo
+      # se cargó cada precio aunque la fila ya existiera, y las pruebas pueden
+      # moverlo con `travel` (el CURRENT_TIMESTAMP de Postgres no se mueve).
       now = Time.current
       PriceOverride.upsert_all(
         changes.map do |c|
@@ -110,8 +142,6 @@ module PriceList
       )
       changes.size
     end
-
-    private
 
     def compare(rows)
       by_code = rows.group_by(&:code)

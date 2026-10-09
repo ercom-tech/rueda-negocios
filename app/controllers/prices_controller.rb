@@ -47,6 +47,11 @@ class PricesController < ApplicationController
     rescue PriceList::Error => e
       upload.delete
       return redirect_to server_prices_path, alert: e.message
+    rescue Exception # rubocop:disable Lint/RescueException
+      # Cualquier otra falla sube como falla (pantalla de error y log), pero
+      # sin dejar el archivo en disco hasta el barrido del día siguiente.
+      upload.delete
+      raise
     end
     redirect_to server_price_review_path(upload.token)
   end
@@ -86,8 +91,8 @@ class PricesController < ApplicationController
     upload = find_upload or return
     review = PriceList::Review.new(upload.read)
     applied = review.apply!(filename: upload.filename, loaded_by: current_user.username)
-    drafts = review.drafts_with_old_price
-    upload.delete
+    drafts = review.stale_drafts
+    upload.mark_applied!
 
     redirect_to server_prices_path, notice: applied_message(applied, drafts)
   rescue PriceList::Error => e
@@ -130,8 +135,7 @@ class PricesController < ApplicationController
   end
 
   def page_size
-    size = params[:per_page].to_i
-    ReportsController::PAGE_SIZES.include?(size) ? size : ReportsController::PAGE_SIZES.first
+    ParamSanitizing.page_size(params[:per_page], ReportsController::PAGE_SIZES)
   end
 
   def require_active_round
@@ -144,7 +148,13 @@ class PricesController < ApplicationController
     upload = PriceList::Upload.find(params[:token])
     return upload if upload
 
-    redirect_to server_prices_path, alert: "Esa revisión ya no está disponible. Vuelve a subir el archivo."
+    # Volver con "atrás" a una revisión ya aplicada (o reenviar su "Aplicar")
+    # decía "ya no está disponible", y el operador creía que había fallado.
+    if PriceList::Upload.applied?(params[:token])
+      redirect_to server_prices_path, notice: "Ese archivo ya se aplicó: sus precios están en «Precios cargados»."
+    else
+      redirect_to server_prices_path, alert: "Esa revisión ya no está disponible. Vuelve a subir el archivo."
+    end
     nil
   end
 
@@ -155,9 +165,6 @@ class PricesController < ApplicationController
              "Se #{applied == 1 ? 'cambió 1 precio' : "cambiaron #{applied.to_fs(:delimited)} precios"}. " \
              "Las partidas nuevas se capturan con el precio nuevo."
     end
-    return text if drafts.zero?
-
-    text + " #{drafts == 1 ? 'Hay 1 pedido en borrador' : "Hay #{drafts} pedidos en borrador"} con partidas " \
-           "al precio anterior: si deben llevar el nuevo, quita la partida y agrégala otra vez."
+    drafts.any? ? "#{text} #{helpers.stale_drafts_sentence(drafts)}" : text
   end
 end

@@ -37,6 +37,27 @@ module PriceList
       assert_equal "lista_stihl_.csv", Upload.store(uploaded("lista*stihl?.csv")).filename
     end
 
+    test "un nombre largo se recorta conservando la extensión" do
+      name = Upload.store(uploaded("#{'á' * 130}.xlsx")).filename
+
+      assert_operator name.bytesize, :<=, 255, "ext4 no acepta nombres de más de 255 bytes"
+      assert name.end_with?(".xlsx")
+      assert name.valid_encoding?, "no parte un carácter a la mitad"
+    end
+
+    test "un nombre que empieza con punto no se vuelve un archivo oculto" do
+      stored = Upload.store(uploaded(".csv"))
+
+      assert_equal "precios.csv", stored.filename
+      assert Upload.find(stored.token), "find no ve archivos ocultos"
+    end
+
+    # Las pruebas vacían su carpeta; con la de desarrollo, borraban las
+    # revisiones en curso del servidor del usuario.
+    test "en pruebas usa una carpeta propia" do
+      assert_equal Rails.root.join("tmp", "price_lists_test"), Upload::ROOT
+    end
+
     test "barre lo que se subió hace más de un día y nunca se aplicó" do
       old = Upload.store(uploaded("viejo.csv"))
       FileUtils.touch(Upload::ROOT.join(old.token), mtime: 2.days.ago.to_time)

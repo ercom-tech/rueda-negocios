@@ -162,11 +162,36 @@ class PricesFlowTest < ActionDispatch::IntegrationTest
 
     token = review!
     get server_price_review_path(token)
-    assert_match(/Hay 1 pedido en borrador/, response.body)
+    assert_match(/Hay 1 pedido en borrador con partidas al precio anterior: cap_po2 \(Cliente\)\./, response.body)
+    assert_match(/pide a cada capturista que las quite y las agregue otra vez\./, response.body)
 
     post server_price_review_apply_path(token)
-    assert_match(/Hay 1 pedido en borrador con partidas al precio anterior/, flash[:notice])
+    assert_match(/Hay 1 pedido en borrador con partidas al precio anterior: cap_po2 \(Cliente\)/, flash[:notice])
     assert_equal 6500, order.order_items.sole.unit_price, "la partida no se toca"
+  end
+
+  # Con "atrás" después de aplicar, Turbo restauraba la revisión de su caché
+  # y al reenviar "Aplicar" decía "ya no está disponible" (13ª auditoría).
+  test "una revisión ya aplicada lo dice al volver a ella, y no se guarda en caché" do
+    token = review!
+    get server_price_review_path(token)
+    assert_select "meta[name='turbo-cache-control'][content='no-cache']"
+
+    post server_price_review_apply_path(token)
+    get server_price_review_path(token)
+    assert_redirected_to server_prices_path
+    assert_equal "Ese archivo ya se aplicó: sus precios están en «Precios cargados».", flash[:notice]
+
+    post server_price_review_apply_path(token)
+    assert_equal "Ese archivo ya se aplicó: sus precios están en «Precios cargados».", flash[:notice]
+    assert_equal 1, PriceOverride.count, "no aplica dos veces"
+  end
+
+  test "un tamaño de página que llega como arreglo no truena" do
+    token = review!
+
+    get server_price_review_path(token, per_page: [ "50" ])
+    assert_response :success
   end
 
   test "la revisión se descarga en CSV, renglón por renglón" do
@@ -218,6 +243,18 @@ class PricesFlowTest < ActionDispatch::IntegrationTest
     assert_redirected_to server_prices_path
     assert_match(/no tiene el formato del layout/, flash[:alert])
     assert_empty Dir.glob(PriceList::Upload::ROOT.join("*").to_s), "no deja el archivo guardado"
+  end
+
+  # Una falla que no es del archivo sube como falla, pero sin dejar el archivo
+  # en disco hasta el barrido.
+  test "una falla inesperada al leer no deja el archivo guardado" do
+    original = PriceList::Upload.instance_method(:read)
+    PriceList::Upload.define_method(:read) { raise "falla inesperada" }
+
+    assert_raises(RuntimeError) { post server_prices_review_path, params: { file: upload("CODIGO,PRECIO LISTA S/IVA\n974101,1\n") } }
+    assert_empty Dir.glob(PriceList::Upload::ROOT.join("*").to_s)
+  ensure
+    PriceList::Upload.define_method(:read, original)
   end
 
   test "sin archivo lo pide" do

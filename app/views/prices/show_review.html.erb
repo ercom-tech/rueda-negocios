@@ -1,4 +1,10 @@
 <% content_for :title, "Revisar precios · Rueda de Negocios" %>
+<%# Sin caché de Turbo: con "atrás" después de aplicar, Turbo restauraba esta
+    pantalla de su copia —"Todavía no se ha cambiado nada", "Aplicar 3,306
+    cambios"— sin preguntar al servidor (13ª auditoría). %>
+<% content_for :head do %>
+  <meta name="turbo-cache-control" content="no-cache">
+<% end %>
 <%#
   Revisión del archivo de precios, con la gramática del reporte de pedidos
   capturados (decisión del usuario 2026-10-08): acciones en la fila del
@@ -9,7 +15,7 @@
 <% review     = @review %>
 <% applicable = review.changes.size %>
 <% large      = review.large_variations.size %>
-<% drafts     = review.drafts_with_old_price %>
+<% drafts     = review.stale_drafts %>
 <%# El umbral viaja en todos los enlaces —tarjetas, paginador, CSV— para que
     cambiar de grupo o de página no lo regrese al de omisión. Se omite cuando
     es el de omisión: URLs limpias. %>
@@ -86,9 +92,8 @@
         <%= large == 1 ? "1 precio cambia" : "#{large.to_fs(:delimited)} precios cambian" %> más de <%= @threshold %>%:
         se aplican igual, revísalos por si hay un error en el archivo.
       <% end %>
-      <% if drafts.positive? %>
-        <%= drafts == 1 ? "Hay 1 pedido en borrador" : "Hay #{drafts} pedidos en borrador" %> con partidas
-        al precio anterior; no se cambian: si deben llevar el nuevo, quita la partida y agrégala otra vez.
+      <% if drafts.any? %>
+        <%= stale_drafts_sentence(drafts) %>
       <% end %>
       Los precios ya cargados de otros archivos se conservan; en un código repetido gana este archivo.
     </p>

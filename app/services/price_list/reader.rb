@@ -49,6 +49,10 @@ module PriceList
       table = extension == "csv" ? read_csv : read_xlsx
       check_header!(table.first || [])
       table.drop(1).each_with_index { |(code, price), index| read_line(index + 2, code, price) }
+      # Solo el encabezado (o renglones vacíos): sin esto, la revisión decía
+      # que todo ya era vigente, de un archivo que no traía nada.
+      raise Error, "El archivo no trae renglones de precios." if rows.empty? && problems.empty?
+
       self
     end
 
@@ -80,9 +84,11 @@ module PriceList
       end
       check_rows!(sheet.last_row - 1)
       (1..sheet.last_row).map { |line| [ sheet.cell(line, 1), sheet.cell(line, 2) ] }
-    rescue Zip::Error, Nokogiri::XML::SyntaxError, ArgumentError => e
+    rescue Zip::Error, Nokogiri::XML::SyntaxError, ArgumentError, SystemStackError => e
       # ArgumentError: así avisa roo de un zip que no es libro de Excel
-      # ("missing required workbook file").
+      # ("missing required workbook file"). SystemStackError: un XML con
+      # entidades anidadas desborda la pila de nokogiri; no es StandardError y
+      # salía como pantalla de error (13ª auditoría).
       unreadable!(e)
     end
 
@@ -152,7 +158,7 @@ module PriceList
       kind, reason =
         if code.nil? then [ :invalid_code, "El código no es válido: deben ser hasta 6 dígitos." ]
         elsif price.nil? && blank?(raw_price) then [ :no_price, "No trae precio." ]
-        elsif price.nil? then [ :invalid_price, "El precio no es un número." ]
+        elsif price.nil? then [ :invalid_price, "El precio no es un número: usa punto para decimales y coma para miles (1,234.50)." ]
         elsif !price.positive? then [ :no_price, "El precio tiene que ser mayor a cero." ]
         elsif price >= OrderItem::MAX_UNIT_PRICE then [ :invalid_price, "El precio es demasiado grande." ]
         end
@@ -178,16 +184,20 @@ module PriceList
 
     # A 2 decimales, como la partida. `to_s` y no el flotante directo: Excel
     # guarda 2058.97 como 2058.9699999999998, y `Float#to_s` ya da "2058.97".
-    # En texto se aceptan "$" y separadores de miles ("$1,234.50").
-    def parse_price(value)
-      text =
-        case value
-        when Numeric then value.to_s
-        when String then value.strip.delete("$, ")
-        end
-      return unless text&.match?(/\A-?\d+(\.\d+)?\z/)
+    #
+    # En texto, con "$" opcional, UNA sola forma (decisión del usuario, 13ª
+    # auditoría): punto decimal y coma de miles ("1,234.50"), sea cual sea el
+    # separador del CSV. Antes se borraban todas las comas y "2058,97" se leía
+    # como 205897: lo que no encaja se rechaza en vez de adivinar.
+    PRICE_FORMAT = /\A-?(\d{1,3}(,\d{3})+|\d+)(\.\d+)?\z/
 
-      BigDecimal(text).round(2)
+    def parse_price(value)
+      case value
+      when Numeric then BigDecimal(value.to_s).round(2)
+      when String
+        text = value.strip.delete_prefix("$").strip
+        BigDecimal(text.delete(",")).round(2) if text.match?(PRICE_FORMAT)
+      end
     end
   end
 end

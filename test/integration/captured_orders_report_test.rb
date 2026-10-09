@@ -124,6 +124,17 @@ class CapturedOrdersReportTest < ActionDispatch::IntegrationTest
     assert_select "tbody tr", 30
   end
 
+  # Llegaba como arreglo y `to_i` levantaba NoMethodError: pantalla de error
+  # (13ª auditoría; el mismo hueco que la revisión de precios copió).
+  test "un per_page que llega como arreglo cae al default sin tronar" do
+    30.times { order!(user: @cap) }
+    login_as("srv980")
+
+    get captured_orders_report_path(per_page: [ "50" ])
+    assert_response :success
+    assert_select "tbody tr", 25
+  end
+
   test "un per_page fuera de la lista cae al default" do
     30.times { order!(user: @cap) }
     login_as("srv980")
