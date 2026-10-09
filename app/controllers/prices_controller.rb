@@ -6,6 +6,11 @@
 class PricesController < ApplicationController
   layout "auth"
 
+  # Grupos de la revisión, en el orden de las tarjetas. "changes" (lo que se
+  # va a aplicar) es la vista por omisión, como el Total del reporte.
+  REVIEW_GROUPS = %w[large rejected unchanged changes].freeze
+  DEFAULT_GROUP = "changes".freeze
+
   before_action :require_server
   before_action :require_active_round
   # Aplicar y quitar escriben precios que el sync-down está a punto de usar.
@@ -41,12 +46,20 @@ class PricesController < ApplicationController
     redirect_to server_price_review_path(upload.token)
   end
 
+  # La revisión con la gramática del reporte de pedidos capturados: tarjetas que
+  # son también el filtro (`group`) y UNA tabla paginada con el grupo elegido.
   def show_review
     @upload = find_upload or return
     @review = PriceList::Review.new(@upload.read)
 
     respond_to do |format|
-      format.html
+      format.html do
+        @group = REVIEW_GROUPS.include?(params[:group]) ? params[:group] : DEFAULT_GROUP
+        rows = review_rows(@group)
+        @page_sizes = ReportsController::PAGE_SIZES
+        @pagy = Pagy.new(count: rows.size, page: ParamSanitizing.page(params[:page]), limit: page_size)
+        @rows = rows[@pagy.offset, @pagy.limit] || []
+      end
       format.csv do
         send_data PriceList::ReviewExport.csv(@review), type: "text/csv; charset=utf-8",
                   filename: "revision-#{File.basename(@upload.filename, '.*')}.csv"
@@ -54,6 +67,10 @@ class PricesController < ApplicationController
     end
   rescue PriceList::Error => e
     redirect_to server_prices_path, alert: e.message
+  rescue Pagy::OverflowError
+    # Una página que ya no existe (marcador viejo): a la primera del mismo
+    # grupo, rearmada con lo ya saneado y no con los parámetros crudos.
+    redirect_to server_price_review_path(@upload.token, group: @group, per_page: page_size)
   end
 
   # Se vuelve a leer y a revisar el archivo: se aplica contra el catálogo de
@@ -88,6 +105,20 @@ class PricesController < ApplicationController
                     .order(Arel.sql("MAX(updated_at) DESC"))
                     .pluck(:source_filename, Arel.sql("COUNT(*)"), Arel.sql("MAX(updated_at)"),
                            Arel.sql("STRING_AGG(DISTINCT loaded_by, ', ')"))
+  end
+
+  def review_rows(group)
+    case group
+    when "large" then @review.large_variations
+    when "rejected" then @review.rejected
+    when "unchanged" then @review.unchanged
+    else @review.changes
+    end
+  end
+
+  def page_size
+    size = params[:per_page].to_i
+    ReportsController::PAGE_SIZES.include?(size) ? size : ReportsController::PAGE_SIZES.first
   end
 
   def require_active_round

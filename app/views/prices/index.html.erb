@@ -19,28 +19,31 @@
     </div>
 
     <div class="flex flex-col gap-6 pb-10">
-      <%# ── Subir archivo ──────────────────────────────────────────── %>
+      <%# ── Subir archivo ───────────────────────────────────────────────
+          Un solo piso, en la barra negra (decisión del usuario 2026-10-08):
+          título e instrucciones a la izquierda, el archivo y "Revisar" a la
+          derecha — del mismo alto que la barra de "Precios cargados", para
+          que las dos secciones se lean hermanas. El campo va en blanco (es
+          lo que se llena) y con ancho propio: estirado a todo lo ancho era
+          lo que más espacio desperdiciaba. En tablet, los controles bajan a
+          un segundo renglón dentro de la misma barra. %>
       <section class="rounded-3xl bg-brand-gold p-2 shadow-lg">
-        <div class="rounded-2xl bg-black px-6 py-3">
-          <h2 class="text-lg font-bold text-white">Subir archivo</h2>
-        </div>
-        <div class="mt-2 rounded-2xl bg-brand-cream px-6 py-5 text-neutral-900">
-          <p class="mb-4 text-neutral-700">
-            Excel (.xlsx) o CSV con las columnas <span class="font-semibold">CODIGO</span> y
-            <span class="font-semibold">PRECIO</span> (sin IVA), como el layout de ejemplo.
-            Antes de aplicar verás qué cambia.
-          </p>
-          <%= form_with url: server_prices_review_path, multipart: true,
-                class: "flex flex-wrap items-center gap-3" do %>
+        <%= form_with url: server_prices_review_path, multipart: true,
+              class: "flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-black px-6 py-3" do %>
+          <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h2 class="text-lg font-bold text-white">Subir archivo</h2>
+            <span class="text-sm text-white/70">Excel o CSV con las columnas CODIGO y PRECIO (sin IVA)</span>
+          </div>
+          <div class="flex min-w-0 flex-wrap items-center gap-2">
             <%= file_field_tag :file, accept: ".xlsx,.csv", required: true,
                   aria: { label: "Archivo de precios" },
-                  class: "min-w-0 flex-1 rounded-xl border border-black/20 bg-white px-3 py-2 text-sm text-neutral-900 " \
+                  class: "w-80 max-w-full rounded-full bg-white py-1 pl-1 pr-3 text-sm text-neutral-900 " \
                          "file:mr-3 file:rounded-full file:border-0 file:bg-neutral-700 file:px-4 file:py-1.5 " \
                          "file:text-sm file:font-semibold file:text-white" %>
             <%= submit_tag "Revisar archivo",
-                  class: "rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
-          <% end %>
-        </div>
+                  class: "rounded-full bg-brand-coral px-5 py-2 text-sm font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
+          </div>
+        <% end %>
       </section>
 
       <%# ── Precios cargados ───────────────────────────────────────────

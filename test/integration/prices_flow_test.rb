@@ -44,9 +44,50 @@ class PricesFlowTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match(/Todavía no se ha cambiado nada/, response.body)
     assert_match(/Aplicar 1 cambio\b/, response.body)
-    assert_match(/No está en el catálogo de esta rueda/, response.body)
     assert_match(/stihl\.csv/, response.body)
     assert_equal 0, PriceOverride.count
+  end
+
+  # Las tarjetas son el filtro, como en el reporte de pedidos: por omisión la
+  # tabla trae lo que se aplica; cada tarjeta la cambia a su grupo.
+  test "las tarjetas filtran la tabla al grupo elegido" do
+    token = review!
+
+    get server_price_review_path(token)
+    assert_select "a[aria-current=true]", text: /Cambian/
+    assert_select "tbody tr", count: 1
+    assert_select "tbody td", text: "MOTOSIERRA"
+
+    get server_price_review_path(token, group: "rejected")
+    assert_select "a[aria-current=true]", text: /No se aplican/
+    assert_select "thead th", text: "Motivo"
+    assert_select "tbody td", text: "No está en el catálogo de esta rueda."
+    assert_select "tbody td", text: "MOTOSIERRA", count: 0
+
+    get server_price_review_path(token, group: "unchanged")
+    assert_select "tbody td", text: "SOPLADORA"
+
+    get server_price_review_path(token, group: "large")
+    assert_select "tbody td", text: /Ningún renglón del archivo cae en este grupo/
+
+    get server_price_review_path(token, group: "inventado")
+    assert_select "a[aria-current=true]", text: /Cambian/
+  end
+
+  test "la tabla se pagina y una página que no existe regresa a la primera" do
+    rows = (1..30).map { |i| "#{974_200 + i},#{i}" }.join("\n")
+    (1..30).each { |i| product(974_200 + i, "PRODUCTO #{i}", 1000) }
+    token = review!("CODIGO,PRECIO\n#{rows}\n")
+
+    get server_price_review_path(token)
+    assert_select "tbody tr", count: 25
+    assert_match(/30 precios\s+· página 1 de 2/, response.body)
+
+    get server_price_review_path(token, page: 2)
+    assert_select "tbody tr", count: 5
+
+    get server_price_review_path(token, page: 9, group: "changes", per_page: 50)
+    assert_redirected_to server_price_review_path(token, group: "changes", per_page: 50)
   end
 
   test "aplicar escribe los precios, con el archivo y quién lo cargó, y borra el archivo guardado" do
