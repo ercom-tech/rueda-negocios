@@ -19,14 +19,14 @@ module PriceList
       products = Product.where(erp_product_id: overrides.map(&:erp_product_id)).includes(:price)
                         .index_by(&:erp_product_id)
 
-      CSV.generate do |csv|
+      SafeCsv.generate do |csv|
         csv << HEADERS
         overrides.each do |o|
           product = products[o.erp_product_id]
           erp = product&.price&.credit_wholesale_price
-          csv << [ format("%06d", o.erp_product_id), product&.description, erp&.to_s("F"), o.unit_price.to_s("F"),
-                   (format("%+.1f%%", (o.unit_price / erp - 1) * 100) if erp&.positive?),
-                   o.source_filename, o.loaded_by, o.updated_at.in_time_zone.strftime("%d/%m/%Y %H:%M") ]
+          csv << [ format("%06d", o.erp_product_id), SafeCsv.text(product&.description), erp&.to_s("F"),
+                   o.unit_price.to_s("F"), (format("%+.1f%%", (o.unit_price / erp - 1) * 100) if erp&.positive?),
+                   SafeCsv.text(o.source_filename), SafeCsv.text(o.loaded_by), o.updated_at.in_time_zone.strftime("%d/%m/%Y %H:%M") ]
         end
       end
     end

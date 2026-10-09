@@ -36,37 +36,99 @@ module PriceList
     end
 
     test "el código en texto con ceros a la izquierda es el mismo código" do
-      assert_equal [ 3021 ], read(csv("CODIGO,PRECIO\n003021,6900\n")).rows.map(&:code)
+      assert_equal [ 3021 ], read(csv("CODIGO,PRECIO LISTA S/IVA\n003021,6900\n")).rows.map(&:code)
     end
 
     test "un código en texto de más de 6 dígitos no es válido" do
-      assert_equal [ "1234567" ], read(csv("CODIGO,PRECIO\n1234567,6900\n")).problems.map(&:code_text)
+      assert_equal [ "1234567" ], read(csv("CODIGO,PRECIO LISTA S/IVA\n1234567,6900\n")).problems.map(&:code_text)
     end
 
-    test "las columnas se buscan por encabezado, no por posición" do
-      path = xlsx([ [ "x", 9, 3021, 6900 ] ], header: [ "Notas", "Existencia", "Código FECEGO", "Precio lista" ])
+    # El formato se exige tal cual el layout (decisión del usuario, 13ª
+    # auditoría): buscar "una columna que diga PRECIO" leía la primera —con
+    # IVA, o el precio del ERP del CSV que exporta la propia pantalla.
+    test "con dos columnas de precio rechaza el archivo en vez de elegir una" do
+      path = xlsx([ [ 3021, 2388.41, 2058.97 ] ], header: [ "CODIGO", "PRECIO C/IVA", "PRECIO LISTA S/IVA" ])
 
-      row = read(path).rows.sole
-      assert_equal [ 3021, BigDecimal("6900") ], [ row.code, row.price ]
+      error = assert_raises(Error) { read(path) }
+      assert_equal "El archivo no tiene el formato del layout: la primera fila debe llevar solo las columnas " \
+                   "CODIGO (A) y PRECIO LISTA S/IVA (B). Este trae: «CODIGO», «PRECIO C/IVA», «PRECIO LISTA S/IVA».",
+                   error.message
     end
 
-    test "encuentra el encabezado aunque tenga un título arriba" do
-      path = xlsx([ [ 3021, 6900 ] ], before: [ [ "Lista Stihl octubre" ], [] ])
+    test "rechaza el CSV que exporta la propia pantalla de precios" do
+      path = csv("Código,Descripción,Precio del ERP,Precio de rueda\n003021,MOTOSIERRA,6500.0,6900.0\n")
+
+      assert_raises(Error) { read(path) }
+    end
+
+    test "exige los encabezados exactos, en su orden y en la primera fila" do
+      [ [ "PRECIO LISTA S/IVA", "CODIGO" ], [ "CODIGO", "PRECIO" ], [ "Código FECEGO", "PRECIO LISTA S/IVA" ] ].each do |header|
+        assert_raises(Error, header.inspect) { read(xlsx([ [ 3021, 6900 ] ], header:)) }
+      end
+      error = assert_raises(Error) { read(xlsx([ [ 3021, 6900 ] ], before: [ [ "Lista Stihl octubre" ] ])) }
+      assert_match(/Este trae: «LISTA STIHL OCTUBRE»/, error.message)
+    end
+
+    test "tolera mayúsculas, acentos y espacios en los encabezados" do
+      path = xlsx([ [ 3021, 6900 ] ], header: [ " Código ", "precio  lista s / iva" ])
 
       assert_equal [ 3021 ], read(path).rows.map(&:code)
     end
 
-    test "sin encabezados lo dice y no adivina columnas" do
-      error = assert_raises(Error) { read(xlsx([ [ 3021, 6900 ] ], header: [ "A", "B" ])) }
-      assert_match(/No encontré las columnas CODIGO y PRECIO/, error.message)
+    test "con la primera fila vacía lo dice" do
+      error = assert_raises(Error) { read(csv("\n3021,6900\n")) }
+      assert_match(/Este la trae vacía\./, error.message)
+    end
+
+    test "rechaza datos fuera de las columnas A y B, aunque el encabezado esté bien" do
+      error = assert_raises(Error) { read(csv("CODIGO,PRECIO LISTA S/IVA\n3021,6900\n3022,10,nota\n")) }
+      assert_match(/el renglón 3 trae datos fuera de las columnas A y B/, error.message)
+
+      error = assert_raises(Error) { read(xlsx([ [ 3021, 6900, nil, "nota" ] ])) }
+      assert_match(/trae datos en la columna D\./, error.message)
+    end
+
+    # Una celda con algo en una columna lejana hacía armar una tabla de miles
+    # de millones de celdas antes de revisar el tope (13ª auditoría). Se
+    # rechaza midiendo la hoja, sin leerla.
+    test "una celda en una columna lejana se rechaza sin leer la hoja" do
+      path = xlsx([ [ 3021, 6900 ] ])
+      sheet_xml = nil
+      Zip::File.open(path) do |zip|
+        sheet_xml = zip.read("xl/worksheets/sheet1.xml")
+          .sub("</sheetData>", '<row r="40000"><c r="XFD40000"><v>1</v></c></row></sheetData>')
+        zip.get_output_stream("xl/worksheets/sheet1.xml") { |f| f.write(sheet_xml) }
+      end
+
+      started = Time.current
+      error = assert_raises(Error) { read(path) }
+      assert_match(/trae datos en la columna XFD\./, error.message)
+      assert_operator Time.current - started, :<, 3, "no debe armar la tabla"
+    end
+
+    test "un xlsx con un renglón lejano se rechaza por renglones sin leer la hoja" do
+      path = xlsx([ [ 3021, 6900 ] ])
+      Zip::File.open(path) do |zip|
+        sheet_xml = zip.read("xl/worksheets/sheet1.xml")
+          .sub("</sheetData>", '<row r="60000"><c r="A60000"><v>1</v></c></row></sheetData>')
+        zip.get_output_stream("xl/worksheets/sheet1.xml") { |f| f.write(sheet_xml) }
+      end
+
+      error = assert_raises(Error) { read(path) }
+      assert_match(/más de 50,000 renglones/, error.message)
+    end
+
+    test "un CSV con un renglón de muchísimas columnas se rechaza sin partirlo" do
+      error = assert_raises(Error) { read(csv("CODIGO,PRECIO LISTA S/IVA\n" + "," * 100_000 + "\n")) }
+      assert_match(/renglones con muchas columnas/, error.message)
     end
 
     test "precio en texto con signo de pesos y miles" do
-      assert_equal [ BigDecimal("1234.5") ], read(csv("CODIGO,PRECIO\n3021,\"$1,234.50\"\n")).rows.map(&:price)
+      assert_equal [ BigDecimal("1234.5") ], read(csv("CODIGO,PRECIO LISTA S/IVA\n3021,\"$1,234.50\"\n")).rows.map(&:price)
     end
 
     test "redondea a 2 decimales, como la partida" do
-      assert_equal [ BigDecimal("10.13") ], read(csv("CODIGO,PRECIO\n3021,10.125\n")).rows.map(&:price)
+      assert_equal [ BigDecimal("10.13") ], read(csv("CODIGO,PRECIO LISTA S/IVA\n3021,10.125\n")).rows.map(&:price)
     end
 
     test "los renglones vacíos se ignoran sin reportarse" do
@@ -116,13 +178,13 @@ module PriceList
     # Así sale un "CSV" de Excel en Windows en México: Windows-1252, con el
     # acento de CÓDIGO en un byte que no es UTF-8.
     test "lee el CSV de Excel en Windows-1252, con acentos en el encabezado" do
-      path = File.join(@dir, "precios.csv").tap { |p| File.binwrite(p, "C\xD3DIGO,PRECIO\r\n003021,6900\r\n".b) }
+      path = File.join(@dir, "precios.csv").tap { |p| File.binwrite(p, "C\xD3DIGO,PRECIO LISTA S/IVA\r\n003021,6900\r\n".b) }
 
       assert_equal [ [ 3021, BigDecimal("6900") ] ], read(path).rows.map { |r| [ r.code, r.price ] }
     end
 
     test "lee el CSV con BOM y con punto y coma de separador" do
-      path = File.join(@dir, "precios.csv").tap { |p| File.binwrite(p, "\xEF\xBB\xBFCODIGO;PRECIO\n3021;6900\n".b) }
+      path = File.join(@dir, "precios.csv").tap { |p| File.binwrite(p, "\xEF\xBB\xBFCODIGO;PRECIO LISTA S/IVA\n3021;6900\n".b) }
 
       assert_equal [ 3021 ], read(path).rows.map(&:code)
     end
@@ -130,7 +192,7 @@ module PriceList
     # Antes reventaba como pantalla de error: roo lee el CSV hasta que se le
     # piden las celdas, fuera del rescate.
     test "un CSV mal formado da el mensaje de qué hacer, no una pantalla de error" do
-      error = assert_raises(Error) { read(csv("CODIGO,PRECIO\n\"3021,10\n")) }
+      error = assert_raises(Error) { read(csv("CODIGO,PRECIO LISTA S/IVA\n\"3021,10\n")) }
       assert_equal Reader::UNREADABLE, error.message
     end
 
@@ -156,14 +218,14 @@ module PriceList
     end
 
     test "rechaza un archivo demasiado grande" do
-      path = csv("CODIGO,PRECIO\n" + "x" * 5.megabytes)
+      path = csv("CODIGO,PRECIO LISTA S/IVA\n" + "x" * 5.megabytes)
 
       error = assert_raises(Error) { read(path) }
       assert_match(/pesa más de 5 MB/, error.message)
     end
 
     test "rechaza más de 50,000 renglones" do
-      path = csv("CODIGO,PRECIO\n" + "3021,10\n" * 50_001)
+      path = csv("CODIGO,PRECIO LISTA S/IVA\n" + "3021,10\n" * 50_001)
 
       error = assert_raises(Error) { read(path) }
       assert_match(/más de 50,000 renglones/, error.message)

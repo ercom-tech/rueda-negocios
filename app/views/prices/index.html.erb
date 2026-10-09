@@ -32,7 +32,7 @@
               class: "flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-black px-6 py-3" do %>
           <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <h2 class="text-lg font-bold text-white">Subir archivo</h2>
-            <span class="text-sm text-white/70">Excel o CSV con las columnas CODIGO y PRECIO (sin IVA)</span>
+            <span class="text-sm text-white/70">Excel o CSV con dos columnas: CODIGO y PRECIO LISTA S/IVA</span>
           </div>
           <div class="flex min-w-0 flex-wrap items-center gap-2">
             <%= file_field_tag :file, accept: ".xlsx,.csv", required: true,

@@ -14,16 +14,16 @@ module PriceList
       rows =
         review.changes.map { |c| change_row(c, review.large?(c) ? "Cambia (variación mayor a #{percent(review.threshold)})" : "Cambia") } +
         review.unchanged.map { |c| change_row(c, "Queda igual") } +
-        review.rejected.map { |r| [ r.line, r.code_text, nil, nil, nil, nil, "No se aplica: #{r.reason}" ] }
+        review.rejected.map { |r| [ r.line, SafeCsv.text(r.code_text), nil, nil, nil, nil, "No se aplica: #{r.reason}" ] }
 
-      CSV.generate do |csv|
+      SafeCsv.generate do |csv|
         csv << HEADERS
         rows.sort_by(&:first).each { |row| csv << row }
       end
     end
 
     def change_row(change, result)
-      [ change.line, format("%06d", change.code), change.description,
+      [ change.line, format("%06d", change.code), SafeCsv.text(change.description),
         change.current_price&.to_s("F"), change.new_price.to_s("F"), variation(change), result ]
     end
 

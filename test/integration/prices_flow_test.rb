@@ -29,7 +29,7 @@ class PricesFlowTest < ActionDispatch::IntegrationTest
     Rack::Test::UploadedFile.new(path, "text/csv", original_filename: name)
   end
 
-  def review!(text = "CODIGO,PRECIO\n974101,6900\n974102,1000\n999,5\n", **)
+  def review!(text = "CODIGO,PRECIO LISTA S/IVA\n974101,6900\n974102,1000\n999,5\n", **)
     post server_prices_review_path, params: { file: upload(text, **) }
     assert_response :redirect
     token = response.location[%r{/review/(\h+)\z}, 1]
@@ -50,7 +50,7 @@ class PricesFlowTest < ActionDispatch::IntegrationTest
 
   # El segundo renglón de cada tarjeta es un dato, como el importe del reporte.
   test "las tarjetas dicen hacia dónde se mueven los precios y por qué no se aplican" do
-    token = review!("CODIGO,PRECIO\n974101,6900\n974102,900\n999,5\n3021,\n")
+    token = review!("CODIGO,PRECIO LISTA S/IVA\n974101,6900\n974102,900\n999,5\n3021,\n")
 
     get server_price_review_path(token)
     assert_select "a", text: /Cambian\s+2\s+1 sube · 1 baja/
@@ -87,7 +87,7 @@ class PricesFlowTest < ActionDispatch::IntegrationTest
   # El umbral solo decide qué se SEÑALA, y viaja en tarjetas, paginador y CSV
   # para no regresar al de omisión al moverse.
   test "el umbral de variación se elige y se conserva" do
-    token = review!("CODIGO,PRECIO\n974101,7800\n974102,1100\n") # +20% y +10%
+    token = review!("CODIGO,PRECIO LISTA S/IVA\n974101,7800\n974102,1100\n") # +20% y +10%
 
     get server_price_review_path(token)
     assert_select "a span", text: "Variación de más de 50%"
@@ -107,14 +107,14 @@ class PricesFlowTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     get server_price_review_path(token, format: :csv, threshold: 10)
-    assert_equal "Cambia (variación mayor a 10%)", CSV.parse(response.body)[1].last
-    assert_equal "Cambia", CSV.parse(response.body)[2].last
+    assert_equal "Cambia (variación mayor a 10%)", CSV.parse(response.body.delete_prefix("\uFEFF"))[1].last
+    assert_equal "Cambia", CSV.parse(response.body.delete_prefix("\uFEFF"))[2].last
   end
 
   test "la tabla se pagina y una página que no existe regresa a la primera" do
     rows = (1..30).map { |i| "#{974_200 + i},#{i}" }.join("\n")
     (1..30).each { |i| product(974_200 + i, "PRODUCTO #{i}", 1000) }
-    token = review!("CODIGO,PRECIO\n#{rows}\n")
+    token = review!("CODIGO,PRECIO LISTA S/IVA\n#{rows}\n")
 
     get server_price_review_path(token)
     assert_select "tbody tr", count: 25
@@ -176,7 +176,7 @@ class PricesFlowTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "text/csv; charset=utf-8", response.media_type + "; charset=utf-8"
     assert_match(/revision-stihl\.csv/, response.headers["Content-Disposition"])
-    lines = CSV.parse(response.body)
+    lines = CSV.parse(response.body.delete_prefix("\uFEFF"))
     assert_equal PriceList::ReviewExport::HEADERS, lines.first
     assert_equal [ "2", "974101", "MOTOSIERRA", "6500.0", "6900.0", "+6.2%", "Cambia" ], lines[1]
     assert_equal "Queda igual", lines[2].last
@@ -193,18 +193,30 @@ class PricesFlowTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match(/precios-cargados-/, response.headers["Content-Disposition"])
-    lines = CSV.parse(response.body)
+    lines = CSV.parse(response.body.delete_prefix("\uFEFF"))
     assert_equal PriceList::LoadedExport::HEADERS, lines.first
     assert_equal [ "974101", "MOTOSIERRA", "6500.0", "6900.0", "+6.2%", "stihl.xlsx", "srv_po" ], lines[1].first(7)
     assert_equal [ "974999", nil, nil, "10.0", nil ], lines[2].first(5), "un código fuera del catálogo sale sin descripción"
     assert_equal 3, lines.size, "solo los de la rueda activa"
   end
 
+  # Sin BOM, Excel en Windows abre el CSV en la codificación local y rompe los
+  # acentos (13ª auditoría).
+  test "los dos CSV llevan BOM para que Excel respete los acentos" do
+    token = review!
+    get server_price_review_path(token, format: :csv)
+    assert response.body.start_with?("\uFEFFLínea")
+
+    PriceOverride.create!(erp_round_id: 974_001, erp_product_id: 974_101, unit_price: 6900)
+    get server_prices_path(format: :csv)
+    assert response.body.start_with?("\uFEFFCódigo")
+  end
+
   test "un archivo inservible se rechaza al subirlo, con qué hacer" do
     post server_prices_review_path, params: { file: upload("hola\n", name: "precios.csv") }
 
     assert_redirected_to server_prices_path
-    assert_match(/No encontré las columnas CODIGO y PRECIO/, flash[:alert])
+    assert_match(/no tiene el formato del layout/, flash[:alert])
     assert_empty Dir.glob(PriceList::Upload::ROOT.join("*").to_s), "no deja el archivo guardado"
   end
 
@@ -243,7 +255,7 @@ class PricesFlowTest < ActionDispatch::IntegrationTest
     PriceOverride.create!(erp_round_id: 974_001, erp_product_id: 974_102, unit_price: 1100)
     SyncRun.create!(kind: "down", started_at: Time.current, pid: Process.pid)
 
-    post server_prices_review_path, params: { file: upload("CODIGO,PRECIO\n974101,1\n") }
+    post server_prices_review_path, params: { file: upload("CODIGO,PRECIO LISTA S/IVA\n974101,1\n") }
     assert_equal ApplicationController::SYNC_PAUSE_MESSAGE, flash[:alert]
     post server_price_review_apply_path(token)
     assert_equal ApplicationController::SYNC_PAUSE_MESSAGE, flash[:alert]
@@ -269,7 +281,7 @@ class PricesFlowTest < ActionDispatch::IntegrationTest
     get server_prices_path
     assert_redirected_to root_path
 
-    post server_prices_review_path, params: { file: upload("CODIGO,PRECIO\n974101,1\n") }
+    post server_prices_review_path, params: { file: upload("CODIGO,PRECIO LISTA S/IVA\n974101,1\n") }
     delete server_prices_destroy_path
     assert_equal 0, PriceOverride.count
   end

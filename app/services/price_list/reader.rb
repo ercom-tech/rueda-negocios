@@ -5,16 +5,23 @@ module PriceList
   # servidor (2026-10-08) y lo deja en renglones limpios, sin consultar nada:
   # comparar contra el catálogo es trabajo de `Review`.
   #
-  # El layout es el de FECEGO ("Cambio precio de lista Stihl.xlsx"): una
-  # columna CODIGO y una PRECIO LISTA S/IVA. Las columnas se buscan por su
-  # ENCABEZADO y no por posición, para que una columna extra a la izquierda no
-  # cambie en silencio qué se lee como precio.
+  # El layout es EXACTAMENTE el de FECEGO ("Cambio precio de lista
+  # Stihl.xlsx"), decisión del usuario (13ª auditoría, 2026-10-09): la primera
+  # fila trae CODIGO en la columna A y PRECIO LISTA S/IVA en la B, y nada más.
+  # Cuando se buscaba "una columna que diga PRECIO", un archivo con PRECIO
+  # C/IVA antes del S/IVA cargaba todo 16% arriba sin que nada lo señalara, y
+  # el CSV que exporta la propia pantalla ("Precio del ERP" antes de "Precio de
+  # rueda") revertía los precios cargados al volver a subirlo. Con el formato
+  # exigido no hay columna que adivinar.
   class Reader
     EXTENSIONS = %w[xlsx csv].freeze
     MAX_BYTES  = 5.megabytes
     MAX_ROWS   = 50_000
-    # El encabezado puede no estar en la primera fila (un título arriba).
-    HEADER_SEARCH_ROWS = 10
+    # Los encabezados del layout, ya normalizados (ver `normalize`).
+    HEADERS = [ "CODIGO", "PRECIO LISTA S/IVA" ].freeze
+    # Un CSV con más separadores que esto en un renglón no es el layout: se
+    # rechaza ANTES de partirlo (un solo renglón de comas tardaba 21 s).
+    MAX_SEPARATORS_PER_LINE = 20
 
     Row     = Data.define(:line, :code, :price)
     # `kind` agrupa los motivos para el desglose de la revisión ("3 fuera de la
@@ -40,20 +47,14 @@ module PriceList
       raise Error, "El archivo pesa más de 5 MB. Revisa que sea la lista de precios." if File.size(@path) > MAX_BYTES
 
       table = extension == "csv" ? read_csv : read_xlsx
-      header_index, code_col, price_col = locate_header(table)
-      if table.size - header_index - 1 > MAX_ROWS
-        raise Error, "El archivo trae más de #{MAX_ROWS.to_fs(:delimited)} renglones. Revisa que sea la lista de precios."
-      end
-
-      table.each_with_index.drop(header_index + 1).each do |cells, index|
-        read_line(index + 1, cells[code_col], cells[price_col])
-      end
+      check_header!(table.first || [])
+      table.drop(1).each_with_index { |(code, price), index| read_line(index + 2, code, price) }
       self
     end
 
-    private
-
     UNREADABLE = "No se pudo leer el archivo. Ábrelo en Excel y guárdalo de nuevo como .xlsx.".freeze
+
+    private
 
     # El archivo se lee COMPLETO aquí, a una tabla en memoria: roo lee
     # perezosamente, y un archivo dañado reventaba después, fuera de este
@@ -62,14 +63,23 @@ module PriceList
     # sin cargar, 2026-10-08) en "guárdalo de nuevo", y mandaba a revisar un
     # archivo que estaba bien.
     #
-    # Celda por celda desde la columna A, para que el índice de cada columna
-    # sea el de Excel sin depender de dónde empiecen los datos.
+    # El tamaño de la hoja se mide ANTES de leerla: una sola celda con algo en
+    # una columna o un renglón lejanos (XFD1048576) hacía armar una tabla de
+    # miles de millones de celdas, y el tope llegaba tarde (13ª auditoría).
+    # Después se leen solo A y B, celda por celda desde el renglón 1.
     def read_xlsx
       sheet = Roo::Spreadsheet.open(@path, extension: :xlsx).sheet(0)
       return [] unless sheet.last_row
 
-      columns = 1..sheet.last_column.to_i
-      (1..sheet.last_row).map { |line| columns.map { |col| sheet.cell(line, col) } }
+      last_column = sheet.last_column.to_i
+      if last_column > HEADERS.size
+        header = (1..[ last_column, 6 ].min).map { |col| sheet.cell(1, col) }
+        check_header!(header)
+        raise Error, "El archivo no tiene el formato del layout: trae datos en la columna " \
+                     "#{Roo::Utils.number_to_letter(last_column)}. Deja solo CODIGO (A) y PRECIO LISTA S/IVA (B)."
+      end
+      check_rows!(sheet.last_row - 1)
+      (1..sheet.last_row).map { |line| [ sheet.cell(line, 1), sheet.cell(line, 2) ] }
     rescue Zip::Error, Nokogiri::XML::SyntaxError, ArgumentError => e
       # ArgumentError: así avisa roo de un zip que no es libro de Excel
       # ("missing required workbook file").
@@ -86,9 +96,42 @@ module PriceList
       text = text.force_encoding(Encoding::Windows_1252).encode(Encoding::UTF_8) unless text.valid_encoding?
       first_line = text.lines.first.to_s
       separator = first_line.count(";") > first_line.count(",") ? ";" : ","
-      CSV.parse(text, col_sep: separator)
+      if text.each_line.any? { |line| line.count(separator) > MAX_SEPARATORS_PER_LINE }
+        raise Error, "El archivo no tiene el formato del layout: trae renglones con muchas columnas. " \
+                     "Deja solo CODIGO (A) y PRECIO LISTA S/IVA (B)."
+      end
+      check_rows!(text.count("\n") - 1)
+
+      table = CSV.parse(text, col_sep: separator)
+      check_header!(table.first || [])
+      extra = table.index { |cells| cells.drop(HEADERS.size).any? { |cell| !blank?(cell) } }
+      if extra
+        raise Error, "El archivo no tiene el formato del layout: el renglón #{extra + 1} trae datos fuera de las " \
+                     "columnas A y B. Deja solo CODIGO y PRECIO LISTA S/IVA."
+      end
+      table
     rescue CSV::MalformedCSVError, EncodingError => e
       unreadable!(e)
+    end
+
+    def check_rows!(count)
+      return if count <= MAX_ROWS
+
+      raise Error, "El archivo trae más de #{MAX_ROWS.to_fs(:delimited)} renglones. Revisa que sea la lista de precios."
+    end
+
+    # La primera fila tiene que ser exactamente el encabezado del layout.
+    # Tolera solo lo que no cambia el significado: mayúsculas, acentos
+    # (CÓDIGO) y espacios. Las celdas vacías a la derecha no cuentan.
+    def check_header!(cells)
+      names = cells.map { |cell| normalize(cell) }
+      names.pop while names.any? && names.last.empty?
+      return if names == HEADERS
+
+      found = names.reject(&:empty?).map { |name| "«#{name}»" }
+      raise Error, "El archivo no tiene el formato del layout: la primera fila debe llevar solo las columnas " \
+                   "CODIGO (A) y PRECIO LISTA S/IVA (B). " +
+                   (found.any? ? "Este trae: #{found.join(', ')}." : "Este la trae vacía.")
     end
 
     def unreadable!(error)
@@ -96,18 +139,7 @@ module PriceList
       raise Error, UNREADABLE
     end
 
-    def locate_header(table)
-      table.first(HEADER_SEARCH_ROWS).each_with_index do |cells, index|
-        names = cells.map { |cell| normalize(cell) }
-        code_col  = names.index { |c| c.start_with?("CODIGO") }
-        price_col = names.index { |c| c.include?("PRECIO") }
-        return [ index, code_col, price_col ] if code_col && price_col
-      end
-      raise Error, "No encontré las columnas CODIGO y PRECIO. La primera fila del archivo tiene que " \
-                   "llevar esos encabezados, como en el layout de ejemplo."
-    end
-
-    def normalize(cell) = I18n.transliterate(cell.to_s).upcase.strip
+    def normalize(cell) = I18n.transliterate(cell.to_s).upcase.gsub(%r{\s*/\s*}, "/").squish
 
     def read_line(line, raw_code, raw_price)
       return if blank?(raw_code) && blank?(raw_price)

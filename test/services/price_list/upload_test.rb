@@ -9,7 +9,7 @@ module PriceList
     end
 
     def uploaded(name)
-      path = File.join(@dir, "x").tap { |p| File.write(p, "CODIGO,PRECIO\n1,2\n") }
+      path = File.join(@dir, "x").tap { |p| File.write(p, "CODIGO,PRECIO LISTA S/IVA\n1,2\n") }
       Rack::Test::UploadedFile.new(path, "text/csv", original_filename: name)
     end
 
@@ -18,7 +18,7 @@ module PriceList
 
       found = Upload.find(stored.token)
       assert_equal "Lista Stihl.csv", found.filename
-      assert_equal "CODIGO,PRECIO\n1,2\n", File.read(found.path)
+      assert_equal "CODIGO,PRECIO LISTA S/IVA\n1,2\n", File.read(found.path)
 
       found.delete
       assert_nil Upload.find(stored.token)
