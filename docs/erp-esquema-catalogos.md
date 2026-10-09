@@ -77,6 +77,8 @@ respaldo con 3 ruedas cargadas (Veracruz / Chiapas / Oaxaca 2026).
   2026-08-17); el export lo manda como `credit_wholesale_price` junto a
   público y mayoreo, que quedan de referencia. Un producto con crédito
   mayoreo en $0 queda invendible en la app (sin fallback a otro nivel).
+  Excepción: los precios cargados en "Cambiar precios" (panel del servidor)
+  lo reemplazan en la laptop, por código y para la rueda activa.
 
 ## Relaciones producto ↔ marca ↔ proveedor
 

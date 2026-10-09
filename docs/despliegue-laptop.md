@@ -46,7 +46,8 @@ abajo van SIN `RAILS_ENV`**: con `production` Rails apunta a
 | Servicio | `fecego-rueda-negocios` |
 | Puerto | 3000 (`0.0.0.0`, para la LAN del salón) |
 
-**Dos pasos que parecen opcionales y no lo son** (medido en la 9ª auditoría):
+**Tres pasos que parecen opcionales y no lo son** (medidos en la 9ª y la 13ª
+auditorías):
 
 - **Sin `bundle install`, la app NO ARRANCA.** No es una pantalla rota: Bundler
   falla en `Bundler.setup`, antes de cargar Rails, y con `Restart=always` el
@@ -54,8 +55,9 @@ abajo van SIN `RAILS_ENV`**: con `production` Rails apunta a
   sitio" y nada en la app dice por qué — hay que ir a `journalctl`.
 - **Sin `systemctl restart`, las gemas nuevas tampoco.** Bundler las carga al
   arrancar: el servidor viejo sigue vivo con el código nuevo pero sin la gema.
-  Con `roo` (2026-10-08), "Cambiar precios" respondía "No se pudo leer el
-  archivo" a un archivo sano.
+  Con `roo` (2026-10-08), "Cambiar precios" da pantalla de error con un .xlsx
+  (`NameError` de `Roo`) mientras un .csv funciona —Ruby lo lee sin roo—: si
+  se prueba solo con CSV, el despliegue parece bueno y no lo está.
 - **Sin `systemctl restart`, los initializers nuevos no existen.** El reload de
   development recarga `app/`, pero **no** `config/initializers/`. Un MIME sin
   registrar hace que la pantalla que lo usa dé 500 — y como todo lo demás sí
@@ -94,9 +96,13 @@ Lo mínimo, en el navegador de la laptop:
   sube y la partida aparece donde debe.
 - **Panel del servidor**: "Obtener información" termina en "✓ Listo" y el panel
   se destraba **solo**, sin recargar (el estado se consulta cada 3 s).
-- **Panel del servidor → Cambiar precios**: subir el layout de precios,
-  revisar y aplicar; una partida nueva de un producto del archivo nace con el
-  precio nuevo. Al terminar, "Quitar precios cargados".
+- **Panel del servidor → Cambiar precios**: subir un **.xlsx** con el layout
+  (primera fila CODIGO y PRECIO LISTA S/IVA; el de FECEGO es "Cambio precio de
+  lista Stihl.xlsx") —un .xlsx y no un .csv: el CSV no usa la gema nueva y no
+  comprueba el reinicio—, revisar y aplicar; una partida nueva de un producto
+  del archivo nace con el precio nuevo. Al terminar, **descartar ese pedido de
+  prueba** (la partida conserva el precio de archivo aunque se quiten los
+  precios) y "Quitar precios cargados".
 - Si el lote trae cambios en el PDF, **imprimir un pedido de ~20 partidas** y
   verificar que los cuatro totales y el importe en letra caen en la misma hoja.
 
@@ -164,11 +170,19 @@ migraciones traiga el lote:
   `supplier_id`/`brand_id` de las partidas y `captured_at` del pedido; y las
   del 2026-10-08: la tabla `price_overrides` y `price_from_file`/
   `erp_unit_price` de las partidas, con valor por omisión): **el checkout
-  basta, sin rollback.** Los precios ya cargados se quedan en su tabla, pero
-  el código anterior no la lee: se captura con los del ERP. El código anterior ignora las columnas que no
+  basta, sin rollback.** El código anterior ignora las columnas que no
   conoce — comprobado en la 12ª auditoría: sin migraciones pendientes,
   `capture!` y "Obtener información" corren completos. Un `db:rollback` aquí
-  solo borraría, sin necesidad, el proveedor y la marca de los productos nuevos.
+  borraría, sin necesidad, el proveedor y la marca de los productos nuevos y
+  los precios cargados con su rastro.
+
+  **Con "Cambiar precios" hay dos cosas que hacer ANTES del checkout** (13ª
+  auditoría): (1) **"Quitar precios cargados"**: el código anterior ni los lee
+  ni los borra al cerrar la rueda, y reaparecerían solos al volver a desplegar
+  sobre la misma rueda; (2) **transmitir antes lo capturado a precio de
+  archivo**: el `Sync::Up` anterior no manda `precio_archivo`/`precio_erp`, y
+  la evidencia se escribe una sola vez — lo que se transmita después de
+  revertir llega al ERP con el precio de archivo y sin rastro de que lo fue.
 - **Tablas o llaves foráneas que el código viejo no contempla** (las de
   promociones, en su momento): ahí la app vieja choca con ellas —"Obtener
   información" fallaba al purgar el catálogo—, y hace falta `bin/rails

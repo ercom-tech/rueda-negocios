@@ -25,7 +25,7 @@ Si es **algo por hacer**, va al backlog.
 ## Índice de la bitácora
 
 - Decisiones generales del proyecto (abajo)
-- Cambiar precios desde un archivo (2026-10-08)
+- Cambiar precios desde un archivo (2026-10-08) · 13ª auditoría (2026-10-09)
 - 12ª, 11ª, 10ª, 9ª, 8ª, 7ª, 6ª, 5ª y 4ª auditorías — remediación
 - Descubrimiento del esquema de catálogos (ERP)
 - Fase A — scaffolding · Fase B — login, menú, reportes, pedido (arcos 1–3)
@@ -63,13 +63,18 @@ obtener la información.
   leer y revisar el archivo contra el catálogo de ese momento. El archivo se
   guarda en `tmp/price_lists/<ficha>` entre los dos pasos (la cookie no lo
   aguanta y el navegador no lo reenvía) y se barre al día.
-- **Lo que no se aplica se dice con línea y motivo:** sin precio, en cero,
-  código inválido, fuera del catálogo de la rueda, y **un código repetido con
-  precios distintos** (no se adivina cuál es el bueno). Las variaciones de más
-  de ±50% se señalan pero se aplican: solo el operador sabe si es error.
+- **Lo que no se aplica se dice con línea y motivo:** sin precio (vacío, cero o
+  negativo), precio que no es número, código inválido, fuera del catálogo de
+  la rueda, el 999999, y **un código repetido con precios distintos** (no se
+  adivina cuál es el bueno). Las variaciones arriba del umbral se señalan pero
+  se aplican: solo el operador sabe si es error. El umbral lo elige el
+  operador en la revisión (10/20/30/50/100%, 50 por omisión), y un precio que
+  aparece desde $0 se señala siempre.
 - **Las partidas ya agregadas no cambian.** El precio de una partida es el que
-  se le ofreció al cliente; la revisión avisa cuántos borradores tienen
-  partidas al precio anterior.
+  se le ofreció al cliente; la revisión dice qué borradores tienen partidas al
+  precio anterior, de qué capturista y de qué cliente (el servidor no puede
+  editarlos), sin contar los regalos. Un regalo que se regenera al reaplicar
+  su promoción nace al precio vigente, como toda partida nueva.
 - **Rastro sin tocar la API ni el ERP:** cada partida guarda al nacer
   `price_from_file` y `erp_unit_price` (el del ERP que reemplazó); viajan como
   `precio_archivo`/`precio_erp` y quedan en `vta_pedido_rueda.payload`, porque
@@ -78,6 +83,19 @@ obtener la información.
   tarjeta y sus pantallas. La única excepción aceptada es que el buscador de
   la captura muestre el precio que se cobra — mismo diseño, otro número. Una
   leyenda "(precio de rueda)" en el buscador se quitó a petición del usuario.
+- **La revisión habla la gramática del reporte de pedidos capturados**
+  (pedido del usuario, 2026-10-09): acciones en la fila del título (combo de
+  umbral, CSV, Aplicar, regreso), párrafo de avisos, tarjetas que son también
+  el filtro —la coral, "Cambian", por omisión— con un DATO en el segundo
+  renglón (cuántos suben y bajan; el desglose de los rechazos por motivo), y
+  una sola tabla paginada. "Subir archivo" va en un solo piso.
+- **El formato se exige tal cual el layout** (decisión del usuario, 13ª
+  auditoría): primera fila CODIGO (A) y PRECIO LISTA S/IVA (B), nada más, y
+  el precio en texto solo con punto decimal y coma de miles. Buscar "una
+  columna que diga PRECIO" tomaba la primera —con IVA, o el precio del ERP del
+  CSV que exporta la propia pantalla—, y la coma decimal se leía ×100. Un
+  precio con coma de miles en un CSV separado por comas llega entre comillas
+  (así lo guarda Excel) o se rechaza por columnas de más: nunca se lee mal.
 
 **Lo que costó:**
 
@@ -90,9 +108,41 @@ obtener la información.
   archivo (`Zip::Error`, `Nokogiri::XML::SyntaxError`, `ArgumentError` de roo,
   `CSV::MalformedCSVError`, `EncodingError`). El CSV lo lee Ruby directo:
   Excel en Windows lo guarda en Windows-1252, a veces con BOM y con `;`.
-- **`upsert_all` con `update_only` no toca `updated_at`**: al cargar un
-  segundo archivo se perdía cuándo cambió cada precio. Fechas explícitas y
-  `record_timestamps: false`.
+- **Una prueba de `updated_at` falló y el diagnóstico fue equivocado.** Se
+  culpó a `upsert_all` con `update_only` ("no toca `updated_at`") y se escribió
+  como regla; la 13ª auditoría generó el SQL y sí lo toca (`CURRENT_TIMESTAMP`
+  si cambió algo). Lo que congelaba la fecha era el reloj de Postgres: dentro
+  de la transacción de la prueba `CURRENT_TIMESTAMP` es la hora de inicio, y
+  `travel` no lo mueve. Las fechas explícitas se quedan (dan el reloj de la
+  app); la regla falsa se corrigió en las convenciones.
+
+## 13ª auditoría (2026-10-09) — "Cambiar precios"
+
+Alcance: el arco de "Cambiar precios" (`688df89..3fae686`), 6 auditores. 1
+ALTA, 8 MEDIA, varias BAJA; ninguna de contrato con el ERP. Remediación en 5
+bloques (`a19f520`, `ea88375`, `b0c337e` y el de documentación).
+
+- **La ALTA la encontraron tres auditores por separado:** la columna de precio
+  se elegía por "la primera que diga PRECIO". La salida no fue adivinar mejor
+  sino exigir el layout tal cual (decisión del usuario).
+- **Una regla de las convenciones era falsa y la había escrito yo** en el mismo
+  arco (ver arriba, `upsert_all`). Diagnosticar por el síntoma y escribirlo
+  como norma sin generar el SQL: la norma se carga en cada sesión y enseñaba
+  algo falso.
+- **Medir antes de leer:** el tope de renglones existía pero se revisaba DESPUÉS
+  de armar la tabla; una celda en XFD hacía la tabla de miles de millones de
+  celdas. Un tope que llega tarde no es tope.
+- **Durante la verificación escribí en la base de desarrollo por error** (un
+  `upsert_all` suelto en un `runner`, fuera de transacción). Se borró al
+  momento. Toda prueba de escritura, en `transaction { …; raise Rollback }`.
+- **Un clic por referencia de la herramienta del navegador no envió el
+  formulario** del diálogo y pareció un defecto de la pantalla; con clic real
+  en coordenadas funcionó. Antes de culpar a la pantalla, medir
+  (`elementFromPoint`, el log del servidor).
+- **Para decidir con FECEGO:** llenar `vta_pedido_detalle.precio_original` con
+  el precio del ERP cuando el precio vino de archivo (cambio de API; hoy el
+  rastro vive solo en la evidencia), y si las promociones medidas en pesos
+  deben alcanzarse con el precio de archivo.
 
 ## 12ª auditoría (2026-09-30) — remediación
 

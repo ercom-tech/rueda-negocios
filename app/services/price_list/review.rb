@@ -12,8 +12,9 @@ module PriceList
   class Review
     # Arriba del umbral se señala, pero se aplica igual: puede ser un error de
     # captura en el archivo o un cambio real, y solo el operador lo sabe. El
-    # umbral lo elige el operador en la pantalla (2026-10-08); este es el de
-    # omisión. Solo decide qué se SEÑALA, nunca qué se aplica.
+    # umbral lo elige el operador en la pantalla (2026-10-09); este es el de
+    # omisión, y de aquí lo toma `PricesController::DEFAULT_THRESHOLD`. Solo
+    # decide qué se SEÑALA, nunca qué se aplica.
     LARGE_VARIATION = BigDecimal("0.5")
 
     Change = Data.define(:line, :code, :description, :current_price, :new_price) do
@@ -64,12 +65,12 @@ module PriceList
     def rejected
       (problems +
        conflicts.map do |c|
-         Reader::Problem.new(line: c.lines.first, code_text: format("%06d", c.code),
+         Reader::Problem.new(line: c.lines.first, code_text: Product.erp_code_for(c.code),
                              reason: "Viene repetido con precios distintos (líneas #{SpanishText.list(c.lines.map(&:to_s))}).",
                              kind: :conflict)
        end +
        not_in_round.map do |r|
-         Reader::Problem.new(line: r.line, code_text: format("%06d", r.code), reason: "No está en el catálogo de esta rueda.",
+         Reader::Problem.new(line: r.line, code_text: Product.erp_code_for(r.code), reason: "No está en el catálogo de esta rueda.",
                              kind: :not_in_round)
        end).sort_by(&:line)
     end
@@ -155,7 +156,7 @@ module PriceList
         row = same_code.first
         product = products[code]
         if code == Product::GENERIC_ERP_ID
-          @problems << Reader::Problem.new(line: row.line, code_text: format("%06d", code),
+          @problems << Reader::Problem.new(line: row.line, code_text: Product.erp_code_for(code),
                                            reason: "El 999999 no lleva precio de lista: se captura a mano en cada partida.",
                                            kind: :generic)
         elsif product.nil?

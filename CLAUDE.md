@@ -86,10 +86,14 @@ Modelo **una laptop = servidor LAN**:
 - **Después / entre días (oficina):** la laptop transmite pedidos a
   `rueda-api` → inserción en ERP → devuelve folio ERP → se marca
   `transmitido`. Idempotente y reintentable.
+- **Precios de la rueda (opcional):** el servidor puede cargar un archivo de
+  precios ("Cambiar precios") que reemplaza al crédito mayoreo como precio de
+  captura, solo en la laptop y solo para esa rueda. "Obtener información" los
+  respeta; las partidas ya agregadas conservan su precio.
 - **Al terminar el evento:** **cerrar rueda** elimina de la laptop los pedidos
-  ya transmitidos, borra el historial de corridas y libera la selección. Es el
-  paso obligado para cargar otra rueda, y la única operación destructiva del
-  panel.
+  ya transmitidos, borra el historial de corridas y los precios cargados, y
+  libera la selección. Es el paso obligado para cargar otra rueda, y la única
+  operación del panel que borra pedidos.
 
 Obtener y cerrar se bloquean si queda algún pedido que solo viva en la laptop
 —borrador o capturado sin transmitir—; transmitir se bloquea solo por

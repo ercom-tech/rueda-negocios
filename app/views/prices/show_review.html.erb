@@ -158,12 +158,12 @@
                 <td class="px-4 py-3 font-semibold tabular-nums"><%= row.code_text.presence || "—" %></td>
                 <td class="min-w-[18rem] px-4 py-3"><%= row.reason %></td>
               <% else %>
-                <td class="px-4 py-3 font-semibold tabular-nums"><%= format("%06d", row.code) %></td>
+                <td class="px-4 py-3 font-semibold tabular-nums"><%= Product.erp_code_for(row.code) %></td>
                 <td class="min-w-[18rem] px-4 py-3"><%= row.description %></td>
                 <td class="px-4 py-3 text-right tabular-nums whitespace-nowrap"><%= row.current_price ? number_to_currency(row.current_price) : "Sin precio" %></td>
                 <td class="px-4 py-3 text-right font-semibold tabular-nums whitespace-nowrap"><%= number_to_currency(row.new_price) %></td>
                 <td class="px-4 py-3 text-right tabular-nums whitespace-nowrap">
-                  <%= PriceList::ReviewExport.variation(row) || "—" %>
+                  <%= PriceList.variation_label(row.variation) || "—" %>
                   <%# En "Cambian" el badge separa las grandes de las demás; en
                       su propio grupo todas lo son y sobraría. %>
                   <% if @group == "changes" && @review.large?(row) %>

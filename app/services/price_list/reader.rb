@@ -153,7 +153,7 @@ module PriceList
       code  = parse_code(raw_code)
       # Como lo muestra el ERP (6 dígitos) cuando es un código; si no, tal cual
       # venía, para que se encuentre en el archivo.
-      code_text = code ? format("%06d", code) : raw_code.to_s.strip
+      code_text = code ? Product.erp_code_for(code) : raw_code.to_s.strip
       price = parse_price(raw_price)
       kind, reason =
         if code.nil? then [ :invalid_code, "El código no es válido: deben ser hasta 6 dígitos." ]

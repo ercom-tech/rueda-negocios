@@ -59,15 +59,17 @@ viejo quedó caduco — verificado en la 6ª auditoría:
   tailwindcss:build` (obligatorio: hay clases nuevas en cada lote).
   **`bundle install` y reiniciar el servicio son obligatorios en este lote:**
   entra la gema `roo` (leer el Excel de "Cambiar precios"), y un servidor que
-  arrancó sin ella responde "No se pudo leer el archivo" a cualquier archivo
-  (pasó en desarrollo el 2026-10-08).
+  arrancó sin ella da pantalla de error con un .xlsx (con un .csv funciona,
+  porque el CSV no usa roo: probar con .xlsx).
 - **Check de "Cambiar precios"** (2026-10-08): en el panel del servidor, subir
-  el layout de FECEGO, revisar, aplicar, agregar una partida de un producto del
-  archivo (debe nacer con el precio nuevo) y "Quitar precios cargados" al
-  terminar la prueba. No necesita nada en el ERP ni en la API.
+  un .xlsx con el layout (CODIGO y PRECIO LISTA S/IVA), revisar, aplicar,
+  agregar una partida de un producto del archivo (debe nacer con el precio
+  nuevo), **descartar ese pedido de prueba** y "Quitar precios cargados". No
+  necesita nada en el ERP ni en la API.
 - **Checks post-deploy** (transmitir un pedido de prueba con una partida del
   genérico): `id_rueda ≠ 0`, `nombre_capturado` poblado (≤40), precio de
-  partida = `cred_mayoreo_precio`, y los de remisión de siempre
+  partida = `cred_mayoreo_precio` (o el del archivo, si se cargaron precios:
+  la evidencia lo dice con `precio_archivo`), y los de remisión de siempre
   (`consec_remision ≠ 0`, `rfc = XAXX010101000`, `c_UsoCFDI = S01`,
   `fecha_crea` = captura). **Y uno que faltaba:** transmitir una REMISIÓN con
   monto de división y comprobar `dividir_facturas ≠ 0` — es lo único que
@@ -454,9 +456,24 @@ purgar, dentro de la misma transacción del sync-down.
 
 ## Definiciones con FECEGO
 
+### Precio de archivo: `precio_original` y promociones en pesos (13ª auditoría)
+
+- El ERP guarda en `vta_pedido_detalle.precio_original` el precio anterior
+  cuando ventas cambia uno a mano (ej. producto 64588: `precio` 4500.00,
+  `precio_original` 4042.72, el crédito mayoreo). Las partidas de rueda con
+  precio de "Cambiar precios" llegan con `precio_original = 0`, así que un
+  reporte del ERP que busque cambios de precio no las ve; el rastro vive solo
+  en `vta_pedido_rueda.payload`. Si FECEGO lo quiere: que la API escriba
+  `precio_original = precio_erp` cuando `precio_archivo` sea verdadero (cambio
+  de API; orden ERP → API → laptop).
+- 16 de las 41 promociones de la rueda activa se miden en pesos (MXN): con
+  precio de archivo, sus escalones se alcanzan con otra cantidad de piezas. El
+  ERP no lo recalcula; confirmar que es lo que quieren.
+
 ### Timbrar una factura con una partida de regalo al 100% (antes del 27-ago)
 
-Las partidas de regalo viajan al ERP con **precio de lista, 100% de descuento
+Las partidas de regalo viajan al ERP con **su precio de captura (crédito
+mayoreo, o el de un archivo cargado en "Cambiar precios"), 100% de descuento
 y total $0.00**. Falta la única comprobación que no se puede hacer desde la
 base: **que el PAC timbre un CFDI que las contenga.**
 
@@ -533,7 +550,9 @@ así que el caso ambiguo es únicamente FLEXIMATIC.
 `OrderCreate::HEADER_DEFAULTS` (la moda del ERP). Confirmar cuáles son
 correctos para una rueda y si alguno debe salir del cliente en vez de ser fijo.
 `tipo_precio = 'MA'` ya quedó consistente con la decisión de precio (la rueda
-vende a crédito mayoreo, la modalidad a crédito del mayoreo — 2026-08-17);
+vende a crédito mayoreo, la modalidad a crédito del mayoreo — 2026-08-17),
+salvo en partidas con precio cargado por archivo, que no son ningún nivel de
+lista: el ERP solo tiene MA y PU, y el rastro va en la evidencia;
 faltan los demás.
 
 ### LAN del evento

@@ -189,6 +189,20 @@ ninguna otra dimensión los habría buscado.
 
 ## Historial
 
+- **13ª (2026-10-09)** — alcance: **"Cambiar precios"** (app
+  `688df89..3fae686`; la API no cambió), con 6 auditores — **1 ALTA · 8 MEDIA
+  · ~25 BAJA** → **remediada en cinco bloques** (detalle en "13ª auditoría" de
+  `memory.md`). El contrato con el ERP salió limpio: la API ignora las llaves
+  nuevas, la evidencia las guarda y los reintentos siguen idempotentes. La
+  ALTA la encontraron **tres auditores por separado** —la columna de precio se
+  elegía por "la primera que diga PRECIO"— y se resolvió exigiendo el layout
+  tal cual. Patrón que dejó: **casi todo lo grave estaba en la frontera con el
+  archivo de un tercero** (columnas, coma decimal, celdas lejanas, entidades
+  XML), y **una regla de las convenciones era falsa**, escrita en el mismo arco
+  a partir de un síntoma sin generar el SQL. Para la próxima: un archivo que
+  llega de fuera se audita como entrada hostil, y toda regla nueva sobre lo
+  que hace una librería se comprueba contra lo que la librería ejecuta.
+
 - **12ª (2026-09-30)** — alcance: **el arco de la evidencia y los ajustes de
   captura, más la remediación de la 11ª** (app `2e29183..877d666`, API
   `82ca178..ffc1f17`), con 6 auditores — **1 ALTA · 7 MEDIA · ~20 BAJA** →

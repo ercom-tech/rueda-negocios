@@ -39,9 +39,11 @@ class Product < ApplicationRecord
   # Código FECEGO como lo muestra el ERP: entero presentado SIEMPRE a 6
   # dígitos (17768 → "017768"). Única definición del formato — se usa en
   # autocompletado y en el snapshot de partidas (tabla/resumen/PDF).
-  def erp_code
-    format("%06d", erp_product_id)
-  end
+  def erp_code = self.class.erp_code_for(erp_product_id)
+
+  # El mismo formato para un código suelto (el de un renglón del archivo de
+  # precios que quizá ni está en el catálogo): un solo lugar para la regla.
+  def self.erp_code_for(id) = format("%06d", id)
 
   # Búsqueda por código FECEGO, código de proveedor (SKU), nombre, modelo o
   # número de parte. El SKU va en una rama UNION aparte (no en el mismo OR con

@@ -23,16 +23,10 @@ module PriceList
     end
 
     def change_row(change, result)
-      [ change.line, format("%06d", change.code), SafeCsv.text(change.description),
-        change.current_price&.to_s("F"), change.new_price.to_s("F"), variation(change), result ]
+      [ change.line, Product.erp_code_for(change.code), SafeCsv.text(change.description),
+        change.current_price&.to_s("F"), change.new_price.to_s("F"), PriceList.variation_label(change.variation), result ]
     end
 
     def percent(fraction) = "#{(fraction * 100).to_i}%"
-
-    def variation(change)
-      return if change.variation.nil?
-
-      format("%+.1f%%", change.variation * 100)
-    end
   end
 end

@@ -14,13 +14,15 @@ class PricesController < ApplicationController
   # porcentaje. Lista cerrada y no un número libre: en tablet se teclea mal, y
   # cualquier otro valor en la URL cae al de omisión.
   THRESHOLDS = [ 10, 20, 30, 50, 100 ].freeze
-  DEFAULT_THRESHOLD = 50
+  # El de omisión sale de la revisión: dos números independientes podían
+  # divergir sin que nada lo notara (13ª auditoría).
+  DEFAULT_THRESHOLD = (PriceList::Review::LARGE_VARIATION * 100).to_i
 
   before_action :require_server
   before_action :require_active_round
-  # Aplicar y quitar escriben precios que el sync-down está a punto de usar.
-  # Revisar no escribe nada, pero compara contra un catálogo que el sync-down
-  # puede estar a medio reponer: también espera.
+  # Revisar, aplicar y quitar comparan contra el catálogo —o escriben precios
+  # que se aplican sobre él—, y el sync-down lo está reponiendo: esperan. Ver
+  # la lista y la revisión ya abierta no, como el resto de las lecturas.
   before_action :pause_writes_during_sync, only: %i[review apply destroy]
 
   def index

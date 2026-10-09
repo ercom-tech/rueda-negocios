@@ -215,10 +215,14 @@ movería también fechas, números y mensajes de Rails que hoy funcionan.
   precisión de la columna sale como `ActiveRecord::RangeError`, que ningún
   rescue atrapa; y en una respuesta Turbo Stream el usuario ni siquiera ve el
   error: la pantalla no se repinta y parece que "no pasó nada".
-- **`upsert_all` con `update_only` NO toca `updated_at`** en las filas que ya
-  existían: la fecha de la carga anterior se queda, y se pierde cuándo cambió
-  el dato. Pasar las fechas explícitas, `updated_at` en `update_only` y
-  `record_timestamps: false`.
+- **En una prueba, el reloj de Postgres no se mueve.** Dentro de la
+  transacción de la prueba, `CURRENT_TIMESTAMP` es la hora en que EMPEZÓ, y
+  `travel` solo mueve el de Ruby: lo que Postgres fecha por su cuenta (un
+  `upsert_all`, un `DEFAULT now()`) sale igual en las dos cargas y la prueba
+  concluye que "no se actualizó". Si la fecha importa, darla desde la app
+  (`Time.current`). Y antes de escribir una regla sobre lo que hace Rails,
+  **generar el SQL**: esta línea decía que `upsert_all` con `update_only` no
+  toca `updated_at`, y sí lo toca — la regla falsa duró un día (13ª auditoría).
 - **Un enum no se puede validar en el modelo:** asignarle un valor desconocido
   levanta `ArgumentError` antes de que corra ninguna validación. Se sanea en
   los `params` (a nil) y se deja que lo recoja el `validates presence`.
