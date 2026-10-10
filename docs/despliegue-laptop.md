@@ -103,6 +103,12 @@ Lo mínimo, en el navegador de la laptop:
   del archivo nace con el precio nuevo. Al terminar, **descartar ese pedido de
   prueba** (la partida conserva el precio de archivo aunque se quiten los
   precios) y "Quitar precios cargados".
+- **Levantamiento de pedido → Cotizador**: tocar una partida de un producto
+  en promoción y picar "Cotizador"; el modal lista los escalones con el precio
+  por pieza. Las columnas de **caja** solo salen después de "Obtener
+  información" con la API que exporta `pieces_per_box` (lote del 2026-10-09):
+  sin eso todos los productos se ven "sin caja", sin error. Fuera de la
+  vigencia de la promoción, el modal dice que el producto no está en ninguna.
 - Si el lote trae cambios en el PDF, **imprimir un pedido de ~20 partidas** y
   verificar que los cuatro totales y el importe en letra caen en la misma hoja.
 
@@ -231,6 +237,12 @@ sudo systemctl restart fecego-rueda-api
 curl -s http://localhost:7011/health
 ```
 
+**Si el lote cambió `db/erp-prerequisitos.sql`, eso va ANTES del restart**
+(procedimiento en `docs/instalacion-vm-produccion.md` de `rueda-api`). El del
+Cotizador (2026-10-10) lo cambió: le da lectura de `alm_ficha_tecnica` al
+usuario de la API. Sin ella, `/health` responde `"permiso de lectura en
+alm_ficha_tecnica"` y "Obtener información" falla completo — no solo la caja.
+
 **Si el lote toca las dos puntas, la API va primero — y la laptop va detrás en
 la misma ventana.** No se opera con una versión de API y otra de laptop (regla
 con FECEGO). Una laptop nueva contra una API vieja se queda sin lo que la API
@@ -246,5 +258,6 @@ Puerta de paso del lado de la API, cuando el lote toca el export:
 curl -s http://localhost:7011/ruedas/3/export | \
   python3 -c "import sys,json; d=json.load(sys.stdin); \
   print('promociones:', len(d.get('promotions', []))); \
-  print('productos:', len(d['products']))"
+  print('productos:', len(d['products'])); \
+  print('con piezas por caja:', sum(1 for p in d['products'] if p.get('pieces_per_box')))"
 ```

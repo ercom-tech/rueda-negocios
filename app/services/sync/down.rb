@@ -306,7 +306,7 @@ module Sync
           part_number: p["part_number"], model: p["model"],
           brand_id: brand_by_erp[p["erp_brand_id"]], stock: p["stock"],
           unit: p["unit"], max_discount: p["max_discount"],
-          min_sale_quantity: p["min_sale_quantity"] }
+          min_sale_quantity: p["min_sale_quantity"], pieces_per_box: p["pieces_per_box"] }
       end
       insert Product, rows
 

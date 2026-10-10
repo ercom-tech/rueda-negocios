@@ -50,7 +50,9 @@ Rails.application.routes.draw do
       get   :summary                           # paso 3: resumen con opciones
       get   :pdf                               # descarga PDF del pedido
     end
-    resources :order_items, only: %i[create update destroy] # partidas (Turbo)
+    resources :order_items, only: %i[create update destroy] do # partidas (Turbo)
+      member { get :quote }                    # contenido del modal del Cotizador
+    end
     # Aplicar (create) y quitar (destroy) una promoción de la rueda. El id es
     # el de la promoción, no el de un registro intermedio: una promoción está
     # aplicada o no lo está, no hay nada más que guardar.

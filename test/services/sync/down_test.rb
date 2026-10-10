@@ -25,7 +25,7 @@ module Sync
                             "erp_brand_id" => 1, "stock" => "0.0", "unit" => "PZA",
                             "public_price" => "471.08", "wholesale_price" => "407.82",
                             "credit_wholesale_price" => "429.44", "tax_rate" => "16.0", "max_discount" => "0.0",
-                            "min_sale_quantity" => "6",
+                            "min_sale_quantity" => "6", "pieces_per_box" => "12",
                             "supplier_ids" => [ 10, 99 ],
                             "supplier_skus" => [ { "erp_supplier_id" => 10, "supplier_sku" => "SKU1" } ] } ],
         "people"      => [ { "erp_person_id" => 90092, "position" => 1,
@@ -47,6 +47,7 @@ module Sync
       assert_equal 1, Client.count
       assert_equal 1, Product.count
       assert_equal 6, Product.sole.min_sale_quantity, "el empaque mínimo debe sincronizarse"
+      assert_equal 12, Product.sole.pieces_per_box, "las piezas por caja (Cotizador) deben sincronizarse"
       assert_equal 1, Price.count
       assert_equal 429.44, Price.sole.credit_wholesale_price,
                    "el precio crédito mayoreo (el que cobra la rueda) debe sincronizarse"

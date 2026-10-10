@@ -152,6 +152,41 @@ Descubierto en la 2ª auditoría al evaluar cablear `min_sale_quantity`:
   ERP mismo no la impone (~78–85% de ventas reales son múltiplos) — aquí es
   más estricta que el ERP, a propósito.
 
+## Ficha técnica (`alm_ficha_tecnica`) — piezas por caja del Cotizador
+
+PK `(id_empresa, id_producto, tipo, consecutivo)`; sin columna `baja` ni de
+vigencia, todo `id_empresa = 1`, y nada en el ERP (funciones, vistas, llaves)
+la lee: su significado sale de medir sus invariantes (14ª auditoría, réplica
+de desarrollo al 2026-10-10, tabla completa):
+
+| tipo | renglones | lectura |
+|---|---|---|
+| `P` | 5,958 | la unidad de venta: `cantidad` siempre 1 |
+| `C` | 4,651 | la caja: `cantidad = piezas_caja` en 4,648, `cajas` = 1 salvo 3 renglones en 0 |
+| `M` | 1,321 | el master; su `piezas_caja` no es consistente (a veces del master, a veces de la caja) |
+| vacío | 9 | basura de captura; se ignora (7 de esos productos tienen además su `C`) |
+
+**`piezas_caja` cuenta UNIDADES DE VENTA, no piezas sueltas:** los anzuelos
+MUSTAD que se venden por CAJA de 100 traen 10 (10 cajitas por caja). Por eso
+precio × `piezas_caja` es el precio de la caja, sin multiplicar dos veces; lo
+que cambia es el rótulo cuando la unidad no es PZA.
+
+Ej. 007121 → 500, 000082 → 10. Con dos cajas distintas (4 productos en el
+ERP; 2 en el catálogo de Oaxaca) el export toma la de **mayor `consecutivo`**,
+la más nueva (decisión del usuario, 14ª auditoría). Exportado como
+`pieces_per_box` (CTE `caja`, 2026-10-09). En el catálogo de la rueda 3 lo
+traen **1,690 de 15,618** productos, y 1,457 de los 9,717 con promoción (49
+de ellos con caja de 1, que el Cotizador trata como sin caja) — export del
+2026-10-10.
+
+No confundir con el empaque mínimo de venta (`com_producto_has_empaque`): no
+coinciden siempre. En 18 productos de la rueda la caja es menor que el mínimo
+(000082: caja de 10, mínimo 20).
+
+**Permiso:** la ficha no tiene los mismos GRANT que sus vecinas. Sin SELECT,
+falla el export completo; `db/erp-prerequisitos.sql` (de `rueda-api`) se lo
+da a quien lea `com_producto`, y `/health` lo revisa.
+
 ## Catálogo de montos de división de facturas (`vta_pedido_monto_divide`)
 
 Catálogo global (no ligado a `id_rueda`): PK `(id_empresa, consecutivo)`,

@@ -1,8 +1,17 @@
 class OrderItemsController < ApplicationController
-  # Todo aquí es escritura, así que la pausa aplica a las tres acciones.
-  before_action :pause_writes_during_sync
+  # Todo aquí es escritura salvo el Cotizador, que solo lee: la pausa aplica
+  # a las demás acciones.
+  before_action :pause_writes_during_sync, except: :quote
   before_action :set_order
   before_action :ensure_editable
+
+  # Contenido del modal del Cotizador (2026-10-09), dentro de su turbo-frame:
+  # la partida en la que está parado el capturista, cotizada en cada escalón
+  # de su promoción (`Promotions::Quote`).
+  def quote
+    item = @order.order_items.find(params[:id])
+    render partial: "orders/quote_detail", locals: { quote: Promotions::Quote.new(item) }
+  end
 
   # Agrega un producto como partida (snapshot). Responde con Turbo Stream.
   # El find va scopeado al universo del capturista (sus proveedores/marcas):

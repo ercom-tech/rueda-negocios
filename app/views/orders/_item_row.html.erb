@@ -8,7 +8,10 @@
     Un solo cálculo aquí y todos los campos lo respetan — repartir la
     condición campo por campo es como se cuela el que sí quedó editable. %>
 <% editable = can_edit_order?(order) && !item.locked_by_promotion? %>
+<%# `data-quote-*`: la fila que el Cotizador cotiza (quote_controller). Los
+    regalos no se cotizan. %>
 <tr id="<%= dom_id(item) %>"
+    <%= tag.attributes(data: { quote_url: quote_order_order_item_path(order, item), quote_label: item.description }) unless item.gift? %>
     class="border-t border-black/10 text-center <%= "bg-black/[0.04]" if item.locked_by_promotion? %>">
   <td class="px-2 py-2">
     <% if editable %>

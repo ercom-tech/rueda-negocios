@@ -1,0 +1,39 @@
+<%#
+  Cascarón del modal del Cotizador (2026-10-09). Uno solo para el pedido: el
+  `quote_controller` le pone al turbo-frame la dirección de la partida
+  seleccionada y lo abre. Es un modal sobre la captura, no otra pantalla.
+
+  Vive FUERA de #order-detail y de #product-search, que se repintan con morph:
+  aquí nada lo reescribe, así que no necesita `data-turbo-permanent`.
+
+  Locals: ninguno.
+%>
+<div id="quote-modal" data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
+  <%# `tabindex="-1"`: el foco aterriza aquí mientras el frame todavía no trae
+      ningún control (ver modal#focusInside). %>
+  <div id="quote-dialog" data-modal-target="dialog" style="display:none" tabindex="-1"
+       role="dialog" aria-modal="true" aria-labelledby="quote-title"
+       data-action="turbo:fetch-request-error->modal#loadFailed"
+       class="fixed inset-0 z-50 items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/50" data-action="click->modal#close"></div>
+
+    <div class="relative max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-3xl bg-brand-gold p-2 shadow-2xl">
+      <turbo-frame id="quote-frame" data-quote-frame>
+        <div class="rounded-2xl bg-brand-cream px-5 py-10 text-center text-neutral-700"
+             role="status" data-modal-target="loading">
+          Cargando el cotizador…
+        </div>
+      </turbo-frame>
+
+      <%# Cerrar FUERA del frame: si la carga falla, el contenido no llega y el
+          diálogo se quedaría sin un solo control (mismo caso que el modal de
+          promoción, 7ª auditoría). Gris como el Cerrar de los demás modales. %>
+      <div class="px-2 pb-1 pt-2 text-center">
+        <button type="button" data-action="modal#close"
+                class="rounded-full bg-neutral-700 px-6 py-2.5 font-bold text-white transition-colors hover:bg-neutral-600">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

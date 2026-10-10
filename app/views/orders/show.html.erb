@@ -178,13 +178,19 @@
           </div>
         </div>
 
-        <%# ── Buscador de producto (autocompletado) — solo si el dueño puede editar ── %>
-        <% if can_edit_order?(@order) %>
-          <%= render "product_search", order: @order %>
-        <% end %>
+        <%# ── Buscador + tabla. Si el pedido se puede editar, los envuelve el
+            Cotizador (quote_controller): recuerda la partida seleccionada en
+            la tabla y abre su modal desde el botón del buscador. ── %>
+        <%= tag.div class: "space-y-2",
+              data: (can_edit_order?(@order) ? { controller: "quote", quote_modal_outlet: "#quote-modal",
+                                                 action: "focusin->quote#select click->quote#select" } : {}) do %>
+          <% if can_edit_order?(@order) %>
+            <%= render "product_search", order: @order %>
+          <% end %>
 
-        <%# ── Tabla de partidas (Turbo) ── %>
-        <%= render "items_table", order: @order %>
+          <%# ── Tabla de partidas (Turbo) ── %>
+          <%= render "items_table", order: @order %>
+        <% end %>
 
         <%# Destino de los streams que mueven el foco (ver OrderItems#destroy). %>
         <%= render "focus_director" %>
@@ -228,6 +234,10 @@
       </div>
 
     </section>
+    <%# Fuera de la card: el cascarón vacío no debe sumar espacio entre bloques. %>
+    <% if can_edit_order?(@order) %>
+      <%= render "quote_modal" %>
+    <% end %>
   </div>
 
   <%# ── Barra fija de totales: aparece solo cuando la tarjeta no se ve ──

@@ -25,12 +25,60 @@ Si es **algo por hacer**, va al backlog.
 ## Índice de la bitácora
 
 - Decisiones generales del proyecto (abajo)
+- Cotizador de la captura (2026-10-09)
 - Cambiar precios desde un archivo (2026-10-08) · 13ª auditoría (2026-10-09)
 - 12ª, 11ª, 10ª, 9ª, 8ª, 7ª, 6ª, 5ª y 4ª auditorías — remediación
 - Descubrimiento del esquema de catálogos (ERP)
 - Fase A — scaffolding · Fase B — login, menú, reportes, pedido (arcos 1–3)
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
+
+## Cotizador de la captura (2026-10-09)
+
+**Qué:** el botón "Cotizador" junto al buscador (deshabilitado desde el
+2026-09-29) abre un **modal sobre la captura** —no otra pantalla, pedido
+explícito del usuario— con la partida seleccionada cotizada en cada escalón de
+su promoción: en la compra, % de descuento, precio por pieza y por caja sin y
+con promoción, y piezas en caja. Diseño del usuario (imagen con encabezados
+amarillo/rojo), adaptado a las convenciones.
+
+**Decisiones y su porqué:**
+
+- **Piezas por caja = ficha técnica del ERP** (`alm_ficha_tecnica`, renglón
+  tipo `C`, `piezas_caja`), no `com_producto_has_empaque` (esa es el empaque
+  mínimo de venta). Viaja como `products.pieces_per_box`. Medido en Oaxaca:
+  solo **1,457 de 9,717** productos con promoción lo tienen; al resto se le
+  omiten las columnas de caja (nota del usuario). Una **caja de 1** (49 de
+  ellos) cuenta como sin caja: sus columnas repetirían las de la pieza.
+  Recorte: catálogo de la rueda 3, export del 2026-10-10.
+- **Con dos cajas, la de mayor consecutivo** (decisión del usuario, 14ª
+  auditoría): es la más nueva. Con la de menor, 044536 se cotizaba en cajas de
+  15 cuando la vigente y su empaque mínimo son de 20.
+- **La API exige leer la ficha** (14ª): sus GRANT no son los de las tablas
+  vecinas y, sin SELECT, falla el export entero. `db/erp-prerequisitos.sql` se
+  lo da a quien lea `com_producto` y `/health` revisa la lectura de TODAS las
+  tablas que la API lee, no solo las que escribe.
+- **Se cotiza con el precio de la PARTIDA**, no del catálogo: es lo que ese
+  pedido cobra (incluido un precio de archivo vigente al agregarla).
+- **El % es el que aplicaría la captura**: el override del producto gana sobre
+  el escalón (FANAL), y los escalones PC no se cotizan — misma escalera que el
+  modal de promoción (`Group#ladder`).
+- **La caja con promoción se redondea al final** (precio × piezas × (1 − %)),
+  como el total de una partida; la pieza redondeada por las piezas se desvía
+  en cajas grandes.
+- **"Partida seleccionada" = la última fila donde estuvo el capturista** (foco
+  o toque): al picar el botón el foco ya salió de la fila. La fila se marca con
+  **tinte dorado de superficie**, no filete (dorado sobre crema da 1.39:1). Los
+  regalos no se cotizan.
+- **El realce y el estado del botón se reaplican tras cada stream**
+  (`turbo:before-stream-render` envolviendo `render`): el morph regresa los
+  atributos al HTML del servidor, que no sabe qué fila está seleccionada. La
+  selección se guarda por `dom_id`, que el morph conserva.
+- **Colores:** fila de grupo "Sin promoción" en dorado con texto negro y "Con
+  promoción" en coral con texto blanco (4.69:1); el texto blanco sobre amarillo
+  del diseño original no se lee. `thead` negro y Cerrar gris, como en los
+  demás modales.
+- **Es lectura:** no se pausa durante un sync.
 
 ## Cambiar precios desde un archivo (2026-10-08)
 
