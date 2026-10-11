@@ -76,9 +76,16 @@ amarillo/rojo), adaptado a las convenciones.
   como el total de una partida; la pieza redondeada por las piezas se desvía
   en cajas grandes.
 - **"Partida seleccionada" = la última fila donde estuvo el capturista** (foco
-  o toque): al picar el botón el foco ya salió de la fila. La fila se marca con
-  **tinte dorado de superficie**, no filete (dorado sobre crema da 1.39:1). Los
-  regalos no se cotizan.
+  o toque): al picar el botón el foco ya salió de la fila. Los regalos no se
+  cotizan.
+- **Siempre hay una seleccionada** (14ª auditoría): al abrir, la más reciente;
+  al agregar, la nueva (el alta no le da el foco, y se cotizaba la de antes);
+  si se quita, la más reciente. Con eso el botón va **siempre habilitado**:
+  deshabilitado hasta tocar una fila, en tablet no decía por qué (el `title`
+  no existe en táctil). Sin partidas, el modal lo explica.
+- **El realce se distingue por forma:** tinte dorado de superficie (1.16:1
+  contra la fila normal: un matiz, no una señal) **más una barra negra de
+  4 px** a la izquierda (18:1), y `aria-current` en la fila.
 - **El realce y el estado del botón se reaplican tras cada stream**
   (`turbo:before-stream-render` envolviendo `render`): el morph regresa los
   atributos al HTML del servidor, que no sabe qué fila está seleccionada. La

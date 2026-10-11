@@ -1,13 +1,19 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Cotizador de la captura (2026-10-09). Recuerda la última partida en la que
-// estuvo el capturista —con el foco o con un toque— y, al picar "Cotizador",
-// abre el modal con esa partida. Hace falta recordarla: al picar el botón el
-// foco ya salió de la fila.
+// Cotizador de la captura (2026-10-09). Recuerda la partida seleccionada y, al
+// picar "Cotizador", abre el modal con ella. Hace falta recordarla: al picar
+// el botón el foco ya salió de la fila.
+//
+// SIEMPRE hay una seleccionada mientras el pedido tenga partidas (14ª
+// auditoría): al abrir, la más reciente (la primera de la tabla); al agregar
+// un producto, su fila nueva — el alta no le da el foco, y sin esto se
+// cotizaba la partida de antes; y la que se toque o se enfoque. Con el botón
+// deshabilitado hasta tocar una fila, en tablet no había forma de saber por
+// qué no respondía (el `title` no existe en pantalla táctil).
 //
 // La tabla y el buscador se repintan con morph en cada alta, baja y cambio de
 // cantidad, e idiomorph regresa los atributos al HTML del servidor —que no
-// sabe cuál fila está seleccionada—: el realce de la fila y el estado del
+// sabe cuál fila está seleccionada—: el realce de la fila y el nombre del
 // botón se borraban. Por eso se vuelven a aplicar DESPUÉS de cada stream
 // (`turbo:before-stream-render` envolviendo su `render`). La selección vive
 // en el id de la fila (`dom_id`), que el morph conserva.
@@ -19,6 +25,9 @@ export default class extends Controller {
   static outlets = ["modal"]
 
   connect() {
+    // Las filas que ya estaban no son "recién agregadas"; sin selección,
+    // `sync` toma la más reciente.
+    this.knownIds = new Set(this.rows.map((tr) => tr.id))
     this.selectedId = null
     this.wrapStreamRender = (event) => {
       const render = event.detail.render
@@ -44,13 +53,20 @@ export default class extends Controller {
   }
 
   open() {
-    const row = this.selectedRow
-    if (!row || !this.hasModalOutlet) return
+    if (!this.hasModalOutlet) return
 
     const frame = this.modalOutlet.element.querySelector("turbo-frame")
     // El contenido de la partida anterior no debe verse mientras carga la
     // nueva: se regresa al "Cargando" de fábrica.
     this.placeholder ??= frame.innerHTML
+    const row = this.selectedRow
+    if (!row) {
+      // Pedido sin partidas cotizables (vacío, o solo regalos).
+      frame.innerHTML = this.emptyMessage
+      this.modalOutlet.open()
+      return
+    }
+
     frame.innerHTML = this.placeholder
     const url = row.dataset.quoteUrl
     // Turbo no vuelve a pedir un `src` que no cambió: misma partida, reload.
@@ -59,37 +75,51 @@ export default class extends Controller {
     this.modalOutlet.open()
   }
 
-  // Realce de la fila y estado del botón, a partir de `selectedId`. Si la
-  // partida seleccionada se quitó del pedido, la selección se suelta.
+  // Selección, realce y nombre del botón. Una fila que no se conocía es una
+  // partida recién agregada: gana la selección. Si la seleccionada se quitó,
+  // la toma la más reciente.
   sync() {
-    let row = this.selectedRow
-    if (!row) this.selectedId = null
+    const rows = this.rows
+    const added = rows.find((tr) => !this.knownIds.has(tr.id))
+    this.knownIds = new Set(rows.map((tr) => tr.id))
+    if (added) this.selectedId = added.id
+    if (!this.selectedRow) this.selectedId = rows[0]?.id ?? null
+    const row = this.selectedRow
 
-    this.element.querySelectorAll("tr[data-quote-url]").forEach((tr) => {
-      // Dorado de SUPERFICIE (tinte de fondo), no de trazo: un filete dorado
-      // sobre el crema da 1.39:1 y no se ve (convenciones-visuales).
-      tr.style.backgroundColor = tr === row
+    rows.forEach((tr) => {
+      const selected = tr === row
+      // Se distingue por FORMA, no solo por color (14ª auditoría): el tinte
+      // dorado sobre el crema da 1.16:1 —un matiz, como el de la fila
+      // bloqueada—, así que la fila lleva además una barra negra a la
+      // izquierda (18:1). Dorado de superficie y no de trazo: un filete
+      // dorado sobre el crema da 1.39:1.
+      tr.style.backgroundColor = selected
         ? "color-mix(in srgb, var(--color-brand-gold) 45%, transparent)"
         : ""
+      if (tr.cells[0]) tr.cells[0].style.boxShadow = selected ? "inset 4px 0 0 #000" : ""
+      if (selected) tr.setAttribute("aria-current", "true")
+      else tr.removeAttribute("aria-current")
     })
 
     if (!this.hasButtonTarget) return
-    const button = this.buttonTarget
-    const enabled = Boolean(row)
-    button.disabled = !enabled
-    button.setAttribute("aria-disabled", String(!enabled))
-    button.classList.toggle("opacity-60", !enabled)
-    button.classList.toggle("cursor-not-allowed", !enabled)
-    button.classList.toggle("cursor-pointer", enabled)
-    button.classList.toggle("hover:bg-neutral-800", enabled)
-    button.title = enabled
-      ? `Cotizar ${row.dataset.quoteLabel}`
-      : "Toca una partida de la tabla para cotizarla."
+    const label = row ? `Cotizar ${row.dataset.quoteLabel}` : "Cotizador"
+    this.buttonTarget.title = label
+    this.buttonTarget.setAttribute("aria-label", label)
+  }
+
+  get rows() {
+    return Array.from(this.element.querySelectorAll("tr[data-quote-url]"))
   }
 
   get selectedRow() {
     if (!this.selectedId) return null
     const row = document.getElementById(this.selectedId)
     return row && this.element.contains(row) && row.dataset.quoteUrl ? row : null
+  }
+
+  get emptyMessage() {
+    return '<div class="rounded-2xl bg-brand-cream px-5 py-10 text-center text-neutral-900" role="status">' +
+      "Este pedido todavía no tiene productos para cotizar. Agrega uno con el buscador y vuelve a picar " +
+      "«Cotizador».</div>"
   }
 }

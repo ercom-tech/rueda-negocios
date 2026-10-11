@@ -101,16 +101,15 @@ class NewProductButtonVisibilityTest < ActionDispatch::IntegrationTest
     assert_no_match(/Producto nuevo/, response.body)
   end
 
-  # "Cotizador": pantalla por definir (2026-09-29). Mientras tanto se ve
-  # deshabilitado —un botón activo que no hace nada se leería como falla— y
-  # sin "Próximamente", como lo pidió el usuario. Cuando tenga función, esta
-  # prueba se reemplaza.
-  test "el botón Cotizador aparece deshabilitado y sin próximamente" do
+  # "Cotizador" ya tiene función (2026-10-09) y va SIEMPRE habilitado (14ª
+  # auditoría: deshabilitado, en tablet no decía por qué no respondía). Sin
+  # "Próximamente", como lo pidió el usuario.
+  test "el botón Cotizador aparece habilitado y sin próximamente" do
     login_as "cap_btn_vis"
 
     get order_path(@order)
 
-    assert_select "button[disabled][aria-disabled=true]", text: /Cotizador/
+    assert_select "button[data-action='quote#open']:not([disabled])", text: /Cotizador/
     assert_no_match(/Próximamente/, response.body)
   end
 

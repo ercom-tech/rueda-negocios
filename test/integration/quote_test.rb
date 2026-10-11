@@ -42,7 +42,7 @@ class QuoteTest < ActionDispatch::IntegrationTest
 
     get order_path(@order)
 
-    assert_select "[data-controller~=quote] button[data-action='quote#open'][disabled]", text: /Cotizador/
+    assert_select "[data-controller~=quote] button[data-action='quote#open']:not([disabled])", text: /Cotizador/
     assert_select "#quote-modal turbo-frame#quote-frame"
     assert_select "tr##{ActionView::RecordIdentifier.dom_id(item)}[data-quote-url=?]",
                   quote_order_order_item_path(@order, item)
