@@ -54,6 +54,15 @@ amarillo/rojo), adaptado a las convenciones.
 - **Con dos cajas, la de mayor consecutivo** (decisión del usuario, 14ª
   auditoría): es la más nueva. Con la de menor, 044536 se cotizaba en cajas de
   15 cuando la vigente y su empaque mínimo son de 20.
+- **Los rótulos siguen a la unidad de venta** (14ª): `piezas_caja` cuenta
+  unidades de venta, y en 215 productos con caja la unidad no es PZA (el
+  anzuelo 941101 se vende por CAJA de 100). Solo con PZA dice "pieza"; con
+  otra unidad dice "Por unidad" / "Unidades en caja" y "Se vende por CAJA"
+  junto al producto. No "Por PQ10": las abreviaturas del ERP no se leen.
+- **El escalón con regalo lo dice** ("+ regalo"): FANDELI trae ≥$15,000 y
+  ≥$20,000 al mismo 9%, y sin eso parecía un renglón repetido. Y sin
+  promoción el aviso dice "su precio es de $X por pieza, antes de
+  descuentos": la partida puede llevar un descuento manual.
 - **La API exige leer la ficha** (14ª): sus GRANT no son los de las tablas
   vecinas y, sin SELECT, falla el export entero. `db/erp-prerequisitos.sql` se
   lo da a quien lea `com_producto` y `/health` revisa la lectura de TODAS las

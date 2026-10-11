@@ -9,7 +9,9 @@ module Promotions
   # catálogo: es lo que ese pedido cobra, incluido un precio cargado desde
   # archivo cuando la partida se agregó.
   class Quote
-    Row = Data.define(:condition, :percent, :piece_price, :box_price, :promo_piece_price, :promo_box_price)
+    # `gift`: el escalón trae regalo. Sin decirlo, FANDELI (≥$15,000 al 9% y
+    # ≥$20,000 al 9% + regalo) se veía como un renglón repetido.
+    Row = Data.define(:condition, :percent, :gift, :piece_price, :box_price, :promo_piece_price, :promo_box_price)
 
     attr_reader :item, :promotion
 
@@ -33,6 +35,15 @@ module Promotions
 
     def boxes? = pieces_per_box.present?
 
+    # La unidad de venta de la partida, como la trae el ERP ("PZA.", "CAJA",
+    # "PQ10"…). El precio unitario es por ESA unidad y `pieces_per_box` cuenta
+    # unidades de venta, no piezas sueltas (14ª auditoría): el anzuelo 941101
+    # se vende por CAJA de 100 y su "caja" de la ficha es de 10 cajitas. Por
+    # eso la pantalla solo dice "pieza" cuando la unidad lo es.
+    def unit = item.unit.presence || product&.unit
+
+    def by_piece? = unit.to_s.delete(".").strip.upcase == "PZA"
+
     # Un renglón por escalón que se puede alcanzar, en el mismo orden que la
     # escalera del modal de promoción (`Group#ladder`): los PC no se aplican,
     # así que cotizarlos sería prometer un precio que la captura no da.
@@ -46,7 +57,7 @@ module Promotions
       override = promotion.override_for(product)
       Group.new(item.order, promotion).ladder.map do |tier|
         percent = override || tier.discount_percent
-        Row.new(condition: tier.condition_label, percent:,
+        Row.new(condition: tier.condition_label, percent:, gift: tier.gifts?,
                 piece_price: unit_price.round(2),
                 box_price: (boxes? ? (unit_price * pieces_per_box).round(2) : nil),
                 promo_piece_price: discounted(unit_price, percent),

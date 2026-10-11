@@ -110,4 +110,15 @@ class PromotionsQuoteTest < ActiveSupport::TestCase
 
     assert_equal 90, Promotions::Quote.new(item.reload).rows.sole.promo_piece_price
   end
+
+  # El ERP escribe la pieza como "PZA." (con punto); "2PZA" es un paquete de
+  # dos y NO es pieza.
+  test "solo la unidad PZA cuenta como pieza" do
+    { "PZA." => true, "PZA" => true, " pza. " => true, "2PZA" => false, "CAJA" => false, "PQ10" => false }
+      .each do |unit, expected|
+        lija = product
+        lija.update!(unit:)
+        assert_equal expected, Promotions::Quote.new(item_for(lija)).by_piece?, unit.inspect
+      end
+  end
 end

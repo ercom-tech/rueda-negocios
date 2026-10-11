@@ -77,6 +77,56 @@ class QuoteTest < ActionDispatch::IntegrationTest
     assert_select "td", text: "$92.15"
   end
 
+  test "vendido por pieza, los rótulos hablan de piezas" do
+    item = add_item(@product)
+
+    get quote_order_order_item_path(@order, item)
+
+    assert_select "th", text: "Por pieza", count: 2
+    assert_select "th", text: "Piezas en caja"
+    assert_no_match "Se vende por", response.body
+  end
+
+  # 14ª auditoría: el 941101 se vende por CAJA de 100 anzuelos y su caja de la
+  # ficha es de 10 cajitas. "Por pieza" sobre ese precio le decía al cliente un
+  # precio 100 veces mayor por anzuelo.
+  test "vendido por otra unidad, los rótulos no dicen pieza y nombran la unidad" do
+    @product.update!(unit: "CAJA")
+    item = add_item(@product)
+
+    get quote_order_order_item_path(@order, item)
+
+    assert_select "th", text: "Por unidad", count: 2
+    assert_select "th", text: "Unidades en caja"
+    assert_select "th", text: /pieza/i, count: 0
+    assert_match(/Se vende por\s*<span[^>]*>CAJA</, response.body)
+  end
+
+  # FANDELI: dos escalones al mismo % y el segundo con regalo.
+  test "el escalón con regalo lo dice" do
+    tier = @promo.promotion_tiers.create!(erp_consecutive: 2, condition_kind: "CM", unit: "MXN",
+                                          quantity_from: 25_000, discount_percent: 7.85)
+    tier.promotion_gifts.create!(product: make_product("REGALO", 10), quantity: 1)
+    item = add_item(@product)
+
+    get quote_order_order_item_path(@order, item)
+
+    assert_select "tbody tr", count: 2
+    assert_select "tbody tr:nth-child(1) td:first-child", text: /\A\s*En la compra de entre[^+]*\z/
+    assert_select "tbody tr:nth-child(2) td:first-child", text: /En la compra mínima de \$25,000\s*\+ regalo/
+  end
+
+  # Los grupos "Sin/Con promoción" son colgroup para el lector de pantalla, y
+  # las esquinas vacías no son encabezados.
+  test "los encabezados de grupo se anuncian como grupo" do
+    item = add_item(@product)
+
+    get quote_order_order_item_path(@order, item)
+
+    assert_select "thead th[scope=colgroup]", count: 2
+    assert_select "thead th:empty", count: 0
+  end
+
   test "un producto sin promoción lo dice, sin tabla" do
     item = add_item(make_product("MARTILLO", 250))
 
@@ -86,7 +136,9 @@ class QuoteTest < ActionDispatch::IntegrationTest
     assert_select "#quote-title", text: "Sin promoción"
     assert_no_match "Promoción de la rueda", response.body
     assert_match "no está en ninguna promoción vigente", response.body
-    assert_match "$250.00", response.body
+    # "Antes de descuentos": no afirma lo que se cobra, que puede llevar un
+    # descuento manual (14ª auditoría).
+    assert_match "su precio es de $250.00 por pieza, antes de descuentos.", response.body
   end
 
   test "los regalos no son cotizables" do

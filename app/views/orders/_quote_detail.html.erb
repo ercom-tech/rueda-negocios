@@ -1,6 +1,6 @@
 <%#
   Contenido del modal del Cotizador (2026-10-09): la partida seleccionada,
-  cotizada por pieza —y por caja, si el ERP tiene el dato— en cada escalón de
+  cotizada por unidad de venta —y por caja, si el ERP tiene el dato— en cada escalón de
   su promoción. Se pide cada vez que el modal se abre (ver `_quote_modal`).
 
   Locals: quote (Promotions::Quote).
@@ -22,50 +22,74 @@
     <% end %>
   </div>
 
+  <%# Los rótulos siguen a la UNIDAD de venta (14ª auditoría): "pieza" solo
+      cuando lo es. En 215 productos con caja la unidad es otra (CAJA, CARR,
+      PQ10…) y el modal decía "Por pieza" sobre el precio de una caja de 100
+      anzuelos. No se escribe "Por CAJA" en el encabezado: varias abreviaturas
+      del ERP son crípticas; la unidad va tal cual junto al producto. %>
+  <% one  = quote.by_piece? ? "pieza" : "unidad" %>
+  <% many = quote.by_piece? ? "Piezas" : "Unidades" %>
   <div class="mt-2 rounded-2xl bg-brand-cream text-neutral-900">
     <p class="px-5 pt-4 text-lg">
       <span class="font-bold">Producto:</span>
       <% if (code = item.product&.erp_code) %><span class="ml-1 font-extrabold tabular-nums"><%= code %></span><% end %>
       <span class="ml-1 font-semibold"><%= item.description %></span>
     </p>
+    <% unless quote.by_piece? || quote.unit.blank? %>
+      <p class="px-5 text-sm text-neutral-700">Se vende por <span class="font-semibold text-neutral-900"><%= quote.unit %></span></p>
+    <% end %>
 
     <% if rows.empty? %>
+      <%# "Antes de descuentos": el precio de la partida no incluye el
+          descuento que el capturista le haya puesto a mano. %>
       <p class="px-5 pb-6 pt-4 text-neutral-700">
         <%= promotion ? "Esta promoción no tiene escalones que se puedan cotizar." :
-                        "Este producto no está en ninguna promoción vigente de la rueda: se cobra a " \
-                        "#{number_to_currency(item.unit_price)} la pieza." %>
+                        "Este producto no está en ninguna promoción vigente de la rueda: su precio es de " \
+                        "#{number_to_currency(item.unit_price)} por #{one}, antes de descuentos." %>
       </p>
     <% else %>
       <%# Dos filas de encabezado: la de arriba agrupa "Sin promoción" (dorado,
           texto negro) y "Con promoción" (coral, texto blanco: 4.69:1), que es
           como venía separado en el diseño del usuario; la de abajo es el
-          `thead` negro de siempre. Sin caja, cada grupo es solo la pieza. %>
+          `thead` negro de siempre. Sin caja, cada grupo es solo la unidad.
+
+          Para el lector de pantalla, los dos grupos son `colgroup` (si no,
+          "Por pieza" se anuncia igual con y sin promoción) y las esquinas
+          negras son `td` vacíos: como `th` se anunciaban como encabezados en
+          blanco. %>
       <% span = quote.boxes? ? 2 : 1 %>
       <div class="mt-3 overflow-x-auto pb-2">
         <table class="w-full text-sm">
+          <colgroup span="2"></colgroup>
+          <colgroup span="<%= span %>"></colgroup>
+          <colgroup span="<%= span %>"></colgroup>
+          <% if quote.boxes? %><colgroup span="1"></colgroup><% end %>
           <thead>
             <tr class="text-sm font-bold">
-              <th colspan="2" class="bg-black"></th>
-              <th colspan="<%= span %>" class="bg-brand-gold px-3 py-2 text-neutral-900">Sin promoción</th>
-              <th colspan="<%= span %>" class="bg-brand-coral px-3 py-2 text-white">Con promoción</th>
-              <% if quote.boxes? %><th class="bg-black"></th><% end %>
+              <td colspan="2" class="bg-black"></td>
+              <th scope="colgroup" colspan="<%= span %>" class="bg-brand-gold px-3 py-2 text-neutral-900">Sin promoción</th>
+              <th scope="colgroup" colspan="<%= span %>" class="bg-brand-coral px-3 py-2 text-white">Con promoción</th>
+              <% if quote.boxes? %><td class="bg-black"></td><% end %>
             </tr>
             <tr class="bg-black text-white">
-              <th class="px-3 py-3 text-left font-semibold">En la compra</th>
-              <th class="px-3 py-3 font-semibold">% de descuento</th>
-              <th class="px-3 py-3 text-right font-semibold">Por pieza</th>
-              <% if quote.boxes? %><th class="px-3 py-3 text-right font-semibold">Por caja</th><% end %>
-              <th class="px-3 py-3 text-right font-semibold">Por pieza</th>
+              <th scope="col" class="px-3 py-3 text-left font-semibold">En la compra</th>
+              <th scope="col" class="px-3 py-3 font-semibold">% de descuento</th>
+              <th scope="col" class="px-3 py-3 text-right font-semibold">Por <%= one %></th>
+              <% if quote.boxes? %><th scope="col" class="px-3 py-3 text-right font-semibold">Por caja</th><% end %>
+              <th scope="col" class="px-3 py-3 text-right font-semibold">Por <%= one %></th>
               <% if quote.boxes? %>
-                <th class="px-3 py-3 text-right font-semibold">Por caja</th>
-                <th class="px-3 py-3 font-semibold">Piezas en caja</th>
+                <th scope="col" class="px-3 py-3 text-right font-semibold">Por caja</th>
+                <th scope="col" class="px-3 py-3 font-semibold"><%= many %> en caja</th>
               <% end %>
             </tr>
           </thead>
           <tbody>
             <% rows.each_with_index do |row, index| %>
               <tr class="border-t border-black/10">
-                <td class="px-3 py-3"><%= row.condition %></td>
+                <td class="px-3 py-3">
+                  <%= row.condition %>
+                  <% if row.gift %><span class="font-bold"> + regalo</span><% end %>
+                </td>
                 <td class="px-3 py-3 text-center tabular-nums"><%= promotion_percent(row.percent) %></td>
                 <td class="px-3 py-3 text-right tabular-nums"><%= number_to_currency(row.piece_price) %></td>
                 <% if quote.boxes? %><td class="px-3 py-3 text-right tabular-nums"><%= number_to_currency(row.box_price) %></td><% end %>
