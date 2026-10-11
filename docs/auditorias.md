@@ -189,6 +189,21 @@ ninguna otra dimensión los habría buscado.
 
 ## Historial
 
+- **14ª (2026-10-10)** — alcance: **el Cotizador** (app y API sin commit, que
+  después fueron `756d02c` y `839b428`), con 5 auditores — **0 ALTA · 8 MEDIA
+  · ~20 BAJA** → remediada en cinco bloques (detalle en "14ª auditoría" de
+  `memory.md`). El cálculo salió limpio: el ERP redondea igual, comprobado
+  sobre 971 mil partidas con promoción. Lo grave estaba en tres lugares: en el
+  **significado del dato** (la caja cuenta unidades de venta, y "pieza"
+  mentía en 215 productos; lo encontraron dos auditores por separado), en el
+  **permiso** (la ficha técnica no tiene los GRANT de sus vecinas, y sin
+  SELECT caía el export entero con `/health` en "ok") y en **los caminos de
+  falla del modal**. Ahí la verificación encontró algo PEOR que lo reportado:
+  la página de error de development lleva `turbo-visit-control: reload`, y
+  una partida quitada en otra pestaña sacaba de la captura entera. Lección:
+  **un modal que carga por frame se audita contra las respuestas que NO son
+  el frame** (404, redirección, error), probándolas en navegador, y en el
+  entorno en que corre la laptop.
 - **13ª (2026-10-09)** — alcance: **"Cambiar precios"** (app
   `688df89..3fae686`; la API no cambió), con 6 auditores — **1 ALTA · 8 MEDIA
   · ~25 BAJA** → **remediada en cinco bloques** (detalle en "13ª auditoría" de

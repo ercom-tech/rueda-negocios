@@ -224,7 +224,16 @@ como copia de respaldo por si el folio se llegara a armar del lado de la app.
 
 - Read-only: productos, clientes, rueda activa.
 - Asistencia de clientes.
-- Cotización.
+- Cotización ("Generar cotización" del menú: simular un pedido completo). Es
+  otra pantalla, NO el Cotizador de la captura (2026-10-09), que cotiza una
+  partida por los escalones de su promoción.
+- Modal de promoción: misma trampa que la 14ª encontró en el Cotizador. Si
+  su frame pide una promoción que ya no existe (`Promotion.find` en
+  `PromotionsController#group_for`), la página de error de development
+  recarga la pantalla entera. Alcanzable en un pedido YA TRANSMITIDO abierto
+  mientras el servidor obtiene información (los transmitidos no la bloquean y
+  el sync-down recrea las promociones con otros ids). Pendiente de decidir:
+  es una pantalla ya existente.
 
 
 ### Mostrar el monto de división que el cliente ya tiene configurado (BAJA)

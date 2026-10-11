@@ -192,6 +192,27 @@ movería también fechas, números y mensajes de Rails que hoy funcionan.
   estructura una vez (al abrir, al cambiar de página/mes) y en la interacción
   **solo actualizar clases**. Falla intermitente e **invisible con eventos
   sintéticos**: hay que probar con clics reales.
+- **El estado que solo vive en el navegador se borra con cada morph.** La fila
+  seleccionada del Cotizador y el nombre de su botón son atributos que puso
+  el JS; idiomorph los regresa a los del HTML del servidor, que no sabe nada
+  de ellos. Se guarda el estado por `dom_id` (que el morph conserva) y se
+  vuelve a aplicar DESPUÉS de cada stream, envolviendo el `render` de
+  `turbo:before-stream-render` (ver `quote_controller`). Ponerlo en `connect()`
+  no basta: con morph el controller no se reconecta.
+- **Un turbo-frame que pide algo que puede ya no existir no usa `find`.** La
+  laptop corre en development, y la página de error de Rails lleva
+  `turbo-visit-control: reload`: Turbo no la mete en el frame, **recarga la
+  pantalla completa** con el error — la captura entera se iba a "RecordNotFound"
+  por una partida quitada en otra pestaña (14ª auditoría). El servidor responde
+  el aviso dentro del frame (`find_by` + parcial). Y lo que el servidor no
+  puede contestar con el frame —la sesión vencida, que redirige al login— lo
+  atiende `turbo:frame-missing` (`modal#loadMissing`); si no, Turbo escribe
+  "Content missing", en inglés. `turbo:fetch-request-error` es SOLO para
+  fallas de red.
+- **Lo que se repone en un frame sale de un `<template>` del servidor, no de
+  copiar su contenido vivo.** Turbo restaura una página desde su caché con el
+  frame como estaba: el "Cargando" copiado del frame tras volver con "Atrás"
+  era la cotización anterior.
 
 ## Formularios
 

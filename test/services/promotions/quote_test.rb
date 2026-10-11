@@ -121,4 +121,17 @@ class PromotionsQuoteTest < ActiveSupport::TestCase
         assert_equal expected, Promotions::Quote.new(item_for(lija)).by_piece?, unit.inspect
       end
   end
+
+  # La vigencia se mide en la fecha de CAPTURA del pedido, como la flama y la
+  # aplicación (`Group`), no hoy: un borrador abierto el último día de la
+  # promoción mostraba la flama y el Cotizador decía "no está en ninguna"
+  # (14ª auditoría: cambiar a `Date.current` dejaba la suite en verde).
+  test "la vigencia se mide en la fecha de captura del pedido, no hoy" do
+    lija = product(price: 100)
+    promo = promotion(products: [ lija ], tiers: [ { kind: "CM", from: 1, percent: 10 } ])
+    promo.update!(starts_on: 10.days.ago.to_date, ends_on: 3.days.ago.to_date)
+    @order.update_columns(created_at: 5.days.ago)
+
+    assert_equal promo, Promotions::Quote.new(item_for(lija)).promotion
+  end
 end

@@ -25,7 +25,7 @@ Si es **algo por hacer**, va al backlog.
 ## Índice de la bitácora
 
 - Decisiones generales del proyecto (abajo)
-- Cotizador de la captura (2026-10-09)
+- Cotizador de la captura (2026-10-09) · 14ª auditoría (2026-10-10)
 - Cambiar precios desde un archivo (2026-10-08) · 13ª auditoría (2026-10-09)
 - 12ª, 11ª, 10ª, 9ª, 8ª, 7ª, 6ª, 5ª y 4ª auditorías — remediación
 - Descubrimiento del esquema de catálogos (ERP)
@@ -196,6 +196,44 @@ obtener la información.
   de la transacción de la prueba `CURRENT_TIMESTAMP` es la hora de inicio, y
   `travel` no lo mueve. Las fechas explícitas se quedan (dan el reloj de la
   app); la regla falsa se corrigió en las convenciones.
+
+## 14ª auditoría (2026-10-10) — el Cotizador
+
+5 auditores sobre el Cotizador aún sin commit: **0 ALTA · 8 MEDIA · ~20
+BAJA**, remediada en cinco bloques. Las decisiones de fondo quedaron en la
+sección "Cotizador de la captura" de arriba; aquí, qué se hizo en cada bloque:
+
+1. **Datos del ERP** (`839b428` en la API, con el feature): caja de **mayor
+   consecutivo** (decisión del usuario); `/health` revisa SELECT en todas las
+   tablas que la API lee, y `db/erp-prerequisitos.sql` da lectura de la ficha
+   a quien lea `com_producto`. Probado contra el ERP real con un rol sin
+   privilegios creado y deshecho dentro de una transacción (en desarrollo
+   `fecego_seller` es superusuario y no lo habría mostrado). Cifras de los
+   docs re-medidas con su recorte; el comando de comprobación del despliegue
+   tenía un paréntesis de más.
+2. **Contenido del modal** (`e7871ca`): rótulos por unidad de venta, "+
+   regalo" en el escalón, "antes de descuentos", `colgroup`.
+3. **Selección** (`b260d26`): siempre hay una partida seleccionada, botón
+   siempre habilitado, barra negra además del tinte, `aria-current`. Primeras
+   pruebas de sistema del Cotizador; una mutación que sobrevivió delató una
+   línea redundante.
+4. **Fallas del modal** (`3d2d0de`): aviso dentro del frame para la partida o
+   el pedido que ya no existen (la página de error de development recargaba
+   la captura entera — más grave que el "Content missing" reportado),
+   `frame-missing` para la sesión vencida, texto de falla propio, "Cargando"
+   desde `<template>`, cotizar no exige pedido editable.
+5. **Pruebas y docs**: vigencia por fecha de captura y pedido ajeno con
+   prueba que muerde; migración a `[8.1]`; dos reglas nuevas en
+   `convenciones-codigo.md` (estado del navegador sobre morph; frames que no
+   usan `find`; plantillas del servidor); README de la API (11 llaves);
+   backlog: "Cotización" del menú es otra pantalla, y el modal de promoción
+   tiene la misma trampa del `find` (pendiente de decidir, pantalla
+   existente).
+
+**Quedan sin cambio, a sabiendas:** la caja de la ficha que no coincide con el
+empaque mínimo (18 productos: es el dato del ERP, el Cotizador no valida
+pedidos), el foco que en iPad puede no regresar al botón (sin dispositivo para
+comprobarlo), y que el lector de pantalla no anuncie el contenido al llegar.
 
 ## 13ª auditoría (2026-10-09) — "Cambiar precios"
 

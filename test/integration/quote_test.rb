@@ -189,6 +189,21 @@ class QuoteTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  # Un pedido de otro capturista no se cotiza, ni forzando la URL: se busca
+  # entre los pedidos del usuario (`current_user.orders`).
+  test "no se cotiza la partida de un pedido ajeno" do
+    other = User.create!(erp_person_id: 9412, username: "cap_qt2", password: "secret123",
+                         role: "capturista", active: true)
+    foreign_order = Order.create!(user: other, business_round: @round, client: @client, kind: "remission")
+    foreign = foreign_order.order_items.create!(@product.to_order_item_attributes.merge(position: 1, quantity: 1,
+                                                                                         discount_percent: 0))
+
+    get quote_order_order_item_path(foreign_order, foreign)
+
+    assert_response :not_found
+    assert_no_match "LIJA AGUA", response.body
+  end
+
   test "solo se cotizan partidas del pedido" do
     other = Order.create!(user: @user, business_round: @round, client: @client, kind: "remission")
     foreign = other.order_items.create!(@product.to_order_item_attributes.merge(position: 1, quantity: 1,

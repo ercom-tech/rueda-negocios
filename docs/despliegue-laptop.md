@@ -175,7 +175,8 @@ migraciones traiga el lote:
 - **Columnas nuevas y nullable** (las del lote del 2026-09-29/30:
   `supplier_id`/`brand_id` de las partidas y `captured_at` del pedido; y las
   del 2026-10-08: la tabla `price_overrides` y `price_from_file`/
-  `erp_unit_price` de las partidas, con valor por omisión): **el checkout
+  `erp_unit_price` de las partidas, con valor por omisión; y la del
+  2026-10-10: `pieces_per_box` del producto, del Cotizador): **el checkout
   basta, sin rollback.** El código anterior ignora las columnas que no
   conoce — comprobado en la 12ª auditoría: sin migraciones pendientes,
   `capture!` y "Obtener información" corren completos. Un `db:rollback` aquí
