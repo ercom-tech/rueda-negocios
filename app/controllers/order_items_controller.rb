@@ -1,16 +1,29 @@
 class OrderItemsController < ApplicationController
-  # Todo aquí es escritura salvo el Cotizador, que solo lee: la pausa aplica
-  # a las demás acciones.
+  # Todo aquí es escritura salvo el Cotizador, que solo lee: ni la pausa ni el
+  # candado de "editable" le aplican. Con el candado, una pantalla abierta de
+  # un pedido que otro equipo ya transmitió recibía un 403 vacío y el modal se
+  # quedaba en "Cargando" (14ª auditoría); cotizar no cambia nada.
   before_action :pause_writes_during_sync, except: :quote
-  before_action :set_order
-  before_action :ensure_editable
+  before_action :set_order, except: :quote
+  before_action :ensure_editable, except: :quote
 
   # Contenido del modal del Cotizador (2026-10-09), dentro de su turbo-frame:
   # la partida en la que está parado el capturista, cotizada en cada escalón
   # de su promoción (`Promotions::Quote`).
+  #
+  # Sin `find` (14ª auditoría): una partida quitada —o un pedido descartado—
+  # desde otra pantalla levantaba RecordNotFound, y la página de error de
+  # Rails (la laptop corre en development) pide a Turbo recargar completo: la
+  # captura entera se iba a la pantalla de error. El aviso va DENTRO del
+  # frame, y el pedido sigue siendo del capturista (`current_user.orders`).
   def quote
-    item = @order.order_items.find(params[:id])
-    render partial: "orders/quote_detail", locals: { quote: Promotions::Quote.new(item) }
+    order = current_user.orders.find_by(id: params[:order_id])
+    item  = order&.order_items&.find_by(id: params[:id])
+    if item
+      render partial: "orders/quote_detail", locals: { quote: Promotions::Quote.new(item) }
+    else
+      render partial: "orders/quote_missing", locals: { order_missing: order.nil? }, status: :not_found
+    end
   end
 
   # Agrega un producto como partida (snapshot). Responde con Turbo Stream.

@@ -67,14 +67,36 @@ export default class extends Controller {
   // volver la red, así que sin esto el diálogo se quedaba diciendo "Cargando"
   // indefinidamente — y en tablet, sin tecla Esc, eso se lee como que la app
   // se trabó (7ª auditoría).
+  //
+  // El texto es del DIÁLOGO (`data-load-error`): el Cotizador reusaba este y
+  // decía "No se pudo cargar la promoción" (14ª auditoría).
   loadFailed(event) {
-    const placeholder = event.target.closest("[data-modal-target='dialog']")
-      ?.querySelector("[data-modal-target='loading']")
-    if (!placeholder) return
-
-    placeholder.textContent =
+    const dialog = event.target.closest("[data-modal-target='dialog']")
+    this.showLoadProblem(dialog, dialog?.dataset.loadError ||
       "No se pudo cargar la promoción. Ciérrala y vuelve a abrirla; " +
-      "si sigue igual, avísale al equipo del servidor."
+      "si sigue igual, avísale al equipo del servidor.")
+  }
+
+  // El servidor SÍ respondió, pero sin el contenido del frame: la sesión que
+  // terminó (redirige al login) o una respuesta inesperada.
+  // `turbo:fetch-request-error` no se dispara —es solo para fallas de red— y
+  // Turbo escribía "Content missing", en inglés, dentro del modal (14ª
+  // auditoría). Se le gana con `preventDefault` y se dice qué pasó y qué
+  // hacer. (Lo que el servidor sabe explicar —una partida que ya no existe—
+  // lo responde él mismo dentro del frame.)
+  loadMissing(event) {
+    event.preventDefault()
+    const dialog = event.target.closest("[data-modal-target='dialog']")
+    const message = event.detail?.response?.redirected
+      ? "Tu sesión terminó. Recarga la pantalla para volver a entrar."
+      : dialog?.dataset.loadError ||
+        "No se pudo cargar. Ciérralo y vuelve a abrirlo; si sigue igual, avísale al equipo del servidor."
+    this.showLoadProblem(dialog, message)
+  }
+
+  showLoadProblem(dialog, message) {
+    const placeholder = dialog?.querySelector("[data-modal-target='loading']")
+    if (placeholder) placeholder.textContent = message
   }
 
   // Un diálogo `data-turbo-permanent` conserva su subárbol entero entre

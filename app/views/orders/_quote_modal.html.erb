@@ -10,20 +10,49 @@
 %>
 <div id="quote-modal" data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
   <%# `tabindex="-1"`: el foco aterriza aquí mientras el frame todavía no trae
-      ningún control (ver modal#focusInside). %>
+      ningún control (ver modal#focusInside).
+
+      Nombre fijo "Cotizador" (`aria-label`) y no el título que llega en el
+      frame: mientras carga, o si falla, ese título no existe y el diálogo se
+      anunciaba sin nombre (14ª auditoría).
+
+      `data-load-error` y `frame-missing`: el texto de falla es de ESTE
+      diálogo — reusaba el del modal de promoción ("No se pudo cargar la
+      promoción") —, y una respuesta sin contenido (partida quitada en otra
+      pantalla, sesión vencida) se explica en vez del "Content missing" de
+      Turbo (ver modal#loadMissing). %>
   <div id="quote-dialog" data-modal-target="dialog" style="display:none" tabindex="-1"
-       role="dialog" aria-modal="true" aria-labelledby="quote-title"
-       data-action="turbo:fetch-request-error->modal#loadFailed"
+       role="dialog" aria-modal="true" aria-label="Cotizador"
+       data-load-error="No se pudo cargar el cotizador. Ciérralo y vuelve a abrirlo; si sigue igual, avísale al equipo del servidor."
+       data-action="turbo:fetch-request-error->modal#loadFailed turbo:frame-missing->modal#loadMissing"
        class="fixed inset-0 z-50 items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/50" data-action="click->modal#close"></div>
 
     <div class="relative max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-3xl bg-brand-gold p-2 shadow-2xl">
-      <turbo-frame id="quote-frame" data-quote-frame>
+      <turbo-frame id="quote-frame">
         <div class="rounded-2xl bg-brand-cream px-5 py-10 text-center text-neutral-700"
              role="status" data-modal-target="loading">
           Cargando el cotizador…
         </div>
       </turbo-frame>
+
+      <%# Lo que el controller pone en el frame al abrir, desde el HTML del
+          servidor y no desde el estado vivo del frame: copiar el "Cargando"
+          de la primera apertura fallaba tras volver con "Atrás" (Turbo
+          restaura la página con la cotización anterior dentro, y esa pasaba
+          por "Cargando" — y, si la carga fallaba, se quedaba; 14ª auditoría). %>
+      <template data-quote-template="loading">
+        <div class="rounded-2xl bg-brand-cream px-5 py-10 text-center text-neutral-700"
+             role="status" data-modal-target="loading">
+          Cargando el cotizador…
+        </div>
+      </template>
+      <template data-quote-template="empty">
+        <div class="rounded-2xl bg-brand-cream px-5 py-10 text-center text-neutral-900" role="status">
+          Este pedido todavía no tiene productos para cotizar. Agrega uno con el buscador y vuelve a picar
+          «Cotizador».
+        </div>
+      </template>
 
       <%# Cerrar FUERA del frame: si la carga falla, el contenido no llega y el
           diálogo se quedaría sin un solo control (mismo caso que el modal de

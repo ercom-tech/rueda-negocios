@@ -1,0 +1,17 @@
+<%#
+  El Cotizador pidió una partida que ya no existe: se quitó (o el pedido se
+  descartó) desde otra pantalla. Va dentro del frame para que el modal lo
+  diga, en vez de que la captura se vaya a la página de error (14ª auditoría).
+
+  Locals: order_missing (el pedido completo ya no existe).
+%>
+<turbo-frame id="quote-frame">
+  <div class="rounded-2xl bg-brand-cream px-5 py-10 text-center text-neutral-900" role="status">
+    <% if order_missing %>
+      Este pedido ya no existe: se descartó desde otra pantalla. Cierra esta ventana y vuelve al menú.
+    <% else %>
+      Esa partida ya no está en el pedido: se quitó desde otra pantalla. Recarga la pantalla para ver el
+      pedido como está.
+    <% end %>
+  </div>
+</turbo-frame>

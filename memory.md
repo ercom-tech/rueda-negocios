@@ -94,7 +94,24 @@ amarillo/rojo), adaptado a las convenciones.
   promoción" en coral con texto blanco (4.69:1); el texto blanco sobre amarillo
   del diseño original no se lee. `thead` negro y Cerrar gris, como en los
   demás modales.
-- **Es lectura:** no se pausa durante un sync.
+- **Es lectura:** no se pausa durante un sync ni exige pedido editable (una
+  pantalla abierta de un pedido que otro equipo transmitió recibía un 403
+  vacío y el modal se quedaba en "Cargando").
+- **Las fallas se dicen dentro del modal** (14ª auditoría):
+  - Partida quitada o pedido descartado desde otra pantalla: el servidor
+    responde el aviso DENTRO del frame. Con `find`, la página de error de
+    Rails —la laptop corre en development— pide a Turbo recargar completo
+    (`turbo-visit-control: reload`) y la captura entera se iba a esa
+    pantalla.
+  - Sesión terminada (redirige al login, sin el frame): `turbo:frame-missing`
+    → `modal#loadMissing` lo dice; si no, Turbo escribía "Content missing".
+  - Falla de red: el texto es del diálogo (`data-load-error`); reusaba el del
+    modal de promoción, "No se pudo cargar la promoción".
+- **El "Cargando" sale de un `<template>` del servidor**, no del estado vivo
+  del frame: tras volver con "Atrás", Turbo restaura la página con la
+  cotización anterior dentro, y esa se mostraba como "Cargando" de la
+  siguiente. El diálogo se llama "Cotizador" (`aria-label`) aunque su
+  contenido no haya llegado.
 
 ## Cambiar precios desde un archivo (2026-10-08)
 

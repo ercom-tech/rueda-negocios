@@ -151,6 +151,34 @@ class QuoteTest < ActionDispatch::IntegrationTest
     assert_select "tr##{ActionView::RecordIdentifier.dom_id(gift)}[data-quote-url]", count: 0
   end
 
+  # Es lectura: una pantalla abierta de un pedido que otro equipo transmitió
+  # recibía un 403 vacío y el modal se quedaba en "Cargando" (14ª auditoría).
+  test "se puede cotizar un pedido ya transmitido" do
+    item = add_item(@product)
+    @order.update_columns(status: "transmitted")
+
+    get quote_order_order_item_path(@order, item)
+
+    assert_response :success
+    assert_match "$92.15", response.body
+  end
+
+  # El texto de falla es del Cotizador, no el del modal de promoción, y la
+  # respuesta sin contenido la atiende el modal (no el "Content missing" de
+  # Turbo). El diálogo se nombra solo, aunque su contenido no haya llegado.
+  test "el cascarón trae su nombre, su texto de falla y sus plantillas" do
+    add_item(@product)
+
+    get order_path(@order)
+
+    assert_select "#quote-dialog[aria-label=Cotizador]"
+    assert_select "#quote-dialog[data-load-error*='cargar el cotizador']"
+    assert_select "#quote-dialog[data-action*='turbo:frame-missing->modal#loadMissing']"
+    assert_select "#quote-dialog[data-action*='turbo:fetch-request-error->modal#loadFailed']"
+    assert_select "#quote-modal template[data-quote-template=loading]"
+    assert_select "#quote-modal template[data-quote-template=empty]"
+  end
+
   # Es lectura: se puede cotizar mientras corre un sync, como ver una promoción.
   test "cotizar no se pausa durante un sync" do
     item = add_item(@product)

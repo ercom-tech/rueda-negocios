@@ -119,6 +119,67 @@ class QuoteFlowTest < ApplicationSystemTestCase
     assert_selector "##{dom_id(taladro)}[aria-current=true]", wait: 5
   end
 
+  # La partida se quitó desde otra pantalla. Con `find`, la página de error de
+  # Rails pedía recargar completo y la captura ENTERA se iba a esa pantalla;
+  # sin ella, Turbo escribía "Content missing" (14ª auditoría).
+  test "si la partida ya no existe, el modal lo explica en español" do
+    esmeril = add_item(@esmeril)
+    sign_in @user
+    visit order_path(@order)
+    assert_equal dom_id(esmeril), selected_row_id
+
+    OrderItem.where(id: esmeril.id).delete_all
+    click_button "Cotizador"
+
+    within("#quote-dialog") do
+      assert_text "Esa partida ya no está en el pedido"
+      assert_no_text "Content missing"
+    end
+    assert_current_path order_path(@order)
+  end
+
+  # La sesión terminó (otro equipo entró con el mismo usuario): la respuesta
+  # es la redirección al login, sin el frame.
+  test "si la sesión terminó, el modal lo dice" do
+    add_item(@esmeril)
+    sign_in @user
+    visit order_path(@order)
+
+    @user.update_column(:session_token, "otra-sesion")
+    click_button "Cotizador"
+
+    within("#quote-dialog") { assert_text "Tu sesión terminó" }
+    assert_current_path order_path(@order)
+  end
+
+  # Turbo restaura la página desde su caché con la cotización anterior DENTRO
+  # del frame; copiar el "Cargando" de ahí mostraba los precios de otra
+  # partida mientras cargaba la nueva (14ª auditoría). Se lee en el MISMO
+  # tick del clic: es lo que el capturista ve antes de que llegue la
+  # respuesta.
+  test "tras volver con Atrás, al abrir se ve Cargando y no la cotización anterior" do
+    taladro = add_item(@taladro)
+    esmeril = add_item(@esmeril)
+    sign_in @user
+    visit order_path(@order)
+    quote_and_assert "ESMERIL"
+
+    click_link "← Volver al menú"
+    assert_text "¿Qué quieres"
+    page.go_back
+    assert_selector "##{dom_id(esmeril)}"
+
+    shown = evaluate_script(<<~JS)
+      (() => {
+        document.querySelector("##{dom_id(taladro)} td:nth-child(3)").click()
+        document.querySelector("[data-quote-target=button]").click()
+        return document.querySelector("#quote-frame").textContent.trim()
+      })()
+    JS
+    assert_equal "Cargando el cotizador…", shown
+    within("#quote-dialog") { assert_text "TALADRO" }
+  end
+
   test "sin partidas, el Cotizador dice qué hacer" do
     sign_in @user
     visit order_path(@order)

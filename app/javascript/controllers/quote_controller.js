@@ -56,18 +56,17 @@ export default class extends Controller {
     if (!this.hasModalOutlet) return
 
     const frame = this.modalOutlet.element.querySelector("turbo-frame")
-    // El contenido de la partida anterior no debe verse mientras carga la
-    // nueva: se regresa al "Cargando" de fábrica.
-    this.placeholder ??= frame.innerHTML
     const row = this.selectedRow
     if (!row) {
       // Pedido sin partidas cotizables (vacío, o solo regalos).
-      frame.innerHTML = this.emptyMessage
+      this.fill(frame, "empty")
       this.modalOutlet.open()
       return
     }
 
-    frame.innerHTML = this.placeholder
+    // El contenido de la partida anterior no debe verse mientras carga la
+    // nueva: se pone el "Cargando" de la plantilla del servidor.
+    this.fill(frame, "loading")
     const url = row.dataset.quoteUrl
     // Turbo no vuelve a pedir un `src` que no cambió: misma partida, reload.
     if (frame.getAttribute("src") === url) frame.reload()
@@ -117,9 +116,10 @@ export default class extends Controller {
     return row && this.element.contains(row) && row.dataset.quoteUrl ? row : null
   }
 
-  get emptyMessage() {
-    return '<div class="rounded-2xl bg-brand-cream px-5 py-10 text-center text-neutral-900" role="status">' +
-      "Este pedido todavía no tiene productos para cotizar. Agrega uno con el buscador y vuelve a picar " +
-      "«Cotizador».</div>"
+  // Reemplaza el contenido del frame con una de las plantillas del cascarón
+  // (`_quote_modal`): "loading" o "empty".
+  fill(frame, name) {
+    const template = this.modalOutlet.element.querySelector(`template[data-quote-template="${name}"]`)
+    frame.replaceChildren(template.content.cloneNode(true))
   }
 }
