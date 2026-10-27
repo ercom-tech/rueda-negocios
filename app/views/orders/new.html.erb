@@ -1,4 +1,10 @@
-<% content_for :title, "Levantamiento de pedido · Rueda de Negocios" %>
+<%# La misma pantalla sirve para el pedido y para la cotización (decisión del
+    usuario 2026-10-27): cambian el título, el botón de "Cliente genérico"
+    —que crea la cotización sin encabezado— y el campo oculto que le dice a
+    `create` qué está creando. Lo demás es idéntico, a propósito. %>
+<% estimate = @order.estimate? %>
+<% screen_title = estimate ? "Generar cotización" : "Levantamiento de pedido" %>
+<% content_for :title, "#{screen_title} · Rueda de Negocios" %>
 
 <div class="relative min-h-screen w-full overflow-hidden bg-black">
   <%# Patrón de herramientas a todo lo ancho (mismo shell que el home) %>
@@ -14,7 +20,7 @@
         "Guardar cambios", el back del navegador o el logo — que saca del
         pedido en el que se estaba trabajando (5ª auditoría). %>
     <div class="mt-8 flex flex-wrap items-center justify-between gap-4">
-      <h1 class="text-3xl font-extrabold text-white sm:text-4xl">Levantamiento de pedido</h1>
+      <h1 class="text-3xl font-extrabold text-white sm:text-4xl"><%= screen_title %></h1>
       <% if @order&.persisted? %>
         <%= link_to "← Volver al pedido", order_path(@order), class: back_link_class %>
       <% else %>
@@ -39,10 +45,13 @@
             paso 2 ya lo hacía; faltaba aquí. Al editar el encabezado NO se
             enfoca: ahí el cliente ya está y el foco robaría el scroll. %>
         <div class="relative" data-controller="autocomplete"
-             data-autocomplete-url-value="<%= client_options_orders_path(order_id: @order.persisted? ? @order.id : nil) %>"
+             data-autocomplete-url-value="<%= client_options_orders_path(order_id: @order.persisted? ? @order.id : nil, document: (estimate && !@order.persisted? ? "estimate" : nil)) %>"
              data-autocomplete-autofocus-value="<%= @client.nil? %>"
              data-action="click@window->autocomplete#hide">
           <%= form_with url: (@order.persisted? ? edit_order_path(@order) : new_order_path), method: :get do %>
+            <%# Al escribir y dar Enter, el GET tiene que seguir pidiendo una
+                cotización; las sugerencias lo llevan en su enlace. %>
+            <%= hidden_field_tag :document, "estimate" if estimate && !@order.persisted? %>
             <div class="flex items-center gap-3 rounded-full bg-black px-5 py-3 text-white focus-within:ring-2 focus-within:ring-brand-gold">
               <svg class="h-5 w-5 shrink-0 text-white/60" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
               <%= text_field_tag :client_key, (@client ? "#{@client.erp_client_key} - #{@client.commercial_name.presence || @client.name}" : nil),
@@ -89,6 +98,7 @@
                 data: { controller: [("order-kind" if both_kinds), "cfdi-default"].compact.join(" "),
                         cfdi_default_map_value: cfdi_defaults.to_json }, class: "space-y-5" do |f| %>
             <%= f.hidden_field :client_id, value: @client.id %>
+            <%= f.hidden_field :document, value: "estimate" if estimate && !@order.persisted? %>
 
             <%# Resumen de campos faltantes tras un submit inválido %>
             <% if @order.errors.any? %>
@@ -184,11 +194,23 @@
             <% end %>
 
             <div class="pt-2 text-center">
-              <%= f.submit (@order.persisted? ? "Guardar cambios" : "Continuar a levantamiento de pedido"),
+              <%= f.submit (@order.persisted? ? "Guardar cambios" : "Continuar a levantamiento de #{estimate ? 'cotización' : 'pedido'}"),
                     class: "cursor-pointer rounded-full bg-brand-coral px-8 py-3 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
             </div>
           <% end %>
           <% end %>
+        <% elsif estimate %>
+          <%# El otro camino de la cotización: alguien que no está en el
+              catálogo de la rueda. Crea la cotización en ese momento, sin
+              encabezado, y pasa directo a la captura. Mismo negro que el
+              buscador (es un control de captura, no una acción primaria) y
+              `button_to`, que es la regla para todo POST. %>
+          <%= button_to "Cliente genérico", orders_path, params: { order: { document: "estimate" } },
+                form_class: "w-full",
+                class: "w-full cursor-pointer rounded-full bg-black px-5 py-3 text-center font-semibold text-white transition-colors hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold" %>
+          <p class="rounded-2xl border border-black/10 bg-brand-cream px-5 py-4 text-sm text-neutral-700">
+            Busca al cliente por clave o nombre, o cotiza a un cliente genérico si no está en la rueda.
+          </p>
         <% else %>
           <%# Crema con borde, como los otros dos avisos de esta misma card: el
               `bg-black/5` era el único translúcido usado como superficie de

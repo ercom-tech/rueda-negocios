@@ -40,6 +40,11 @@ Rails.application.routes.draw do
   # exactamente los filtros que se están viendo en pantalla.
   get "reports/products", to: "reports#products", as: :products_report
 
+  # "Generar cotización": el mismo paso 1 del pedido, pidiendo una cotización.
+  # Ruta propia para que el menú y el paso 3 tengan a dónde volver sin armar
+  # el parámetro a mano.
+  get "estimates/new", to: "orders#new", defaults: { document: "estimate" }, as: :new_estimate
+
   # Levantamiento de pedido.
   resources :orders, only: %i[new create show edit update destroy] do
     collection { get :client_options }         # autocompletado del buscador de cliente

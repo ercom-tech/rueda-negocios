@@ -1,5 +1,8 @@
 <%# Sugerencias del autocompletado. Locals: clients; order (opcional, si se está
-    editando un pedido → el cambio de cliente recae sobre el mismo pedido). %>
+    editando un pedido → el cambio de cliente recae sobre el mismo pedido);
+    document ("estimate" cuando se está generando una cotización: el enlace
+    lo conserva para que el paso 1 cree una cotización y no un pedido). %>
+<% document = (local_assigns[:document] if local_assigns[:document] == "estimate") %>
 <% if clients.any? %>
   <%# `max-h-80 overflow-auto` como los buscadores de producto: con
       Client::SEARCH_LIMIT sugerencias el panel mide ~3,600 px, y el shell
@@ -10,7 +13,7 @@
       class="max-h-80 overflow-auto rounded-2xl border border-black/10 bg-brand-cream shadow-xl">
     <% clients.each do |c| %>
       <li>
-        <%= link_to (order ? edit_order_path(order, client_key: c.erp_client_key) : new_order_path(client_key: c.erp_client_key)),
+        <%= link_to (order ? edit_order_path(order, client_key: c.erp_client_key) : new_order_path(client_key: c.erp_client_key, document: document)),
               class: "flex items-center justify-between gap-4 px-5 py-3 hover:bg-black/5" do %>
           <span>
             <span class="flex flex-wrap items-baseline gap-x-2">

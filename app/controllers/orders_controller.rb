@@ -13,7 +13,7 @@ class OrdersController < ApplicationController
       @client = client_from_key(params[:client_key])
     end
     @cfdi_uses = CfdiUse.order(:code)
-    @order = Order.new(client: @client)
+    @order = Order.new(client: @client, document: document_param)
     apply_header_defaults if @client
   end
 
@@ -29,13 +29,14 @@ class OrdersController < ApplicationController
     # `local_assigns`, así que una ivar no le llega y el aviso no se pinta
     # nunca — el corte volvía a ser silencioso sin que nada fallara (8ª aud.).
     render partial: "client_options",
-           locals: { clients: clients, order: order, truncated: truncated }, layout: false
+           locals: { clients: clients, order: order, truncated: truncated, document: document_param }, layout: false
   end
 
   def create
     @order = build_order
     if @order.save
-      redirect_to @order, notice: "Encabezado guardado. Continúa con el detalle."
+      redirect_to @order, notice: (@order.generic? ? "Cotización iniciada. Continúa con el detalle."
+                                                   : "Encabezado guardado. Continúa con el detalle.")
     else
       @client = @order.client
       @cfdi_uses = CfdiUse.order(:code)
@@ -241,11 +242,20 @@ class OrdersController < ApplicationController
     @order.cfdi_use               ||= @order.client_tax_profile&.default_cfdi_use
   end
 
+  # "estimate" si se pidió una cotización; cualquier otra cosa es un pedido.
+  # Vale para `?document=` (entrada y sugerencias) y para `order[document]`.
+  def document_param(value = params[:document])
+    value == "estimate" ? "estimate" : "sale"
+  end
+
   def build_order
     Order.new(order_params).tap do |o|
       o.user           = current_user
       o.business_round = active_round
       o.status         = "draft"
+      # SOLO al crear: el tipo se fija aquí y no vuelve a aceptarse (ver
+      # Order#document_is_fixed). Con `kind`, pasa por el saneo de abajo.
+      o.document       = document_param(params.dig(:order, :document))
     end
   end
 

@@ -41,7 +41,7 @@
                 title: ["Reportes", "de venta"], desc: "Visualiza tus métricas y resultados del evento." %>
           <%= render "menu_card", href: "#", accent: :yellow, icon_path: hero[:clipboard], soon: true,
                 title: ["Asistencia", "de clientes"], desc: "Monitorea qué clientes ya fueron atendidos y cuáles siguen pendientes." %>
-          <%= render "menu_card", href: "#", accent: :yellow, icon_path: hero[:calculator], soon: true,
+          <%= render "menu_card", href: new_estimate_path, accent: :yellow, icon_path: hero[:calculator],
                 title: ["Generar", "cotización"], desc: "Simula el pedido de tu cliente antes de confirmar la compra." %>
         </div>
       <% end %>
