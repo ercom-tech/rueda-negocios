@@ -18,12 +18,12 @@
 <%# Una sola línea mientras quepa; en pantalla angosta se parte en renglones
     antes que cortarse (`flex-wrap`), pero cada cifra queda entera con su
     rótulo (`whitespace-nowrap`). %>
-<span id="order-totals-bar-content" class="flex flex-wrap items-center gap-x-5 gap-y-1">
+<span id="order-totals-bar-content" class="flex flex-wrap items-center gap-x-7.5 gap-y-1.5">
   <span class="whitespace-nowrap font-semibold text-white/70"><%= count %> <%= count == 1 ? "partida" : "partidas" %></span>
-  <span class="whitespace-nowrap rounded-full bg-brand-coral px-3.5 py-1 font-bold text-white">
+  <span class="whitespace-nowrap rounded-full bg-brand-coral px-5 py-1.5 font-bold text-white">
     Subtotal <span class="tabular-nums"><%= number_to_currency(order.subtotal) %></span>
   </span>
-  <span class="whitespace-nowrap text-base font-bold text-white">
+  <span class="whitespace-nowrap text-2xl font-bold text-white">
     Total <span class="tabular-nums"><%= number_to_currency(order.total) %></span>
   </span>
 </span>
