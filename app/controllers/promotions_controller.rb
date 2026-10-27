@@ -4,6 +4,8 @@ class PromotionsController < ApplicationController
   # repintado.
   # `show` es lectura: se puede ver el detalle de una promoción durante un
   # sync y en un pedido ya transmitido.
+  rescue_from ActiveRecord::RecordNotFound, with: :order_gone
+
   before_action :pause_writes_during_sync, except: :show
   before_action :set_order
   before_action :ensure_editable, except: :show
@@ -95,7 +97,7 @@ class PromotionsController < ApplicationController
       # "guardar el pedido": el botón de la pantalla dice "Guardar", no
       # "Finalizar" — el mensaje tiene que nombrar el control que se ve.
       message += " No se pudo agregar #{SpanishText.list(group.missing_gifts)}: " \
-                 "avísale al equipo del servidor antes de guardar el pedido."
+                 "avísale al equipo del servidor antes de guardar #{@order.document_phrase}."
     end
     message
   end

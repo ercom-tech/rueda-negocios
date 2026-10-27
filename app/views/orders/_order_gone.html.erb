@@ -1,0 +1,7 @@
+<%# Respuesta del buscador de producto cuando el pedido o la cotización ya no
+    existe (ver ApplicationController#order_gone): el panel de sugerencias
+    muestra el aviso y la salida, en vez de la página del menú entera. %>
+<div role="alert" class="rounded-2xl border border-black/10 bg-brand-cream px-5 py-3 text-sm text-neutral-700 shadow-xl">
+  <%= ApplicationController::ORDER_GONE_MESSAGE %>
+  <%= link_to "Volver al menú", root_path, class: "ml-1 font-semibold text-neutral-900 underline" %>
+</div>

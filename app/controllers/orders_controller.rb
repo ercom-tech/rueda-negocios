@@ -3,6 +3,8 @@ class OrdersController < ApplicationController
 
   # Solo las acciones que ESCRIBEN: abrir un pedido, el resumen y el PDF siguen
   # disponibles mientras corre un sync.
+  rescue_from ActiveRecord::RecordNotFound, with: :order_gone
+
   before_action :pause_writes_during_sync, only: %i[create update destroy capture observations]
 
   # Paso 1 — encabezado. `client_key` carga al cliente (clave exacta o, si no,
@@ -68,7 +70,7 @@ class OrdersController < ApplicationController
         # capturista no se entera por ningún lado, y en la revisión posterior
         # "¿quién borró esto?" no tiene otra respuesta.
         log_resolved_draft(order, "descartado") unless order.user_id == current_user.id
-        redirect_to root_path, notice: "Pedido descartado."
+        redirect_to root_path, notice: (order.estimate? ? "Cotización descartada." : "Pedido descartado.")
       end
     end
   end
@@ -90,7 +92,8 @@ class OrdersController < ApplicationController
 
     @client    = @order.client
     @cfdi_uses = CfdiUse.order(:code)
-    apply_header_defaults
+    # Sin cliente (cotización genérica) no hay de dónde sacar defaults.
+    apply_header_defaults if @client
     render :new
   end
 
@@ -99,7 +102,7 @@ class OrdersController < ApplicationController
     return redirect_to @order, alert: "Un pedido transmitido no se puede editar." unless @order.editable?
 
     if @order.update(order_params)
-      redirect_to @order, notice: "Encabezado actualizado."
+      redirect_to @order, notice: (@order.generic? ? "La cotización ahora es de cliente genérico." : "Encabezado actualizado.")
     else
       @client    = @order.client
       @cfdi_uses = CfdiUse.order(:code)
@@ -158,7 +161,7 @@ class OrdersController < ApplicationController
         #   descartarlo.
         redirect_to @order, alert: (resolving ?
           "Este pedido no tiene productos, así que no se puede guardar. Descártalo para que deje de bloquear las operaciones del panel." :
-          "Agrega al menos un producto antes de guardar el pedido.")
+          "Agrega al menos un producto antes de guardar #{@order.document_phrase}.")
       end
     end
   end
@@ -168,9 +171,10 @@ class OrdersController < ApplicationController
     @order = accessible_orders.find(params[:id])
   end
 
-  # Descarga del PDF del pedido.
+  # Descarga del PDF del pedido. Solo pedidos: la cotización no lleva PDF
+  # (decisión del usuario 2026-10-27), así que su id aquí es un 404.
   def pdf
-    @order = accessible_orders.find(params[:id])
+    @order = accessible_orders.sale.find(params[:id])
     send_data Pdf::OrderGenerator.new(@order).render,
               filename: "pedido-#{@order.folio}.pdf", type: "application/pdf", disposition: "attachment"
   end

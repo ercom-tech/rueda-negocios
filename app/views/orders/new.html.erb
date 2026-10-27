@@ -22,7 +22,7 @@
     <div class="mt-8 flex flex-wrap items-center justify-between gap-4">
       <h1 class="text-3xl font-extrabold text-white sm:text-4xl"><%= screen_title %></h1>
       <% if @order&.persisted? %>
-        <%= link_to "← Volver al pedido", order_path(@order), class: back_link_class %>
+        <%= link_to "← Volver a#{estimate ? ' la cotización' : 'l pedido'}", order_path(@order), class: back_link_class %>
       <% else %>
         <%= link_to "← Volver al menú", root_path, class: back_link_class %>
       <% end %>
@@ -70,6 +70,15 @@
                data-autocomplete-target="results" class="absolute inset-x-0 top-full z-20 mt-1"></div>
         </div>
 
+        <% if estimate && @order.persisted? && @order.client_id.present? %>
+          <%# El otro sentido de la edición (decisión del usuario 2026-10-27):
+              una cotización con cliente puede volverse genérica. Manda el
+              cliente vacío; el modelo limpia el encabezado. %>
+          <%= button_to "Cliente genérico", order_path(@order), method: :patch, params: { order: { client_id: "" } },
+                form_class: "w-full",
+                class: "w-full cursor-pointer rounded-full bg-black px-5 py-3 text-center font-semibold text-white transition-colors hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold" %>
+        <% end %>
+
         <% if @client %>
           <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm text-neutral-700">
             <span>Cliente: <span class="font-semibold"><%= @client.name %></span></span>
@@ -86,7 +95,7 @@
           <% if !has_invoice && !has_remission %>
             <p class="rounded-2xl bg-brand-coral px-5 py-4 text-sm font-semibold text-white">
               Este cliente no tiene datos para facturar ni para remisionar, así
-              que no se le puede capturar un pedido. Avisa al equipo del
+              que no se le puede capturar <%= estimate ? "una cotización" : "un pedido" %>. Avisa al equipo del
               servidor para que actualicen su información, y mientras tanto
               busca otro cliente.
             </p>
@@ -199,7 +208,7 @@
             </div>
           <% end %>
           <% end %>
-        <% elsif estimate %>
+        <% elsif estimate && !@order.persisted? %>
           <%# El otro camino de la cotización: alguien que no está en el
               catálogo de la rueda. Crea la cotización en ese momento, sin
               encabezado, y pasa directo a la captura. Mismo negro que el

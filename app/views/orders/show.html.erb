@@ -1,4 +1,8 @@
-<% content_for :title, "Levantamiento de pedido · Rueda de Negocios" %>
+<%# La misma pantalla captura pedidos y cotizaciones (decisión del usuario
+    2026-10-27): el sustantivo sale de `document_noun`, el encabezado del
+    cliente genérico va vacío, y la cotización no lleva PDF. %>
+<% noun = @order.document_noun %>
+<% content_for :title, "Levantamiento de #{noun} · Rueda de Negocios" %>
 
 <div class="relative min-h-screen w-full overflow-hidden bg-black" data-controller="totals-bar">
   <%# Patrón de herramientas a todo lo ancho (mismo shell que el home) %>
@@ -24,7 +28,7 @@
         lo que se hace antes de transmitir), al menú si no. La barra de la card
         se queda con las acciones. %>
     <div class="mt-8 flex flex-wrap items-center justify-between gap-4">
-      <h1 class="text-3xl font-extrabold text-white sm:text-4xl">Levantamiento de pedido</h1>
+      <h1 class="text-3xl font-extrabold text-white sm:text-4xl">Levantamiento de <%= noun %></h1>
       <% if report_back_path %>
         <%= link_to "← Volver al reporte", report_back_path, class: back_link_class %>
       <% else %>
@@ -42,7 +46,7 @@
       <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-black px-6 py-3">
         <div class="flex flex-wrap items-center gap-3">
           <h2 class="text-xl font-extrabold text-white sm:text-2xl">
-            # Pedido <%= @order.folio %>
+            # <%= noun.capitalize %> <%= @order.folio %>
           </h2>
           <span class="rounded-full px-4 py-1.5 text-sm font-semibold <%= @order.status_color %>">
             <%= @order.status_label %>
@@ -67,9 +71,9 @@
                       class="rounded-full bg-neutral-700 px-6 py-2.5 font-bold text-white transition-colors hover:bg-neutral-600">Descartar</button>
               <%# Mensaje según estatus: un borrador se descarta; un capturado ya
                   está guardado con folio — se elimina con sus partidas. %>
-              <%= render "home/confirm_dialog", title: "Descartar pedido",
-                    message: (@order.draft? ? "Se descartará este pedido en captura y no se guardará. ¿Continuar?"
-                                            : "Se eliminará el pedido #{@order.folio} con todas sus partidas. ¿Continuar?"),
+              <%= render "home/confirm_dialog", title: "Descartar #{noun}",
+                    message: (@order.draft? ? "Se descartará #{@order.estimate? ? 'esta cotización' : 'este pedido'} en captura y no se guardará. ¿Continuar?"
+                                            : "Se eliminará #{@order.document_phrase} #{@order.folio} con todas sus partidas. ¿Continuar?"),
                     confirm_label: "Sí, descartar", path: order_path(@order), method: :delete %>
             </div>
             <% if @order.draft? %>
@@ -127,7 +131,9 @@
                              "Después ya no podrás descartarlo. ¿Continuar?",
                     confirm_label: "Sí, guardar", path: capture_order_path(@order), method: :post %>
             </div>
-          <% else %>
+          <% elsif @order.sale? %>
+            <%# Solo pedidos: la cotización no tiene PDF, y a quien solo la
+                consulta (el equipo-servidor) no le queda ningún botón. %>
             <%= link_to "Descargar PDF", pdf_order_path(@order),
                   class: "rounded-full bg-brand-gold px-6 py-2.5 font-bold text-neutral-900 transition-colors hover:bg-brand-gold-dark" %>
           <% end %>
@@ -136,6 +142,14 @@
 
       <div class="mt-2 space-y-2">
         <%# ── Resumen del encabezado (solo lectura) — 4 columnas × 2 filas ── %>
+        <% if @order.generic? %>
+          <%# Cotización de cliente genérico: no hay encabezado que resumir.
+              Misma caja negra, con el dato que sí existe. %>
+          <div class="rounded-2xl bg-black p-5 text-sm text-white">
+            <span class="block text-xs text-white/50">Cliente</span>
+            <span class="font-semibold">Cliente genérico</span>
+          </div>
+        <% else %>
         <div class="grid grid-cols-2 gap-x-6 gap-y-4 rounded-2xl bg-black p-5 text-sm text-white sm:grid-cols-4">
           <%# Fila 1 %>
           <div>
@@ -177,6 +191,7 @@
             <span class="font-semibold"><%= @order.client_branch&.label || "—" %></span>
           </div>
         </div>
+        <% end %>
 
         <%# ── Buscador + tabla. Si el pedido se puede editar, los envuelve el
             Cotizador (quote_controller): recuerda la partida seleccionada en
@@ -215,7 +230,7 @@
                   pausa de sync responde 422), el campo revierte a lo guardado
                   en vez de quedarse mintiendo con lo tecleado. %>
               <%= text_area_tag :observations, @order.observations,
-                    placeholder: "Observaciones", "aria-label": "Observaciones del pedido",
+                    placeholder: "Observaciones", "aria-label": "Observaciones de#{@order.estimate? ? ' la cotización' : 'l pedido'}",
                     data: { action: "focus->form-submit#remember change->form-submit#submit" },
                     class: "h-full min-h-32 w-full rounded-2xl border border-black/10 bg-white p-4 uppercase text-neutral-900 outline-none placeholder:normal-case placeholder:text-neutral-500 focus:border-brand-gold-dark" %>
               <span data-form-submit-target="status" role="status"
@@ -283,7 +298,7 @@
            stroke="currentColor" aria-hidden="true" class="h-7.5 w-7.5 shrink-0 text-brand-gold">
         <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
       </svg>
-      <span class="sr-only">Ver los totales completos del pedido</span>
+      <span class="sr-only">Ver los totales completos de <%= @order.document_phrase %></span>
     </button>
   </div>
 </div>

@@ -3,6 +3,8 @@ class OrderItemsController < ApplicationController
   # candado de "editable" le aplican. Con el candado, una pantalla abierta de
   # un pedido que otro equipo ya transmitió recibía un 403 vacío y el modal se
   # quedaba en "Cargando" (14ª auditoría); cotizar no cambia nada.
+  rescue_from ActiveRecord::RecordNotFound, with: :order_gone
+
   before_action :pause_writes_during_sync, except: :quote
   before_action :set_order, except: :quote
   before_action :ensure_editable, except: :quote

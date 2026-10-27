@@ -109,7 +109,7 @@
             <%# La promoción es del grupo, no de la fila desde la que se abrió
                 el modal: sin decirlo, el capturista ve cambiar renglones que
                 no tocó. %>
-            Se aplica a <%= pluralize(group.items.size, "partida") %> de este pedido:
+            Se aplica a <%= pluralize(group.items.size, "partida") %> de <%= group.order.estimate? ? "esta cotización" : "este pedido" %>:
             <span class="font-semibold"><%= group.items.map(&:position).join(", ") %></span>.
             <%= group.items.size == 1 ? "Quedará bloqueada" : "Quedarán bloqueadas" %>
             mientras la promoción esté aplicada.

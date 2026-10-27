@@ -196,6 +196,19 @@ class Order < ApplicationRecord
 
   STATUS_LABELS = { "draft" => "Borrador", "captured" => "Capturado", "transmitted" => "Transmitido" }.freeze
 
+  # Cómo nombra la pantalla a este registro: "pedido" o "cotización". Un solo
+  # lugar, como STATUS_LABELS: los textos que lo usan (título, modales, flash,
+  # avisos) viven en seis archivos distintos y con condicionales sueltos se
+  # desfasan.
+  def document_noun
+    estimate? ? "cotización" : "pedido"
+  end
+
+  # Con artículo: "el pedido" / "la cotización".
+  def document_phrase
+    estimate? ? "la cotización" : "el pedido"
+  end
+
   # Importe de las partidas con descuento e IVA — la misma fórmula de
   # OrderItem#total, pero EN SQL: `Order#total` se calcula en Ruby, así que
   # totalizar un reporte con él obligaría a cargar cada pedido con todas sus
@@ -302,7 +315,12 @@ class Order < ApplicationRecord
     "transmitted" => "bg-brand-coral text-white"
   }.freeze
 
+  # Una cotización guardada se dice "Guardada" (es lo que el capturista hizo:
+  # el botón dice Guardar); "Capturado" es el término del pedido, que además
+  # tiene un paso más adelante (transmitirlo).
   def status_label
+    return "Guardada" if estimate? && captured?
+
     STATUS_LABELS.fetch(status, status)
   end
 

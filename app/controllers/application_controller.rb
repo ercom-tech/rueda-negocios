@@ -39,6 +39,30 @@ class ApplicationController < ActionController::Base
     current_user&.server? && order.sale? && order.draft?
   end
 
+  # Un pedido o cotización que YA NO EXISTE, con la pantalla todavía abierta en
+  # otro equipo. Es nuevo con las cotizaciones: obtener información y cerrar la
+  # rueda las borran sin que nada lo impida (un borrador de pedido, en cambio,
+  # bloquea las dos). El siguiente toque sobre esa pantalla caía en "No
+  # encontramos esa pantalla", sin explicación; ahora regresa al menú y dice
+  # qué pasó. Solo cuando el registro no existe: uno que existe y no es del
+  # usuario sigue siendo 404, que es la respuesta correcta a un id ajeno.
+  ORDER_GONE_MESSAGE = "Ese pedido o cotización ya no está en esta laptop: se descartó, " \
+                       "o se borró al obtener la información o al cerrar la rueda.".freeze
+
+  def order_gone(error)
+    id = params[:order_id] || params[:id]
+    raise error if id.blank? || Order.exists?(id)
+
+    # El buscador de producto trae sus sugerencias con un fetch plano que
+    # SIGUE la redirección: sin esta rama, el menú entero se inyectaba dentro
+    # del panel de sugerencias. El aviso va dentro del panel, con su salida.
+    if action_name == "product_options"
+      render partial: "orders/order_gone", layout: false
+    else
+      redirect_to root_path, alert: ORDER_GONE_MESSAGE
+    end
+  end
+
   # De dónde se toma un pedido que se va a ESCRIBIR. El capturista, solo los
   # suyos; el server, además los borradores ajenos que puede resolver. No se usa
   # `accessible_orders` (que le da todos): una cosa es lo que puede leer y otra
