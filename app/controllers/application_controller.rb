@@ -33,8 +33,10 @@ class ApplicationController < ActionController::Base
   # transmitir y cerrar rueda) y dejaba a la laptop sin salida en pleno evento.
   # Acotado a borradores a propósito: un pedido capturado ya tiene folio y es
   # transmisible, y borrarlo es una decisión distinta.
+  # Solo PEDIDOS: el permiso existe porque un borrador bloquea las operaciones
+  # del panel, y una cotización no bloquea ninguna — el servidor la consulta.
   def can_resolve_draft?(order)
-    current_user&.server? && order.draft?
+    current_user&.server? && order.sale? && order.draft?
   end
 
   # De dónde se toma un pedido que se va a ESCRIBIR. El capturista, solo los

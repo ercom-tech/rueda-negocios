@@ -39,6 +39,13 @@ class CanResolveDraftTest < ActiveSupport::TestCase
     assert_not as(nil).send(:can_resolve_draft?, @draft)
   end
 
+  # El permiso existe porque un borrador bloquea las operaciones del panel. Una
+  # cotización no bloquea nada, así que el servidor solo la consulta.
+  test "el servidor NO resuelve el borrador de una cotización" do
+    estimate = Order.create!(user: @cap, business_round: @draft.business_round, document: "estimate")
+    assert_not as(@server).send(:can_resolve_draft?, estimate)
+  end
+
   # Un capturado ya tiene folio y es transmisible: borrarlo es otra decisión,
   # y no la que desbloquea las operaciones del panel.
   test "el servidor NO resuelve un pedido ya capturado" do

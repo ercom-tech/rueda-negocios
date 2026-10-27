@@ -12,4 +12,15 @@ class Setting < ApplicationRecord
   rescue ActiveRecord::RecordNotUnique
     first
   end
+
+  # Siguiente número del folio de cotización (ver Order#generate_local_folio).
+  # Con candado de fila: dos capturistas guardando a la vez no deben sacar el
+  # mismo número. No retrocede cuando se borran cotizaciones.
+  def self.next_estimate_number!
+    setting = instance
+    setting.with_lock do
+      setting.increment!(:last_estimate_number)
+      setting.last_estimate_number
+    end
+  end
 end

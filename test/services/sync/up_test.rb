@@ -21,6 +21,26 @@ module Sync
       @order.save!
     end
 
+    # Una cotización guardada tiene el mismo estatus que un pedido capturado,
+    # y NO es una venta: no va al ERP.
+    test "una cotización guardada no se transmite" do
+      estimate = Order.new(user: @user, business_round: @round, document: "estimate",
+                           status: "captured", local_folio: "COT-000001")
+      estimate.order_items.build(product: @product, quantity: 1, unit_price: 100,
+                                 discount_percent: 0, tax_rate: 16, code: "3", description: "Rotomartillo", unit: "PZA")
+      estimate.save!
+      req = stub_request(:post, "#{API}/pedidos")
+            .to_return(status: 201, body: { clave_pedido: "1A0007" }.to_json,
+                       headers: { "Content-Type" => "application/json" })
+
+      result = Up.new(API).run!
+
+      assert_equal [ "RN-000001" ], result[:transmitted].map { |t| t[:local] }
+      assert_requested req, times: 1
+      assert estimate.reload.captured?, "la cotización se queda como estaba"
+      assert_nil estimate.erp_folio
+    end
+
     test "transmite un pedido capturado y guarda el folio del ERP" do
       req = stub_request(:post, "#{API}/pedidos")
             .to_return(status: 201, body: { clave_pedido: "1A0007" }.to_json,

@@ -46,6 +46,17 @@ class EvidenceRakeTest < ActiveSupport::TestCase
     assert_equal "philips2", records.first["payload"]["capturista_usuario"]
   end
 
+  # Una cotización jamás debería llegar a "transmitida"; si por un error lo
+  # hiciera, tampoco es evidencia de una venta.
+  test "una cotización no va en la evidencia aunque figure como transmitida" do
+    Order.create!(user: @sent.user, business_round: @sent.business_round, document: "estimate",
+                  status: "transmitted", local_folio: "COT-000001", erp_folio: "2B0099")
+
+    run_export
+
+    assert_equal [ %w[2B0011 2B0012] ], JSON.parse(File.read(@out)).map { |r| r["claves"] }
+  end
+
   # Un respaldo de antes de `erp_folios` solo trae el singular.
   test "sin la lista de folios usa el folio singular" do
     @sent.update_columns(erp_folios: [])

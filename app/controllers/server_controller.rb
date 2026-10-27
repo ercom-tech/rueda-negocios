@@ -124,10 +124,14 @@ class ServerController < ApplicationController
 
     removed = Sync::CloseRound.run!
     # Concordancia a mano: el verbo también cuenta ("Se eliminaron 1 pedido"
-    # delataba justo en la única operación destructiva — 6ª auditoría).
+    # delataba justo en la única operación destructiva — 6ª auditoría). Con
+    # pedidos Y cotizaciones el sujeto es plural aunque cada uno sea 1.
+    counts = [ helpers.pluralize(removed.orders, "pedido"),
+               ("#{removed.estimates} #{removed.estimates == 1 ? 'cotización' : 'cotizaciones'}" if removed.estimates.positive?) ].compact
+    total  = removed.orders + removed.estimates
     redirect_to root_path,
-                notice: "Rueda cerrada. Se #{removed == 1 ? 'eliminó' : 'eliminaron'} " \
-                        "#{helpers.pluralize(removed, 'pedido')} de esta laptop. " \
+                notice: "Rueda cerrada. Se #{total == 1 ? 'eliminó' : 'eliminaron'} " \
+                        "#{SpanishText.list(counts)} de esta laptop. " \
                         "Elige la siguiente rueda y obtén su información."
   rescue Sync::CloseRound::PendingOrdersError, Sync::CloseRound::SyncInProgressError => e
     redirect_to root_path, alert: e.message

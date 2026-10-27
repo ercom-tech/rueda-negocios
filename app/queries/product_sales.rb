@@ -21,7 +21,8 @@ class ProductSales
   GIFTED_SQL = "COALESCE(SUM(CASE WHEN order_items.gift THEN order_items.quantity ELSE 0 END), 0)".freeze
 
   def initialize(orders, supplier_id: nil, brand_id: nil)
-    @orders      = orders.where(status: %w[captured transmitted])
+    # `sale`: las piezas de una cotización no salen del almacén.
+    @orders      = orders.sale.where(status: %w[captured transmitted])
     @supplier_id = supplier_id
     @brand_id    = brand_id
   end

@@ -14,13 +14,15 @@ module Sync
     # los nombres que ve en pantalla, no con los de las rutas.
     DRAFTS_PATH = "Reportes de venta → Pedidos capturados → Borrador".freeze
 
-    # Pedidos que todavía viven solo en la laptop.
+    # Pedidos que todavía viven solo en la laptop. Sobre `Order.sale`: una
+    # cotización también vive solo en la laptop, pero no es una venta y no
+    # bloquea — se borra con el reemplazo (ver Order.purge_estimates!).
     def draft_count
-      Order.draft.count
+      Order.sale.draft.count
     end
 
     def untransmitted_count
-      Order.captured.where(erp_folio: nil).count
+      Order.sale.captured.where(erp_folio: nil).count
     end
 
     # Guarda del sync-up: un pedido en borrador sigue en captura y no se

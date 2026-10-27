@@ -42,7 +42,10 @@ class Order < ApplicationRecord
 
   belongs_to :user
   belongs_to :business_round
-  belongs_to :client
+  # Opcional SOLO en una cotización de cliente genérico (ver `document`); un
+  # pedido sin cliente lo rechaza la validación de abajo y, por si algo la
+  # salta, el CHECK `orders_sale_requires_client` de la base.
+  belongs_to :client, optional: true
   belongs_to :client_tax_profile,     optional: true
   belongs_to :client_receipt_profile, optional: true
   belongs_to :client_branch,          optional: true
@@ -54,6 +57,18 @@ class Order < ApplicationRecord
   # flujo más usado del evento y desde una tablet.
   has_many :order_items, -> { order(:position).includes(:product) }, dependent: :destroy
 
+  # sale: pedido (una venta, va al ERP) · estimate: cotización (decisión del
+  # usuario 2026-10-27). Comparten tabla porque comparten TODO lo demás —
+  # partidas, promociones, Cotizador, totales, la pantalla de captura—, y el
+  # costo es que cada lectura de "pedidos" tiene que excluir a las
+  # cotizaciones: sync-up, guardas, reportes, cerrar rueda, evidencia. Por eso
+  # esas lecturas van sobre `Order.sale`, nunca sobre `Order` pelón.
+  #
+  # Una cotización no se transmite, no bloquea ninguna operación del panel y
+  # se borra al obtener información o al cerrar la rueda. Y en el código se
+  # llama `estimate`, no `quote`: "quote" ya es el Cotizador de la captura
+  # (`Promotions::Quote`), que es otra cosa.
+  enum :document, { sale: "sale", estimate: "estimate" }, default: "sale"
   enum :kind,   { invoice: "invoice", remission: "remission" }
   # draft: en captura · captured: finalizado por el capturista, editable ·
   # transmitted: ya en el ERP (folio asignado), NO editable.
@@ -61,9 +76,23 @@ class Order < ApplicationRecord
 
   before_validation :clear_inactive_header_branch
 
-  validates :kind, presence: true
+  # El tipo se fija al crear y no cambia: una cotización vuelta pedido saldría
+  # al ERP sin cliente, y un pedido vuelto cotización se borraría sin
+  # transmitirse. El formulario de edición no lo manda, pero el valor viajaría
+  # en un campo forjado igual que cualquier otro.
+  validate :document_is_fixed, on: :update
+  # Sin cliente solo la cotización de cliente genérico. Y sin cliente no hay
+  # Factura/Remisión que elegir: `kind` solo se exige cuando hay cliente.
+  validates :client, presence: true, unless: :estimate?
+  validates :kind,   presence: true, if: :client
   validate  :header_selections_present
   validate  :header_selections_belong_to_client
+
+  # Cotización de alguien que no está en el catálogo de la rueda: el
+  # encabezado va vacío.
+  def generic?
+    estimate? && client_id.nil?
+  end
 
   def subtotal
     order_items.sum(&:line_total)
@@ -152,8 +181,12 @@ class Order < ApplicationRecord
   def capture!
     return false if order_items.empty?
 
-    update!(status: :captured, local_folio: local_folio.presence || generate_local_folio,
-            captured_at: Time.current)
+    # Transacción por el consecutivo de cotización: si el update fallara, el
+    # número tomado se devuelve con el rollback y no queda un hueco.
+    transaction do
+      update!(status: :captured, local_folio: local_folio.presence || generate_local_folio,
+              captured_at: Time.current)
+    end
   end
 
   # Editable mientras no se haya transmitido al ERP.
@@ -222,8 +255,20 @@ class Order < ApplicationRecord
   # catálogo seguiría sin poder borrarse. `OrderItem` no tiene dependientes,
   # así que la cadena termina ahí.
   def self.purge_transmitted!
-    OrderItem.where(order_id: transmitted.select(:id)).delete_all
-    transmitted.delete_all
+    OrderItem.where(order_id: sale.transmitted.select(:id)).delete_all
+    sale.transmitted.delete_all
+  end
+
+  # Purga de las cotizaciones, en los mismos dos lugares que la de
+  # transmitidos (obtener información y cerrar la rueda): una cotización solo
+  # vive en la laptop y no bloquea esas operaciones —bloquearía para siempre,
+  # porque nunca se transmite—, así que se borra, avisando cuántas (decisión
+  # del usuario 2026-10-27). Mismo `delete_all` explícito, por el mismo
+  # candado de promoción que aborta un `destroy` en silencio. Devuelve cuántas
+  # se borraron.
+  def self.purge_estimates!
+    OrderItem.where(order_id: estimate.select(:id)).delete_all
+    estimate.delete_all
   end
 
   # Resumen { estatus => { count:, total: } } del alcance recibido — se llama
@@ -285,7 +330,18 @@ class Order < ApplicationRecord
   # la columna existiera lo trae vacío. Sin él, el folio saldría "-000123" y el
   # defecto no aparecería hasta capturar el primer pedido de la rueda.
   def generate_local_folio
-    "#{business_round&.folio_prefix.presence || DEFAULT_FOLIO_PREFIX}-#{id.to_s.rjust(6, "0")}"
+    return "#{business_round&.folio_prefix.presence || DEFAULT_FOLIO_PREFIX}-#{id.to_s.rjust(6, "0")}" if sale?
+
+    # La cotización lleva su propio consecutivo (COT-000001, con el prefijo de
+    # la rueda delante si lo hay; el respaldo "RN" no aplica, porque "COT" ya
+    # la identifica), separado del de pedidos y del id: así no se mezcla con
+    # la numeración que sí llega al ERP (decisión del usuario 2026-10-27).
+    [ business_round&.folio_prefix.presence, "COT", Setting.next_estimate_number!.to_s.rjust(6, "0") ]
+      .compact.join("-")
+  end
+
+  def document_is_fixed
+    errors.add(:document, "no se puede cambiar") if document_changed?
   end
 
 
@@ -301,7 +357,12 @@ class Order < ApplicationRecord
   # ahora el campo se muestra en ambos y el valor se conserva
   # (corrección 2026-08-24).
   def clear_inactive_header_branch
-    if remission?
+    # La genérica no tiene encabezado: lo que traiga de un cliente anterior
+    # (una cotización que se pasó a genérica al editarla) se descarta.
+    if generic?
+      self.kind = nil
+      self.client_tax_profile_id = self.cfdi_use_id = self.client_receipt_profile_id = self.client_branch_id = nil
+    elsif remission?
       self.client_tax_profile_id = nil
       self.cfdi_use_id           = nil
     elsif invoice?

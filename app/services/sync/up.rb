@@ -197,8 +197,10 @@ module Sync
 
     private
 
+    # `sale`: una cotización guardada comparte estatus con un pedido capturado
+    # y no es una venta.
     def pending
-      Order.captured.where(erp_folio: nil)
+      Order.sale.captured.where(erp_folio: nil)
            .includes(:user, { order_items: :product }, :client_tax_profile, :cfdi_use,
                      :client_receipt_profile, :client_branch, client: :salesperson)
     end

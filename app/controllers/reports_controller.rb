@@ -123,8 +123,9 @@ class ReportsController < ApplicationController
   # estatus y el conteo del paginador, para que no puedan divergir. El alcance
   # por rol es `accessible_orders` (ApplicationController), compartido con
   # OrdersController; los filtros se aplican SOBRE él en `OrdersFilter`.
+  # Sobre `sale`: las cotizaciones comparten tabla y tienen su propio reporte.
   def orders_scope
-    accessible_orders
+    accessible_orders.sale
   end
 
   def page_size

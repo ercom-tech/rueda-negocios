@@ -17,7 +17,7 @@ namespace :evidence do
   desc "Exporta los pedidos transmitidos de un respaldo como evidencia para el ERP. ENV: OUT"
   task export: :environment do
     out = ENV.fetch("OUT") { abort "Falta OUT (archivo JSON de salida)" }
-    orders = Order.transmitted.includes(:user, :business_round, :client, order_items: %i[product promotion promotion_tier supplier brand])
+    orders = Order.sale.transmitted.includes(:user, :business_round, :client, order_items: %i[product promotion promotion_tier supplier brand])
                   .order(:id)
     abort "[evidence:export] no hay pedidos transmitidos en #{ActiveRecord::Base.connection.current_database}" if orders.none?
 

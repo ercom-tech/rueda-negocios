@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_09_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_27_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -220,14 +220,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_120000) do
     t.datetime "captured_at"
     t.bigint "cfdi_use_id"
     t.bigint "client_branch_id"
-    t.bigint "client_id", null: false
+    t.bigint "client_id"
     t.bigint "client_receipt_profile_id"
     t.bigint "client_tax_profile_id"
     t.datetime "created_at", null: false
     t.decimal "dividir_facturas", precision: 18, scale: 6, default: "0.0", null: false
+    t.string "document", default: "sale", null: false
     t.string "erp_folio"
     t.string "erp_folios", default: [], array: true
-    t.string "kind", default: "invoice", null: false
+    t.string "kind"
     t.string "local_folio"
     t.text "observations"
     t.string "status", default: "draft", null: false
@@ -240,8 +241,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_120000) do
     t.index ["client_id"], name: "index_orders_on_client_id"
     t.index ["client_receipt_profile_id"], name: "index_orders_on_client_receipt_profile_id"
     t.index ["client_tax_profile_id"], name: "index_orders_on_client_tax_profile_id"
+    t.index ["document"], name: "index_orders_on_document"
     t.index ["local_folio"], name: "index_orders_on_local_folio", unique: true
     t.index ["user_id"], name: "index_orders_on_user_id"
+    t.check_constraint "document::text = 'estimate'::text OR client_id IS NOT NULL", name: "orders_sale_requires_client"
   end
 
   create_table "price_overrides", force: :cascade do |t|
@@ -358,6 +361,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_120000) do
 
   create_table "settings", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.integer "last_estimate_number", default: 0, null: false
     t.integer "selected_round_erp_id"
     t.string "selected_round_name"
     t.datetime "updated_at", null: false

@@ -84,7 +84,10 @@ module PriceList
     # auditoría). Los regalos no cuentan: van al 100% de descuento y su precio
     # no mueve el total. `locked` son las partidas con promoción aplicada, que
     # no se pueden quitar sin quitar antes la promoción.
-    StaleDraft = Data.define(:capturista, :client, :items, :locked)
+    # `estimate`: también cuentan las cotizaciones en borrador —conservan el
+    # precio con que se armaron—, y el aviso las nombra como tales. Sin
+    # cliente (genérica), `client` dice "Cliente genérico".
+    StaleDraft = Data.define(:capturista, :client, :items, :locked, :estimate)
 
     def stale_drafts
       new_price = changes.to_h { |c| [ c.code, c.new_price ] }
@@ -98,7 +101,8 @@ module PriceList
       orders = Order.where(id: stale.keys).includes(:user, :client).order(:id)
       orders.map do |order|
         items = stale[order.id]
-        StaleDraft.new(capturista: order.user.full_name.presence || order.user.username, client: order.client.name,
+        StaleDraft.new(capturista: order.user.full_name.presence || order.user.username,
+                       client: order.client&.name || "Cliente genérico", estimate: order.estimate?,
                        items: items.size, locked: items.count { |*, promotion_id| promotion_id })
       end
     end

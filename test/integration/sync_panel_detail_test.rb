@@ -258,6 +258,35 @@ class SyncPanelDetailTest < ActionDispatch::IntegrationTest
     assert_match(/Se quitarán 2 pedidos ya transmitidos/, response.body)
   end
 
+  # Las cotizaciones también se van con el reemplazo (decisión del usuario
+  # 2026-10-27), y el operador tiene que saberlo antes de confirmar.
+  test "el modal de obtener información nombra las cotizaciones que se van a borrar" do
+    cap   = User.create!(erp_person_id: 981, username: "cap981", password: "secret123",
+                         role: "capturista", active: true)
+    round = BusinessRound.create!(erp_round_id: 980, name: "Rueda 980", active: true)
+    Order.create!(user: cap, business_round: round, document: "estimate")
+
+    get root_path
+
+    assert_match(/Se borrará 1 cotización\./, response.body)
+    assert_no_match(/Se quitarán/, response.body)
+  end
+
+  test "cerrar la rueda dice cuántos pedidos y cuántas cotizaciones eliminó" do
+    cap    = User.create!(erp_person_id: 981, username: "cap981", password: "secret123",
+                          role: "capturista", active: true)
+    round  = BusinessRound.create!(erp_round_id: 980, name: "Rueda 980", active: true)
+    client = Client.create!(erp_client_key: "C980", name: "Cliente 980")
+    Order.create!(user: cap, business_round: round, client: client, kind: "remission",
+                  status: "transmitted", local_folio: "RN-000980", erp_folio: "1A0001")
+    2.times { Order.create!(user: cap, business_round: round, document: "estimate") }
+
+    post server_close_round_path
+    follow_redirect!
+
+    assert_match(/Se eliminaron 1 pedido y 2 cotizaciones de esta laptop/, response.body)
+  end
+
   test "sin pedidos en la laptop el modal no habla de quitar nada" do
     get root_path
 

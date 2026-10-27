@@ -83,6 +83,25 @@ class CapturedOrdersReportTest < ActionDispatch::IntegrationTest
     assert_equal 1, @cap.orders.totals_by_status["captured"][:count], "acotado al capturista"
   end
 
+  # Las cotizaciones comparten tabla con los pedidos y tienen su propio reporte
+  # (decisión del usuario 2026-10-27): aquí no aparecen ni en la tabla ni en el
+  # resumen — ni para el servidor, que ve "todo".
+  test "las cotizaciones no aparecen en el reporte de pedidos" do
+    order!(user: @cap, status: "captured")
+    estimate = Order.create!(user: @cap, business_round: @round, document: "estimate",
+                             status: "captured", local_folio: "COT-000001")
+    estimate.order_items.create!(position: 1, quantity: 1, unit_price: 100, tax_rate: 16, discount_percent: 0)
+    login_as("srv980")
+
+    get captured_orders_report_path
+
+    assert_response :success
+    assert_select "tbody tr", 1
+    assert_no_match(/COT-000001/, response.body)
+    assert_match(/\$116\.00/, response.body, "el resumen suma solo el pedido")
+    assert_no_match(/\$232\.00/, response.body, "el resumen no suma la cotización")
+  end
+
   test "el reporte del capturista no muestra pedidos ajenos" do
     order!(user: @cap,  status: "captured")
     order!(user: @otro, status: "captured")

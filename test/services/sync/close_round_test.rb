@@ -46,12 +46,35 @@ module Sync
       assert_match(/Guarda o descarta (el borrador|los borradores) desde .*Borrador, transmite los demás/, error.message)
     end
 
+    def estimate(status: "draft", client: nil)
+      Order.create!(user: @user, business_round: @round, document: "estimate", client: client,
+                    kind: (client ? "remission" : nil), status: status,
+                    local_folio: (status == "draft" ? nil : "COT-#{format('%06d', rand(1_000_000))}"))
+    end
+
+    # Una cotización solo vive en la laptop y nunca se transmite: si bloqueara,
+    # bloquearía para siempre. Se borra con los transmitidos y se reporta
+    # aparte (decisión del usuario 2026-10-27).
+    test "las cotizaciones no bloquean: se borran y se cuentan aparte" do
+      estimate(status: "draft")
+      estimate(status: "captured", client: @client)
+      order(status: "transmitted", erp_folio: "1A0001")
+
+      removed = CloseRound.run!
+
+      assert_equal 1, removed.orders
+      assert_equal 2, removed.estimates
+      assert_equal 0, Order.count
+      assert_not @round.reload.active?
+    end
+
     test "cierra: purga los transmitidos, desactiva la rueda y limpia la selección" do
       order(status: "transmitted", erp_folio: "1A0001")
 
       removed = CloseRound.run!
 
-      assert_equal 1, removed
+      assert_equal 1, removed.orders
+      assert_equal 0, removed.estimates
       assert_equal 0, Order.count
       assert_not @round.reload.active?, "la rueda debe quedar inactiva"
       setting = Setting.instance
@@ -145,7 +168,7 @@ module Sync
     test "el cierre normal solo borra los transmitidos y devuelve su cuenta" do
       2.times { |i| order(status: "transmitted", erp_folio: "1A000#{i}") }
 
-      assert_equal 2, CloseRound.run!
+      assert_equal 2, CloseRound.run!.orders
       assert_equal 0, Order.count
     end
   end

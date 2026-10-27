@@ -65,6 +65,7 @@ namespace :sync do
     puts "[sync:down] productos de promoción que no llegaron al catálogo: #{s[:skipped_promotion_products]}"
     puts "[sync:down] productos en más de una promoción (solo se ofrece una): #{s[:shared_promotion_products].size} #{s[:shared_promotion_products].inspect if s[:shared_promotion_products].any?}"
     puts "[sync:down] pedidos locales purgados por el reemplazo: #{s[:purged_orders]}"
+    puts "[sync:down] cotizaciones borradas por el reemplazo: #{s[:purged_estimates]}"
     # Los mismos dos avisos del panel: los dos dejan operar, así que nada más
     # los delata. Faltaban aquí, y es la regla de todo dato nuevo del summary:
     # panel Y rake (11ª auditoría).
@@ -85,7 +86,7 @@ namespace :sync do
   task up: :environment do
     base = ENV.fetch("RUEDA_API_URL") { abort "Falta RUEDA_API_URL (base de rueda-api, p.ej. http://localhost:4568)" }
 
-    pending = Order.captured.where(erp_folio: nil).count
+    pending = Order.sale.captured.where(erp_folio: nil).count
     puts "[sync:up] pedidos por transmitir: #{pending}"
 
     run = start_run.call("up", Sync::Up)

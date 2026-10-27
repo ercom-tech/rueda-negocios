@@ -64,6 +64,17 @@ class ProductsReportTest < ActionDispatch::IntegrationTest
     assert_equal 5, rows.find { |r| r.code == "009711" }.sold
   end
 
+  # Una cotización no es una venta: sus piezas no salen del almacén.
+  test "las piezas de una cotización no cuentan" do
+    item!(order!, @martillo, quantity: 3)
+    estimate = Order.create!(user: @user, business_round: @round, document: "estimate",
+                             status: "captured", local_folio: "COT-000001")
+    item!(estimate, @martillo, quantity: 10)
+
+    rows = ProductSales.new(@user.orders).catalog_rows
+    assert_equal 3, rows.find { |r| r.code == "009711" }.sold
+  end
+
   # Vendido y regalado en columnas separadas: las dos son piezas que salen del
   # almacén, pero mezclarlas escondería cuánto se bonificó.
   test "los regalos van en su propia columna, no sumados a la cantidad" do

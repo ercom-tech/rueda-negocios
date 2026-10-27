@@ -224,6 +224,26 @@ module Sync
       assert_equal 1, Order.count, "no debe purgar nada si abortó"
     end
 
+    # Una cotización en borrador o guardada no es una venta: no bloquea, se
+    # purga con el reemplazo y se reporta aparte de los pedidos (decisión del
+    # usuario 2026-10-27).
+    test "las cotizaciones NO bloquean: se purgan y se reportan aparte" do
+      user   = User.create!(erp_person_id: 1, username: "u", password: "x", role: "capturista")
+      round  = BusinessRound.create!(erp_round_id: 1, name: "R")
+      client = Client.create!(erp_client_key: "C1", name: "C")
+      Order.create!(user: user, business_round: round, document: "estimate")
+      Order.create!(user: user, business_round: round, document: "estimate", client: client,
+                    kind: "remission", status: "captured", local_folio: "COT-000001")
+      Order.create!(user: user, business_round: round, client: client, kind: "remission",
+                    status: "transmitted", erp_folio: "1A0001", local_folio: "RN-000002")
+
+      result = Down.new(export_data).run!
+
+      assert_equal 1, result.summary[:purged_orders]
+      assert_equal 2, result.summary[:purged_estimates]
+      assert_equal 0, Order.count
+    end
+
     test "los transmitidos NO bloquean: se purgan y el refresh procede" do
       user   = User.create!(erp_person_id: 1, username: "u", password: "x", role: "capturista")
       round  = BusinessRound.create!(erp_round_id: 1, name: "R")

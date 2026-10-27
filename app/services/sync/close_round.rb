@@ -21,6 +21,10 @@ module Sync
     class PendingOrdersError < StandardError; end
     class SyncInProgressError < StandardError; end
 
+    # Lo que se eliminó, para el aviso del operador: los pedidos transmitidos
+    # y, aparte, las cotizaciones (decisión del usuario 2026-10-27).
+    Removed = Data.define(:orders, :estimates)
+
     def self.run!
       # La verificación y el borrado van bajo el MISMO lock que usa el alta de
       # corridas: si no, entre el `exists?` y el `delete_all` puede colarse una
@@ -44,10 +48,13 @@ module Sync
         # este lock), y con `Order.destroy_all` esa venta se perdía en silencio.
         # Así, si algo se coló, la segunda guarda deshace la transacción entera
         # y no se pierde nada — el operador reintenta.
-        removed = Order.transmitted.count
+        removed = Order.sale.transmitted.count
         # Ver Order.purge_transmitted!: con `destroy_all`, el candado de
         # promoción dejaba pedidos vivos y "Cerrar rueda" reportaba éxito.
         Order.purge_transmitted!
+        # Las cotizaciones no bloquean el cierre (nunca se transmiten, así que
+        # bloquearían para siempre): se borran y se reportan aparte.
+        removed_estimates = Order.purge_estimates!
         Guards.no_local_orders!(PendingOrdersError, "al cerrar la rueda")
 
         SyncRun.delete_all
@@ -56,7 +63,7 @@ module Sync
         PriceOverride.delete_all
         BusinessRound.update_all(active: false)
         Setting.instance.update!(selected_round_erp_id: nil, selected_round_name: nil)
-        removed
+        Removed.new(orders: removed, estimates: removed_estimates)
       end
     end
   end

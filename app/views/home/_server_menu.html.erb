@@ -85,12 +85,17 @@
         pedidos ya transmitidos — y el reemplazo los quita. Decirlo con el
         número: antes solo se hablaba de "reemplazar la información local" y el
         reporte del día anterior amanecía en cero sin explicación. %>
-    <% transmitted = Order.transmitted.count %>
+    <% transmitted = Order.sale.transmitted.count %>
+    <%# Las cotizaciones también se van con el reemplazo (no son ventas y no
+        bloquean): el operador lo tiene que leer ANTES de confirmar. %>
+    <% estimates = Order.estimate.count %>
     <% down_message = [
          "Se descargarán los datos de la rueda seleccionada y se reemplazará la información local.",
          ("Se #{transmitted == 1 ? 'quitará' : 'quitarán'} #{transmitted} " \
           "#{transmitted == 1 ? 'pedido' : 'pedidos'} ya " \
           "#{transmitted == 1 ? 'transmitido' : 'transmitidos'}." if transmitted.positive?),
+         ("Se #{estimates == 1 ? 'borrará' : 'borrarán'} #{estimates} " \
+          "#{estimates == 1 ? 'cotización' : 'cotizaciones'}." if estimates.positive?),
          "¿Continuar?"
        ].compact.join(" ") %>
     <%= render "home/confirm_dialog", title: "Obtener información",
@@ -190,7 +195,7 @@
       </button>
     </div>
     <%= render "home/confirm_dialog", title: "Cerrar rueda",
-          message: "Se eliminarán TODOS los pedidos locales (los transmitidos ya están en el ERP) y se limpiará la rueda seleccionada. Solo procede si ya transmitiste todo. ¿Continuar?",
+          message: "Se eliminarán TODOS los pedidos locales (los transmitidos ya están en el ERP) y todas las cotizaciones, y se limpiará la rueda seleccionada. Solo procede si ya transmitiste todo. ¿Continuar?",
           confirm_label: "Sí, cerrar rueda", path: server_close_round_path %>
   </div>
 </div>

@@ -150,6 +150,19 @@ module PriceList
                    drafts.map { |d| [ d.capturista, d.client, d.items, d.locked ] }
     end
 
+    # Una cotización en borrador también conserva el precio con que se armó; el
+    # aviso la nombra como cotización y, sin cliente, como de cliente genérico.
+    # Sin el caso previsto, `order.client.name` tronaba la pantalla del
+    # servidor con la primera genérica (2026-10-27).
+    test "una cotización genérica en borrador se reporta sin tronar" do
+      user     = User.create!(erp_person_id: 9503, username: "cap_pl3", password: "x", role: "capturista", name: "LUIS")
+      estimate = Order.create!(user:, business_round: @round, document: "estimate")
+      estimate.order_items.create!(@saw.to_order_item_attributes.merge(quantity: 1, unit_price: 6500))
+
+      draft = review([ [ 3021, 6900 ] ]).stale_drafts.sole
+      assert_equal [ "LUIS", "Cliente genérico", true ], [ draft.capturista, draft.client, draft.estimate ]
+    end
+
     # El precio de un regalo no mueve el total (va al 100%): avisar de él
     # mandaba a quitar partidas que el candado de promoción no deja quitar.
     test "los regalos no cuentan y las partidas con promoción se cuentan aparte" do

@@ -44,6 +44,7 @@ module Sync
       # Set: se reporta por persona, no por renglón de membresía.
       @skipped_people = Set.new
       @purged_orders = 0
+      @purged_estimates = 0
       @skipped_promotion_products = 0
       # Set: se reporta por producto, no por renglón.
       @shared_promotion_products = Set.new
@@ -72,6 +73,7 @@ module Sync
       { entities: @stats, skipped_users: @skipped_users,
         removed_users: @removed_users, skipped_skus: @skipped_skus,
         skipped_people: @skipped_people.to_a, purged_orders: @purged_orders,
+        purged_estimates: @purged_estimates,
         skipped_promotion_products: @skipped_promotion_products,
         shared_promotion_products: @shared_promotion_products.to_a,
         # La captura fuera de catálogo depende de que el genérico venga en el
@@ -98,11 +100,15 @@ module Sync
     # corrida), y con `Order.destroy_all` esa venta se perdía en silencio —
     # mismo patrón que CloseRound (ver docs/convenciones-codigo.md).
     def purge_local_orders!
-      @purged_orders = Order.transmitted.count
+      @purged_orders = Order.sale.transmitted.count
       # `purge_transmitted!` y no `destroy_all`: el candado de promoción de
       # OrderItem aborta el destroy y las partidas sobrevivían a la purga, con
       # el replace del catálogo reventando después por FK (ver Order).
       Order.purge_transmitted! if @purged_orders.positive?
+      # Las cotizaciones se van con el reemplazo: no son ventas y no bloquean
+      # (decisión del usuario 2026-10-27). Se reportan aparte en el panel y
+      # en el rake.
+      @purged_estimates = Order.purge_estimates!
       Guards.no_local_orders!(GuardError, "al obtener la información")
     end
 
