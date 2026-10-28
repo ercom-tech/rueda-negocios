@@ -86,7 +86,18 @@ movería también fechas, números y mensajes de Rails que hoy funcionan.
   producto llega como el HTML de la página destino —con 200— y se inyecta
   entero en el panel de sugerencias. Lo que responde a un fetch que no es de
   Turbo contesta dentro del componente (ver `order_gone` y `_order_gone`),
-  igual que un turbo-frame contesta dentro del frame.
+  igual que un turbo-frame contesta dentro del frame. Y lo que el servidor NO
+  puede contestar así —un `before_action` que expulsa al login, como el de
+  rueda cerrada— lo atiende el JS: si `res.redirected`, navega con la
+  respuesta YA recibida (`Turbo.visit(url, { response: { statusCode,
+  redirected, responseHTML } })`, ver `autocomplete#fetch`), no con un
+  `Turbo.visit(url)` pelón: el aviso iba en el flash y se consumió en esa
+  misma petición (15ª auditoría).
+- **Todo modal que carga por frame lleva manejador de `turbo:frame-missing`.**
+  La 14ª lo puso en el Cotizador y su vecino, el de promoción, siguió
+  escribiendo "Content missing" (15ª). Para navegar a lo que el servidor
+  respondió, `event.detail.visit(event.detail.response)` —con la respuesta,
+  no con la URL, por el mismo flash— (`modal#followMissing`).
 - **Un porcentaje (o cualquier cifra) que ve el usuario se le pide al objeto
   que lo aplica, nunca a la regla de la que sale.** La vista leía
   `tier.discount_percent` y el flash tomaba el de la primera partida; con

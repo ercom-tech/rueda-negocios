@@ -169,6 +169,36 @@ class EstimateCaptureTest < ActionDispatch::IntegrationTest
     assert_select "[role=alert] a[href=?]", root_path
   end
 
+  # El buscador de cliente del paso 1 (al editar) pide con fetch. Sobre una
+  # cotización ya borrada armaba las sugerencias como si no hubiera registro:
+  # apuntaban a /orders/new, el paso 1 de un PEDIDO, y al guardar nacía una
+  # venta en borrador sin que nada lo dijera (15ª auditoría).
+  test "el buscador de cliente de una cotización borrada avisa en su panel y no ofrece crear un pedido" do
+    estimate = estimate!(client: @client)
+    id = estimate.id
+    Order.where(id: id).then { |o| OrderItem.where(order_id: id).delete_all; o.delete_all }
+
+    get client_options_orders_path(order_id: id, q: "CAP01")
+
+    assert_response :success
+    assert_select "[role=alert]", /ya no está en esta laptop/
+    assert_select "a[href^='/orders/new']", count: 0
+  end
+
+  # El aviso del Cotizador cuando el registro entero ya no existe: puede ser
+  # una cotización, y la causa puede ser el panel, no solo un descarte.
+  test "el Cotizador sobre una cotización borrada no la llama pedido" do
+    estimate = estimate!
+    item = item!(estimate)
+    Order.purge_estimates!
+
+    get quote_order_order_item_path(estimate.id, item.id)
+
+    assert_response :not_found
+    assert_match(/ya no está en esta laptop/, response.body)
+    assert_no_match(/Este pedido ya no existe/, response.body)
+  end
+
   test "un pedido ajeno sigue siendo 404, no 'ya no está'" do
     other = Order.create!(user: @other, business_round: @round, client: @client, kind: "remission",
                           client_receipt_profile: @client.receipt_profiles.first)

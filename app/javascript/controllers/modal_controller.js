@@ -94,6 +94,18 @@ export default class extends Controller {
     this.showLoadProblem(dialog, message)
   }
 
+  // El modal de promoción ante una respuesta sin su frame: el pedido o la
+  // cotización ya no existe (el servidor redirige al menú con el aviso, ver
+  // `order_gone`) o la sesión terminó (redirige al login). Sin manejador,
+  // Turbo escribía "Content missing" en el diálogo (15ª auditoría, la misma
+  // trampa que la 14ª cerró en el Cotizador). Se navega a la pantalla que el
+  // servidor ya respondió, con la respuesta recibida: así llega el aviso del
+  // flash, que volver a pedirla perdería.
+  followMissing(event) {
+    event.preventDefault()
+    event.detail.visit(event.detail.response)
+  }
+
   showLoadProblem(dialog, message) {
     const placeholder = dialog?.querySelector("[data-modal-target='loading']")
     if (placeholder) placeholder.textContent = message

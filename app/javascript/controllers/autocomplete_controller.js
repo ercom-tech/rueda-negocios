@@ -59,6 +59,17 @@ export default class extends Controller {
       url.searchParams.set("q", q)
       const res = await fetch(url, { headers: { Accept: "text/html" } })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      // Un fetch SIGUE las redirecciones: si el servidor mandó a otra pantalla
+      // (al login tras "Cerrar rueda", o con la sesión vencida), lo que llega
+      // es esa página entera, y se inyectaba dentro del panel de sugerencias
+      // (15ª auditoría). Se navega a ella con la respuesta YA recibida: volver
+      // a pedirla perdería el aviso, que el servidor puso en el flash y se
+      // consumió en esta misma petición.
+      if (res.redirected) {
+        window.Turbo.visit(res.url, { action: "replace",
+                         response: { statusCode: res.status, redirected: true, responseHTML: await res.text() } })
+        return
+      }
 
       this.resultsTarget.innerHTML = await res.text()
       this.index = -1

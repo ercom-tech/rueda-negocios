@@ -59,6 +59,20 @@ Arreglo (decisión del usuario, los tres puntos):
 - No se le dio al servidor un botón para descartarlas: con la guía no hace
   falta, y cambiaría la decisión de que solo consulta.
 
+**Bloque 2 — la cotización que desaparece con la pantalla abierta (M1, M2,
+M3 y el aviso del Cotizador).** Los cuatro resistieron la refutación (vistos
+en Chrome: "Content missing" en el modal de promoción; la página de login
+DENTRO del panel del buscador tras cerrar rueda; sugerencias de cliente que
+apuntaban al paso 1 de un pedido; "Este pedido ya no existe: se descartó").
+Arreglo: el modal de promoción navega a lo que el servidor respondió
+(`modal#followMissing`, con la respuesta ya recibida para que llegue el
+flash); el autocompletado, ante una redirección, navega la página entera con
+esa respuesta (cubre los tres buscadores); `client_options` con un
+`order_id` que ya no existe responde el aviso en su panel; el aviso del
+Cotizador usa el mismo texto que `order_gone`. Prueba de sistema nueva
+`estimate_gone_flow_test` (roja antes; clics reales en Chrome headless) y
+mutación de cada arreglo.
+
 Lección: **una guía de reversión se audita contra el código VIEJO, no contra
 el nuevo**. Yo razoné qué haría el código viejo con una cotización genérica
 (la que estaba pensando) y no con la que tiene cliente, que es el caso normal.

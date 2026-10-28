@@ -23,7 +23,7 @@
     todavía no trae ningún control (ver modal#focusInside). %>
 <div id="<%= dialog_id %>" data-modal-target="dialog" style="display:none" data-turbo-permanent
      tabindex="-1" role="dialog" aria-modal="true" aria-label="Promoción <%= promotion.name %>"
-     data-action="turbo:fetch-request-error->modal#loadFailed"
+     data-action="turbo:fetch-request-error->modal#loadFailed turbo:frame-missing->modal#followMissing"
      class="fixed inset-0 z-50 items-center justify-center p-4">
   <div class="absolute inset-0 bg-black/50" data-action="click->modal#close"></div>
 
