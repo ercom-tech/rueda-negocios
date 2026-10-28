@@ -25,6 +25,7 @@ Si es **algo por hacer**, va al backlog.
 ## Índice de la bitácora
 
 - Decisiones generales del proyecto (abajo)
+- 15ª auditoría (2026-10-28) — cotizaciones y todo el proyecto
 - Cotizaciones — "Generar cotización" (2026-10-27/28)
 - Cotizador de la captura (2026-10-09) · 14ª auditoría (2026-10-10)
 - Cambiar precios desde un archivo (2026-10-08) · 13ª auditoría (2026-10-09)
@@ -33,6 +34,34 @@ Si es **algo por hacer**, va al backlog.
 - Fase A — scaffolding · Fase B — login, menú, reportes, pedido (arcos 1–3)
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
+
+## 15ª auditoría (2026-10-28) — cotizaciones y todo el proyecto
+
+7 auditores sobre todo el proyecto con énfasis en cotizaciones, la barra de
+totales a 1.5x y la remediación de la 14ª. **0 CRÍTICA · 1 ALTA · 7 MEDIA ·
+~22 BAJA** tras verificar. Se remedia bloque por bloque.
+
+**Bloque 1 — A1 (reversión con cotizaciones) + M6 (`CLAUDE.md`).** Lo
+encontraron dos auditores por separado y resistió la refutación: el código
+anterior a las cotizaciones trata una guardada con cliente como pedido
+capturado, el panel dice "Transmítelo" y la API la aceptaba —no valida la
+forma de la clave, y `COT-000001` cabe en sus 12 caracteres—: una **venta
+falsa en el ERP**. La guía de reversión que escribí decía que "fallaría" y
+mandaba a descartarlas desde el reporte, donde el servidor no tiene botones.
+Arreglo (decisión del usuario, los tres puntos):
+- **La guía** borra las cotizaciones por consola (`Order.purge_estimates!`) y
+  comprueba que queden 0 ANTES del checkout, como paso obligatorio.
+- **La API rechaza toda clave con el segmento `COT-`** (`ESTIMATE_KEY`, antes
+  de la validación de largo): la red del otro lado del contrato, por si una
+  cotización llegara a transmitirse por cualquier camino.
+- **`CLAUDE.md`** dice que obtener también quita transmitidos y describe las
+  cotizaciones (nunca se transmiten, no bloquean, obtener y cerrar las borran).
+- No se le dio al servidor un botón para descartarlas: con la guía no hace
+  falta, y cambiaría la decisión de que solo consulta.
+
+Lección: **una guía de reversión se audita contra el código VIEJO, no contra
+el nuevo**. Yo razoné qué haría el código viejo con una cotización genérica
+(la que estaba pensando) y no con la que tiene cliente, que es el caso normal.
 
 ## Cotizaciones — "Generar cotización" (2026-10-27/28)
 

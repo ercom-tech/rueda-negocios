@@ -92,11 +92,17 @@ Modelo **una laptop = servidor LAN**:
   respeta; las partidas ya agregadas conservan su precio.
 - **Al terminar el evento:** **cerrar rueda** elimina de la laptop los pedidos
   ya transmitidos, borra el historial de corridas y los precios cargados, y
-  libera la selección. Es el paso obligado para cargar otra rueda, y la única
-  operación del panel que borra pedidos.
+  libera la selección. Es el paso obligado para cargar otra rueda. "Obtener
+  información" también quita los pedidos ya transmitidos (viven en el ERP).
+- **Cotizaciones** ("Generar cotización", 2026-10-27): viven en la misma tabla
+  que los pedidos (`orders.document = estimate`), con folio propio
+  (`COT-000001`) y cliente opcional (genérico). **Nunca se transmiten** —la
+  API además rechaza toda clave `COT-`—, **no bloquean** ninguna operación del
+  panel, y **obtener información y cerrar rueda las borran**, avisando
+  cuántas. Toda lectura de pedidos va sobre `Order.sale`.
 
-Obtener y cerrar se bloquean si queda algún pedido que solo viva en la laptop
-—borrador o capturado sin transmitir—; transmitir se bloquea solo por
+Obtener y cerrar se bloquean si queda algún pedido (no cotización) que solo
+viva en la laptop —borrador o capturado sin transmitir—; transmitir se bloquea solo por
 borradores (los capturados sin transmitir son justo lo que transmite).
 Mientras una operación corre, la captura se pausa.
 

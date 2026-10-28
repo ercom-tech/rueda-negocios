@@ -109,9 +109,11 @@ Lo mínimo, en el navegador de la laptop:
   información" con la API que exporta `pieces_per_box` (lote del 2026-10-09):
   sin eso todos los productos se ven "sin caja", sin error. Fuera de la
   vigencia de la promoción, el modal dice que el producto no está en ninguna.
-- **Menú → Generar cotización** (lote del 2026-10-28): "Cliente genérico"
-  abre la captura con el encabezado "Cliente genérico"; agregar una partida y
-  "Guardar" da folio `COT-000001` y el resumen sin PDF. En **Reportes →
+- **Menú de un capturista → Generar cotización** (lote del 2026-10-28; el
+  equipo-servidor no tiene esa tarjeta): "Cliente genérico" abre la captura
+  con el encabezado "Cliente genérico"; agregar una partida y "Guardar" da un
+  folio `COT-…` (con el prefijo de la rueda delante si lo tiene) y el resumen
+  sin PDF. En **Reportes →
   Cotizaciones capturadas** aparece con estatus "Guardada". Descartarla al
   terminar (o se irá con el siguiente "Obtener información", que lo avisa en
   su modal: "Se borrará 1 cotización").
@@ -169,6 +171,23 @@ capturista, y en las partidas del 999999 el proveedor o la marca que se eligió.
 
 ## Si algo sale mal
 
+**Si el sha anterior es de antes de las cotizaciones (anterior a `9c53e2e`),
+primero se borran las cotizaciones y se comprueba que no quede ninguna.** El
+código anterior no sabe qué es una cotización: una guardada con cliente la
+trata como un pedido capturado, el panel dice "Transmítelo" y "Transmitir
+pedidos" la manda al ERP como **venta real** (15ª auditoría). La API
+actualizada la rechaza ("es una cotización, no un pedido"), pero la laptop no
+debe depender de eso:
+
+```bash
+bin/rails runner 'puts Order.purge_estimates!'   # cuántas se borraron
+bin/rails runner 'puts Order.estimate.count'     # tiene que decir 0
+```
+
+Es el mismo borrado que hacen "Obtener información" y "Cerrar rueda". Las
+cotizaciones solo viven en la laptop y no se recuperan: avisar a los
+capturistas antes.
+
 ```bash
 git checkout <sha anterior>
 bin/rails tailwindcss:build     # el CSS también hay que rehacerlo al revertir
@@ -193,12 +212,12 @@ migraciones traiga el lote:
   los precios cargados con su rastro.
 - **Ojo con la del 2026-10-27 (cotizaciones):** el código anterior convive
   con las columnas —todo pedido viejo lleva `document = sale`—, pero NO con
-  los datos: una cotización —en borrador o guardada— la vería como un pedido
-  más, sin cliente: bloquearía obtener y cerrar como cualquier borrador, la
-  captura tronaría al abrirla y "Transmitir pedidos" la intentaría mandar al
-  ERP sin cliente y fallaría. Antes de revertir,
-  **descartar las cotizaciones** desde Reportes → Cotizaciones capturadas (o
-  cerrar la rueda, que las borra).
+  los datos. Por eso el borrado de cotizaciones de arriba es obligatorio, y
+  no basta con pedirlo desde las pantallas: el equipo-servidor no puede
+  descartar cotizaciones (solo las consulta), y cada capturista solo ve las
+  suyas. Sin él, además de la venta falsa, una cotización genérica tumba el
+  reporte de pedidos del código anterior y aborta "Transmitir pedidos" a
+  medias.
 
   **Con "Cambiar precios" hay dos cosas que hacer ANTES del checkout** (13ª
   auditoría): (1) **"Quitar precios cargados"**: el código anterior ni los lee
@@ -260,6 +279,13 @@ curl -s http://localhost:7011/health
 Cotizador (2026-10-10) lo cambió: le da lectura de `alm_ficha_tecnica` al
 usuario de la API. Sin ella, `/health` responde `"permiso de lectura en
 alm_ficha_tecnica"` y "Obtener información" falla completo — no solo la caja.
+
+**El lote de las cotizaciones (2026-10-28) también toca la API**, aunque la
+laptop no la necesita para funcionar: la API rechaza cualquier pedido cuya
+clave lleve el segmento `COT-` ("es una cotización, no un pedido"). Es la red
+por si una cotización llegara a transmitirse (p. ej., tras una reversión de la
+laptop). Comprobación: en el log de la API no debe aparecer ese rechazo; si
+aparece, alguien intentó mandar una cotización.
 
 **Si el lote toca las dos puntas, la API va primero — y la laptop va detrás en
 la misma ventana.** No se opera con una versión de API y otra de laptop (regla
