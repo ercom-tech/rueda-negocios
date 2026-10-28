@@ -70,10 +70,13 @@
                data-autocomplete-target="results" class="absolute inset-x-0 top-full z-20 mt-1"></div>
         </div>
 
-        <% if estimate && @order.persisted? && @order.client_id.present? %>
+        <% if estimate && @order.persisted? && @order.client_id_in_database.present? %>
           <%# El otro sentido de la edición (decisión del usuario 2026-10-27):
               una cotización con cliente puede volverse genérica. Manda el
-              cliente vacío; el modelo limpia el encabezado. %>
+              cliente vacío; el modelo limpia el encabezado. Según el cliente
+              GUARDADO, no el que se está eligiendo: al escoger cliente para
+              una genérica, `edit` lo pone en memoria y el botón aparecía
+              antes de guardar nada (visto en navegador 2026-10-28). %>
           <%= button_to "Cliente genérico", order_path(@order), method: :patch, params: { order: { client_id: "" } },
                 form_class: "w-full",
                 class: "w-full cursor-pointer rounded-full bg-black px-5 py-3 text-center font-semibold text-white transition-colors hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold" %>

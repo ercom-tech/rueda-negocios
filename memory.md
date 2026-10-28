@@ -25,6 +25,7 @@ Si es **algo por hacer**, va al backlog.
 ## Índice de la bitácora
 
 - Decisiones generales del proyecto (abajo)
+- Cotizaciones — "Generar cotización" (2026-10-27/28)
 - Cotizador de la captura (2026-10-09) · 14ª auditoría (2026-10-10)
 - Cambiar precios desde un archivo (2026-10-08) · 13ª auditoría (2026-10-09)
 - 12ª, 11ª, 10ª, 9ª, 8ª, 7ª, 6ª, 5ª y 4ª auditorías — remediación
@@ -32,6 +33,86 @@ Si es **algo por hacer**, va al backlog.
 - Fase A — scaffolding · Fase B — login, menú, reportes, pedido (arcos 1–3)
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
+
+## Cotizaciones — "Generar cotización" (2026-10-27/28)
+
+**Qué:** la tarjeta "Generar cotización" del menú (era "Próximamente"). Al
+entrar: buscar un cliente (mismo paso 1 del pedido) o **"Cliente genérico"**
+(alguien que no está en la rueda). La captura es LA MISMA pantalla del pedido
+—promociones, Cotizador, barra de totales, genérico de producto—, con su
+folio (`COT-000001`), sin transmitirse, y se guarda, edita y descarta. Reporte
+propio en "Reportes de venta → Cotizaciones capturadas". Sin PDF por ahora.
+Diseño del usuario (imagen con buscador + "Cliente genérico" + "Regresar" en
+coral), adaptado a la norma: el regreso va en la fila del título.
+
+**Decisiones y su porqué:**
+
+- **Misma tabla `orders`, con `document` (`sale` / `estimate`)**, no tablas
+  aparte (decisión del usuario): comparten partidas, promociones, Cotizador,
+  totales y la pantalla entera; aparte se habrían ido desviando. El costo es
+  que **cada lectura de "pedidos" tiene que excluir a las cotizaciones**:
+  sync-up, guardas, reportes, rake, evidencia, `can_resolve_draft?`. Todas van
+  sobre `Order.sale` y cada una lleva su prueba de exclusión (fail-first). En
+  código se llama `estimate`, no `quote`: "quote" ya es el Cotizador.
+- **Cliente genérico = `client_id` NULL**, solo en cotizaciones. El CHECK
+  `orders_sale_requires_client` lo garantiza en la base: un pedido sin cliente
+  saldría al ERP sin a quién venderle. `kind` (factura/remisión) solo se exige
+  con cliente, y su `NOT NULL` + default "invoice" se quitaron: ese default no
+  lo usaba nadie (el paso 1 siempre lo calcula del cliente).
+- **El tipo se fija al crear** (`document_is_fixed`, y `create` lo sanea):
+  una cotización vuelta pedido saldría al ERP sin cliente, y un pedido vuelto
+  cotización se borraría sin transmitirse.
+- **Folio `COT-000001` con consecutivo propio** (`settings.last_estimate_
+  number`, con candado de fila), aparte del de pedidos y del id; con prefijo
+  de rueda, `OAX-COT-000001`; sin prefijo NO lleva el respaldo "RN" porque
+  "COT" ya la identifica. No retrocede al borrar cotizaciones, para que un
+  número no se repita a media rueda. Vive en `settings` y no en una secuencia
+  de Postgres porque `db/schema.rb` no volcaría la secuencia y la base de
+  pruebas se quedaría sin ella.
+- **Obtener información y cerrar rueda las borran** (decisión del usuario):
+  una cotización nunca se transmite, así que si bloqueara, bloquearía para
+  siempre. El modal de obtener dice "Se borrarán N cotizaciones" ANTES de
+  confirmar; el flash de cerrar, "Se eliminaron 1 pedido y 2 cotizaciones"; el
+  rake imprime la cuenta. Mismo `delete_all` explícito que la purga de
+  transmitidos (el candado de promoción aborta un `destroy` en silencio).
+- **Nuevo caso: la pantalla abierta de algo que ya no existe.** Antes no
+  pasaba —un borrador bloquea las dos operaciones—; ahora una cotización se
+  puede borrar con alguien capturándola. `order_gone` (ApplicationController)
+  regresa al menú y dice qué pasó, SOLO si el registro no existe: un id ajeno
+  sigue siendo 404. El buscador de producto contesta DENTRO de su panel (ver
+  convenciones: un fetch plano sigue redirecciones).
+- **El equipo-servidor solo consulta** (decisión del usuario): las ve todas en
+  el reporte y en la captura, sin botones. `can_resolve_draft?` no aplica: ese
+  permiso existe porque un borrador de pedido bloquea el panel, y una
+  cotización no bloquea nada.
+- **Edición en los dos sentidos** (decisión del usuario): al editar una
+  cotización con cliente aparece "Cliente genérico" (manda `client_id` vacío;
+  el modelo limpia `kind` y perfiles); una genérica toma cliente desde el
+  buscador. El botón sale según el cliente GUARDADO (`client_id_in_database`):
+  al elegir cliente para una genérica, `edit` lo pone en memoria y el botón
+  aparecía antes de guardar (visto en navegador).
+- **Textos desde un solo lugar**: `Order#document_noun` / `document_phrase`
+  alimentan título, modales, flash y avisos; "Guardada" en vez de "Capturado"
+  (es lo que el capturista hizo; "Capturado" tiene un paso más: transmitir).
+  "Cambiar precios" también la nombra: la revisión tronaba con
+  `order.client.name` en la primera genérica.
+- **Reporte parametrizado, no duplicado**: `reports#estimates` rinde la misma
+  vista con `@document`; `report_path` apunta al reporte que se ve y
+  `report_back_path` reconoce las dos rutas. El genérico se muestra, filtra
+  (`client_id=generic`) y ordena como lo que dice su celda
+  (`COALESCE(clients.name, 'Cliente genérico')`). Resumen con Borrador y
+  Guardada. Quinta tarjeta en el hub, a cinco columnas; el relleno lateral de
+  las tarjetas bajó a `px-4` porque "Cotizaciones" a 1024 px se salía 11 px.
+- **Borradores genéricos abandonados** (entrar y salir sin capturar) se dejan:
+  no bloquean nada y se van con obtener/cerrar.
+
+**Fuera, a propósito:** PDF de la cotización y convertirla en pedido (backlog).
+
+**Validación:** fail-first y mutación en cada bloque; navegador a 1400 y 768
+con usuario efímero `val_cot` (menú → entrada → genérica → partida con
+promoción → Cotizador → guardar → resumen → hub → reporte → abrir → volver al
+reporte → editar a cliente → editar a genérica). Commits: 9c53e2e (modelo y
+exclusiones), e9fc676 (entrada), 4dc0940 (captura), 88ed95c (reporte).
 
 ## Cotizador de la captura (2026-10-09)
 

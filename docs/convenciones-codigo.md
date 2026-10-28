@@ -72,6 +72,21 @@ movería también fechas, números y mensajes de Rails que hoy funcionan.
   único donde viven la URL, los timeouts y —cuando entren— los tokens y el TLS.
   Una clase que arme su propio `Net::HTTP` queda fuera del endurecimiento sin
   que nada lo delate hasta el 401.
+- **Toda lectura de "pedidos" va sobre `Order.sale`, nunca sobre `Order`
+  pelón.** Las cotizaciones (`document = estimate`, 2026-10-27) viven en la
+  misma tabla con los mismos estatus: un `Order.captured` cuenta también las
+  cotizaciones guardadas, y así se colaban al sync-up, a las guardas del
+  panel, al reporte de productos y a la evidencia. Cada lugar que las excluye
+  tiene su prueba ("una cotización no entra aquí"); un lugar nuevo que lea
+  pedidos necesita la suya. Y al revés: lo que debe cubrir a las dos (la
+  revisión de "Cambiar precios", la captura) tiene que aguantar
+  `order.client == nil` (cliente genérico).
+- **Un `fetch` plano SIGUE las redirecciones; Turbo no.** Un `redirect_to`
+  como respuesta a una petición que hizo el autocompletado del buscador de
+  producto llega como el HTML de la página destino —con 200— y se inyecta
+  entero en el panel de sugerencias. Lo que responde a un fetch que no es de
+  Turbo contesta dentro del componente (ver `order_gone` y `_order_gone`),
+  igual que un turbo-frame contesta dentro del frame.
 - **Un porcentaje (o cualquier cifra) que ve el usuario se le pide al objeto
   que lo aplica, nunca a la regla de la que sale.** La vista leía
   `tier.discount_percent` y el flash tomaba el de la primera partida; con
@@ -464,6 +479,12 @@ movería también fechas, números y mensajes de Rails que hoy funcionan.
     que no distingue una consulta correcta de una incorrecta **no está probando
     la consulta**: si el código bajo prueba decide *qué* pedir, el stub tiene
     que responder según lo pedido.
+- **Un objeto de consulta que las pruebas construyen con un Hash literal no
+  puede tomar keywords.** `OrdersFilter.new(params, document: "x")` rompió
+  cuatro pruebas que lo llamaban `OrdersFilter.new(supplier_id: 1)`: Ruby toma
+  el Hash como argumentos con nombre y el posicional queda vacío ("given 0,
+  expected 1"). En el controlador no se nota porque `params` no es un Hash.
+  El argumento extra va posicional con default.
 - **Un doble de base de datos NO puede verificar qué columnas pide un SELECT**,
   porque las filas que devuelve las inventa la prueba. En `rueda-api`, quitarle
   `fecha_pedido` a la consulta de partes —una columna que el código sí lee de

@@ -224,9 +224,11 @@ como copia de respaldo por si el folio se llegara a armar del lado de la app.
 
 - Read-only: productos, clientes, rueda activa.
 - Asistencia de clientes.
-- Cotización ("Generar cotización" del menú: simular un pedido completo). Es
-  otra pantalla, NO el Cotizador de la captura (2026-10-09), que cotiza una
-  partida por los escalones de su promoción.
+- Cotización: **hecha** (2026-10-27/28, ver memory.md). Queda pendiente, sin
+  pedir todavía: **PDF de la cotización** (el del pedido con título
+  "Cotización" y "Cliente genérico" cuando aplique; hoy el paso 3 no ofrece
+  PDF ni correo) y **convertir una cotización en pedido** (la pregunta
+  natural siguiente: el cliente dice quién es cuando ya le gustó el precio).
 - Modal de promoción: misma trampa que la 14ª encontró en el Cotizador. Si
   su frame pide una promoción que ya no existe (`Promotion.find` en
   `PromotionsController#group_for`), la página de error de development

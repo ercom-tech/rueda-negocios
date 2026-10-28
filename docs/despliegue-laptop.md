@@ -109,6 +109,12 @@ Lo mínimo, en el navegador de la laptop:
   información" con la API que exporta `pieces_per_box` (lote del 2026-10-09):
   sin eso todos los productos se ven "sin caja", sin error. Fuera de la
   vigencia de la promoción, el modal dice que el producto no está en ninguna.
+- **Menú → Generar cotización** (lote del 2026-10-28): "Cliente genérico"
+  abre la captura con el encabezado "Cliente genérico"; agregar una partida y
+  "Guardar" da folio `COT-000001` y el resumen sin PDF. En **Reportes →
+  Cotizaciones capturadas** aparece con estatus "Guardada". Descartarla al
+  terminar (o se irá con el siguiente "Obtener información", que lo avisa en
+  su modal: "Se borrará 1 cotización").
 - Si el lote trae cambios en el PDF, **imprimir un pedido de ~20 partidas** y
   verificar que los cuatro totales y el importe en letra caen en la misma hoja.
 
@@ -176,12 +182,23 @@ migraciones traiga el lote:
   `supplier_id`/`brand_id` de las partidas y `captured_at` del pedido; y las
   del 2026-10-08: la tabla `price_overrides` y `price_from_file`/
   `erp_unit_price` de las partidas, con valor por omisión; y la del
-  2026-10-10: `pieces_per_box` del producto, del Cotizador): **el checkout
-  basta, sin rollback.** El código anterior ignora las columnas que no
+  2026-10-10: `pieces_per_box` del producto, del Cotizador; y la del
+  2026-10-27: `orders.document` con default "sale", `client_id` y `kind`
+  nullable, el CHECK `orders_sale_requires_client` y
+  `settings.last_estimate_number`): **el checkout basta, sin rollback.**
+  El código anterior ignora las columnas que no
   conoce — comprobado en la 12ª auditoría: sin migraciones pendientes,
   `capture!` y "Obtener información" corren completos. Un `db:rollback` aquí
   borraría, sin necesidad, el proveedor y la marca de los productos nuevos y
   los precios cargados con su rastro.
+- **Ojo con la del 2026-10-27 (cotizaciones):** el código anterior convive
+  con las columnas —todo pedido viejo lleva `document = sale`—, pero NO con
+  los datos: una cotización —en borrador o guardada— la vería como un pedido
+  más, sin cliente: bloquearía obtener y cerrar como cualquier borrador, la
+  captura tronaría al abrirla y "Transmitir pedidos" la intentaría mandar al
+  ERP sin cliente y fallaría. Antes de revertir,
+  **descartar las cotizaciones** desde Reportes → Cotizaciones capturadas (o
+  cerrar la rueda, que las borra).
 
   **Con "Cambiar precios" hay dos cosas que hacer ANTES del checkout** (13ª
   auditoría): (1) **"Quitar precios cargados"**: el código anterior ni los lee

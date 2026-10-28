@@ -135,6 +135,8 @@ class EstimateCaptureTest < ActionDispatch::IntegrationTest
     get edit_order_path(estimate, client_key: "CAP01")
     assert_response :success
     assert_select "input[name='order[client_id]'][value=?]", @client.id.to_s, visible: :all
+    # Todavía no hay cliente guardado: el botón de volverla genérica no aplica.
+    assert_select "button", text: "Cliente genérico", count: 0, visible: :all
 
     patch order_path(estimate), params: { order: { client_id: @client.id, kind: "remission",
                                                    client_receipt_profile_id: @client.receipt_profiles.first.id } }
