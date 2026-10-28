@@ -90,6 +90,13 @@ ve (`totals_bar_controller#reservePageSpace`): el navegador lo descuenta al
 llevar algo a la vista y al mover el foco. Y si la capa se oculta con el foco
 adentro, el foco se entrega a lo que la reemplaza — si no, cae al `<body>`.
 
+**`lg:` no separa la laptop de la tablet: la tablet horizontal mide 1024, que
+ES `lg`.** Lo que solo cabe en laptop va con `xl:` (1280). La barra de totales
+a 1.5x se puso sin prefijo y en tablet se volvió franja: a 768 px se partía en
+dos renglones sobre el 100% del ancho de la tabla, y a 1024×600 tapaba la
+cantidad y el total (15ª auditoría). Un cambio de TAMAÑO se mide a 768×1024 y
+a 1024×600, no solo en la laptop donde se pidió.
+
 **`bg-white/10` es para fondo OSCURO, no para el marco dorado de los filtros.**
 Un botón secundario con esa clase dentro de la barra dorada se lava hasta
 volverse ilegible — el blanco sobre dorado claro no tiene dónde apoyarse. Ahí

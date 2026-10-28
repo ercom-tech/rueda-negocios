@@ -266,7 +266,12 @@
       revés. El margen inferior suma el área segura del iPad.
 
       A 1.5x de su tamaño original (decisión del usuario 2026-10-27; al doble
-      se veía muy grande): texto, relleno, filete y flecha.
+      se veía muy grande): texto, relleno, filete y flecha — pero solo desde
+      `xl:` (1280 px, la laptop). En tablet el 1.5x deshacía la píldora: a
+      768 px se partía en dos renglones y cubría el 100% del ancho de la
+      tabla, con el bote y el total de las partidas de abajo; a 1024×600
+      cubría el 88% y tapaba la cantidad y el total (medido, 15ª auditoría).
+      Por eso no basta `lg:`: la tablet horizontal ES 1024.
       El espacio que reserva al fondo (`reservePageSpace`) se mide del alto
       real, así que crece solo.
 
@@ -290,12 +295,12 @@
         anunciaría la acción sin las cifras. La acción va como texto oculto
         al final. %>
     <button type="button" data-action="totals-bar#reveal"
-            class="pointer-events-auto inline-flex max-w-full items-center gap-6 rounded-full border-[3px] border-brand-gold bg-black py-3 pl-7.5 pr-4.5 text-left text-[21px] leading-tight shadow-xl transition-colors hover:bg-neutral-900">
+            class="pointer-events-auto inline-flex max-w-full items-center gap-4 rounded-full border-2 border-brand-gold bg-black py-2 pl-5 pr-3 text-left text-sm shadow-xl transition-colors hover:bg-neutral-900 xl:gap-6 xl:border-[3px] xl:py-3 xl:pl-7.5 xl:pr-4.5 xl:text-[21px] xl:leading-tight">
       <%= render "orders/totals_bar_content", order: @order %>
       <%# Flecha hacia ABAJO: tocar la barra baja hasta la tarjeta, que está al
           final de la página. Heroicons outline chevron-down, trazo 1.5. %>
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-           stroke="currentColor" aria-hidden="true" class="h-7.5 w-7.5 shrink-0 text-brand-gold">
+           stroke="currentColor" aria-hidden="true" class="h-5 w-5 shrink-0 text-brand-gold xl:h-7.5 xl:w-7.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
       </svg>
       <span class="sr-only">Ver los totales completos de <%= @order.document_phrase %></span>

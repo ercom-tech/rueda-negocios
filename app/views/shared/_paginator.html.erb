@@ -1,5 +1,10 @@
 <%# Paginador reutilizable. Locals: pagy · noun (singular, p.ej. "pedido") ·
-    base_params (los filtros vigentes, ya saneados) · page_sizes (opcional).
+    plural (opcional) · base_params (los filtros vigentes, ya saneados) ·
+    page_sizes (opcional).
+
+    `plural` existe porque `pluralize` es el inflector inglés: con
+    "cotización" daba "2 cotizacións" (15ª auditoría). Sin él se usa
+    `pluralize`, que acierta con los sustantivos que hoy llegan aquí.
 
     Los enlaces conservan `base_params` para que los filtros sobrevivan al
     cambiar de página. Se recibe la lista de parámetros LEGÍTIMOS y no
@@ -18,7 +23,7 @@
   <%# El conteo se muestra SIEMPRE (aunque haya una sola página): saber
       cuántos hay es dato útil por sí mismo, sobre todo antes de transmitir. %>
   <span class="tabular-nums">
-    <%= pluralize(pagy.count, noun) %>
+    <%= pagy.count %> <%= pagy.count == 1 ? noun : local_assigns.fetch(:plural) { noun.pluralize } %>
     <% if pagy.pages > 1 %>
       · página <%= pagy.page %> de <%= pagy.pages %>
     <% end %>

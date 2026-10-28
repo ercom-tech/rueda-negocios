@@ -10,8 +10,13 @@
 <%# `px-4` y no `p-6`: con cinco tarjetas en laptop (1024 px) la tarjeta mide
     159 px y "Cotizaciones" a text-xl mide 122: con 24 px por lado se salía
     11 px del marco (medido 2026-10-28). El contenido va centrado, así que el
-    relleno lateral no se nota. %>
-<% base = "relative flex aspect-square flex-col items-center justify-center rounded-3xl #{card_bg} px-4 py-6 text-center shadow-lg" %>
+    relleno lateral no se nota.
+    `pb-10` y no `pb-6`: en cinco columnas la tarjeta crece con su contenido,
+    y el rótulo quedaba a 24 px del borde, justo donde vive el badge
+    "Próximamente" (de 12 a 36 px): le tapaba 12 px de la segunda línea (15ª
+    auditoría). Va en TODAS, no solo en las "Próximamente", para que los
+    íconos de un mismo renglón queden a la misma altura. %>
+<% base = "relative flex aspect-square flex-col items-center justify-center rounded-3xl #{card_bg} px-4 pt-6 pb-10 text-center shadow-lg" %>
 
 <% inner = capture do %>
   <%# El contenido se atenúa cuando es "Próximamente"; el badge NO (queda a

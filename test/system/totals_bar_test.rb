@@ -207,4 +207,61 @@ class TotalsBarTest < ApplicationSystemTestCase
 
     assert_equal "order-totals", evaluate_script("document.activeElement.id")
   end
+  # La barra a 1.5x (decisión del usuario 2026-10-27) vale para la laptop. En
+  # tablet deshacía la píldora: a 768 px se partía en dos renglones y cubría
+  # el 100% del ancho de la tabla; a 1024×600, el 88%, con la cantidad y el
+  # total de las partidas que pasan por debajo (15ª auditoría).
+  BEHIND_BAR = <<~JS
+    (() => {
+      const b = document.querySelector("[data-totals-bar-target=bar] button").getBoundingClientRect()
+      const table = document.querySelector("tbody").getBoundingClientRect()
+      const covered = []
+      document.querySelectorAll("tbody tr").forEach(tr => {
+        const r = tr.getBoundingClientRect()
+        if (r.bottom < b.top || r.top > b.bottom) return
+        const y = Math.min(Math.max(r.top + r.height / 2, b.top + 2), b.bottom - 2)
+        const cells = { trash: tr.querySelector("button[aria-label^='Quitar']"), total: tr.querySelector("td:nth-last-child(2)") }
+        Object.entries(cells).forEach(([name, el]) => {
+          const e = el.getBoundingClientRect()
+          if (document.elementFromPoint(e.left + e.width / 2, y)?.closest("[data-totals-bar-target=bar]")) covered.push(name)
+        })
+      })
+      return { share: b.width / table.width, height: b.height, covered: [...new Set(covered)] }
+    })()
+  JS
+
+  def viewport(width, height)
+    page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: width, height: height,
+                                    deviceScaleFactor: 1, mobile: false)
+  end
+
+  test "en tablet la barra vuelve a su tamaño compacto y no tapa el bote ni el total" do
+    items!(40)
+    sign_in @user
+    [ [ 768, 1024 ], [ 1024, 600 ] ].each do |width, height|
+      viewport(width, height)
+      visit order_path(@order)
+      assert bar.visible?
+      execute_script("window.scrollTo(0, 300)")
+
+      box = evaluate_script(BEHIND_BAR)
+      assert_operator box["share"], :<, 0.7, "a #{width}×#{height} la barra cubre casi toda la tabla"
+      assert_empty box["covered"], "a #{width}×#{height} la barra tapa #{box['covered'].join(' y ')}"
+    end
+  ensure
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
+
+  test "en la laptop la barra conserva el 1.5x" do
+    items!(40)
+    sign_in @user
+    viewport(1440, 900)
+    visit order_path(@order)
+    assert bar.visible?
+
+    # 68 px a 1.5x; el tamaño compacto mide 48.
+    assert_operator evaluate_script(BEHIND_BAR)["height"], :>, 60
+  ensure
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
 end

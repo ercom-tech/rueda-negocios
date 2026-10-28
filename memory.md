@@ -73,6 +73,23 @@ Cotizador usa el mismo texto que `order_gone`. Prueba de sistema nueva
 `estimate_gone_flow_test` (roja antes; clics reales en Chrome headless) y
 mutación de cada arreglo.
 
+**Bloque 3 — M4, M5 y M7 (lo visual).** Los tres resistieron la refutación,
+medidos con una prueba desechable en Chrome headless:
+- **M4, barra de totales a 1.5x:** a 768×1024 medía 720×106 (dos renglones) y
+  cubría el 100% de la tabla, con bote, cantidad y total de las partidas de
+  abajo; a 1024×600, el 88%, con cantidad y total. Desde 1280 ya no tapaba ni
+  bote ni total. Arreglo: el 1.5x solo desde `xl:`; en tablet, el tamaño
+  compacto de antes. `lg:` no servía —la tablet horizontal mide 1024— y una
+  mutación con `lg:` lo comprobó. La decisión del usuario (1.5x) sigue en la
+  laptop, que es donde se pidió, con prueba que la vigila.
+- **M5, badge "Próximamente":** con cinco columnas la tarjeta crece con su
+  contenido y el rótulo queda a 24 px del borde; el badge ocupa de 12 a 36:
+  12 px encima. Achicar el ícono no sirve (lo medí: la tarjeta se encoge con
+  él). Arreglo: `pb-10` en todas las tarjetas del hub, para que los íconos de
+  un renglón sigan alineados.
+- **M7, "2 cotizacións":** el paginador recibe `plural` escrito a mano;
+  sin él sigue usando `pluralize`, que acierta con los demás sustantivos.
+
 Lección: **una guía de reversión se audita contra el código VIEJO, no contra
 el nuevo**. Yo razoné qué haría el código viejo con una cotización genérica
 (la que estaba pensando) y no con la que tiene cliente, que es el caso normal.

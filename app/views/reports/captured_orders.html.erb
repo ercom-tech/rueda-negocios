@@ -135,6 +135,7 @@
     <% end %>
 
     <%= render "shared/paginator", pagy: @pagy, noun: (estimate ? "cotización" : "pedido"),
+          plural: (estimate ? "cotizaciones" : "pedidos"),
           base_params: @filter.to_params.merge(@sort.to_params).merge(per_page: @pagy.limit),
           page_sizes: @page_sizes %>
     </div>

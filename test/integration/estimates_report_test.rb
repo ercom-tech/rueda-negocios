@@ -130,6 +130,20 @@ class EstimatesReportTest < ActionDispatch::IntegrationTest
     assert_match(/Todas las cotizaciones/, response.body)
   end
 
+  # `pluralize` es el inflector inglés: el paginador decía "2 cotizacións"
+  # (15ª auditoría).
+  test "el paginador cuenta las cotizaciones en español" do
+    2.times { estimate! }
+    login_as "cap_rep"
+
+    get estimates_report_path
+    assert_select "nav[aria-label=Paginación] span", text: /\A\s*2 cotizaciones\s*\z/
+
+    Order.estimate.first.destroy
+    get estimates_report_path
+    assert_select "nav[aria-label=Paginación] span", text: /\A\s*1 cotización\s*\z/
+  end
+
   test "desde una cotización abierta del reporte se vuelve al reporte con sus filtros" do
     estimate = estimate!
     login_as "cap_rep"
