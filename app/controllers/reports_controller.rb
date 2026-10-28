@@ -22,7 +22,7 @@ class ReportsController < ApplicationController
       redirect_to products_report_path(supplier_id: @supplier_id, brand_id: @brand_id,
                                        per_page: page_size)
     else
-      redirect_to captured_orders_report_path((@filter&.to_params || {}).merge(per_page: page_size))
+      redirect_to report_path((@filter&.to_params || {}).merge(per_page: page_size))
     end
   end
 
@@ -32,27 +32,15 @@ class ReportsController < ApplicationController
   # equipo-servidor ve todos (para transmitirlos al ERP). Paginado: en un
   # evento grande la lista completa se vuelve pesada para la tablet.
   def captured_orders
-    @all_scope = current_user.can_see_all_orders?
-    @filter    = OrdersFilter.new(params)
-    @sort      = OrdersSort.new(params)
+    orders_report("sale")
+  end
 
-    # El resumen se calcula con TODOS los filtros menos el de estatus: sus
-    # tarjetas son el filtro de estatus y deben seguir mostrando el panorama
-    # completo para poder saltar entre ellas.
-    filtered    = @filter.apply_without_status(orders_scope)
-    @items_sql  = @filter.matching_items_sql
-    @summary    = filtered.totals_by_status(@items_sql)
-    @options    = filter_options
-    @page_sizes = PAGE_SIZES
-
-    # El orden se aplica ANTES de paginar (dentro de `OrdersSort#apply`), o la
-    # tabla se vería ordenada dentro de una página que siempre trae los mismos
-    # pedidos. `@items_sql` va porque con filtro de partida las columnas
-    # Renglones y Total muestran —y por tanto ordenan por— lo que coincide.
-    ordered = @sort.apply(@filter.apply_status(filtered), @items_sql)
-                   .includes(:user, :order_items, client: :salesperson)
-    @pagy, @orders = pagy(ordered, limit: page_size)
-    @matching = matching_totals(@orders, @items_sql)
+  # Reporte de cotizaciones capturadas (decisión del usuario 2026-10-27): la
+  # misma pantalla y las mismas reglas, sobre `Order.estimate`. El servidor las
+  # ve todas, solo para consultar.
+  def estimates
+    orders_report("estimate")
+    render :captured_orders
   end
 
   # Reporte de productos: piezas vendidas por producto en la rueda. Mismo
@@ -123,9 +111,43 @@ class ReportsController < ApplicationController
   # estatus y el conteo del paginador, para que no puedan divergir. El alcance
   # por rol es `accessible_orders` (ApplicationController), compartido con
   # OrdersController; los filtros se aplican SOBRE él en `OrdersFilter`.
-  # Sobre `sale`: las cotizaciones comparten tabla y tienen su propio reporte.
+  def orders_report(document)
+    @document  = document
+    @all_scope = current_user.can_see_all_orders?
+    @filter    = OrdersFilter.new(params, document)
+    @sort      = OrdersSort.new(params)
+
+    # El resumen se calcula con TODOS los filtros menos el de estatus: sus
+    # tarjetas son el filtro de estatus y deben seguir mostrando el panorama
+    # completo para poder saltar entre ellas.
+    filtered    = @filter.apply_without_status(orders_scope)
+    @items_sql  = @filter.matching_items_sql
+    @summary    = filtered.totals_by_status(@items_sql)
+    @options    = filter_options
+    @page_sizes = PAGE_SIZES
+
+    # El orden se aplica ANTES de paginar (dentro de `OrdersSort#apply`), o la
+    # tabla se vería ordenada dentro de una página que siempre trae los mismos
+    # pedidos. `@items_sql` va porque con filtro de partida las columnas
+    # Renglones y Total muestran —y por tanto ordenan por— lo que coincide.
+    ordered = @sort.apply(@filter.apply_status(filtered), @items_sql)
+                   .includes(:user, :order_items, client: :salesperson)
+    @pagy, @orders = pagy(ordered, limit: page_size)
+    @matching = matching_totals(@orders, @items_sql)
+  end
+
+  # La ruta del reporte que se está viendo (pedidos o cotizaciones), para que
+  # filtros, tarjetas de estatus y enlaces de la vista compartida vuelvan al
+  # mismo reporte. Lo usa también `report_back_path`.
+  helper_method :report_path
+  def report_path(params = {})
+    @document == "estimate" ? estimates_report_path(params) : captured_orders_report_path(params)
+  end
+
+  # Pedidos o cotizaciones según el reporte: comparten tabla y cada reporte ve
+  # solo lo suyo.
   def orders_scope
-    accessible_orders.sale
+    @document == "estimate" ? accessible_orders.estimate : accessible_orders.sale
   end
 
   def page_size
@@ -140,7 +162,10 @@ class ReportsController < ApplicationController
   def filter_options
     {
       users: (User.capturista.order(:name, :username).map { |u| [ u.full_name.presence || u.username, u.id ] } if @all_scope),
-      clients: Client.order(:name).map { |c| [ "#{c.erp_client_key} — #{c.name}", c.id ] },
+      # En cotizaciones, "Cliente genérico" es una opción más del combo (su
+      # valor es la palabra, no un id: ver OrdersFilter).
+      clients: [ ([ "Cliente genérico", OrdersFilter::GENERIC_CLIENT ] if @document == "estimate") ].compact +
+               Client.order(:name).map { |c| [ "#{c.erp_client_key} — #{c.name}", c.id ] },
       salespeople: Salesperson.order(:name).map { |s| [ "#{s.erp_salesperson_id} — #{s.name}", s.id ] },
       # Proveedores y marcas del universo de quien mira: al capturista no se le
       # ofrecen opciones que jamás podrían aparecer en sus pedidos.

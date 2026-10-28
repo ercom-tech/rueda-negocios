@@ -7,7 +7,11 @@
 <%# En "Próximamente" el fondo se atenúa con alpha (bg .../60), que —a diferencia
     de opacity— NO afecta a los hijos, así el badge queda a plena opacidad. %>
 <% card_bg = soon ? "bg-brand-gold/60" : "bg-brand-gold" %>
-<% base = "relative flex aspect-square flex-col items-center justify-center rounded-3xl #{card_bg} p-6 text-center shadow-lg" %>
+<%# `px-4` y no `p-6`: con cinco tarjetas en laptop (1024 px) la tarjeta mide
+    159 px y "Cotizaciones" a text-xl mide 122: con 24 px por lado se salía
+    11 px del marco (medido 2026-10-28). El contenido va centrado, así que el
+    relleno lateral no se nota. %>
+<% base = "relative flex aspect-square flex-col items-center justify-center rounded-3xl #{card_bg} px-4 py-6 text-center shadow-lg" %>
 
 <% inner = capture do %>
   <%# El contenido se atenúa cuando es "Próximamente"; el badge NO (queda a

@@ -196,6 +196,14 @@ class Order < ApplicationRecord
 
   STATUS_LABELS = { "draft" => "Borrador", "captured" => "Capturado", "transmitted" => "Transmitido" }.freeze
 
+  # Los estatus que ve el reporte de cada tipo, con su rótulo: la cotización
+  # no se transmite y su "captured" se dice "Guardada" (ver `status_label`).
+  def self.status_labels_for(document)
+    return STATUS_LABELS if document != "estimate"
+
+    { "draft" => "Borrador", "captured" => "Guardada" }
+  end
+
   # Cómo nombra la pantalla a este registro: "pedido" o "cotización". Un solo
   # lugar, como STATUS_LABELS: los textos que lo usan (título, modales, flash,
   # avisos) viven en seis archivos distintos y con condicionales sueltos se

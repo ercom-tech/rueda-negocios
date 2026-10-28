@@ -1,4 +1,10 @@
-<% content_for :title, "Pedidos capturados · Rueda de Negocios" %>
+<%# La misma pantalla sirve a "Pedidos capturados" y a "Cotizaciones
+    capturadas" (decisión del usuario 2026-10-27): cambian el sustantivo, el
+    cliente genérico de las cotizaciones y los estatus del resumen. Los
+    enlaces van por `report_path`, que apunta al reporte que se está viendo. %>
+<% estimate = @document == "estimate" %>
+<% screen_title = estimate ? "Cotizaciones capturadas" : "Pedidos capturados" %>
+<% content_for :title, "#{screen_title} · Rueda de Negocios" %>
 
 <div class="relative min-h-screen w-full overflow-hidden bg-black text-white">
   <div class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.18]"
@@ -11,9 +17,13 @@
     <%# ── Título + alcance + regreso al hub ── %>
     <div class="mt-8 mb-6 flex flex-wrap items-center justify-between gap-4">
       <div class="flex flex-wrap items-center gap-3">
-        <h1 class="text-3xl font-extrabold text-white sm:text-4xl">Pedidos capturados</h1>
+        <h1 class="text-3xl font-extrabold text-white sm:text-4xl"><%= screen_title %></h1>
         <span class="rounded-full bg-brand-gold px-3 py-1 text-xs font-semibold text-neutral-900">
-          <%= @all_scope ? "Todos los pedidos" : "Mis pedidos" %>
+          <% if estimate %>
+            <%= @all_scope ? "Todas las cotizaciones" : "Mis cotizaciones" %>
+          <% else %>
+            <%= @all_scope ? "Todos los pedidos" : "Mis pedidos" %>
+          <% end %>
         </span>
       </div>
       <%= link_to "← Volver a reportes", reports_path, class: back_link_class %>
@@ -60,18 +70,22 @@
               <td class="px-4 py-3 whitespace-nowrap"><%= captured.strftime("%d/%m/%Y") %></td>
               <td class="hidden px-4 py-3 lg:table-cell"><%= captured.strftime("%H:%M") %></td>
               <td class="px-4 py-3">
-                <span class="font-semibold"><%= order.client.erp_client_key %></span>
-                — <%= order.client.name %>
+                <% if order.client %>
+                  <span class="font-semibold"><%= order.client.erp_client_key %></span>
+                  — <%= order.client.name %>
+                <% else %>
+                  Cliente genérico
+                <% end %>
               </td>
               <td class="hidden px-4 py-3 lg:table-cell">
-                <% if (sp = order.client.salesperson) %>
+                <% if (sp = order.client&.salesperson) %>
                   <span class="font-semibold"><%= sp.erp_salesperson_id %></span> — <%= sp.name %>
                 <% else %>
                   —
                 <% end %>
               </td>
               <td class="px-4 py-3 font-semibold whitespace-nowrap">
-                <%= link_to order.folio, order_path(order), title: "Abrir pedido",
+                <%= link_to order.folio, order_path(order), title: "Abrir #{order.document_noun}",
                       class: "underline decoration-brand-coral-dark decoration-2 underline-offset-4 hover:text-brand-coral" %>
               </td>
               <%# Con filtro de partida, renglones e importe son los de las
@@ -93,11 +107,11 @@
             <tr>
               <td colspan="<%= @all_scope ? 9 : 8 %>" class="px-4 py-10 text-center text-neutral-600">
                 <% if @filter.any? %>
-                  Ningún pedido coincide con lo que elegiste.
-                  <%= link_to "Quitar filtros", captured_orders_report_path(per_page: @pagy.limit),
+                  <%= estimate ? "Ninguna cotización coincide" : "Ningún pedido coincide" %> con lo que elegiste.
+                  <%= link_to "Quitar filtros", report_path(per_page: @pagy.limit),
                         class: "ml-2 font-semibold text-neutral-900 underline decoration-brand-coral-dark decoration-2 underline-offset-4" %>
                 <% else %>
-                  Todavía no hay pedidos capturados.
+                  <%= estimate ? "Todavía no hay cotizaciones." : "Todavía no hay pedidos capturados." %>
                 <% end %>
               </td>
             </tr>
@@ -120,7 +134,7 @@
       </p>
     <% end %>
 
-    <%= render "shared/paginator", pagy: @pagy, noun: "pedido",
+    <%= render "shared/paginator", pagy: @pagy, noun: (estimate ? "cotización" : "pedido"),
           base_params: @filter.to_params.merge(@sort.to_params).merge(per_page: @pagy.limit),
           page_sizes: @page_sizes %>
     </div>

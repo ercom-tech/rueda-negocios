@@ -34,6 +34,8 @@ Rails.application.routes.draw do
   # Reportes de venta (hub de reportes).
   get "reports", to: "reports#index", as: :reports
   get "reports/captured-orders", to: "reports#captured_orders", as: :captured_orders_report
+  # La misma pantalla del reporte de pedidos, sobre las cotizaciones.
+  get "reports/estimates", to: "reports#estimates", as: :estimates_report
   get "reports/product-options", to: "reports#product_options", as: :product_options_report # autocompletado del filtro de producto
   # Reporte de productos (piezas vendidas). Responde HTML, CSV y Excel: las
   # descargas son la MISMA acción con otro formato, así el archivo sale con

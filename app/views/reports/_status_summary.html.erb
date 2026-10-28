@@ -33,12 +33,15 @@
   </p>
 <% end %>
 
-<div class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-  <% Order::STATUS_LABELS.each do |status, label| %>
+<%# Los estatus del reporte que se ve: tres para pedidos, dos para
+    cotizaciones (sin Transmitido), más la tarjeta de Total. %>
+<% labels = Order.status_labels_for(@document) %>
+<div class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 <%= labels.size == 2 ? "lg:grid-cols-3" : "lg:grid-cols-4" %>">
+  <% labels.each do |status, label| %>
     <% counts  = summary[status] || { count: 0, total: 0 } %>
     <% active = filter.status == status %>
     <%# Volver a picar la tarjeta activa quita el filtro. %>
-    <%= link_to captured_orders_report_path(base_params.merge(active ? {} : { status: status })),
+    <%= link_to report_path(base_params.merge(active ? {} : { status: status })),
           aria: { current: (active ? "true" : nil) },
           class: "#{card_class} bg-brand-cream text-neutral-900 #{'ring-4 ring-brand-gold' if active}" do %>
       <div class="flex items-center justify-between gap-3">
@@ -59,7 +62,7 @@
   <%# Total general en coral, como el renglón Total de la card de totales del
       pedido: cierra la fila y evita sumar de cabeza los tres estatus. Con un
       estatus filtrado, este enlace es la vuelta a "todos". %>
-  <%= link_to captured_orders_report_path(base_params), class: "#{card_class} bg-brand-coral text-white" do %>
+  <%= link_to report_path(base_params), class: "#{card_class} bg-brand-coral text-white" do %>
     <div class="flex items-center justify-between gap-3">
       <span class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">Total</span>
       <span class="text-3xl font-extrabold tabular-nums">

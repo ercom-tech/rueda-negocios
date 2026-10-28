@@ -96,7 +96,8 @@ class ApplicationController < ActionController::Base
     @report_back_path = begin
       uri = URI.parse(request.referer.to_s)
       same_site = uri.host.blank? || (uri.host == request.host && uri.port == request.port)
-      [ uri.path, uri.query ].compact_blank.join("?") if same_site && uri.path == captured_orders_report_path
+      report = uri.path.in?([ captured_orders_report_path, estimates_report_path ])
+      [ uri.path, uri.query ].compact_blank.join("?") if same_site && report
     rescue URI::InvalidURIError
       nil
     end

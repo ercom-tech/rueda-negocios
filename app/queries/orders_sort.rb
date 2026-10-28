@@ -33,7 +33,10 @@ class OrdersSort
     # la rueda, el `NULLS LAST` ni los tocaba: quedaban amontonados al
     # principio y de ahí en adelante la columna se veía desordenada, con la
     # inicial saltando (J, A, M, F). 9ª auditoría.
-    "client" => { sql: "clients.name", fallback: "clients.erp_client_key", joins: :client },
+    # Y el genérico de las cotizaciones (sin cliente) ordena por el texto que
+    # muestra su celda, no por NULL —que lo clavaría al final en las dos
+    # direcciones, como pasó con "(borrador)" en Clave local.
+    "client" => { sql: "COALESCE(clients.name, 'Cliente genérico')", fallback: "clients.erp_client_key", joins: :client },
     "salesperson" => { sql: "salespeople.name", joins: { client: :salesperson } },
     # Espeja EXACTAMENTE lo que la celda muestra (`Order#folio`), incluido el
     # "(borrador)" de un pedido sin folio todavía. Ordenar por la columna cruda

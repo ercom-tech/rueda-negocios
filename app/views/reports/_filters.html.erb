@@ -21,7 +21,7 @@
     página sí viaja, para no perderlo al filtrar. %>
 <% on_change = { action: "change->form-submit#submit" } %>
 
-<%= form_with url: captured_orders_report_path, method: :get,
+<%= form_with url: report_path, method: :get,
       data: { controller: "form-submit" } do %>
   <%= hidden_field_tag :per_page, per_page %>
 
@@ -100,7 +100,7 @@
         <%# `items-end`: alineado abajo, a la altura del borde inferior de los
             pills, no a media celda. %>
         <div class="flex h-[46px] items-end px-2 pb-2">
-          <%= link_to "Limpiar filtros", captured_orders_report_path(per_page: per_page),
+          <%= link_to "Limpiar filtros", report_path(per_page: per_page),
                 class: "text-sm font-semibold text-neutral-900 underline decoration-neutral-900/40 underline-offset-4 transition-colors hover:decoration-neutral-900" %>
         </div>
       <% end %>

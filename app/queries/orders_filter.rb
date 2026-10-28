@@ -31,9 +31,17 @@ class OrdersFilter
   attr_reader :user_id, :client_id, :salesperson_id, :from, :to, :status,
               :supplier_id, :brand_id, :product_q
 
-  def initialize(params)
+  # Valor del combo de cliente que significa "las cotizaciones sin cliente".
+  # Es una palabra y no un id porque no hay registro al que apuntar.
+  GENERIC_CLIENT = "generic".freeze
+
+  # `document`: en el reporte de cotizaciones el filtro de cliente admite
+  # además el genérico; en el de pedidos no existe tal cosa. Posicional y no
+  # keyword: las pruebas construyen el filtro con un Hash literal, y con un
+  # keyword Ruby se lo comía como argumentos con nombre.
+  def initialize(params, document = "sale")
     @user_id        = id_param(params[:user_id])
-    @client_id      = id_param(params[:client_id])
+    @client_id      = (document == "estimate" && params[:client_id] == GENERIC_CLIENT) ? GENERIC_CLIENT : id_param(params[:client_id])
     @salesperson_id = id_param(params[:salesperson_id])
     @from           = date_param(params[:from])
     @to             = date_param(params[:to])
@@ -89,7 +97,7 @@ class OrdersFilter
 
   def apply_without_status(scope)
     scope = scope.where(user_id: user_id)     if user_id
-    scope = scope.where(client_id: client_id) if client_id
+    scope = scope.where(client_id: (client_id == GENERIC_CLIENT ? nil : client_id)) if client_id
     scope = scope.joins(:client).where(clients: { salesperson_id: salesperson_id }) if salesperson_id
     scope = scope.where(created_at: day_start(from)..)      if from
     scope = scope.where(created_at: ...day_start(to + 1))   if to
