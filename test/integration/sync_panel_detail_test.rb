@@ -293,4 +293,45 @@ class SyncPanelDetailTest < ActionDispatch::IntegrationTest
     assert_match(/se reemplazará la información local/, response.body)
     assert_no_match(/Se quitarán/, response.body)
   end
+
+  # Lo que quedó en cero no se enuncia: "Se eliminó 0 pedidos y 1 cotización"
+  # (15ª auditoría).
+  test "cerrar la rueda con solo una cotización no enuncia cero pedidos" do
+    cap   = User.create!(erp_person_id: 982, username: "cap982", password: "secret123",
+                         role: "capturista", active: true)
+    round = BusinessRound.create!(erp_round_id: 982, name: "Rueda 982", active: true)
+    Order.create!(user: cap, business_round: round, document: "estimate")
+
+    post server_close_round_path
+
+    assert_equal "Rueda cerrada. Se eliminó 1 cotización de esta laptop. " \
+                 "Elige la siguiente rueda y obtén su información.", flash[:notice]
+  end
+
+  test "cerrar la rueda sin nada que borrar lo dice" do
+    BusinessRound.create!(erp_round_id: 983, name: "Rueda 983", active: true)
+
+    post server_close_round_path
+
+    assert_match(/\ARueda cerrada\. No había pedidos transmitidos ni cotizaciones que eliminar\./, flash[:notice])
+  end
+
+  test "si una partida se cuela mientras se cierra, el operador ve que basta repetir" do
+    BusinessRound.create!(erp_round_id: 984, name: "Rueda 984", active: true)
+    # Antepuesto y desarmado tras la primera llamada (ver close_round_test).
+    fired = false
+    Sync::CloseRound.singleton_class.prepend(Module.new do
+      define_method(:run!) do
+        next super() if fired
+
+        fired = true
+        raise ActiveRecord::InvalidForeignKey, "order_items_order_id_fkey"
+      end
+    end)
+
+    post server_close_round_path
+
+    assert_redirected_to root_path
+    assert_match(/No se borró nada: vuelve a intentarlo/, flash[:alert])
+  end
 end

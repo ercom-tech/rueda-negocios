@@ -15,6 +15,8 @@ escribe en el paso **Documentar** del flujo PAIVD.
 | `backlog.md` | Lo que falta implementar | No — se consulta |
 | `docs/erp-esquema-*.md` | Esquema del ERP (catálogos y pedidos) | No — se consulta |
 | `docs/instalacion-laptop.md` | Instalación en la laptop-servidor | No — se consulta |
+| `docs/despliegue-laptop.md` | Actualizar la laptop: pasos con su comprobación | No — se consulta |
+| `docs/diagnostico-erp.md` | Consultas para identificar los omitidos que el panel cuenta | No — se consulta |
 | `docs/auditorias.md` | Cómo se audita: método y dimensiones | No — se consulta |
 | `docs/auditorias-2026-07.md` | Historial de las 2 primeras auditorías (cerradas) | No — archivo |
 
@@ -90,6 +92,48 @@ medidos con una prueba desechable en Chrome headless:
 - **M7, "2 cotizacións":** el paginador recibe `plural` escrito a mano;
   sin él sigue usando `pluralize`, que acierta con los demás sustantivos.
 
+**Bloque 4 — las BAJA.** Ninguna se refutó; las que el código ya había
+cerrado (aviso del Cotizador, M6, comprobación post-deploy) no se tocaron.
+- **Robustez:** `?page[]=2` y `?from=` de más de 128 caracteres ya no son
+  pantalla de error; un `client_id` inexistente en una cotización es
+  "Revisa los datos" (validación, no llave foránea); el servidor no crea
+  cotizaciones ni pedidos tecleando la URL (`require_capturista`), y si
+  fuerza guardar o descartar una cotización ajena el aviso dice la verdad
+  ("solo las consulta") en vez de "ya la guardaron".
+- **La carrera partida ↔ "Cerrar rueda"** (ventana de ~14 ms): `purge_estimates!`
+  toma candado de fila sobre las cotizaciones antes de borrar, así que la
+  partida que se está insertando entra y se borra con las demás; la que llega
+  después la rechaza la llave foránea y `order_gone` lleva al menú con el
+  aviso (partidas y promociones). Si aun así algo se cuela —una cotización
+  CREADA en ese instante—, "Cerrar rueda" dice "no se borró nada, repite".
+  Probado con dos conexiones reales (`estimate_concurrency_test`), que además
+  cubre el candado del consecutivo.
+- **Una partida quitada en otra pestaña** ya no pinta el 404 en la captura:
+  se repinta la tabla con el aviso (preexistente; la 14ª lo arregló solo en el
+  Cotizador).
+- **Textos:** el sustantivo y sus formas (`DOCUMENT_TEXTS`: "esta cotización",
+  "a la cotización", "guardada"…) salen del modelo; se fueron los 11
+  condicionales sueltos y los cinco textos que seguían diciendo "pedido". El
+  rótulo "Guardada" tiene una sola tabla. Flash de cerrar sin "0 pedidos";
+  "Ver solo estas"; badge "Total" a ~7:1; el paso 1 se titula igual que el 2
+  y el 3.
+- **UX del paso 1:** "Cliente genérico" sigue disponible tras elegir un
+  cliente (cotización nueva); al editar pide confirmación y es gris de acción
+  secundaria, ya no idéntico al buscador; editar una genérica explica que
+  puede quedarse así. Filtrar o tocar una tarjeta conserva el orden.
+- **Cobertura:** las cinco mutaciones que sobrevivieron en la auditoría ahora
+  mueren (transacción de `capture!`, candado del consecutivo, `.sale` de
+  `purge_transmitted!`, `client_id=generic` en pedidos, `frame.reload()` del
+  Cotizador). La última escondía algo: la rama `reload()` era **código
+  muerto** —comparaba el `src` absoluto que guarda Turbo contra la ruta
+  relativa de la fila— y funcionaba de rebote por la otra rama. Una mutación
+  que sobrevive no siempre es una prueba que falta; a veces es código que no
+  hace lo que dice.
+- **Docs:** backlog al día (migraciones, anuncios, pruebas de sistema), README
+  de la API con sus endpoints y la evidencia, tabla de `memory.md` igual a la
+  de `CLAUDE.md`, excepción "avisado antes" en la convención del summary. La
+  API dice "el pedido no trae cliente" en vez de "el cliente  no existe".
+
 Lección: **una guía de reversión se audita contra el código VIEJO, no contra
 el nuevo**. Yo razoné qué haría el código viejo con una cotización genérica
 (la que estaba pensando) y no con la que tiene cliente, que es el caso normal.
@@ -126,7 +170,12 @@ coral), adaptado a la norma: el regreso va en la fila del título.
   number`, con candado de fila), aparte del de pedidos y del id; con prefijo
   de rueda, `OAX-COT-000001`; sin prefijo NO lleva el respaldo "RN" porque
   "COT" ya la identifica. No retrocede al borrar cotizaciones, para que un
-  número no se repita a media rueda. Vive en `settings` y no en una secuencia
+  número no se repita a media rueda. **Y no se reinicia al cerrar la rueda**
+  (15ª auditoría, decisión registrada): el consecutivo es de la LAPTOP, como
+  el folio `RN-` de los pedidos, que sale del id y tampoco vuelve a 1. Si
+  algún día la cotización lleva PDF, un cliente podría tener en la mano un
+  `COT-000001` de cada rueda sin prefijo; así no puede pasar. El costo es que
+  la siguiente rueda arranca donde quedó la anterior. Vive en `settings` y no en una secuencia
   de Postgres porque `db/schema.rb` no volcaría la secuencia y la base de
   pruebas se quedaría sin ella.
 - **Obtener información y cerrar rueda las borran** (decisión del usuario):

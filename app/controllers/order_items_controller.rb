@@ -4,6 +4,12 @@ class OrderItemsController < ApplicationController
   # un pedido que otro equipo ya transmitió recibía un 403 vacío y el modal se
   # quedaba en "Cargando" (14ª auditoría); cotizar no cambia nada.
   rescue_from ActiveRecord::RecordNotFound, with: :order_gone
+  # Una partida que se agrega justo cuando "Cerrar rueda" u "Obtener
+  # información" borran la cotización: el alta espera el candado de la fila y
+  # la rechaza la llave foránea. Sin esto, la pantalla de error — que además
+  # promete "Tu pedido no se perdió" (15ª auditoría). Si la cotización sigue
+  # existiendo, `order_gone` vuelve a levantar el error: no es este caso.
+  rescue_from ActiveRecord::InvalidForeignKey, with: :order_gone
 
   before_action :pause_writes_during_sync, except: :quote
   before_action :set_order, except: :quote
@@ -24,7 +30,7 @@ class OrderItemsController < ApplicationController
     if item
       render partial: "orders/quote_detail", locals: { quote: Promotions::Quote.new(item) }
     else
-      render partial: "orders/quote_missing", locals: { order_missing: order.nil? }, status: :not_found
+      render partial: "orders/quote_missing", locals: { order: order }, status: :not_found
     end
   end
 
@@ -94,7 +100,9 @@ class OrderItemsController < ApplicationController
   end
 
   def update
-    item = @order.order_items.find(params[:id])
+    item = @order.order_items.find_by(id: params[:id])
+    return item_gone unless item
+
     if item.update(item_params_for(item))
       render turbo_stream: detail_streams
     else
@@ -109,7 +117,9 @@ class OrderItemsController < ApplicationController
   end
 
   def destroy
-    item = @order.order_items.find(params[:id])
+    item = @order.order_items.find_by(id: params[:id])
+    return item_gone unless item
+
     # Una partida congelada por una promoción no se quita: el modelo lo aborta
     # y aquí se dice por qué. Sin el mensaje, el bote de una pestaña rezagada
     # "no hacía nada" y el capturista lo picaba otra vez.
@@ -133,6 +143,20 @@ class OrderItemsController < ApplicationController
   end
 
   private
+
+  # La partida se quitó desde otra pantalla (otra pestaña de la misma tablet)
+  # y en esta se corrigió su cantidad o se tocó su bote. Con `find`, el 404
+  # de Rails se pintaba EN LUGAR de la captura: "No encontramos esa
+  # pantalla", sin decir qué pasó (15ª auditoría; la 14ª lo arregló solo en el
+  # Cotizador). Se repinta la tabla como está, con el aviso.
+  def item_gone
+    render turbo_stream: [
+      *detail_streams,
+      turbo_stream.replace("flash", partial: "shared/flash",
+                                    locals: { alert: "Esa partida ya no está en #{@order.document_phrase}: " \
+                                                     "se quitó desde otra pantalla. Así está ahora." })
+    ]
+  end
 
   def duplicate_message(item, previous_position)
     "\"#{item.description}\" ya estaba en la partida #{previous_position}; " \

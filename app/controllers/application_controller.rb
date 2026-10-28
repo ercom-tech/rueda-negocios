@@ -63,21 +63,10 @@ class ApplicationController < ActionController::Base
     end
   end
 
-  # De dónde se toma un pedido que se va a ESCRIBIR. El capturista, solo los
-  # suyos; el server, además los borradores ajenos que puede resolver. No se usa
-  # `accessible_orders` (que le da todos): una cosa es lo que puede leer y otra
-  # lo que puede cambiar.
-  def writable_order(id)
-    order = accessible_orders.find(id)
-    return order if order.user_id == current_user&.id || can_resolve_draft?(order)
-
-    raise ActiveRecord::RecordNotFound
-  end
-
   # Pedidos que el usuario puede LEER: el capturista los suyos, el
   # equipo-servidor todos (los transmite y los revisa). La escritura va por
-  # `current_user.orders`, o por `writable_order` donde el servidor puede
-  # resolver un borrador ajeno. Vive aquí, y no repetido en cada controller, para
+  # `current_user.orders`, o por `with_locked_writable_order` (OrdersController)
+  # donde el servidor puede resolver un borrador ajeno. Vive aquí, y no repetido en cada controller, para
   # que la regla de visibilidad se cambie en un solo lugar.
   def accessible_orders
     current_user.can_see_all_orders? ? Order.all : current_user.orders

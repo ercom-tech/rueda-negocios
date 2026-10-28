@@ -19,18 +19,18 @@
         importa (evita el callejón sin salida). %>
     <div class="mt-8 flex flex-wrap items-center justify-between gap-4">
       <h1 class="text-3xl font-extrabold text-white sm:text-4xl">Levantamiento de <%= @order.document_noun %></h1>
-      <%= link_to "← Volver a#{estimate ? ' la cotización' : 'l pedido'}", order_path(@order), class: back_link_class %>
+      <%= link_to "← Volver #{@order.document_text(:to_the)}", order_path(@order), class: back_link_class %>
     </div>
   </div>
 
   <div class="relative z-10 mx-auto max-w-xl px-6 py-12">
     <section class="rounded-3xl bg-brand-gold p-6 sm:p-8">
       <div class="rounded-2xl bg-black py-4 text-center">
-        <h2 class="text-2xl font-extrabold text-white">Resumen de<%= estimate ? " la cotización" : "l pedido" %></h2>
+        <h2 class="text-2xl font-extrabold text-white">Resumen <%= @order.document_text(:of_the) %></h2>
       </div>
 
       <p class="mt-4 text-center text-sm text-neutral-800">
-        <%= @order.document_noun.capitalize %> <span class="font-bold">#<%= @order.folio %></span> <%= estimate ? "guardada" : "guardado" %> correctamente.
+        <%= @order.document_noun.capitalize %> <span class="font-bold">#<%= @order.folio %></span> <%= @order.document_text(:saved) %> correctamente.
       </p>
 
       <div class="mt-6 space-y-4">
@@ -59,7 +59,7 @@
           <%# En sesiones de captura seguidas, la acción siguiente SIEMPRE es
               otro pedido: sin esto son dos toques y dos cargas por cliente
               atendido (menú → Registrar pedido). %>
-          <%= link_to (estimate ? "Capturar otra cotización" : "Capturar otro pedido"), (estimate ? new_estimate_path : new_order_path),
+          <%= link_to "Capturar #{@order.document_text(:another)}", (estimate ? new_estimate_path : new_order_path),
                 class: "inline-block rounded-full bg-brand-coral px-8 py-3 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
         </div>
       </div>

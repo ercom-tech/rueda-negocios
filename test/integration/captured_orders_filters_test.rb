@@ -399,4 +399,18 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
     get captured_orders_report_path(client_id: @c1.id)
     assert_match(/Limpiar filtros/, response.body)
   end
+
+  # "generic" es el cliente genérico del reporte de COTIZACIONES. Aquí no
+  # existe: se ignora, en vez de filtrar a "sin cliente" y dejar la tabla
+  # vacía sin aviso (15ª auditoría, hueco de cobertura).
+  test "client_id=generic no filtra el reporte de pedidos" do
+    order!(user: @ana, client: @c1)
+    order!(user: @ana, client: @c2)
+    login_as("srv990")
+
+    get captured_orders_report_path(client_id: "generic")
+
+    assert_response :success
+    assert_equal 2, data_rows
+  end
 end

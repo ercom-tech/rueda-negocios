@@ -4,15 +4,15 @@
   borrado al obtener la información o al cerrar la rueda). Va dentro del frame para que el modal lo
   diga, en vez de que la captura se vaya a la página de error (14ª auditoría).
 
-  Locals: order_missing (el pedido completo ya no existe).
+  Locals: order (nil si el pedido o la cotización completa ya no existe).
 %>
 <turbo-frame id="quote-frame">
   <div class="rounded-2xl bg-brand-cream px-5 py-10 text-center text-neutral-900" role="status">
-    <% if order_missing %>
+    <% if order.nil? %>
       <%= ApplicationController::ORDER_GONE_MESSAGE %> Cierra esta ventana y vuelve al menú.
     <% else %>
-      Esa partida ya no está en el pedido: se quitó desde otra pantalla. Recarga la pantalla para ver el
-      pedido como está.
+      Esa partida ya no está en <%= order.document_phrase %>: se quitó desde otra pantalla. Recarga la pantalla
+      para ver <%= order.document_phrase %> como está.
     <% end %>
   </div>
 </turbo-frame>

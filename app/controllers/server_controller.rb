@@ -123,21 +123,36 @@ class ServerController < ApplicationController
     end
 
     removed = Sync::CloseRound.run!
-    # Concordancia a mano: el verbo también cuenta ("Se eliminaron 1 pedido"
-    # delataba justo en la única operación destructiva — 6ª auditoría). Con
-    # pedidos Y cotizaciones el sujeto es plural aunque cada uno sea 1.
-    counts = [ helpers.pluralize(removed.orders, "pedido"),
-               ("#{removed.estimates} #{removed.estimates == 1 ? 'cotización' : 'cotizaciones'}" if removed.estimates.positive?) ].compact
-    total  = removed.orders + removed.estimates
     redirect_to root_path,
-                notice: "Rueda cerrada. Se #{total == 1 ? 'eliminó' : 'eliminaron'} " \
-                        "#{SpanishText.list(counts)} de esta laptop. " \
+                notice: "Rueda cerrada. #{removed_sentence(removed)} " \
                         "Elige la siguiente rueda y obtén su información."
   rescue Sync::CloseRound::PendingOrdersError, Sync::CloseRound::SyncInProgressError => e
     redirect_to root_path, alert: e.message
+  rescue ActiveRecord::InvalidForeignKey
+    # Una partida que entró a una cotización justo mientras se borraba (el
+    # candado de `purge_estimates!` cierra casi toda la ventana, no la de una
+    # cotización CREADA en ese instante). La transacción se deshizo entera:
+    # no se borró nada y basta repetir.
+    redirect_to root_path, alert: "Alguien estaba capturando una cotización mientras se cerraba la rueda. " \
+                                  "No se borró nada: vuelve a intentarlo."
   end
 
   private
+
+  # Concordancia a mano: el verbo también cuenta ("Se eliminaron 1 pedido"
+  # delataba justo en la única operación destructiva — 6ª auditoría). Lo que
+  # quedó en cero no se enuncia —"Se eliminó 0 pedidos y 1 cotización" (15ª)—,
+  # salvo que todo sea cero, que también es un dato: no había nada que borrar.
+  def removed_sentence(removed)
+    counts = { "pedido" => removed.orders, "cotización" => removed.estimates }
+    named  = counts.select { |_, n| n.positive? }
+    return "No había pedidos transmitidos ni cotizaciones que eliminar." if named.empty?
+
+    plural = { "pedido" => "pedidos", "cotización" => "cotizaciones" }
+    parts  = named.map { |noun, n| "#{n} #{n == 1 ? noun : plural[noun]}" }
+    verb   = named.size == 1 && named.values.first == 1 ? "eliminó" : "eliminaron"
+    "Se #{verb} #{SpanishText.list(parts)} de esta laptop."
+  end
 
   def round_in_progress?
     Setting.instance.selected_round_erp_id.present?

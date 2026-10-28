@@ -9,7 +9,7 @@ aprendizajes de lo que ya se hizo.
 
 ## Prioridad alta
 
-### Desplegar en la laptop y en la VM de testing (todo lo remediado de la 4ª a la 12ª, más la evidencia)
+### Desplegar en la laptop y en la VM de testing (todo lo remediado de la 4ª a la 15ª, más la evidencia)
 
 **Nada está desplegado desde antes de la 4ª** (la API de testing corre
 `b43495a`, del 30-jul: ni siquiera trae el arreglo de remisiones). Con el
@@ -55,7 +55,10 @@ viejo quedó caduco — verificado en la 6ª auditoría:
   credit_wholesale_price, las de promociones y las del 2026-09: `folio_prefix`
   de la rueda, `erp_folios` del pedido, `supplier_id`/`brand_id` de la
   partida y `captured_at` del pedido; las del 2026-10-08: `price_overrides`
-  y `price_from_file`/`erp_unit_price` de la partida) + `bin/rails
+  y `price_from_file`/`erp_unit_price` de la partida; la del 2026-10-09:
+  `pieces_per_box`; y la del 2026-10-27: `document`, `client_id`/`kind`
+  opcionales, el CHECK y `last_estimate_number` — la lista completa y su
+  comprobación viven en `docs/despliegue-laptop.md`) + `bin/rails
   tailwindcss:build` (obligatorio: hay clases nuevas en cada lote).
   **`bundle install` y reiniciar el servicio son obligatorios en este lote:**
   entra la gema `roo` (leer el Excel de "Cambiar precios"), y un servidor que
@@ -109,7 +112,10 @@ viejo quedó caduco — verificado en la 6ª auditoría:
   hacia atrás (el PDF y el ERP siguen en 1, 2, 3); y del lote del 2026-09-09:
   el folio local ahora lleva el **prefijo de la rueda** en vez de `RN` (los
   pedidos ya capturados conservan el suyo), y el detalle de un pedido
-  transmitido dice **en qué pedidos del ERP quedó** cuando se separó.
+  transmitido dice **en qué pedidos del ERP quedó** cuando se separó; y de
+  octubre: el **Cotizador** de la captura, **"Cambiar precios"** en el panel
+  del servidor, **"Generar cotización"** (con su reporte "Cotizaciones
+  capturadas") y la **barra de totales a 1.5x** en la laptop.
 - Candidato aparte: no existe handshake de versión laptop↔API (`/` y
   `/health` no la exponen) — esta clase de desfase seguirá siendo invisible
   hasta que exista.
@@ -179,11 +185,10 @@ y cómo aislarla (transacción con rollback por prueba, como ya se hace a mano).
 ### Pruebas de sistema: ampliar la cobertura del JavaScript
 
 **Arranque hecho (2026-08-11):** existe `test/system/` con
-`ApplicationSystemTestCase` (Chrome headless) y cuatro archivos:
-`order_items_test.rb` (nació para cazar el modal de quitar partida que se
-cerraba solo), `order_header_test.rb` (anillos rojos del paso 1),
-`sync_pause_feedback_test.rb` (la pausa durante un sync, 5ª auditoría) y `generic_item_flow_test.rb` (el fuera de catálogo, punta a punta). Se
-corren con `bin/rails test:system`, aparte de la suite normal.
+`ApplicationSystemTestCase` (Chrome headless); hoy son doce archivos
+(`ls test/system`), del modal de quitar partida a la cotización que
+desaparece con la pantalla abierta. Se corren con `bin/rails test:system`,
+aparte de la suite normal.
 
 **Lo que falta cubrir**, por orden de dolor si se rompe:
 
@@ -197,8 +202,9 @@ corren con `bin/rails test:system`, aparte de la suite normal.
   que hay es de integración.
 - **Filtros del reporte de productos** (`c61d68d`): los combos disparan
   `form-submit` al cambiar, que es JS. Mismo caso que el anterior.
-- **Buscador de producto**: autocompletado, agregar al pedido, contador de
-  partidas, aviso de capturista sin proveedor ni marca.
+- **Buscador de producto**: contador de partidas y aviso de capturista sin
+  proveedor ni marca (autocompletar y agregar ya lo recorren `quote_flow_test`
+  y `estimate_gone_flow_test`).
 - **Paso por múltiplos del empaque** con las flechas ↑/↓ (`step="any"` y el
   paso implementado a mano) y el auto-guardado en `blur` solo si cambió.
 - **Combo custom** (`shared/_custom_select`) y los pills de contexto.
@@ -224,8 +230,7 @@ como copia de respaldo por si el folio se llegara a armar del lado de la app.
 
 - Read-only: productos, clientes, rueda activa.
 - Asistencia de clientes.
-- Cotización: **hecha** (2026-10-27/28, ver memory.md). Queda pendiente, sin
-  pedir todavía: **PDF de la cotización** (el del pedido con título
+- Cotización — pendiente, sin pedir todavía: **PDF de la cotización** (el del pedido con título
   "Cotización" y "Cliente genérico" cuando aplique; hoy el paso 3 no ofrece
   PDF ni correo) y **convertir una cotización en pedido** (la pregunta
   natural siguiente: el cliente dice quién es cuando ya le gustó el precio).

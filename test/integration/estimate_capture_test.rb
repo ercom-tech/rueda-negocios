@@ -114,7 +114,12 @@ class EstimateCaptureTest < ActionDispatch::IntegrationTest
     get edit_order_path(estimate)
     assert_response :success
     assert_select "a[href=?]", order_path(estimate), text: "← Volver a la cotización"
-    assert_select "form[action=?] button", order_path(estimate), text: "Cliente genérico"
+    # Con confirmación (15ª auditoría): el botón abre un modal, y es el modal
+    # el que manda el cambio.
+    assert_select "button[data-action='modal#open']", text: /Cliente genérico/
+    assert_select "form[action=?] button", order_path(estimate), text: "Sí, cambiar"
+    assert_select "form[action=?] input[name='order[client_id]'][value='']", order_path(estimate), visible: :all
+    assert_select "form[action=?] button", order_path(estimate), text: "Cliente genérico", count: 0
 
     patch order_path(estimate), params: { order: { client_id: "" } }
 
@@ -221,5 +226,120 @@ class EstimateCaptureTest < ActionDispatch::IntegrationTest
     assert_select "a", text: "Descargar PDF", count: 0
     assert_select "button", text: "Descartar", count: 0
     assert_select "button", text: "Guardar", count: 0
+  end
+
+  # --- 15ª auditoría, BAJA ----------------------------------------------------
+
+  test "la captura de una cotización no dice pedido" do
+    estimate = estimate!
+    item = item!(estimate)
+
+    get order_path(estimate)
+
+    assert_select "template[data-quote-template=empty]", text: /Esta cotización todavía no tiene productos/
+    assert_match(/¿Quitar la partida 1, &quot;MARTILLO&quot;, de la cotización\?/, response.body)
+    assert_no_match(/del pedido|este pedido|al pedido/i, response.body.gsub(/<!--.*?-->/m, ""))
+
+    product = Product.create!(erp_product_id: 970_702, description: "MARTILLO", unit: "PZA")
+    Price.create!(product: product, credit_wholesale_price: 100, tax_rate: 16)
+    ProductSupplier.create!(product: product, supplier: Supplier.find_by!(erp_supplier_id: 9702))
+    item.update_columns(product_id: product.id)
+    get product_options_order_path(estimate, q: "MARTILLO")
+    assert_match(/Ya está en la cotización, partida 1/, response.body)
+  end
+
+  test "el Cotizador sobre una partida quitada nombra a la cotización" do
+    estimate = estimate!
+
+    get quote_order_order_item_path(estimate, 999_999_999)
+
+    assert_response :not_found
+    assert_match(/Esa partida ya no está en la cotización/, response.body)
+  end
+
+  test "editar una genérica no dice 'para comenzar'" do
+    get edit_order_path(estimate!)
+
+    assert_match(/Busca al cliente si quieres asignarle esta cotización/, response.body)
+    assert_no_match(/para comenzar/, response.body)
+  end
+
+  # Una partida quitada en otra pestaña: corregir su cantidad o tocar su bote
+  # pintaba el 404 de Rails en lugar de la captura.
+  test "corregir o quitar una partida que ya no está repinta la tabla con el aviso" do
+    estimate = estimate!
+    item = item!(estimate)
+    item.delete
+
+    patch order_order_item_path(estimate, item), params: { order_item: { quantity: 2 } }, as: :turbo_stream
+    assert_response :success
+    assert_match(/Esa partida ya no está en la cotización: se quitó desde otra pantalla/, response.body)
+    assert_match(/<turbo-stream[^>]*target="order-detail"/, response.body)
+
+    delete order_order_item_path(estimate, item), as: :turbo_stream
+    assert_response :success
+    assert_match(/Esa partida ya no está en la cotización/, response.body)
+  end
+
+  # La partida que entra justo cuando "Cerrar rueda" borra la cotización: la
+  # llave foránea la rechaza. Se reproduce borrando la cotización entre la
+  # lectura del controlador y el INSERT.
+  test "una partida que llega a una cotización recién borrada lleva al menú con el aviso" do
+    estimate = estimate!
+    product = Product.create!(erp_product_id: 970_703, description: "PINZA", unit: "PZA")
+    Price.create!(product: product, credit_wholesale_price: 100, tax_rate: 16)
+    ProductSupplier.create!(product: product, supplier: Supplier.find_by!(erp_supplier_id: 9702))
+    # Antepuesto y desarmado tras la primera llamada (ver close_round_test).
+    fired = false
+    Order.prepend(Module.new do
+      define_method(:next_item_position) do
+        unless fired
+          fired = true
+          Order.where(id: id).delete_all
+        end
+        super()
+      end
+    end)
+
+    post order_order_items_path(estimate), params: { product_id: product.id }, as: :turbo_stream
+
+    assert_redirected_to root_path
+    assert_match(/ya no está en esta laptop/, flash[:alert])
+  end
+
+  test "el servidor no resuelve cotizaciones, y si lo fuerza el aviso dice por qué" do
+    estimate = estimate!
+    item!(estimate)
+    login_as "srv_est"
+
+    post capture_order_path(estimate)
+    assert_match(/el equipo del servidor solo las consulta/, flash[:alert])
+    delete order_path(estimate)
+    assert_match(/el equipo del servidor solo las consulta/, flash[:alert])
+
+    assert estimate.reload.draft?
+    assert_equal 1, estimate.order_items.count
+  end
+
+  test "un cliente que no existe en una cotización es 'revisa los datos', no una pantalla de error" do
+    assert_no_difference("Order.count") do
+      post orders_path, params: { order: { document: "estimate", client_id: 999_999_999, kind: "remission" } }
+    end
+    assert_response :unprocessable_entity
+
+    estimate = estimate!
+    patch order_path(estimate), params: { order: { client_id: 999_999_999, kind: "remission" } }
+    assert_response :unprocessable_entity
+    assert estimate.reload.generic?
+  end
+
+  test "promoción ya quitada: el aviso nombra a la cotización" do
+    estimate = estimate!
+    promo = Promotion.create!(erp_promotion_id: 970_704, code: "P15", name: "P15",
+                              starts_on: 1.week.ago.to_date, ends_on: 1.week.from_now.to_date)
+
+    delete order_promotion_path(estimate, promo), as: :turbo_stream
+
+    assert_match(/ya no estaba aplicada en esta cotización/, response.body)
   end
 end

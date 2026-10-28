@@ -56,7 +56,7 @@
                 catálogo" son el uso normal, no un descuido. %>
             <% if existing_position && !product.generic? %>
               <span class="mt-1 block text-xs font-semibold text-brand-coral-dark">
-                Ya está en el pedido, partida <%= existing_position %>
+                Ya está en <%= order.document_phrase %>, partida <%= existing_position %>
               </span>
             <% end %>
             <%# Bloqueado por una promoción aplicada: se avisa ANTES del toque,

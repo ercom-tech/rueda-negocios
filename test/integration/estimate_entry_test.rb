@@ -28,7 +28,7 @@ class EstimateEntryTest < ActionDispatch::IntegrationTest
     get new_estimate_path
 
     assert_response :success
-    assert_select "h1", "Generar cotización"
+    assert_select "h1", "Levantamiento de cotización"
     assert_select "input[name=client_key][placeholder=?]", "Buscar cliente por clave o nombre"
     assert_select "form[action=?] input[name=document][value=estimate]", new_order_path, visible: :all
     assert_select "form[action=?] button", orders_path, text: "Cliente genérico"
@@ -59,10 +59,11 @@ class EstimateEntryTest < ActionDispatch::IntegrationTest
     get new_order_path(client_key: "COT01", document: "estimate")
 
     assert_response :success
-    assert_select "h1", "Generar cotización"
+    assert_select "h1", "Levantamiento de cotización"
     assert_select "input[name='order[document]'][value=estimate]", visible: :all
     assert_select "input[type=submit][value=?]", "Continuar a levantamiento de cotización"
-    assert_select "button", text: "Cliente genérico", count: 0
+    # Elegido un cliente, todavía puede cotizar al genérico (15ª auditoría).
+    assert_select "form[action=?] button", orders_path, text: "Cliente genérico"
 
     assert_difference("Order.estimate.count", 1) do
       post orders_path, params: { order: { document: "estimate", client_id: @client.id, kind: "remission",
@@ -92,5 +93,25 @@ class EstimateEntryTest < ActionDispatch::IntegrationTest
       post orders_path, params: { order: { kind: "remission" } }
     end
     assert_response :unprocessable_entity
+  end
+
+  # El equipo-servidor solo consulta: su menú no tiene las tarjetas, y
+  # tecleando la URL tampoco crea (15ª auditoría).
+  test "el servidor no crea cotizaciones ni pedidos tecleando la URL" do
+    User.create!(erp_person_id: 9799, username: "srv_cot", password: "secret123", role: "server", active: true)
+    login_as "srv_cot"
+
+    get new_estimate_path
+    assert_redirected_to root_path
+    assert_match(/es de los capturistas/, flash[:alert])
+
+    get new_order_path(client_key: "COT01")
+    assert_redirected_to root_path
+
+    assert_no_difference("Order.count") do
+      post orders_path, params: { order: { document: "estimate" } }
+      post orders_path, params: { order: { client_id: @client.id, kind: "remission",
+                                           client_receipt_profile_id: @client.receipt_profiles.first.id } }
+    end
   end
 end

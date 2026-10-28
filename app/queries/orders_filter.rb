@@ -183,7 +183,9 @@ class OrdersFilter
     return nil unless value.is_a?(String)
 
     Date.parse(value)
-  rescue Date::Error
+  # ArgumentError: con más de 128 caracteres `Date.parse` levanta esa clase
+  # madre, no `Date::Error`, y un `?from=` largo era una pantalla de error (15ª).
+  rescue Date::Error, ArgumentError
     nil
   end
 

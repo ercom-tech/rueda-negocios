@@ -106,8 +106,9 @@ module Sync
       # el replace del catálogo reventando después por FK (ver Order).
       Order.purge_transmitted! if @purged_orders.positive?
       # Las cotizaciones se van con el reemplazo: no son ventas y no bloquean
-      # (decisión del usuario 2026-10-27). Se reportan aparte en el panel y
-      # en el rake.
+      # (decisión del usuario 2026-10-27). El panel las avisa ANTES, en el
+      # modal de confirmación (como los transmitidos), y el rake las cuenta
+      # después; el resumen del panel no las repite.
       @purged_estimates = Order.purge_estimates!
       Guards.no_local_orders!(GuardError, "al obtener la información")
     end

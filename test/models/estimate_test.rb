@@ -138,4 +138,41 @@ class EstimateTest < ActiveSupport::TestCase
     assert_equal [ sale.id ], Order.pluck(:id)
     assert_equal 1, OrderItem.count
   end
+
+  # --- 15ª auditoría: huecos de cobertura -------------------------------------
+
+  test "una cotización transmitida (no existe por flujo) no se va con la purga de transmitidos" do
+    stray = with_item(estimate).tap(&:save!)
+    stray.update_columns(status: "transmitted")
+
+    Order.purge_transmitted!
+
+    assert Order.exists?(stray.id)
+  end
+
+  test "si guardar falla, el número de cotización no se consume" do
+    Setting.instance.update!(last_estimate_number: 4)
+    # Con cliente y sin tipo: la validación de `kind` hace fallar el update!.
+    order = with_item(estimate(client: @client)).tap { |o| o.save!(validate: false) }
+
+    assert_raises(ActiveRecord::RecordInvalid) { order.capture! }
+
+    assert_equal 4, Setting.instance.reload.last_estimate_number
+    assert_nil order.reload.local_folio
+  end
+
+  test "badge y tarjetas leen el rótulo de la misma tabla" do
+    saved = estimate.tap { |o| o.status = "captured" }
+
+    assert_equal Order.status_labels_for("estimate")["captured"], saved.status_label
+    assert_equal "Guardada", saved.status_label
+    assert_equal "Capturado", Order.new(status: "captured").status_label
+  end
+
+  test "un client_id que no existe no es una cotización válida" do
+    order = estimate(client_id: 999_999_999)
+
+    assert_not order.valid?
+    assert order.errors.of_kind?(:client, :blank)
+  end
 end

@@ -67,7 +67,11 @@ export default class extends Controller {
     // El contenido de la partida anterior no debe verse mientras carga la
     // nueva: se pone el "Cargando" de la plantilla del servidor.
     this.fill(frame, "loading")
-    const url = row.dataset.quoteUrl
+    // Absoluta: Turbo guarda el `src` resuelto, y la fila trae una ruta
+    // relativa. Comparando tal cual nunca coincidían y esta rama era código
+    // muerto — funcionaba de rebote, porque reasignar el mismo destino con
+    // otra escritura sí recarga (15ª auditoría).
+    const url = new URL(row.dataset.quoteUrl, document.baseURI).href
     // Turbo no vuelve a pedir un `src` que no cambió: misma partida, reload.
     if (frame.getAttribute("src") === url) frame.reload()
     else frame.src = url

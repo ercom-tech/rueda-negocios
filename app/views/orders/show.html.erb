@@ -65,14 +65,14 @@
                   class: "rounded-full bg-neutral-700 px-6 py-2.5 font-bold text-white transition-colors hover:bg-neutral-600" %>
             <div class="inline-block" data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
               <%# "Descartar", no "Cancelar": mismo verbo que el modal que abre
-                  (título, "Sí, descartar" y flash "Pedido descartado") — y el
+                  (título, "Sí, descartar" y el flash `document_text(:discarded)`) — y el
                   modal tiene su propio "Cancelar" que significa lo contrario. %>
               <button type="button" data-action="modal#open"
                       class="rounded-full bg-neutral-700 px-6 py-2.5 font-bold text-white transition-colors hover:bg-neutral-600">Descartar</button>
               <%# Mensaje según estatus: un borrador se descarta; un capturado ya
                   está guardado con folio — se elimina con sus partidas. %>
               <%= render "home/confirm_dialog", title: "Descartar #{noun}",
-                    message: (@order.draft? ? "Se descartará #{@order.estimate? ? 'esta cotización' : 'este pedido'} en captura y no se guardará. ¿Continuar?"
+                    message: (@order.draft? ? "Se descartará #{@order.document_text(:this)} en captura y no se guardará. ¿Continuar?"
                                             : "Se eliminará #{@order.document_phrase} #{@order.folio} con todas sus partidas. ¿Continuar?"),
                     confirm_label: "Sí, descartar", path: order_path(@order), method: :delete %>
             </div>
@@ -83,14 +83,15 @@
                   2026-08-24): el capturista piensa en guardar su pedido, no en
                   finalizarlo. Lo que el botón HACE sigue siendo capturarlo —
                   asigna folio y lo saca de borrador—, y esa distinción, que
-                  importa porque un borrador bloquea transmitir y cerrar rueda,
+                  importa porque el borrador de un PEDIDO bloquea transmitir y
+                  cerrar rueda (el de una cotización no bloquea nada),
                   la sigue dando el badge de estatus junto al título. %>
               <%= button_to "Guardar", capture_order_path(@order),
                     form_class: "inline-block",
                     class: "cursor-pointer rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
             <% else %>
               <%# Ya está capturado: el coral lleva al resumen (ahí vive el
-                  PDF), no a "finalizarlo" otra vez — con ese rótulo, llegar
+                  PDF del pedido; la cotización no lleva), no a "finalizarlo" otra vez — con ese rótulo, llegar
                   al PDF del cliente exigía tocar un botón que mentía.
                   Dice "Guardar" (decisión del usuario 2026-08-24) porque es lo
                   que el capturista cree que está haciendo al terminar de
@@ -230,7 +231,7 @@
                   pausa de sync responde 422), el campo revierte a lo guardado
                   en vez de quedarse mintiendo con lo tecleado. %>
               <%= text_area_tag :observations, @order.observations,
-                    placeholder: "Observaciones", "aria-label": "Observaciones de#{@order.estimate? ? ' la cotización' : 'l pedido'}",
+                    placeholder: "Observaciones", "aria-label": "Observaciones #{@order.document_text(:of_the)}",
                     data: { action: "focus->form-submit#remember change->form-submit#submit" },
                     class: "h-full min-h-32 w-full rounded-2xl border border-black/10 bg-white p-4 uppercase text-neutral-900 outline-none placeholder:normal-case placeholder:text-neutral-500 focus:border-brand-gold-dark" %>
               <span data-form-submit-target="status" role="status"
@@ -251,7 +252,7 @@
     </section>
     <%# Fuera de la card: el cascarón vacío no debe sumar espacio entre bloques. %>
     <% if can_edit_order?(@order) %>
-      <%= render "quote_modal" %>
+      <%= render "quote_modal", order: @order %>
     <% end %>
   </div>
 

@@ -31,8 +31,8 @@
 
     <div class="w-full">
     <%# Orden de lectura: filtros → agregado → detalle → navegación. %>
-    <%= render "filters", filter: @filter, options: @options, per_page: @pagy.limit %>
-    <%= render "status_summary", summary: @summary, filter: @filter, per_page: @pagy.limit %>
+    <%= render "filters", filter: @filter, sort: @sort, options: @options, per_page: @pagy.limit %>
+    <%= render "status_summary", summary: @summary, filter: @filter, sort: @sort, per_page: @pagy.limit %>
 
     <div class="overflow-x-auto rounded-3xl border border-black/10 bg-brand-cream text-neutral-900">
       <table class="w-full text-sm">

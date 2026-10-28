@@ -5,6 +5,9 @@ class PromotionsController < ApplicationController
   # `show` es lectura: se puede ver el detalle de una promoción durante un
   # sync y en un pedido ya transmitido.
   rescue_from ActiveRecord::RecordNotFound, with: :order_gone
+  # Aplicar inserta regalos: si la cotización se borró en ese instante
+  # (obtener información o cerrar la rueda), los rechaza la llave foránea.
+  rescue_from ActiveRecord::InvalidForeignKey, with: :order_gone
 
   before_action :pause_writes_during_sync, except: :show
   before_action :set_order
@@ -44,7 +47,7 @@ class PromotionsController < ApplicationController
     unless group.unapply!
       return render turbo_stream: [
         *detail_streams,
-        flash_stream(alert: "Esa promoción ya no estaba aplicada en este pedido. No se cambió nada.")
+        flash_stream(alert: "Esa promoción ya no estaba aplicada en #{@order.document_text(:this)}. No se cambió nada.")
       ]
     end
 

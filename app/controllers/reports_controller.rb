@@ -132,7 +132,9 @@ class ReportsController < ApplicationController
     # Renglones y Total muestran —y por tanto ordenan por— lo que coincide.
     ordered = @sort.apply(@filter.apply_status(filtered), @items_sql)
                    .includes(:user, :order_items, client: :salesperson)
-    @pagy, @orders = pagy(ordered, limit: page_size)
+    # `page:` saneado: Pagy lee `params[:page]` crudo y un `?page[]=2` le
+    # levantaba NoMethodError —no el OverflowError que se rescata— (15ª).
+    @pagy, @orders = pagy(ordered, page: ParamSanitizing.page(params[:page]), limit: page_size)
     @matching = matching_totals(@orders, @items_sql)
   end
 

@@ -1,4 +1,5 @@
-<%# Barra de filtros del reporte. Locals: filter (OrdersFilter), options, per_page.
+<%# Barra de filtros del reporte. Locals: filter (OrdersFilter), sort
+    (OrdersSort), options, per_page.
 
     Marco dorado DELGADO con los mismos márgenes del paso 2 (`p-2` y `gap-2`):
     el dorado se lee como borde, no como fondo con aire. Controles en filter_control_class
@@ -18,12 +19,16 @@
 
     GET sin `page`: cambiar un filtro regresa siempre a la primera página
     (quedarse en la 7 con menos resultados deja la tabla vacía). El tamaño de
-    página sí viaja, para no perderlo al filtrar. %>
+    página sí viaja, para no perderlo al filtrar; y el orden también: filtrar
+    lo regresaba a Fecha mientras que paginar lo conservaba (15ª). %>
 <% on_change = { action: "change->form-submit#submit" } %>
 
 <%= form_with url: report_path, method: :get,
       data: { controller: "form-submit" } do %>
   <%= hidden_field_tag :per_page, per_page %>
+  <% sort.to_params.each do |key, value| %>
+    <%= hidden_field_tag key, value, id: nil %>
+  <% end %>
 
   <section class="mb-6 rounded-3xl bg-brand-gold p-2">
     <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">

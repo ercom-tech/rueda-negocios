@@ -407,4 +407,30 @@ class PromotionsTest < ActionDispatch::IntegrationTest
 
     assert_response :not_found
   end
+
+  # Aplicar inserta regalos y reescribe partidas: si en ese instante "Cerrar
+  # rueda" borró la cotización, la llave foránea lo rechaza. Se simula ese
+  # desenlace —el registro ya no está y la base levanta el error— porque el
+  # orden real de dos conexiones no cabe en una prueba de integración (la
+  # carrera de fondo la cubre `estimate_concurrency_test`).
+  test "aplicar sobre una cotización recién borrada lleva al menú con el aviso" do
+    estimate = Order.create!(user: @user, business_round: @round, document: "estimate")
+    estimate.order_items.create!(@product.to_order_item_attributes.merge(position: 1, quantity: 6, discount_percent: 0))
+    fired = false
+    Promotions::Group.prepend(Module.new do
+      define_method(:apply!) do
+        next super() if fired
+
+        fired = true
+        OrderItem.where(order_id: order.id).delete_all
+        Order.where(id: order.id).delete_all
+        raise ActiveRecord::InvalidForeignKey, "order_items_order_id_fkey"
+      end
+    end)
+
+    post order_promotions_path(estimate), params: { promotion_id: @promo.id }, as: :turbo_stream
+
+    assert_redirected_to root_path
+    assert_match(/ya no está en esta laptop/, flash[:alert])
+  end
 end

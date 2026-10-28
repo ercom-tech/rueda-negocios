@@ -188,4 +188,18 @@ class QuoteFlowTest < ApplicationSystemTestCase
 
     within("#quote-dialog") { assert_text "todavía no tiene productos para cotizar" }
   end
+
+  # Misma partida dos veces: Turbo no vuelve a pedir un `src` que no cambió,
+  # así que la segunda apertura se quedaba en "Cargando" —o, sin la plantilla,
+  # con las cifras de antes—. `quote#open` lo recarga a mano (15ª auditoría,
+  # hueco de cobertura: quitar el `reload()` dejaba la suite en verde).
+  test "cotizar dos veces la misma partida trae las cifras de ahora" do
+    taladro = add_item(@taladro)
+    sign_in @user
+    visit order_path(@order)
+    quote_and_assert "TALADRO"
+
+    taladro.update_columns(unit_price: 2345)
+    quote_and_assert "2,345"
+  end
 end

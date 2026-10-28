@@ -172,4 +172,33 @@ class EstimatesReportTest < ActionDispatch::IntegrationTest
     assert_select "span", text: "Capturado"
     assert_match(/Mis pedidos/, response.body)
   end
+
+  # --- 15ª auditoría, BAJA ----------------------------------------------------
+
+  test "una URL forjada con page[] o con una fecha larguísima no es pantalla de error" do
+    estimate!
+    login_as "cap_rep"
+
+    [ estimates_report_path, captured_orders_report_path ].each do |path|
+      get path, params: { page: [ "2" ] }
+      assert_response :success, "#{path} con page[]"
+      get "#{path}?page[x]=2"
+      assert_response :success, "#{path} con page[x]"
+      get path, params: { from: "1" * 200, to: "2" * 200 }
+      assert_response :success, "#{path} con fechas de 200 caracteres"
+    end
+  end
+
+  test "las tarjetas de estatus dicen 'estas' y, como los filtros, conservan el orden" do
+    estimate!
+    login_as "cap_rep"
+
+    get estimates_report_path(sort: "client", dir: "asc")
+
+    assert_match(/Ver solo estas/, response.body)
+    assert_no_match(/Ver solo estos/, response.body)
+    assert_select "a[href*='status=draft'][href*='sort=client'][href*='dir=asc']"
+    assert_select "form[action=?] input[type=hidden][name=sort][value=client]", estimates_report_path, visible: :all
+    assert_select "form[action=?] input[type=hidden][name=dir][value=asc]", estimates_report_path, visible: :all
+  end
 end

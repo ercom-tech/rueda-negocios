@@ -1,12 +1,13 @@
 <%#
-  Cascarón del modal del Cotizador (2026-10-09). Uno solo para el pedido: el
+  Cascarón del modal del Cotizador (2026-10-09). Uno solo por pantalla de
+  captura (pedido o cotización): el
   `quote_controller` le pone al turbo-frame la dirección de la partida
   seleccionada y lo abre. Es un modal sobre la captura, no otra pantalla.
 
   Vive FUERA de #order-detail y de #product-search, que se repintan con morph:
   aquí nada lo reescribe, así que no necesita `data-turbo-permanent`.
 
-  Locals: ninguno.
+  Locals: order (para nombrarlo: "este pedido" / "esta cotización").
 %>
 <div id="quote-modal" data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
   <%# `tabindex="-1"`: el foco aterriza aquí mientras el frame todavía no trae
@@ -49,7 +50,7 @@
       </template>
       <template data-quote-template="empty">
         <div class="rounded-2xl bg-brand-cream px-5 py-10 text-center text-neutral-900" role="status">
-          Este pedido todavía no tiene productos para cotizar. Agrega uno con el buscador y vuelve a picar
+          <%= order.document_text(:this).capitalize %> todavía no tiene productos para cotizar. Agrega uno con el buscador y vuelve a picar
           «Cotizador».
         </div>
       </template>

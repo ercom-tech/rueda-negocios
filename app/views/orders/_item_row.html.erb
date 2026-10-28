@@ -37,7 +37,7 @@
             bote de basura de otra fila, la pareja de acciones más común. %>
         <%= render "home/confirm_dialog", title: "Quitar producto",
               id: dom_id(item, :remove_dialog), permanent: true,
-              message: "¿Quitar la partida #{item.position}, \"#{item.description}\", del pedido?",
+              message: "¿Quitar la partida #{item.position}, \"#{item.description}\", #{order.document_text(:of_the)}?",
               confirm_label: "Sí, quitar", path: order_order_item_path(order, item), method: :delete %>
       </div>
     <% end %>

@@ -97,7 +97,7 @@
       </button>
       <button type="submit"
               class="cursor-pointer rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white transition-colors hover:bg-brand-coral-dark">
-        Agregar al pedido
+        Agregar <%= order.document_text(:to_the) %>
       </button>
     </div>
   <% end %>

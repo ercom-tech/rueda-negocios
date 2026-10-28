@@ -78,12 +78,17 @@ class Order < ApplicationRecord
 
   # El tipo se fija al crear y no cambia: una cotización vuelta pedido saldría
   # al ERP sin cliente, y un pedido vuelto cotización se borraría sin
-  # transmitirse. El formulario de edición no lo manda, pero el valor viajaría
-  # en un campo forjado igual que cualquier otro.
+  # transmitirse. Un `order[document]` forjado no llega hasta aquí —
+  # `order_params` no lo permite—: esto es la red para el código que asigne
+  # `document` directo (consola, rake). No es razón para permitirlo en el
+  # controlador: un valor fuera del enum levanta ArgumentError antes de validar.
   validate :document_is_fixed, on: :update
   # Sin cliente solo la cotización de cliente genérico. Y sin cliente no hay
   # Factura/Remisión que elegir: `kind` solo se exige cuando hay cliente.
-  validates :client, presence: true, unless: :estimate?
+  # En la cotización se valida también si trae un `client_id`: uno que no
+  # existe (campo oculto forjado) llegaba a la base y salía como pantalla de
+  # error por la llave foránea, donde el pedido daba "Revisa los datos" (15ª).
+  validates :client, presence: true, if: -> { sale? || client_id.present? }
   validates :kind,   presence: true, if: :client
   validate  :header_selections_present
   validate  :header_selections_belong_to_client
@@ -196,25 +201,46 @@ class Order < ApplicationRecord
 
   STATUS_LABELS = { "draft" => "Borrador", "captured" => "Capturado", "transmitted" => "Transmitido" }.freeze
 
-  # Los estatus que ve el reporte de cada tipo, con su rótulo: la cotización
-  # no se transmite y su "captured" se dice "Guardada" (ver `status_label`).
-  def self.status_labels_for(document)
-    return STATUS_LABELS if document != "estimate"
+  # Una cotización guardada se dice "Guardada" (es lo que el capturista hizo:
+  # el botón dice Guardar); "Capturado" es el término del pedido, que además
+  # tiene un paso más adelante (transmitirlo). Y no se transmite: no tiene ese
+  # estatus.
+  ESTIMATE_STATUS_LABELS = { "draft" => "Borrador", "captured" => "Guardada" }.freeze
 
-    { "draft" => "Borrador", "captured" => "Guardada" }
+  # Los estatus que ve el reporte de cada tipo, con su rótulo. Es la ÚNICA
+  # fuente: el badge de cada registro (`status_label`) también lee de aquí, para
+  # que tarjetas y badges no puedan decir cosas distintas en la misma pantalla.
+  def self.status_labels_for(document)
+    document == "estimate" ? ESTIMATE_STATUS_LABELS : STATUS_LABELS
   end
 
-  # Cómo nombra la pantalla a este registro: "pedido" o "cotización". Un solo
-  # lugar, como STATUS_LABELS: los textos que lo usan (título, modales, flash,
-  # avisos) viven en seis archivos distintos y con condicionales sueltos se
-  # desfasan.
+  # Cómo nombra la pantalla a este registro, en cada forma que piden los
+  # textos. Un solo lugar, como STATUS_LABELS: los textos que lo usan (título,
+  # modales, flash, avisos) viven en una docena de archivos, y con
+  # condicionales sueltos se desfasaron — cinco seguían diciendo "pedido" en
+  # una cotización (15ª auditoría). El género va en la tabla y no en una regla:
+  # "guardado/guardada", "este/esta", "al/a la".
+  DOCUMENT_TEXTS = {
+    "sale" => { noun: "pedido", the: "el pedido", this: "este pedido", a: "un pedido",
+                to_the: "al pedido", of_the: "del pedido", another: "otro pedido",
+                saved: "guardado", discarded: "Pedido descartado." },
+    "estimate" => { noun: "cotización", the: "la cotización", this: "esta cotización", a: "una cotización",
+                    to_the: "a la cotización", of_the: "de la cotización", another: "otra cotización",
+                    saved: "guardada", discarded: "Cotización descartada." }
+  }.freeze
+
+  def document_text(form)
+    DOCUMENT_TEXTS.fetch(document).fetch(form)
+  end
+
+  # "pedido" / "cotización".
   def document_noun
-    estimate? ? "cotización" : "pedido"
+    document_text(:noun)
   end
 
   # Con artículo: "el pedido" / "la cotización".
   def document_phrase
-    estimate? ? "la cotización" : "el pedido"
+    document_text(:the)
   end
 
   # Importe de las partidas con descuento e IVA — la misma fórmula de
@@ -287,7 +313,17 @@ class Order < ApplicationRecord
   # del usuario 2026-10-27). Mismo `delete_all` explícito, por el mismo
   # candado de promoción que aborta un `destroy` en silencio. Devuelve cuántas
   # se borraron.
+  #
+  # Con candado de fila primero: una cotización es editable mientras se borra
+  # —a diferencia de un transmitido—, y una partida que se insertaba entre los
+  # dos DELETE hacía fallar la operación entera por la llave foránea (15ª
+  # auditoría, ventana de ~14 ms). El alta de una partida toma un candado
+  # compartido sobre su cotización, que choca con este: o la partida entra
+  # antes y se borra con las demás, o espera y la rechaza la llave foránea
+  # cuando la cotización ya no existe — y eso lo atiende `order_gone`.
+  # Llamarlo dentro de una transacción (lo hacen las dos operaciones).
   def self.purge_estimates!
+    estimate.lock.pluck(:id)
     OrderItem.where(order_id: estimate.select(:id)).delete_all
     estimate.delete_all
   end
@@ -323,13 +359,9 @@ class Order < ApplicationRecord
     "transmitted" => "bg-brand-coral text-white"
   }.freeze
 
-  # Una cotización guardada se dice "Guardada" (es lo que el capturista hizo:
-  # el botón dice Guardar); "Capturado" es el término del pedido, que además
-  # tiene un paso más adelante (transmitirlo).
+  # Ver ESTIMATE_STATUS_LABELS.
   def status_label
-    return "Guardada" if estimate? && captured?
-
-    STATUS_LABELS.fetch(status, status)
+    self.class.status_labels_for(document).fetch(status) { STATUS_LABELS.fetch(status, status) }
   end
 
   def status_color

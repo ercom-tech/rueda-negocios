@@ -18,7 +18,9 @@
     el de estatus: los tres tienen que seguir visibles, aunque vengan en cero,
     para poder saltar entre ellos. Refleja el alcance de quien mira: el
     capturista ve el resumen de SUS pedidos; el servidor, el de todos. %>
-<% base_params = filter.to_params.except(:status).merge(per_page: per_page) %>
+<%# Con el orden: tocar una tarjeta lo perdía, mientras que paginar lo
+    conservaba (15ª auditoría). %>
+<% base_params = filter.to_params.except(:status).merge(sort.to_params).merge(per_page: per_page) %>
 <% card_class = "block rounded-2xl px-5 py-4 transition-transform hover:scale-[1.015]" %>
 
 <%# Con un filtro de partida activo, los importes de esta pantalla (resumen y
@@ -54,7 +56,7 @@
       <%# Pista visible de que la tarjeta filtra: el hover no existe en tablet
           y el estado activo solo aparece DESPUÉS de acertar. %>
       <p class="mt-1 text-xs font-semibold text-neutral-600">
-        <%= active ? "Quitar filtro" : "Ver solo estos" %>
+        <%= active ? "Quitar filtro" : (@document == "estimate" ? "Ver solo estas" : "Ver solo estos") %>
       </p>
     <% end %>
   <% end %>
@@ -64,7 +66,9 @@
       estatus filtrado, este enlace es la vuelta a "todos". %>
   <%= link_to report_path(base_params), class: "#{card_class} bg-brand-coral text-white" do %>
     <div class="flex items-center justify-between gap-3">
-      <span class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">Total</span>
+      <%# `bg-black/25` y no `bg-white/20`: blanco sobre el coral aclarado daba
+          3.34:1 a 12 px, bajo el 4.5 de texto normal; oscurecido da ~7:1 (15ª). %>
+      <span class="rounded-full bg-black/25 px-3 py-1 text-xs font-semibold">Total</span>
       <span class="text-3xl font-extrabold tabular-nums">
         <%= summary.values.sum { |d| d[:count] } %>
       </span>

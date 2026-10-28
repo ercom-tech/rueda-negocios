@@ -1,10 +1,15 @@
 class OrdersController < ApplicationController
   layout "auth"
 
-  # Solo las acciones que ESCRIBEN: abrir un pedido, el resumen y el PDF siguen
-  # disponibles mientras corre un sync.
   rescue_from ActiveRecord::RecordNotFound, with: :order_gone
 
+  # Crear es del capturista. El equipo-servidor consulta (y resuelve borradores
+  # ajenos de pedido): su menú no tiene las tarjetas, pero tecleando la URL
+  # levantaba cotizaciones y pedidos a su nombre — y un pedido así se
+  # transmitiría con el operador como capturista (15ª auditoría).
+  before_action :require_capturista, only: %i[new create]
+  # Solo las acciones que ESCRIBEN: abrir un pedido, el resumen y el PDF siguen
+  # disponibles mientras corre un sync.
   before_action :pause_writes_during_sync, only: %i[create update destroy capture observations]
 
   # Paso 1 — encabezado. `client_key` carga al cliente (clave exacta o, si no,
@@ -60,7 +65,8 @@ class OrdersController < ApplicationController
   end
 
   # Cancelar la captura: descarta el pedido (solo si aún es editable). El
-  # equipo-servidor puede descartar un borrador AJENO — ver `writable_order`.
+  # equipo-servidor puede descartar un borrador AJENO — ver
+  # `with_locked_writable_order`.
   def destroy
     with_locked_writable_order(params[:id]) do |order|
       # La pantalla vieja de un pedido ya transmitido conserva el botón: sin
@@ -78,7 +84,7 @@ class OrdersController < ApplicationController
         # capturista no se entera por ningún lado, y en la revisión posterior
         # "¿quién borró esto?" no tiene otra respuesta.
         log_resolved_draft(order, "descartado") unless order.user_id == current_user.id
-        redirect_to root_path, notice: (order.estimate? ? "Cotización descartada." : "Pedido descartado.")
+        redirect_to root_path, notice: order.document_text(:discarded)
       end
     end
   end
@@ -174,7 +180,7 @@ class OrdersController < ApplicationController
     end
   end
 
-  # Paso 3: resumen con opciones (PDF / correo).
+  # Paso 3: resumen con opciones (PDF / correo, solo en el pedido).
   def summary
     @order = accessible_orders.find(params[:id])
   end
@@ -190,7 +196,7 @@ class OrdersController < ApplicationController
   private
 
   # Toma el pedido con candado de fila y vuelve a comprobar el permiso con la
-  # fila FRESCA antes de escribir. Entre que `writable_order` lo leyó y la
+  # fila FRESCA antes de escribir. Entre que la pantalla lo leyó y la
   # escritura, otro equipo pudo guardarlo o descartarlo: el equipo-servidor que
   # descartaba un borrador en el mismo instante en que su capturista lo
   # guardaba borraba un pedido ya capturado —con folio y listo para
@@ -202,16 +208,25 @@ class OrdersController < ApplicationController
   # después espera al candado y ve el estado ya resuelto.
   #
   # El pedido se toma de lo que el usuario puede LEER (`accessible_orders`) y
-  # no de `writable_order`, que corre fuera del candado: con la pantalla de un
+  # no de un buscador de "escribibles" fuera del candado: con la pantalla de un
   # borrador ajeno abierta un rato, si el capturista lo guardaba, el servidor
   # recibía "No encontramos esa pantalla" en vez del aviso — que solo salía en
   # la ventana de milisegundos dentro del candado (12ª auditoría). El permiso
   # se decide adentro, con la fila fresca, igual para los dos casos.
+  #
+  # Una cotización ajena no es "un borrador que ya se guardó": el servidor no
+  # resuelve cotizaciones (no bloquean nada), y el aviso de la carrera le
+  # decía algo falso — que la guardaron, con la cotización todavía en
+  # borrador (15ª auditoría). Solo llega aquí con una petición armada a mano.
   def with_locked_writable_order(id)
     order = accessible_orders.find(id)
     order.with_lock do
       if order.user_id == current_user.id || can_resolve_draft?(order)
         yield order
+      elsif order.estimate?
+        redirect_to order_path(order),
+                    alert: "Las cotizaciones las guarda o descarta su capturista; el equipo del servidor " \
+                           "solo las consulta. No se cambió nada."
       else
         redirect_to order_path(order),
                     alert: "Este pedido ya no es un borrador: lo guardaron desde otro equipo. No se cambió nada."
@@ -237,6 +252,13 @@ class OrdersController < ApplicationController
   def client_from_key(value)
     key = value.to_s.strip.split(/\s[–-]\s/).first.to_s.strip
     Client.find_by(erp_client_key: key) || Client.search(key).first
+  end
+
+  def require_capturista
+    return if current_user.capturista?
+
+    redirect_to root_path, alert: "Capturar pedidos y cotizaciones es de los capturistas: " \
+                                  "el equipo del servidor los consulta."
   end
 
   def apply_header_defaults

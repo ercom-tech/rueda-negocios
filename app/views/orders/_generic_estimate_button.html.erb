@@ -1,0 +1,9 @@
+<%# "Cliente genérico" del paso 1 de una cotización NUEVA: alguien que no
+    está en el catálogo de la rueda. Crea la cotización en ese momento, sin
+    encabezado, y pasa directo a la captura. Mismo negro que el buscador (es
+    un control de captura, no una acción primaria) y `button_to`, que es la
+    regla para todo POST. Va antes y después de elegir cliente (ver
+    orders/new). %>
+<%= button_to "Cliente genérico", orders_path, params: { order: { document: "estimate" } },
+      form_class: "w-full",
+      class: "w-full cursor-pointer rounded-full bg-black px-5 py-3 text-center font-semibold text-white transition-colors hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold" %>
