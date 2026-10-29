@@ -342,4 +342,30 @@ class EstimateCaptureTest < ActionDispatch::IntegrationTest
 
     assert_match(/ya no estaba aplicada en esta cotización/, response.body)
   end
+
+  # --- 16ª auditoría ------------------------------------------------------------
+
+  # `order_gone` preguntaba `Order.exists?(id)` con el parámetro crudo: un
+  # `?order_id[]=<condición>` llega como arreglo y Rails lo toma como
+  # fragmento SQL. Con la respuesta distinta para verdadero (404) y falso
+  # (302), un capturista tenía un oráculo para leer cualquier tabla — la
+  # contraseña cifrada del operador incluida. Se afirma que la condición NO
+  # llega a la base, no solo la respuesta: así no depende de qué haya en ella.
+  test "un id forjado como arreglo no llega a la base como SQL" do
+    estimate!
+    marker = "audit16_probe"
+    leaked = []
+    callback = ->(*, payload) { leaked << payload[:sql] if payload[:sql].include?(marker) }
+
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      # Lo que no existe cae en `order_gone`, que lee `order_id` antes que
+      # `id`: un `order_id` de la query sobre una ruta que solo trae `id`.
+      condition = "'#{marker}' = '#{marker}'"
+      get order_path(999_999_999), params: { order_id: [ condition ] }
+      get edit_order_path(999_999_999), params: { order_id: { "x" => condition } }
+      get summary_order_path(999_999_999), params: { order_id: [ condition ] }
+    end
+
+    assert_empty leaked, "el parámetro forjado llegó como SQL:\n#{leaked.join("\n")}"
+  end
 end

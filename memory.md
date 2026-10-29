@@ -27,6 +27,7 @@ Si es **algo por hacer**, va al backlog.
 ## Índice de la bitácora
 
 - Decisiones generales del proyecto (abajo)
+- 16ª auditoría (2026-10-29) — todo el proyecto
 - 15ª auditoría (2026-10-28) — cotizaciones y todo el proyecto
 - Cotizaciones — "Generar cotización" (2026-10-27/28)
 - Cotizador de la captura (2026-10-09) · 14ª auditoría (2026-10-10)
@@ -36,6 +37,30 @@ Si es **algo por hacer**, va al backlog.
 - Fase A — scaffolding · Fase B — login, menú, reportes, pedido (arcos 1–3)
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
+
+## 16ª auditoría (2026-10-29) — todo el proyecto, énfasis en la remediación de la 15ª
+
+7 auditores. **0 CRÍTICA · 1 ALTA · 6 MEDIA · ~18 BAJA** tras verificar. Se
+remedia bloque por bloque.
+
+**Bloque 1 — A1, inyección SQL en `order_gone`.** Resistió la refutación: la
+subconsulta forjada entró literal al `WHERE`. `Order.exists?(id)` recibía
+`params[:order_id] || params[:id]` crudo; un `?order_id[]=<condición>` llega
+como arreglo y un arreglo posicional es un fragmento SQL. Como la respuesta
+cambiaba según el resultado (404 si existe, 302 al menú si no), cualquier
+capturista con sesión tenía un oráculo ciego para leer cualquier tabla,
+`password_digest` y `session_token` del operador incluidos. La variante
+`?order_id[x]=` daba pantalla de error (`ForbiddenAttributesError`). Arreglo:
+`ParamSanitizing.id` + `exists?(id:)`. Revisé todas las consultas con
+parámetros de la app: las demás ya iban en forma de hash, y el token de
+"Cambiar precios" va anclado a 32 hexadecimales. Prueba que escucha el SQL
+emitido (no solo la respuesta) y mutación que deja pasar el arreglo: muerde.
+
+Lección: **la función que escribí para un caso nuevo no pasó por la regla
+que el proyecto ya tenía** ("todo parámetro de URL pasa por
+`ParamSanitizing`"). La escribí pensando en el registro que desaparece, no en
+quién manda el id. La 15ª tampoco la vio: el auditor de seguridad de entonces
+revisó `order_gone` como oráculo de EXISTENCIA, no de contenido.
 
 ## 15ª auditoría (2026-10-28) — cotizaciones y todo el proyecto
 

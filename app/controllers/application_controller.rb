@@ -49,9 +49,17 @@ class ApplicationController < ActionController::Base
   ORDER_GONE_MESSAGE = "Ese pedido o cotización ya no está en esta laptop: se descartó, " \
                        "o se borró al obtener la información o al cerrar la rueda.".freeze
 
+  #
+  # El id pasa por `ParamSanitizing` y la consulta va en forma de hash: con
+  # `Order.exists?(params[:order_id])` un `?order_id[]=<condición>` llegaba
+  # como arreglo, y un arreglo en `exists?` es un FRAGMENTO SQL. Con la
+  # respuesta distinta para verdadero (404) y falso (302), cualquier
+  # capturista tenía un oráculo para leer cualquier tabla (16ª auditoría,
+  # ALTA). Lo que no es un id válido no puede ser un registro que desapareció:
+  # sigue el error original.
   def order_gone(error)
-    id = params[:order_id] || params[:id]
-    raise error if id.blank? || Order.exists?(id)
+    id = ParamSanitizing.id(params[:order_id] || params[:id])
+    raise error if id.nil? || Order.exists?(id: id)
 
     # El buscador de producto trae sus sugerencias con un fetch plano que
     # SIGUE la redirección: sin esta rama, el menú entero se inyectaba dentro

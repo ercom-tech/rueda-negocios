@@ -129,6 +129,14 @@ movería también fechas, números y mensajes de Rails que hoy funcionan.
   el CSV al llamar `open`, sino al pedir la primera celda: el `rescue` del
   `open` no atrapaba un CSV mal formado, que salía como pantalla de error.
   Forzar la lectura completa dentro del bloque protegido.
+- **Un parámetro NUNCA va en forma posicional a `exists?`, `where` o `find_by`.**
+  `Order.exists?(params[:id])` con un `?id[]=<condición>` recibe un arreglo, y
+  un arreglo posicional es un FRAGMENTO SQL con sus valores: la condición
+  entra tal cual al `WHERE`. En `order_gone` daba un oráculo ciego (404 contra
+  302) para leer cualquier tabla (16ª auditoría, ALTA). La forma de hash
+  (`exists?(id: x)`, `find_by(id: x)`) siempre se parametriza; y aun así el
+  id se sanea, porque un `?id[x]=1` llega como `Parameters` y levanta
+  `ForbiddenAttributesError`.
 - **Todo parámetro de URL que se use para consultar pasa por
   `ParamSanitizing`.** Un `?id[]=1` llega como **arreglo** y un `?id[x]=1` como
   `ActionController::Parameters`: sobre cualquiera de los dos, `to_i` levanta
