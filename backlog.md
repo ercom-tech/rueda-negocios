@@ -14,7 +14,8 @@ aprendizajes de lo que ya se hizo.
 **La laptop corre `c63a18a`** (2026-10-11, confirmado por el usuario el
 2026-10-29): ya tiene promociones, "Cambiar precios", el Cotizador y la
 evidencia. Le falta el lote de cotizaciones y lo remediado después: **una sola
-migración** (la del 2026-10-27), sin gemas ni initializers nuevos. Este renglón
+migración** (la del 2026-10-27), sin gemas ni initializers nuevos. Objetivo al
+2026-10-29: laptop `1a7fcce`, API `ab5539a`. Este renglón
 decía "nada está desplegado desde antes de la 4ª", y la guía de reversión se
 apoyaba en un sha equivocado (17ª auditoría). **De la API de testing** el
 último dato es `b43495a` (30-jul) y no se ha vuelto a confirmar: es el paso 0
