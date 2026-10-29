@@ -9,12 +9,17 @@ aprendizajes de lo que ya se hizo.
 
 ## Prioridad alta
 
-### Desplegar en la laptop y en la VM de testing (todo lo remediado de la 4ª a la 15ª, más la evidencia)
+### Desplegar en la laptop y en la VM de testing (cotizaciones y las remediaciones de la 15ª a la 17ª)
 
-**Nada está desplegado desde antes de la 4ª** (la API de testing corre
-`b43495a`, del 30-jul: ni siquiera trae el arreglo de remisiones). Con el
-lote del 2026-08-17 (precio crédito, id_rueda, genérico 999999) el plan
-viejo quedó caduco — verificado en la 6ª auditoría:
+**La laptop corre `c63a18a`** (2026-10-11, confirmado por el usuario el
+2026-10-29): ya tiene promociones, "Cambiar precios", el Cotizador y la
+evidencia. Le falta el lote de cotizaciones y lo remediado después: **una sola
+migración** (la del 2026-10-27), sin gemas ni initializers nuevos. Este renglón
+decía "nada está desplegado desde antes de la 4ª", y la guía de reversión se
+apoyaba en un sha equivocado (17ª auditoría). **De la API de testing** el
+último dato es `b43495a` (30-jul) y no se ha vuelto a confirmar: es el paso 0
+de la guía. La lista de abajo es la histórica completa; lo que `c63a18a` ya
+tiene sigue escrito porque la VM de la API puede no tenerlo:
 
 - **Prerequisito ERP (antes de todo, en testing 10.1.3.43 y producción):**
   columnas `vta_pedido.id_rueda` (default 0) y
@@ -69,8 +74,11 @@ viejo quedó caduco — verificado en la 6ª auditoría:
   agregar una partida de un producto del archivo (debe nacer con el precio
   nuevo), **descartar ese pedido de prueba** y "Quitar precios cargados". No
   necesita nada en el ERP ni en la API.
-- **Checks post-deploy** (transmitir un pedido de prueba con una partida del
-  genérico): `id_rueda ≠ 0`, `nombre_capturado` poblado (≤40), precio de
+- **Checks post-deploy, SOLO contra el ERP de testing** (`fecegowstest`):
+  transmitir pedidos de prueba en producción los deja como **venta real**, y
+  por eso la comprobación de `docs/despliegue-laptop.md` los descarta sin
+  transmitir (17ª auditoría). Con la laptop apuntando a testing (transmitir un
+  pedido de prueba con una partida del genérico): `id_rueda ≠ 0`, `nombre_capturado` poblado (≤40), precio de
   partida = `cred_mayoreo_precio` (o el del archivo, si se cargaron precios:
   la evidencia lo dice con `precio_archivo`), y los de remisión de siempre
   (`consec_remision ≠ 0`, `rfc = XAXX010101000`, `c_UsoCFDI = S01`,
@@ -81,7 +89,7 @@ viejo quedó caduco — verificado en la 6ª auditoría:
   `vta_pedido_rueda` y sus partidas en `vta_pedido_rueda_detalle` —con el
   proveedor o la marca de la partida del 999999—; la consulta está en
   `docs/despliegue-laptop.md`.
-- **Check del pedido partido** (2026-09-09): transmitir un pedido de **más de
+- **Check del pedido partido** (2026-09-09, también **solo contra testing**): transmitir un pedido de **más de
   45 partidas** que incluya una del genérico y comprobar en el ERP que entraron
   **varios pedidos** —45 + resto + los genéricos aparte—, todos con la misma
   `clave_rueda` y con folios distintos; y que el detalle del pedido en la

@@ -64,10 +64,17 @@ auditorías):
   tomó el código nuevo, parece que el despliegue salió bien y que la pantalla
   nueva nació rota.
 
-**Hazlo desde la oficina, con internet, y con la rueda cerrada.** El peor orden
-posible es `git pull` en el salón sin conexión: el pull funciona, el
-`bundle install` falla por DNS, y el proceso viejo sigue vivo **hasta el primer
-reinicio** — momento en que el sitio muere y la única salida es revertir.
+**Hazlo desde la oficina, con internet, y con la rueda cerrada** (el paso 2
+lo comprueba). El peor orden posible es `git pull` en el salón sin conexión:
+el pull funciona y el `bundle install` falla por DNS. Y **si el lote trae
+migraciones, el sitio cae en el momento del pull**, no en el siguiente
+reinicio: en development el proceso que sigue vivo recarga `app/` y revisa en
+cada petición si hay migraciones pendientes (`migration_error = :page_load`),
+así que todas las tablets ven "Algo falló de este lado" hasta que corra
+`db:migrate` — que necesita a Bundler (reproducido en la 17ª auditoría). La
+única salida en el salón es `git checkout <sha del paso 1>`, sin reiniciar.
+Desde la oficina pasa igual entre los pasos 4 y 6, pero ahí no hay nadie
+capturando.
 
 ## Los pasos
 
@@ -78,9 +85,9 @@ cd ~/Proyectos/fecego-rueda-negocios
 | # | Paso | Qué comprobar después |
 |---|---|---|
 | 0 | **La API ya está actualizada** (ver "La API es aparte", al final): en la VM, `git log --oneline -1` | El sha que se quería, y `curl -s http://localhost:7011/health` → `"schema":"ok"`. Con la API vieja todo lo de abajo "sale bien" —el sync-down baja los precios vacíos sin error— y no se nota hasta capturar (16ª auditoría) |
-| 1 | `git status --short` | Vacío. Si sale `Gemfile.lock` modificado (bundler reescribe `BUNDLED WITH`), `git checkout Gemfile.lock` antes de seguir |
-| 2 | `bin/rails runner 'puts SyncRun.running.count'` | `0`. Si no, esperar: reiniciar a media corrida la mata (los jobs viven en hilos de puma) |
-| 3 | Respaldo de la BD (comandos en `docs/instalacion-laptop.md`, "Respaldo de la BD de la app") | `pg_restore -l "$DUMP"` lista tablas. Es la única vuelta atrás del paso 6: `git checkout` no deshace una migración |
+| 1 | `git status --short` y `git rev-parse --short HEAD` | Vacío. Si sale `Gemfile.lock` modificado (bundler reescribe `BUNDLED WITH`), `git checkout Gemfile.lock` antes de seguir. **Anota el sha**: es el de partida, y de él depende cómo se revierte ("Si algo sale mal"). Sin anotarlo, después del pull ya no hay de dónde sacarlo con certeza (17ª auditoría) |
+| 2 | `bin/rails runner 'puts SyncRun.running.count'` y `bin/rails runner 'puts [BusinessRound.active.count, Order.count].inspect'` | `0`, y `[0, 0]`: ninguna corrida viva, y la rueda cerrada (sin rueda activa ni pedidos en la laptop). Si hay corrida, esperar: reiniciar a media corrida la mata (los jobs viven en hilos de puma). Si quedan pedidos, la rueda no se cerró: desplegar así mete en el respaldo del paso 3 trabajo que una reversión puede perder |
+| 3 | Respaldo de la BD (comandos en `docs/instalacion-laptop.md`, "Respaldo de la BD de la app") | `pg_restore -l "$DUMP"` lista tablas. **Anota la ruta de `$DUMP`**: "Regresar al respaldo" la necesita y puede correr en otra terminal, horas después. Es la única vuelta atrás del paso 6: `git checkout` no deshace una migración |
 | 4 | `git pull origin master` | `git log --oneline -1` coincide con la versión que se quería |
 | 5 | `bundle install` | `bundle check` → `The Gemfile's dependencies are satisfied` |
 | 6 | `bin/rails db:migrate` | Sin error. Es inofensivo aunque no haya migraciones. Y `bin/rails db:migrate:status \| grep -c "^\s*down"` → `0`: ninguna quedó pendiente |
@@ -176,11 +183,22 @@ capturista, y en las partidas del 999999 el proveedor o la marca que se eligió.
 
 ## Si algo sale mal
 
-**Primero: ¿a qué sha se regresa?** De eso depende TODO lo demás (16ª
-auditoría):
+**Primero: ¿a qué sha se regresa?** Al anotado en el paso 1. De eso depende
+TODO lo demás (16ª auditoría), y se decide con git, no de memoria:
 
-- **Anterior a las promociones (`2bcc943`, 2026-08-22) — el caso de hoy: la
-  laptop corre `e990d81`.** Ahí el `checkout` solo NO basta: el código viejo
+```bash
+git merge-base --is-ancestor 2bcc943 <sha del paso 1> && echo "ya tiene promociones"
+git merge-base --is-ancestor 9c53e2e <sha del paso 1> && echo "ya tiene cotizaciones"
+```
+
+Esta guía decía "la laptop corre `e990d81`" y no era cierto: el 25-ago ya
+tenía promociones, y `e990d81` es anterior a ellas. Seguido al pie de la
+letra, restauraba un respaldo con las tablas de promociones bajo un código
+que no las conoce (17ª auditoría). Al 2026-10-29 la laptop corre `c63a18a`:
+tiene promociones y no cotizaciones, el segundo caso.
+
+- **Anterior a las promociones (`2bcc943`, 2026-08-22).** Ahí el `checkout`
+  solo NO basta: el código viejo
   borra el catálogo sin conocer las tablas de promociones, y "Obtener
   información" falla siempre con la llave foránea de `promotion_products`.
   **La reversión es restaurar el respaldo del paso 3** (ver abajo, "Regresar
@@ -220,15 +238,27 @@ sudo systemctl start fecego-rueda-negocios
 **Regresar al respaldo** (sha anterior a las promociones). El procedimiento de
 `docs/instalacion-laptop.md` ("Restaurar"), con dos diferencias: el código se
 regresa ANTES de arrancar, y la copia **no se migra** — el respaldo ya tiene
-el esquema del sha viejo, y migrarlo le pondría el del nuevo:
+el esquema del sha viejo, y migrarlo le pondría el del nuevo.
+
+Los comandos no dan por hecho la terminal del paso 3: cargan el `.env`, toman
+la ruta anotada y van encadenados con `&&`, para que una restauración fallida
+no siga hasta arrancar la app contra una base vacía. La base lleva fecha en
+el nombre: un `rueda_restore` de una prueba anterior haría fallar el
+`createdb`.
 
 ```bash
-sudo systemctl stop fecego-rueda-negocios
-createdb -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" rueda_restore
-pg_restore -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d rueda_restore --no-owner "$DUMP"
-git checkout <sha anterior>
-bin/rails tailwindcss:build
-# DB_NAME=rueda_restore en el .env
+cd ~/Proyectos/fecego-rueda-negocios
+set -a; source .env; set +a
+DUMP=<ruta anotada en el paso 3>
+RESTORE_DB=rueda_restore_$(date +%Y%m%d_%H%M)
+sudo systemctl stop fecego-rueda-negocios &&
+  pg_restore -l "$DUMP" > /dev/null &&
+  createdb -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" "$RESTORE_DB" &&
+  pg_restore -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$RESTORE_DB" --no-owner "$DUMP" &&
+  git checkout <sha del paso 1> &&
+  bin/rails tailwindcss:build &&
+  echo "Listo: pon DB_NAME=$RESTORE_DB en el .env y arranca el servicio"
+# DB_NAME=<el que imprimió> en el .env
 sudo systemctl start fecego-rueda-negocios
 ```
 
@@ -288,7 +318,11 @@ conexiones. `OrderCreate` envuelve todo en una transacción, así que no quedó
 nada a medias: **basta volver a transmitir**.
 
 **Una corrida atorada en "en progreso"** se destraba sola al recargar el panel
-(consulta su estado cada 3 s). Si de verdad quedó colgada:
+(consulta su estado cada 3 s) cuando su proceso murió. **No** cuando puma se
+reinició en caliente (`touch tmp/restart.txt`, `bin/rails restart`, SIGUSR2):
+el hilo del job muere pero el pid sigue vivo, y el barrido la respeta —la
+captura queda pausada en todo el salón (17ª auditoría). Ahí, o si de verdad
+quedó colgada:
 
 ```bash
 bin/rails runner '
@@ -321,10 +355,11 @@ alm_ficha_tecnica"` y "Obtener información" falla completo — no solo la caja.
 laptop no la necesita para funcionar: la API rechaza cualquier pedido cuya
 clave lleve el segmento `COT-` ("es una cotización, no un pedido"). Es la red
 por si una cotización llegara a transmitirse, **pero solo desde una laptop
-que manda la clave** (`472a6a6`, 2026-09-08, en adelante): el código de
-`e990d81` no la manda, y para la API ese pedido no trae segmento que mirar.
-Tras revertir a ese sha, la única red es el borrado de cotizaciones de "Si
-algo sale mal" (16ª auditoría). Por lo mismo, una rueda con prefijo `COT`
+que manda la clave** (`472a6a6`, 2026-09-08, en adelante): el código anterior
+no la manda, y para la API ese pedido no trae segmento que mirar. Tras
+revertir a un sha anterior a `472a6a6`, la única red es el borrado de
+cotizaciones de "Si algo sale mal" (16ª auditoría). `c63a18a`, el de la laptop
+al 2026-10-29, sí la manda. Por lo mismo, una rueda con prefijo `COT`
 haría que la API rechazara todas sus ventas: la laptop lo evita sacando esos
 pedidos con el respaldo `RN` y avisándolo en el panel. Comprobación: en el log de la API no debe aparecer ese rechazo; si
 aparece, alguien intentó mandar una cotización.

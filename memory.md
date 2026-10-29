@@ -71,6 +71,32 @@ confirmados al intentar refutarlos. Se remedia bloque por bloque.
 Fail-first: las tres pruebas nuevas salieron rojas sin su arreglo (la de la
 API, con la mutación de no mezclar los defaults).
 
+### Bloque 2 — la guía de despliegue y el backlog
+
+- **La laptop corre `c63a18a`** (2026-10-11, dato del usuario): tiene
+  promociones y no cotizaciones. La guía de reversión decía "el caso de hoy:
+  `e990d81`", anterior a las promociones — imposible, porque el 25-ago la
+  laptop ya las tenía (`2bcc943` no es ancestro de `e990d81`). Seguida al pie
+  de la letra, restauraba un respaldo con tablas de promociones bajo código que
+  no las conoce. El dato venía de una nota de memoria del 2026-09-08 que nadie
+  volvió a comprobar. **Lección: un sha "de hoy" escrito en una guía caduca
+  sin avisar; la guía pide anotarlo (paso 1) y decide con `git merge-base
+  --is-ancestor`, no con lo que dice el documento.**
+- **El sitio cae al hacer pull, no al reiniciar.** En development cada
+  petición revisa migraciones pendientes: con un lote que las trae, el pull
+  basta para el 500. La guía lo dice y da la salida (checkout al sha del paso
+  1, sin reiniciar).
+- **Paso 2 comprueba la rueda cerrada** (`[BusinessRound.active.count,
+  Order.count]` → `[0, 0]`, que corre igual en el código viejo). **Paso 3
+  anota la ruta del respaldo**, y "Regresar al respaldo" carga el `.env`, va
+  encadenado con `&&` y usa una base con fecha. Probado en una base efímera:
+  con ruta mala se detiene; con la buena, restaura.
+- **Backlog:** el estado del despliegue ya dice `c63a18a` (antes: "nada
+  desplegado desde la 4ª"), y los checks que transmiten pedidos de prueba son
+  **solo contra testing** — la guía prohíbe transmitirlos en producción.
+- De paso (BAJA del mismo documento): la corrida "atorada" tras un reinicio en
+  caliente de puma no se destraba sola —el pid sigue vivo—, y la guía lo dice.
+
 ## 16ª auditoría (2026-10-29) — todo el proyecto, énfasis en la remediación de la 15ª
 
 7 auditores. **0 CRÍTICA · 1 ALTA · 6 MEDIA · ~18 BAJA** tras verificar. Se
