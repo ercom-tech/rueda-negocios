@@ -480,7 +480,7 @@ movería también fechas, números y mensajes de Rails que hoy funcionan.
   PROPIEDAD JS, no con `dataset`.** Un data-attr es un atributo, e idiomorph
   sincroniza los atributos con los del HTML nuevo: desaparece aunque el nodo
   sea el mismo, y la prueba concluye lo contrario de lo que pasó. Una propiedad
-  expando (`el.__marca = …`) solo se pierde si el elemento se reemplaza.
+  expando (`el.__mark = …`) solo se pierde si el elemento se reemplaza.
 - **En una prueba de sistema, los broadcasts de Action Cable SÍ se entregan.**
   El adaptador `test` hereda de `Async`, y el servidor de Capybara vive en el
   mismo proceso que la prueba, así que un `broadcast_replace_to` llega al

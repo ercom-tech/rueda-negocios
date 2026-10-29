@@ -47,12 +47,13 @@
         <%# Lo que el reemplazo BORRÓ, contado al borrarlo. El modal de
             confirmación ya lo anticipa, pero cuenta al pintarse el panel y
             nada lo repinta: las cotizaciones guardadas después se iban sin
-            que el operador lo supiera (16ª auditoría). Concordancia a mano. %>
+            que el operador lo supiera (16ª auditoría). Los sustantivos, de
+            `Order.document_text`; verbo y adjetivo, a mano. %>
         <% if (gone = run.summary["purged_orders"].to_i).positive? %>
-          · se <%= gone == 1 ? "quitó 1 pedido transmitido" : "quitaron #{gone} pedidos transmitidos" %>
+          · se <%= gone == 1 ? "quitó" : "quitaron" %> <%= gone %> <%= Order.document_text("sale", gone == 1 ? :noun : :plural) %> <%= gone == 1 ? "transmitido" : "transmitidos" %>
         <% end %>
         <% if (gone = run.summary["purged_estimates"].to_i).positive? %>
-          · se <%= gone == 1 ? "borró 1 cotización" : "borraron #{gone} cotizaciones" %>
+          · se <%= gone == 1 ? "borró" : "borraron" %> <%= gone %> <%= Order.document_text("estimate", gone == 1 ? :noun : :plural) %>
         <% end %>
       <% else %>
         <% transmitted = run.summary["transmitted"].to_a %>

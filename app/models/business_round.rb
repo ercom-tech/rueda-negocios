@@ -20,8 +20,10 @@ class BusinessRound < ApplicationRecord
   # folios de venta `COT-000123` idénticos a los de una cotización, y NINGUNA
   # venta se transmitiría — sin salida, porque el folio ya quedó fijo (16ª).
   # Ninguna regla de la API puede distinguirlos: el texto es el mismo. Mismo
-  # recorte que la regla de la API: "XCOT" no choca, "-COT" sí.
-  RESERVED_FOLIO_PREFIX = /(\A|-)COT\z/i
+  # recorte que la regla de la API (`/(\A|-)COT-/i` sobre la clave): "XCOT" y
+  # "COTA" no chocan; "-COT" y "COT-" sí. El de "COT-" se escapaba —la clave
+  # sale `COT--000123`— y la API rechazaba todas las ventas (17ª auditoría).
+  RESERVED_FOLIO_PREFIX = /(\A|-)COT(-|\z)/i
 
   def reserved_folio_prefix?
     folio_prefix.to_s.match?(RESERVED_FOLIO_PREFIX)

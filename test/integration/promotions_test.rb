@@ -25,6 +25,17 @@ class PromotionsTest < ActionDispatch::IntegrationTest
     login_as "cap_pr"
   end
 
+  # Un id forjado como arreglo hacía que `find` devolviera un arreglo y la
+  # pantalla tronara con NoMethodError (17ª auditoría): ahora es un 404.
+  test "un product_id o promotion_id forjado como arreglo es un 404, no la pantalla de error" do
+    post order_order_items_path(@order), params: { product_id: [ @product.id ] }
+    assert_response :not_found
+
+    add_item(@product, 2)
+    post order_promotions_path(@order), params: { promotion_id: [ @promo.id ] }
+    assert_response :not_found
+  end
+
   def make_product(description, price, erp_id: nil)
     product = Product.create!(erp_product_id: erp_id || rand(1_000_000..9_999_999),
                               description: description, unit: "PZA", max_discount: 9)
@@ -246,12 +257,12 @@ class PromotionsTest < ActionDispatch::IntegrationTest
   end
 
   test "un producto ajeno a la promoción sí se puede agregar" do
-    foreign_draft = make_product("MARTILLO", 300)
+    foreign_product = make_product("MARTILLO", 300)
     add_item(@product, 6)
     post order_promotions_path(@order), params: { promotion_id: @promo.id }
 
     assert_difference -> { @order.order_items.count }, 1 do
-      post order_order_items_path(@order), params: { product_id: foreign_draft.id }
+      post order_order_items_path(@order), params: { product_id: foreign_product.id }
     end
   end
 

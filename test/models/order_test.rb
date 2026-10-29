@@ -48,7 +48,7 @@ class OrderTest < ActiveSupport::TestCase
   # ventas saldrían `COT-000123`, idénticas a una cotización, y ninguna se
   # transmitiría (16ª auditoría). Literal, no leído de la constante.
   test "con prefijo COT el pedido toma el respaldo y la cotización conserva su forma" do
-    [ "COT", "cot", "-COT" ].each do |prefix|
+    [ "COT", "cot", "-COT", "COT-", "A-COT" ].each do |prefix|
       @round.update!(folio_prefix: prefix)
       order = build_order
       order.order_items.build(quantity: 1, unit_price: 10, discount_percent: 0, tax_rate: 0)
@@ -60,6 +60,14 @@ class OrderTest < ActiveSupport::TestCase
 
     @round.update!(folio_prefix: "XCOT")
     assert_equal "XCOT", @round.sale_folio_prefix, "solo el segmento COT choca, como en la API"
+    @round.update!(folio_prefix: "COTA")
+    assert_equal "COTA", @round.sale_folio_prefix, "COTA-000123 no lleva el segmento COT-"
+
+    @round.update!(folio_prefix: "COT")
+    estimate = Order.create!(user: @user, business_round: @round, document: "estimate")
+    estimate.order_items.create!(quantity: 1, unit_price: 10, discount_percent: 0, tax_rate: 0, position: 1)
+    assert estimate.capture!
+    assert_match(/\ACOT-COT-\d{6}\z/, estimate.local_folio, "la cotización no toma el respaldo")
   end
 
   # Toda rueda dada de alta antes de que el ERP tuviera la columna trae el

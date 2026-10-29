@@ -104,7 +104,7 @@ class EstimateConcurrencyTest < ActiveSupport::TestCase
   # en vez de colgarse (pasaba con `taken.pop` sin tope, 16ª auditoría).
   test "si el hilo que sostiene el candado falla, la prueba termina con su error" do
     error = assert_raises(RuntimeError) do
-      holding(-> { raise "falla a propósito" }) { :nunca }
+      holding(-> { raise "falla a propósito" }) { :never }
     end
 
     assert_equal "falla a propósito", error.message

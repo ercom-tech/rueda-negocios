@@ -9,7 +9,9 @@ class OrderItemsController < ApplicationController
   # la rechaza la llave foránea. Sin esto, la pantalla de error — que además
   # promete "Tu pedido no se perdió" (15ª auditoría). Si la cotización sigue
   # existiendo, `order_gone` vuelve a levantar el error: no es este caso.
-  rescue_from ActiveRecord::InvalidForeignKey, with: :order_gone
+  # El mismo choque puede acabar en interbloqueo, y Postgres elige a la
+  # edición como víctima: la cotización se borra igual (17ª auditoría).
+  rescue_from ActiveRecord::InvalidForeignKey, ActiveRecord::Deadlocked, with: :order_gone
 
   before_action :pause_writes_during_sync, except: :quote
   before_action :set_order, except: :quote
@@ -38,7 +40,9 @@ class OrderItemsController < ApplicationController
   # El find va scopeado al universo del capturista (sus proveedores/marcas):
   # un product_id fuera del universo → 404, aunque el POST venga forjado.
   def create
-    product = current_user.product_universe(active_round).find(params[:product_id])
+    # Saneado: un `product_id[]` forjado hacía que `find` devolviera un
+    # arreglo y `generic?` tronara (17ª auditoría); así es un 404.
+    product = current_user.product_universe(active_round).find(ParamSanitizing.id(params[:product_id]))
 
     # El genérico (999999) se captura con descripción, parte y precio
     # propios: el primer POST (el clic en la opción del buscador, sin datos)
@@ -165,7 +169,6 @@ class OrderItemsController < ApplicationController
   def set_order
     @order = current_user.orders.find(params[:order_id])
   end
-
 
   # Candado por partida: descripción, no. de parte y precio solo se editan en
   # el genérico — en un producto de catálogo son snapshot del ERP y un PATCH

@@ -31,13 +31,14 @@ class OrdersController < ApplicationController
     found     = params[:q].present? ? Client.search(params[:q]).limit(Client::SEARCH_LIMIT + 1).to_a : []
     truncated = found.size > Client::SEARCH_LIMIT
     clients   = found.first(Client::SEARCH_LIMIT)
-    order = current_user.orders.find_by(id: params[:order_id])
+    order_id = ParamSanitizing.id(params[:order_id])
+    order = current_user.orders.find_by(id: order_id)
     # Al editar el encabezado viene `order_id`. Si ya no existe (se descartó, o
     # "Obtener información" o "Cerrar rueda" borraron la cotización), las
     # sugerencias se armaban como para un registro nuevo: apuntaban al paso 1
     # de un PEDIDO y al guardar nacía una venta (15ª auditoría). El aviso va
     # dentro del panel, como en el buscador de producto (`order_gone`).
-    if params[:order_id].present? && order.nil? && !Order.exists?(id: params[:order_id])
+    if params[:order_id].present? && order.nil? && !Order.exists?(id: order_id)
       return render partial: "orders/order_gone", layout: false
     end
     # `truncated` va en los locals, no como ivar: el partial lo lee con

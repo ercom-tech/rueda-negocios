@@ -97,6 +97,39 @@ API, con la mutación de no mezclar los defaults).
 - De paso (BAJA del mismo documento): la corrida "atorada" tras un reinicio en
   caliente de puma no se destraba sola —el pid sigue vivo—, y la guía lo dice.
 
+### Bloque 3 — las BAJA de código
+
+- **Prefijo `COT-`:** la app reservaba `/(\A|-)COT\z/i` y la API rechaza
+  `/(\A|-)COT-/i` sobre la clave; con el prefijo `COT-` (cabe en varchar(4)) la
+  clave sale `COT--000123` y la API rechazaba todas las ventas. Ahora
+  `/(\A|-)COT(-|\z)/i`; "COTA" y "XCOT" siguen libres. Lo encontraron tres
+  auditores, y un cuarto afirmó que las reglas "coinciden" leyendo las dos
+  regex. **Lección: dos reglas "equivalentes" se comparan barriendo el
+  espacio de entradas (el ERP lo acota a 4 caracteres), no leyéndolas.** La
+  prueba ahora también comprueba el folio de la cotización (`COT-COT-…`), que
+  su nombre prometía y no miraba.
+- **Interbloqueo con la purga perdido por la edición:** `Deadlocked` se suma al
+  `rescue_from … with: :order_gone` de partidas y promociones (la cotización
+  se borra igual; antes, pantalla de error). En "Obtener información", el
+  mismo choque decía "revisa el servidor": ahora dice lo mismo que "Cerrar
+  rueda" (alguien capturaba, no se borró nada, repetir).
+- **Ids:** `product_id`/`promotion_id` por `ParamSanitizing` (un arreglo hacía
+  que `find` devolviera un arreglo: NoMethodError), y `ParamSanitizing.id` en
+  base 10 (`Integer("010")` es 8 y ActiveRecord lo lee como 10). También
+  `client_options`, por consistencia (ahí era inofensivo).
+- Texto de "Cliente genérico" sin "encabezado" ("será de cliente genérico");
+  sustantivos del panel por `Order.document_text`; renglones en blanco dobles.
+- **Pruebas:** el renombre de la 16ª tradujo palabra por palabra sin mirar qué
+  guardaba la variable (`foreign_draft` era un perfil fiscal y un producto,
+  `@other_user` un cliente, `brand_record` la marca puesta a un nodo): se
+  nombraron por su contenido, y los ~8 identificadores en español que quedaban
+  pasaron a inglés. **Lección: un diccionario global de traducción no sirve
+  para renombrar; el nombre sale de lo que contiene la variable en ESE
+  archivo.**
+
+Fail-first: las 5 pruebas nuevas rojas sin el arreglo; la mitad de
+`promotion_id` comprobada con su propia mutación.
+
 ## 16ª auditoría (2026-10-29) — todo el proyecto, énfasis en la remediación de la 15ª
 
 7 auditores. **0 CRÍTICA · 1 ALTA · 6 MEDIA · ~18 BAJA** tras verificar. Se

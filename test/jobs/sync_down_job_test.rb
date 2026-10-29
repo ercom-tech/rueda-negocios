@@ -33,6 +33,27 @@ class SyncDownJobTest < ActiveJob::TestCase
     assert Client.exists?(client.id), "el catálogo anterior sigue intacto"
   end
 
+  # Un choque con una partida de cotización a media purga: el panel decía
+  # "revisa que el servidor esté disponible", y el servidor no tenía nada que
+  # ver (17ª auditoría).
+  test "un choque con la captura no culpa al servidor y no deja nada a medias" do
+    Setting.instance.update!(selected_round_erp_id: 3, selected_round_name: "R")
+    run = SyncRun.create!(kind: "down", started_at: Time.current, pid: Process.pid)
+    stub_request(:get, "#{API}/ruedas/3/export").to_return(status: 200, body: "{}")
+    armed = true
+    Sync::Down.prepend(Module.new do
+      define_method(:run!) { armed ? raise(ActiveRecord::Deadlocked, "deadlock detected") : super() }
+    end)
+
+    with_env("RUEDA_API_URL" => API) { SyncDownJob.perform_now(run.id) }
+
+    assert run.reload.failed?
+    assert_match(/No se borró nada: vuelve a intentarlo/, run.message)
+    assert_no_match(/servidor/, run.message)
+  ensure
+    armed = false # el módulo antepuesto se queda: se desarma (16ª)
+  end
+
   private
 
   # Export mínimo válido hasta clientes, donde la clave ausente viola el

@@ -7,7 +7,8 @@ class PromotionsController < ApplicationController
   rescue_from ActiveRecord::RecordNotFound, with: :order_gone
   # Aplicar inserta regalos: si la cotización se borró en ese instante
   # (obtener información o cerrar la rueda), los rechaza la llave foránea.
-  rescue_from ActiveRecord::InvalidForeignKey, with: :order_gone
+  # O en interbloqueo con la purga, perdido por la edición (17ª auditoría).
+  rescue_from ActiveRecord::InvalidForeignKey, ActiveRecord::Deadlocked, with: :order_gone
 
   before_action :pause_writes_during_sync, except: :show
   before_action :set_order
@@ -71,7 +72,8 @@ class PromotionsController < ApplicationController
   end
 
   def group_for(promotion_id)
-    Promotions::Group.new(@order, Promotion.find(promotion_id))
+    # Saneado: con `promotion_id[]`, `find` devolvía un arreglo (17ª).
+    Promotions::Group.new(@order, Promotion.find(ParamSanitizing.id(promotion_id)))
   end
 
   def applied_message(group)
@@ -114,7 +116,6 @@ class PromotionsController < ApplicationController
     scope = action_name == "show" ? accessible_orders : current_user.orders
     @order = scope.find(params[:order_id])
   end
-
 
   # Los mismos tres nodos que repinta OrderItemsController: la tabla cambia
   # (descuentos, regalos, candados), los totales cambian, y el buscador

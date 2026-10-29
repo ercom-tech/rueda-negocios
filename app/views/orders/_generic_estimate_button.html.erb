@@ -16,7 +16,7 @@
       Cliente genérico
     </button>
     <%= render "home/confirm_dialog", title: "Cliente genérico",
-          message: "Se quitará el cliente elegido y la cotización empezará sin encabezado. ¿Continuar?",
+          message: "Se quitará el cliente elegido y la cotización será de cliente genérico. ¿Continuar?",
           confirm_label: "Sí, cambiar", path: orders_path, params: { order: { document: "estimate" } } %>
   </div>
 <% else %>

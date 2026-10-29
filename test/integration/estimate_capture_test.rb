@@ -174,6 +174,29 @@ class EstimateCaptureTest < ActionDispatch::IntegrationTest
     assert_select "[role=alert] a[href=?]", root_path
   end
 
+  # La purga y una edición de partida pueden interbloquearse, y Postgres puede
+  # abortar a la EDICIÓN: la cotización se borra igual, y el capturista veía
+  # la pantalla de error en vez del aviso (17ª auditoría).
+  test "si la edición pierde el interbloqueo con la purga, la pantalla dice que la cotización ya no está" do
+    id = estimate!.id
+    armed = true
+    OrderItemsController.prepend(Module.new do
+      define_method(:create) do
+        return super() unless armed
+
+        Order.purge_estimates!
+        raise ActiveRecord::Deadlocked, "deadlock detected"
+      end
+    end)
+
+    post order_order_items_path(id), params: { product_id: 1 }
+
+    assert_redirected_to root_path
+    assert_match(/ya no está en esta laptop/, flash[:alert])
+  ensure
+    armed = false # el módulo antepuesto se queda: se desarma (16ª)
+  end
+
   # El buscador de cliente del paso 1 (al editar) pide con fetch. Sobre una
   # cotización ya borrada armaba las sugerencias como si no hubiera registro:
   # apuntaban a /orders/new, el paso 1 de un PEDIDO, y al guardar nacía una

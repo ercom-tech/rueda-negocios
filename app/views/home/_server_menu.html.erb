@@ -93,7 +93,7 @@
     <% down_message = [
          "Se descargarán los datos de la rueda seleccionada y se reemplazará la información local.",
          ("Se #{transmitted == 1 ? 'quitará' : 'quitarán'} #{transmitted} " \
-          "#{transmitted == 1 ? 'pedido' : 'pedidos'} ya " \
+          "#{Order.document_text('sale', transmitted == 1 ? :noun : :plural)} ya " \
           "#{transmitted == 1 ? 'transmitido' : 'transmitidos'}." if transmitted.positive?),
          ("Se #{estimates == 1 ? 'borrará' : 'borrarán'} #{estimates} " \
           "#{Order.document_text('estimate', estimates == 1 ? :noun : :plural)}." if estimates.positive?),

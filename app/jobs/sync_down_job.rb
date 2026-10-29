@@ -19,6 +19,14 @@ class SyncDownJob < ApplicationJob
     run.finish!(status: :completed, summary: result.summary)
   rescue Sync::Down::GuardError, Sync::ApiClient::Error => e
     run&.finish!(status: :failed, message: e.message)
+  rescue ActiveRecord::Deadlocked, ActiveRecord::InvalidForeignKey => e
+    # El reemplazo chocó con una partida que un capturista estaba guardando en
+    # una cotización (entró justo antes de la pausa). La transacción se
+    # deshizo entera; el genérico de abajo mandaba a revisar el servidor, que
+    # no tiene nada que ver (17ª auditoría). Mismo aviso que "Cerrar rueda".
+    Rails.logger.warn(e.full_message)
+    run&.finish!(status: :failed, message: "Alguien estaba capturando una cotización mientras se obtenía la " \
+                                           "información. No se borró nada: vuelve a intentarlo.")
   rescue StandardError => e
     # El detalle técnico (clase, rutas internas, IPs de la red on-prem) va al
     # log; en el panel, guía accionable — mismo criterio que el resto del panel.

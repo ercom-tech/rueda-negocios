@@ -50,30 +50,30 @@ class ForgedInputTest < ActionDispatch::IntegrationTest
   # un campo oculto.
 
   test "un perfil fiscal de otro cliente no se guarda" do
-    foreign_draft = ClientTaxProfile.create!(client: @other, rfc: "AAA010101AAA", business_name: "OTRO SA")
+    foreign_tax_profile = ClientTaxProfile.create!(client: @other, rfc: "AAA010101AAA", business_name: "OTRO SA")
     cfdi  = CfdiUse.create!(code: "G01", description: "ADQUISICIÓN DE MERCANCÍAS")
 
     assert_no_difference "Order.count" do
-      post orders_path, params: header_params(kind: "invoice", client_tax_profile_id: foreign_draft.id,
+      post orders_path, params: header_params(kind: "invoice", client_tax_profile_id: foreign_tax_profile.id,
                                               cfdi_use_id: cfdi.id)
     end
     assert_response :unprocessable_entity
   end
 
   test "una sucursal de otro cliente no se guarda" do
-    foreign_estimate = ClientBranch.create!(client: @other, erp_branch_id: 1, name: "MATRIZ OTRO")
+    foreign_branch = ClientBranch.create!(client: @other, erp_branch_id: 1, name: "MATRIZ OTRO")
 
     assert_no_difference "Order.count" do
-      post orders_path, params: header_params(client_branch_id: foreign_estimate.id)
+      post orders_path, params: header_params(client_branch_id: foreign_branch.id)
     end
     assert_response :unprocessable_entity
   end
 
   test "el perfil propio sí pasa" do
-    own_order = ClientBranch.create!(client: @client, erp_branch_id: 1, name: "MATRIZ")
+    own_branch = ClientBranch.create!(client: @client, erp_branch_id: 1, name: "MATRIZ")
 
     assert_difference "Order.count", 1 do
-      post orders_path, params: header_params(client_branch_id: own_order.id)
+      post orders_path, params: header_params(client_branch_id: own_branch.id)
     end
   end
 

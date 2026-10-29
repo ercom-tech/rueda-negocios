@@ -411,7 +411,6 @@ class Order < ApplicationRecord
     errors.add(:document, "no se puede cambiar") if document_changed?
   end
 
-
   # Los campos de la rama que NO aplica se descartan al guardar. El paso 1
   # muestra los de factura y los de remisión en el mismo formulario y solo
   # oculta con CSS los de la rama inactiva, así que se envían igual: un pedido

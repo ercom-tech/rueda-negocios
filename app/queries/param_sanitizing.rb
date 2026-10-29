@@ -16,11 +16,14 @@ module ParamSanitizing
   module_function
 
   # Un id de catálogo: entero positivo que cabe en un bigint, o nil. Rechaza
-  # arreglos, hashes y cadenas que no sean números — nunca levanta.
+  # arreglos, hashes y cadenas que no sean números — nunca levanta. En base
+  # 10 explícita: `Integer("010")` es 8 (octal) y `"0x1f"` es 31, mientras
+  # ActiveRecord lee "010" como 10 — `find` y `exists?` miraban registros
+  # distintos con el mismo parámetro (17ª auditoría).
   def id(value)
     return nil unless value.is_a?(String) || value.is_a?(Integer)
 
-    number = Integer(value, exception: false)
+    number = value.is_a?(Integer) ? value : Integer(value, 10, exception: false)
     number if number&.positive? && number <= MAX_ID
   end
 
@@ -31,7 +34,6 @@ module ParamSanitizing
     id(value) || 1
   end
 
-  # Texto libre: recortado, o nil.
   # Tamaño de página: solo uno de los permitidos. Un `?per_page[]=50` llega
   # como arreglo y el `to_i` que había en cada controlador levantaba
   # NoMethodError (13ª auditoría).
@@ -40,6 +42,7 @@ module ParamSanitizing
     sizes.include?(size) ? size : sizes.first
   end
 
+  # Texto libre: recortado, o nil.
   def text(value)
     value.strip.presence if value.is_a?(String)
   end

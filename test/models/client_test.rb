@@ -13,14 +13,14 @@ class ClientTest < ActiveSupport::TestCase
                                commercial_name: "FERREMAQ")
     @containing = Client.create!(erp_client_key: "ABC001", name: "DISTRIBUIDORA FERREMAQ SUR",
                                commercial_name: "DISTRISUR")
-    @other_user     = Client.create!(erp_client_key: "XYZ999", name: "TORNILLOS DEL GOLFO",
-                               commercial_name: "TORGOLFO")
+    @other_client = Client.create!(erp_client_key: "XYZ999", name: "TORNILLOS DEL GOLFO",
+                                   commercial_name: "TORGOLFO")
   end
 
   test "encuentra por clave, por nombre y por nombre comercial" do
     assert_includes Client.search("FERRE1"), @exact
     assert_includes Client.search("DEL NORTE"), @exact
-    assert_includes Client.search("TORGOLFO"), @other_user
+    assert_includes Client.search("TORGOLFO"), @other_client
   end
 
   test "no distingue mayúsculas" do

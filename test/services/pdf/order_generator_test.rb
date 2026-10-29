@@ -105,7 +105,7 @@ module Pdf
 
     # Descripción que se parte en dos líneas en la columna de 197 pt: el 6.5%
     # del catálogo real lo hace, y con el prefijo de regalo lo hace el 82%.
-    DESCRIPCION_LARGA = "MARTILLO DEMOLEDOR HM1810 CON MALETIN Y JUEGO DE CINCELES DE REPUESTO".freeze
+    LONG_DESCRIPTION = "MARTILLO DEMOLEDOR HM1810 CON MALETIN Y JUEGO DE CINCELES DE REPUESTO".freeze
 
     # El pie —importe en letra y los cuatro totales— se dibujaba donde quedara
     # el cursor, en un `bounding_box` sin alto. Cerca de cada salto de hoja no
@@ -122,21 +122,21 @@ module Pdf
     # antes del arreglo — 28 de 180 combinaciones.
     test "el pie completo cae en UNA hoja para cualquier numero de partidas" do
       cases = [
-        { rango: 18..24, description: "PRODUCTO",          gift: false },
-        { rango: 11..15, description: DESCRIPCION_LARGA,   gift: false },
-        { rango: 9..13,  description: DESCRIPCION_LARGA,   gift: true }
+        { range: 18..24, description: "PRODUCTO",          gift: false },
+        { range: 11..15, description: LONG_DESCRIPTION,    gift: false },
+        { range: 9..13,  description: LONG_DESCRIPTION,    gift: true }
       ]
 
-      cases.each do |caso|
-        caso[:rango].each do |n|
-          order = order_with_items(n, description: caso[:description], gift: caso[:gift])
+      cases.each do |test_case|
+        test_case[:range].each do |n|
+          order = order_with_items(n, description: test_case[:description], gift: test_case[:gift])
           gen   = OrderGenerator.new(order)
           gen.render # llena los importes impresos
           amount_words = gen.send(:amount_in_words, gen.send(:printed_total, :total))
           total = gen.send(:number_to_currency, gen.send(:printed_total, :total))
 
           pages = pdf_pages(order)
-          label_text = "#{n} partidas (#{caso[:description][0, 8]}, regalos=#{caso[:gift]})"
+          label_text = "#{n} partidas (#{test_case[:description][0, 8]}, regalos=#{test_case[:gift]})"
 
           complete_ones = pages.count { |p| p.include?(amount_words) && p.include?(total) }
           assert_equal 1, complete_ones,
@@ -181,7 +181,7 @@ module Pdf
       items = generator.send(:printed_items)
 
       column_sum = items.sum { |i| i[:total] }
-      footer          = generator.send(:printed_total, :total)
+      footer = generator.send(:printed_total, :total)
       assert_equal column_sum, footer
 
       # Y el pie cuadra consigo mismo: Subtotal − Descuento + IVA = Total.
@@ -248,15 +248,15 @@ module Pdf
     # partidas se dibuja después, y lo que quede bajo su borde superior queda
     # tapado aunque esté escrito. Lo que hay que medir es cuánto espacio
     # RESERVA `render_info` frente a lo que el bloque ocupa.
-    def espacio_reservado_y_ocupado(order)
+    def reserved_and_used_space(order)
       gen = OrderGenerator.new(order)
       pdf = Prawn::Document.new(page_size: "LETTER", page_layout: :landscape, margin: [ 36, 36, 54, 36 ])
       pdf.font "Helvetica"
       top = pdf.cursor
       gen.send(:render_info, pdf)
       reserved = top - pdf.cursor
-      taken_slot   = gen.send(:text_height, pdf, gen.send(:left_info), 470)
-      [ reserved, taken_slot ]
+      used = gen.send(:text_height, pdf, gen.send(:left_info), 470)
+      [ reserved, used ]
     end
 
     # El caso que lo destapó: una factura con dirección larga suma RFC/Razón
@@ -273,11 +273,11 @@ module Pdf
       @order.update!(kind: "invoice", client_tax_profile: tax, cfdi_use: cfdi,
                      client_receipt_profile: nil, client_branch: branch, dividir_facturas: 5000)
 
-      reserved, taken_slot = espacio_reservado_y_ocupado(@order)
+      reserved, used = reserved_and_used_space(@order)
 
-      assert_operator taken_slot, :>, OrderGenerator::INFO_MIN_HEIGHT,
+      assert_operator used, :>, OrderGenerator::INFO_MIN_HEIGHT,
                       "si este caso no rebasa el mínimo, la prueba no está midiendo el caso largo"
-      assert_operator reserved, :>=, taken_slot + OrderGenerator::INFO_GAP,
+      assert_operator reserved, :>=, used + OrderGenerator::INFO_GAP,
                       "la tabla arrancaría encima del bloque y taparía sus últimas líneas"
     end
 
@@ -285,9 +285,9 @@ module Pdf
     test "un pedido corto conserva el espacio minimo" do
       item!(quantity: 1, price: 100)
 
-      reserved, taken_slot = espacio_reservado_y_ocupado(@order)
+      reserved, used = reserved_and_used_space(@order)
 
-      assert_operator taken_slot, :<, OrderGenerator::INFO_MIN_HEIGHT
+      assert_operator used, :<, OrderGenerator::INFO_MIN_HEIGHT
       assert_equal OrderGenerator::INFO_MIN_HEIGHT + OrderGenerator::INFO_GAP, reserved
     end
   end

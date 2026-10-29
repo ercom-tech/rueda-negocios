@@ -19,13 +19,13 @@ class ItemsDisplayOrderTest < ActionDispatch::IntegrationTest
     @client = Client.create!(erp_client_key: "C975", name: "Cliente")
     @order  = Order.create!(user: @user, business_round: @round, client: @client, kind: "remission")
 
-    %w[UNO DOS TRES].each_with_index do |nombre, i|
-      p = Product.create!(erp_product_id: 975_001 + i, description: nombre, max_discount: 50)
+    %w[UNO DOS TRES].each_with_index do |name, i|
+      p = Product.create!(erp_product_id: 975_001 + i, description: name, max_discount: 50)
       Price.create!(product: p, credit_wholesale_price: 100, tax_rate: 16)
       ProductSupplier.create!(product: p, supplier: @sup)
       @order.order_items.create!(product: p, position: i + 1, quantity: 1, unit_price: 100,
                                  discount_percent: 0, tax_rate: 16, code: p.erp_code,
-                                 description: nombre, unit: "PZA")
+                                 description: name, unit: "PZA")
     end
     login_as "cap975"
   end
