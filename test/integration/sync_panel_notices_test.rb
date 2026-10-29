@@ -102,6 +102,21 @@ class SyncPanelNoticesTest < ActionDispatch::IntegrationTest
     assert_match(/Pide que le cambien la clave en el ERP/, response.body)
   end
 
+  # El modal de "Obtener información" cuenta al pintarse el panel y nada lo
+  # repinta: lo guardado después se borraba sin aviso. El resumen dice lo que
+  # SÍ se borró (16ª auditoría).
+  test "el resumen dice cuántas cotizaciones y pedidos transmitidos borró el reemplazo" do
+    finished_run(kind: "down", summary: { entities: { products: 10 }, purged_estimates: 3, purged_orders: 1 })
+    get server_menu_path
+    assert_match(/se borraron 3 cotizaciones/, response.body)
+    assert_match(/se quitó 1 pedido transmitido/, response.body)
+
+    finished_run(kind: "down", summary: { entities: { products: 10 }, purged_estimates: 1, purged_orders: 0 })
+    get server_menu_path
+    assert_match(/se borró 1 cotización/, response.body)
+    assert_no_match(/pedidos? transmitidos?/, response.body)
+  end
+
   test "con clave de folios el panel no levanta el aviso" do
     finished_run(kind: "down", summary: { entities: { products: 10 }, missing_folio_prefix: false })
 

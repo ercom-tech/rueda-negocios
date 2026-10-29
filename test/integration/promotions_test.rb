@@ -373,7 +373,11 @@ class PromotionsTest < ActionDispatch::IntegrationTest
 
     post order_promotions_path(@order), params: { promotion_id: @promo.id }
 
-    assert_response :forbidden
+    # Con aviso, no un 403 vacío: el modal se cerraba sin decir nada (16ª).
+    assert_redirected_to order_path(@order)
+    assert_response :see_other
+    assert_equal "Este pedido ya se transmitió al ERP: ya no se puede cambiar. Así quedó.", flash[:alert]
+    assert_nil @order.order_items.first.reload.promotion_id
   end
   # --- El equipo-servidor abriendo el modal en un pedido ajeno (11ª aud.) ----
 

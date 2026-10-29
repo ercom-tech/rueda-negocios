@@ -131,8 +131,14 @@
         `turbo:submit-end->modal#close`: al terminar, el modal se cierra solo.
         El resultado se ve en la tabla (que se repinta detrás) y en el flash;
         dejarlo abierto tapaba justo lo que el capturista quiere revisar, y su
-        fondo se comía el siguiente clic. %>
-    <% close_on_submit = { data: { action: "turbo:submit-end->modal#close" } } %>
+        fondo se comía el siguiente clic.
+        `turbo_frame: "_top"`: si el servidor responde con una REDIRECCIÓN (el
+        pedido se transmitió con la pantalla abierta, o ya no existe), la que
+        navega es la página. Dentro del frame, Turbo la seguía ahí mismo, el
+        modal se cerraba y el aviso no llegaba a ningún lado (16ª auditoría).
+        Las respuestas Turbo Stream de siempre no cambian: Turbo las aplica
+        sin importar el frame. %>
+    <% close_on_submit = { data: { action: "turbo:submit-end->modal#close", turbo_frame: "_top" } } %>
     <%# "Cerrar" NO va aquí: vive en el cascarón del modal, fuera del
         turbo-frame, para que exista aunque la carga falle. Y la acción que
         muta va en coral, no en el mismo pill neutral que la de escape —

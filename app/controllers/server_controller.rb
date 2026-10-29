@@ -128,11 +128,13 @@ class ServerController < ApplicationController
                         "Elige la siguiente rueda y obtén su información."
   rescue Sync::CloseRound::PendingOrdersError, Sync::CloseRound::SyncInProgressError => e
     redirect_to root_path, alert: e.message
-  rescue ActiveRecord::InvalidForeignKey
+  rescue ActiveRecord::InvalidForeignKey, ActiveRecord::Deadlocked
     # Una partida que entró a una cotización justo mientras se borraba (el
     # candado de `purge_estimates!` cierra casi toda la ventana, no la de una
-    # cotización CREADA en ese instante). La transacción se deshizo entera:
-    # no se borró nada y basta repetir.
+    # cotización CREADA en ese instante); o una edición de partida que tomó
+    # los candados en el orden contrario (partida → pedido, por el `touch`) y
+    # Postgres abortó el cierre (16ª auditoría, ~0.2 ms). En los dos casos la
+    # transacción se deshizo entera: no se borró nada y basta repetir.
     redirect_to root_path, alert: "Alguien estaba capturando una cotización mientras se cerraba la rueda. " \
                                   "No se borró nada: vuelve a intentarlo."
   end

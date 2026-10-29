@@ -44,6 +44,16 @@
         · <%= number_with_delimiter(e["products"].to_i) %> productos
         · <%= e["clients"].to_i %> clientes
         · <%= e["users"].to_i %> usuarios
+        <%# Lo que el reemplazo BORRÓ, contado al borrarlo. El modal de
+            confirmación ya lo anticipa, pero cuenta al pintarse el panel y
+            nada lo repinta: las cotizaciones guardadas después se iban sin
+            que el operador lo supiera (16ª auditoría). Concordancia a mano. %>
+        <% if (gone = run.summary["purged_orders"].to_i).positive? %>
+          · se <%= gone == 1 ? "quitó 1 pedido transmitido" : "quitaron #{gone} pedidos transmitidos" %>
+        <% end %>
+        <% if (gone = run.summary["purged_estimates"].to_i).positive? %>
+          · se <%= gone == 1 ? "borró 1 cotización" : "borraron #{gone} cotizaciones" %>
+        <% end %>
       <% else %>
         <% transmitted = run.summary["transmitted"].to_a %>
         <% sent = transmitted.size %>

@@ -167,12 +167,6 @@ class OrderItemsController < ApplicationController
     @order = current_user.orders.find(params[:order_id])
   end
 
-  # Un pedido transmitido al ERP ya no se puede editar.
-  def ensure_editable
-    return if @order.editable?
-
-    head :forbidden
-  end
 
   # Candado por partida: descripción, no. de parte y precio solo se editan en
   # el genérico — en un producto de catálogo son snapshot del ERP y un PATCH

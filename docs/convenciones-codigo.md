@@ -371,9 +371,12 @@ movería también fechas, números y mensajes de Rails que hoy funcionan.
   del servidor Y en la tarea rake.** Calcularlo y guardarlo no es reportarlo:
   ya pasó en la 5ª (`skipped_users`) y volvió a pasar en la 7ª
   (`skipped_promotion_products`, `shared_promotion_products`). El panel es el
-  camino del operador; el rake, el de consola. Excepción registrada: lo que
-  el operador ya vio ANTES de confirmar (`purged_orders`, `purged_estimates`:
-  el modal de "Obtener información" los cuenta) no se repite en el resumen.
+  camino del operador; el rake, el de consola. **Sin excepción por "ya lo vio
+  antes":** la 15ª la registró para `purged_orders`/`purged_estimates`
+  —el modal de "Obtener información" los cuenta— y la 16ª la tumbó: el modal
+  cuenta al pintarse el panel y nada lo repinta, así que lo guardado después
+  se borraba sin aviso. Un aviso previo es una estimación; el resumen es lo
+  que pasó.
 - **Un candado `before_destroy` dirigido a la UI bloquea TODO lo que borre por
   `destroy`, y sin decirlo.** El `throw :abort` que impide al capturista borrar
   una partida con promoción aplicada rompió tres cosas distintas, todas

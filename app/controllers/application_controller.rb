@@ -71,6 +71,20 @@ class ApplicationController < ActionController::Base
     end
   end
 
+  # Un pedido transmitido al ERP ya no se edita. Respondía `head :forbidden`
+  # y, con la pantalla abierta mientras el servidor transmitía, la cantidad
+  # regresaba sola y el modal de promoción se cerraba sin decir nada (16ª
+  # auditoría). Se vuelve a la captura COMPLETA, no solo a la tabla: el badge
+  # tiene que decir "Transmitido" y los botones de editar desaparecer.
+  # `see_other`: es la respuesta a un PATCH/POST/DELETE, y Turbo la sigue.
+  ORDER_TRANSMITTED_MESSAGE = "Este pedido ya se transmitió al ERP: ya no se puede cambiar. Así quedó.".freeze
+
+  def ensure_editable
+    return if @order.editable?
+
+    redirect_to order_path(@order), alert: ORDER_TRANSMITTED_MESSAGE, status: :see_other
+  end
+
   # Pedidos que el usuario puede LEER: el capturista los suyos, el
   # equipo-servidor todos (los transmite y los revisa). La escritura va por
   # `current_user.orders`, o por `with_locked_writable_order` (OrdersController)

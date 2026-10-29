@@ -78,6 +78,25 @@ emitido (no solo la respuesta) y mutación que deja pasar el arreglo: muerde.
   `Order.estimate`). La "red" de la API solo cubre laptops desde `472a6a6`,
   que mandan la clave.
 
+**Bloque 3 — M4, M5, M6 y el deadlock.**
+- **M4:** el "✓ Listo" de "Obtener información" dice cuántas cotizaciones y
+  pedidos transmitidos borró; la excepción "ya lo vio antes" salió de las
+  convenciones. El modal cuenta al pintarse el panel y nada lo repinta: era
+  una estimación, no lo que pasó.
+- **M5:** `ensure_editable` (uno solo, en ApplicationController) regresa a la
+  captura con "Este pedido ya se transmitió al ERP…" en vez de un 403 vacío.
+  La página completa y no solo la tabla, para que el badge y los botones
+  queden en solo lectura. Hizo falta `data-turbo-frame="_top"` en Aplicar y
+  Quitar promoción: dentro del frame, Turbo seguía la redirección AHÍ, el
+  modal se cerraba y el aviso no llegaba a nada. Lo encontró la prueba de
+  sistema; la de integración pasaba.
+- **M6:** la prueba de concurrencia nace con la rueda INACTIVA, barre al
+  arrancar lo que haya dejado una corrida interrumpida y espera con tope (el
+  error del hilo sube en vez de colgar). Simulé los restos confirmados: se
+  barren.
+- **Deadlock** de la purga contra la edición de una partida: "Cerrar rueda"
+  lo rescata con el mismo "no se borró nada, repite".
+
 Lección del bloque 2: **un cambio de permisos invalida las guías que nombran
 usuarios.** `require_capturista` (15ª, bloque 4) dejó inservible la
 comprobación post-deploy, y nadie releyó la guía porque el cambio "era de

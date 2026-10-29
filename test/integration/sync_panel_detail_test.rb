@@ -316,6 +316,26 @@ class SyncPanelDetailTest < ActionDispatch::IntegrationTest
     assert_match(/\ARueda cerrada\. No había pedidos transmitidos ni cotizaciones que eliminar\./, flash[:notice])
   end
 
+  # La edición de una partida toma partida → pedido (por el `touch`), el
+  # candado de la purga pedido → partidas: Postgres aborta uno (16ª).
+  test "si el cierre choca con una edición (deadlock), el operador ve que basta repetir" do
+    BusinessRound.create!(erp_round_id: 985, name: "Rueda 985", active: true)
+    fired = false
+    Sync::CloseRound.singleton_class.prepend(Module.new do
+      define_method(:run!) do
+        next super() if fired
+
+        fired = true
+        raise ActiveRecord::Deadlocked, "deadlock detected"
+      end
+    end)
+
+    post server_close_round_path
+
+    assert_redirected_to root_path
+    assert_match(/No se borró nada: vuelve a intentarlo/, flash[:alert])
+  end
+
   test "si una partida se cuela mientras se cierra, el operador ve que basta repetir" do
     BusinessRound.create!(erp_round_id: 984, name: "Rueda 984", active: true)
     # Antepuesto y desarmado tras la primera llamada (ver close_round_test).

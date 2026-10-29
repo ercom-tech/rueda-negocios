@@ -115,11 +115,6 @@ class PromotionsController < ApplicationController
     @order = scope.find(params[:order_id])
   end
 
-  def ensure_editable
-    return if @order.editable?
-
-    head :forbidden
-  end
 
   # Los mismos tres nodos que repinta OrderItemsController: la tabla cambia
   # (descuentos, regalos, candados), los totales cambian, y el buscador
