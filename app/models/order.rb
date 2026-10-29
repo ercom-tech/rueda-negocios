@@ -388,7 +388,9 @@ class Order < ApplicationRecord
   # la columna existiera lo trae vacío. Sin él, el folio saldría "-000123" y el
   # defecto no aparecería hasta capturar el primer pedido de la rueda.
   def generate_local_folio
-    return "#{business_round&.folio_prefix.presence || DEFAULT_FOLIO_PREFIX}-#{id.to_s.rjust(6, "0")}" if sale?
+    # `sale_folio_prefix` y no `folio_prefix`: un prefijo "COT" se confundiría
+    # con las cotizaciones (ver BusinessRound::RESERVED_FOLIO_PREFIX).
+    return "#{business_round&.sale_folio_prefix || DEFAULT_FOLIO_PREFIX}-#{id.to_s.rjust(6, "0")}" if sale?
 
     # La cotización lleva su propio consecutivo (COT-000001, con el prefijo de
     # la rueda delante si lo hay; el respaldo "RN" no aplica, porque "COT" ya

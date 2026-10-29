@@ -111,6 +111,19 @@
     </div>
   <% end %>
 
+  <%# La clave de folios es la de las cotizaciones: la API rechazaría como
+      cotización cada pedido de la rueda. La laptop ya los saca con el
+      respaldo, pero hay que cambiarla en el ERP — y antes del evento: un folio
+      queda fijo al guardarse (16ª auditoría). %>
+  <% if kind == "down" && summary["reserved_folio_prefix"].present? %>
+    <div class="mt-3 rounded-2xl bg-brand-cream px-4 py-3 text-left text-sm leading-snug text-neutral-900">
+      La clave de folios de esta rueda, <span class="font-semibold"><%= summary["reserved_folio_prefix"] %></span>,
+      es la que llevan las cotizaciones, así que los pedidos saldrán como
+      <span class="font-semibold">RN-000123</span>. Pide que le cambien la clave en el ERP y vuelve a
+      obtener la información antes de capturar.
+    </div>
+  <% end %>
+
   <%# Capturistas cuya asignación de proveedor/marca no vino completa. Con
       nombres (sin ellos, "pide que los asignen" no era accionable), contados
       POR PERSONA, y sin mentir: desde el genérico 999999 sí pueden capturar

@@ -14,4 +14,22 @@ class BusinessRound < ApplicationRecord
   validates :name, presence: true
 
   scope :active, -> { where(active: true) }
+
+  # Un prefijo que la API leería como cotización: rechaza toda clave con el
+  # segmento `COT-` (15ª auditoría), así que una rueda con prefijo `COT` daría
+  # folios de venta `COT-000123` idénticos a los de una cotización, y NINGUNA
+  # venta se transmitiría — sin salida, porque el folio ya quedó fijo (16ª).
+  # Ninguna regla de la API puede distinguirlos: el texto es el mismo. Mismo
+  # recorte que la regla de la API: "XCOT" no choca, "-COT" sí.
+  RESERVED_FOLIO_PREFIX = /(\A|-)COT\z/i
+
+  def reserved_folio_prefix?
+    folio_prefix.to_s.match?(RESERVED_FOLIO_PREFIX)
+  end
+
+  # El prefijo con el que salen los PEDIDOS: nil si no hay o si está reservado,
+  # y entonces el pedido toma el respaldo (`Order::DEFAULT_FOLIO_PREFIX`).
+  def sale_folio_prefix
+    folio_prefix.presence unless reserved_folio_prefix?
+  end
 end

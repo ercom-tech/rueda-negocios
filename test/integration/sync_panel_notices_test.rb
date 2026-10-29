@@ -93,6 +93,15 @@ class SyncPanelNoticesTest < ActionDispatch::IntegrationTest
     assert_match(/RN-000123/, response.body)
   end
 
+  test "el panel avisa cuando la clave de folios es la de las cotizaciones" do
+    finished_run(kind: "down", summary: { entities: { products: 10 }, reserved_folio_prefix: "COT" })
+
+    get server_menu_path
+
+    assert_match(/La clave de folios de esta rueda, <span class="font-semibold">COT<\/span>,\s+es la que llevan las cotizaciones/, response.body)
+    assert_match(/Pide que le cambien la clave en el ERP/, response.body)
+  end
+
   test "con clave de folios el panel no levanta el aviso" do
     finished_run(kind: "down", summary: { entities: { products: 10 }, missing_folio_prefix: false })
 

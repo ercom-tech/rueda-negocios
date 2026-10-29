@@ -70,6 +70,7 @@ module Sync
     end
 
     def summary
+      round = BusinessRound.find_by(erp_round_id: @data.dig("round", "erp_round_id"))
       { entities: @stats, skipped_users: @skipped_users,
         removed_users: @removed_users, skipped_skus: @skipped_skus,
         skipped_people: @skipped_people.to_a, purged_orders: @purged_orders,
@@ -85,8 +86,12 @@ module Sync
         # a dar en el ERP. Es silencioso por naturaleza —el pedido se captura y
         # se transmite igual—, así que sin este aviso solo se descubre
         # consultando el ERP semanas después (10ª auditoría).
-        missing_folio_prefix: BusinessRound.find_by(erp_round_id: @data.dig("round", "erp_round_id"))
-                                           &.folio_prefix.blank? }
+        missing_folio_prefix: round&.folio_prefix.blank?,
+        # La clave de folios es "COT": los pedidos salen con el respaldo, como
+        # sin prefijo, pero el motivo es otro y la salida también (cambiarla,
+        # no capturarla). Se avisa ANTES del evento: al transmitir ya no
+        # tendría arreglo (16ª auditoría).
+        reserved_folio_prefix: (round.folio_prefix if round&.reserved_folio_prefix?) }
     end
 
     private

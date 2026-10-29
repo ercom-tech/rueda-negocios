@@ -74,6 +74,11 @@ namespace :sync do
            "RN-000123 y en el ERP no se sabrá de qué rueda vinieron. Se puede capturar y transmitir " \
            "igual. Pide que le pongan su clave en el ERP y vuelve a obtener la información."
     end
+    if s[:reserved_folio_prefix]
+      puts "[sync:down] AVISO: la clave de folios de esta rueda, #{s[:reserved_folio_prefix]}, es la que llevan " \
+           "las cotizaciones, así que los pedidos saldrán como RN-000123. Pide que le cambien la clave en " \
+           "el ERP y vuelve a obtener la información antes de capturar."
+    end
     if s[:missing_generic]
       puts "[sync:down] AVISO: la información no incluyó (o vino incompleto) el producto fuera de " \
            "catálogo (999999): nadie podrá capturar productos fuera de catálogo. Revisa que el " \

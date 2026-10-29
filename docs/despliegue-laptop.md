@@ -77,6 +77,7 @@ cd ~/Proyectos/fecego-rueda-negocios
 
 | # | Paso | Qué comprobar después |
 |---|---|---|
+| 0 | **La API ya está actualizada** (ver "La API es aparte", al final): en la VM, `git log --oneline -1` | El sha que se quería, y `curl -s http://localhost:7011/health` → `"schema":"ok"`. Con la API vieja todo lo de abajo "sale bien" —el sync-down baja los precios vacíos sin error— y no se nota hasta capturar (16ª auditoría) |
 | 1 | `git status --short` | Vacío. Si sale `Gemfile.lock` modificado (bundler reescribe `BUNDLED WITH`), `git checkout Gemfile.lock` antes de seguir |
 | 2 | `bin/rails runner 'puts SyncRun.running.count'` | `0`. Si no, esperar: reiniciar a media corrida la mata (los jobs viven en hilos de puma) |
 | 3 | Respaldo de la BD (comandos en `docs/instalacion-laptop.md`, "Respaldo de la BD de la app") | `pg_restore -l "$DUMP"` lista tablas. Es la única vuelta atrás del paso 6: `git checkout` no deshace una migración |
@@ -89,34 +90,38 @@ cd ~/Proyectos/fecego-rueda-negocios
 
 ## Comprobación después de desplegar
 
-Lo mínimo, en el navegador de la laptop:
+Lo mínimo, en el navegador de la laptop, **en este orden**. El despliegue se
+hizo con la rueda cerrada, y sin rueda ningún capturista puede entrar; y desde
+el lote del 2026-10-28 el equipo-servidor ya no captura (16ª auditoría). Cada
+renglón dice con qué usuario va:
 
-- **Menú → Reportes**: las tarjetas habilitadas abren sin error.
-- **Levantamiento de pedido**: agregar una partida; el contador del buscador
-  sube y la partida aparece donde debe.
-- **Panel del servidor**: "Obtener información" termina en "✓ Listo" y el panel
-  se destraba **solo**, sin recargar (el estado se consulta cada 3 s).
-- **Panel del servidor → Cambiar precios**: subir un **.xlsx** con el layout
-  (primera fila CODIGO y PRECIO LISTA S/IVA; el de FECEGO es "Cambio precio de
-  lista Stihl.xlsx") —un .xlsx y no un .csv: el CSV no usa la gema nueva y no
-  comprueba el reinicio—, revisar y aplicar; una partida nueva de un producto
-  del archivo nace con el precio nuevo. Al terminar, **descartar ese pedido de
-  prueba** (la partida conserva el precio de archivo aunque se quiten los
-  precios) y "Quitar precios cargados".
-- **Levantamiento de pedido → Cotizador**: tocar una partida de un producto
-  en promoción y picar "Cotizador"; el modal lista los escalones con el precio
-  por pieza. Las columnas de **caja** solo salen después de "Obtener
-  información" con la API que exporta `pieces_per_box` (lote del 2026-10-09):
-  sin eso todos los productos se ven "sin caja", sin error. Fuera de la
-  vigencia de la promoción, el modal dice que el producto no está en ninguna.
-- **Menú de un capturista → Generar cotización** (lote del 2026-10-28; el
-  equipo-servidor no tiene esa tarjeta): "Cliente genérico" abre la captura
-  con el encabezado "Cliente genérico"; agregar una partida y "Guardar" da un
-  folio `COT-…` (con el prefijo de la rueda delante si lo tiene) y el resumen
-  sin PDF. En **Reportes →
-  Cotizaciones capturadas** aparece con estatus "Guardada". Descartarla al
-  terminar (o se irá con el siguiente "Obtener información", que lo avisa en
-  su modal: "Se borrará 1 cotización").
+1. **Servidor → Elegir rueda** (la del próximo evento) **→ Obtener
+   información**: termina en "✓ Listo" y el panel se destraba **solo**, sin
+   recargar (el estado se consulta cada 3 s). Las columnas de **caja** del
+   Cotizador dependen de este paso con la API nueva.
+2. **Servidor → Cambiar precios**: subir un **.xlsx** con el layout (primera
+   fila CODIGO y PRECIO LISTA S/IVA; el de FECEGO es "Cambio precio de lista
+   Stihl.xlsx") —un .xlsx y no un .csv: el CSV no usa la gema nueva y no
+   comprueba el reinicio—, revisar y aplicar. Anota un código del archivo.
+3. **Capturista** (uno de la rueda: que entre él, o pídele su usuario) **→
+   Registrar pedido**: elegir un cliente, agregar el producto anotado; nace con
+   el precio del archivo y el contador del buscador sube.
+4. **Mismo capturista → Cotizador**: sobre una partida de un producto en
+   promoción, el modal lista los escalones con el precio por pieza (fuera de la
+   vigencia dice que el producto no está en ninguna).
+5. **Mismo capturista → Generar cotización → Cliente genérico**: agregar una
+   partida y "Guardar"; da un folio que termina en `COT-` y seis dígitos (con
+   el prefijo de la rueda delante si lo tiene; el número no vuelve a 1, así
+   que no tiene que ser `000001`) y el resumen sin PDF. En **Reportes →
+   Cotizaciones capturadas** aparece como "Guardada".
+6. **Descartar lo de prueba, las dos cosas**: el pedido del paso 3 (Descartar,
+   desde su captura) y la cotización del 5. **El pedido no se guarda ni se
+   transmite**: un borrador bloquea el siguiente "Obtener información", y su
+   aviso ofrece "guárdalo y transmítelo" — seguido al pie de la letra, el
+   pedido de prueba llegaría al ERP como **venta real**.
+7. **Servidor → Cambiar precios → Quitar precios cargados**, y **Reportes**:
+   las tarjetas habilitadas abren sin error.
+
 - Si el lote trae cambios en el PDF, **imprimir un pedido de ~20 partidas** y
   verificar que los cuatro totales y el importe en letra caen en la misma hoja.
 
@@ -171,27 +176,60 @@ capturista, y en las partidas del 999999 el proveedor o la marca que se eligió.
 
 ## Si algo sale mal
 
-**Si el sha anterior es de antes de las cotizaciones (anterior a `9c53e2e`),
-primero se borran las cotizaciones y se comprueba que no quede ninguna.** El
-código anterior no sabe qué es una cotización: una guardada con cliente la
-trata como un pedido capturado, el panel dice "Transmítelo" y "Transmitir
-pedidos" la manda al ERP como **venta real** (15ª auditoría). La API
-actualizada la rechaza ("es una cotización, no un pedido"), pero la laptop no
-debe depender de eso:
+**Primero: ¿a qué sha se regresa?** De eso depende TODO lo demás (16ª
+auditoría):
+
+- **Anterior a las promociones (`2bcc943`, 2026-08-22) — el caso de hoy: la
+  laptop corre `e990d81`.** Ahí el `checkout` solo NO basta: el código viejo
+  borra el catálogo sin conocer las tablas de promociones, y "Obtener
+  información" falla siempre con la llave foránea de `promotion_products`.
+  **La reversión es restaurar el respaldo del paso 3** (ver abajo, "Regresar
+  al respaldo"). Ese respaldo es de ANTES del despliegue: se pierde lo
+  capturado después que no se haya transmitido, y las cotizaciones (que el
+  respaldo no conoce). Transmitir antes lo que se pueda.
+- **Posterior a las promociones pero anterior a las cotizaciones (`9c53e2e`):**
+  `checkout`, pero **antes, con el servicio detenido, se borran las
+  cotizaciones** (abajo). El código anterior no sabe qué es una cotización:
+  una guardada con cliente la trata como pedido capturado, el panel dice
+  "Transmítelo" y "Transmitir pedidos" la manda al ERP como **venta real**
+  (15ª auditoría).
+- **Posterior a las cotizaciones:** `checkout` y listo (las migraciones de
+  este lote son compatibles hacia atrás, ver abajo).
+
+**Borrar las cotizaciones, con el servicio DETENIDO.** Con el servicio
+arriba, una cotización guardada entre el borrado y el reinicio la vería el
+código viejo como pedido. Y la comprobación va en SQL, porque el código viejo
+no tiene `Order.estimate` y no se podría repetir después del `checkout`:
 
 ```bash
-bin/rails runner 'puts Order.purge_estimates!'   # cuántas se borraron
-bin/rails runner 'puts Order.estimate.count'     # tiene que decir 0
+sudo systemctl stop fecego-rueda-negocios
+bin/rails runner 'puts Order.transaction { Order.purge_estimates! }'   # cuántas se borraron
+bin/rails runner 'puts ActiveRecord::Base.connection.select_value("SELECT count(*) FROM orders WHERE document = \x27estimate\x27")'   # 0
 ```
 
 Es el mismo borrado que hacen "Obtener información" y "Cerrar rueda". Las
 cotizaciones solo viven en la laptop y no se recuperan: avisar a los
-capturistas antes.
+capturistas antes. Después, con el servicio todavía detenido:
 
 ```bash
 git checkout <sha anterior>
 bin/rails tailwindcss:build     # el CSS también hay que rehacerlo al revertir
-sudo systemctl restart fecego-rueda-negocios
+sudo systemctl start fecego-rueda-negocios
+```
+
+**Regresar al respaldo** (sha anterior a las promociones). El procedimiento de
+`docs/instalacion-laptop.md` ("Restaurar"), con dos diferencias: el código se
+regresa ANTES de arrancar, y la copia **no se migra** — el respaldo ya tiene
+el esquema del sha viejo, y migrarlo le pondría el del nuevo:
+
+```bash
+sudo systemctl stop fecego-rueda-negocios
+createdb -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" rueda_restore
+pg_restore -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d rueda_restore --no-owner "$DUMP"
+git checkout <sha anterior>
+bin/rails tailwindcss:build
+# DB_NAME=rueda_restore en el .env
+sudo systemctl start fecego-rueda-negocios
 ```
 
 **Revertir el código NO deshace las migraciones.** Qué hacer depende de QUÉ
@@ -227,10 +265,9 @@ migraciones traiga el lote:
   la evidencia se escribe una sola vez — lo que se transmita después de
   revertir llega al ERP con el precio de archivo y sin rastro de que lo fue.
 - **Tablas o llaves foráneas que el código viejo no contempla** (las de
-  promociones, en su momento): ahí la app vieja choca con ellas —"Obtener
-  información" fallaba al purgar el catálogo—, y hace falta `bin/rails
-  db:rollback STEP=n` **antes** del checkout, sabiendo que se pierde lo que esas
-  columnas guardaban. Mejor: restaurar el respaldo del paso 3.
+  promociones): ahí la app vieja choca con ellas —"Obtener información" falla
+  al purgar el catálogo—. Es el caso de regresar a un sha anterior a
+  `2bcc943`, y la salida es la de arriba: restaurar el respaldo del paso 3.
 
 **Y se revierten las DOS puntas, no solo la laptop.** Con la API nueva y la
 laptop vieja, cada pedido que se transmita deja su evidencia en el ERP sin
@@ -283,8 +320,13 @@ alm_ficha_tecnica"` y "Obtener información" falla completo — no solo la caja.
 **El lote de las cotizaciones (2026-10-28) también toca la API**, aunque la
 laptop no la necesita para funcionar: la API rechaza cualquier pedido cuya
 clave lleve el segmento `COT-` ("es una cotización, no un pedido"). Es la red
-por si una cotización llegara a transmitirse (p. ej., tras una reversión de la
-laptop). Comprobación: en el log de la API no debe aparecer ese rechazo; si
+por si una cotización llegara a transmitirse, **pero solo desde una laptop
+que manda la clave** (`472a6a6`, 2026-09-08, en adelante): el código de
+`e990d81` no la manda, y para la API ese pedido no trae segmento que mirar.
+Tras revertir a ese sha, la única red es el borrado de cotizaciones de "Si
+algo sale mal" (16ª auditoría). Por lo mismo, una rueda con prefijo `COT`
+haría que la API rechazara todas sus ventas: la laptop lo evita sacando esos
+pedidos con el respaldo `RN` y avisándolo en el panel. Comprobación: en el log de la API no debe aparecer ese rechazo; si
 aparece, alguien intentó mandar una cotización.
 
 **Si el lote toca las dos puntas, la API va primero — y la laptop va detrás en

@@ -44,6 +44,24 @@ class OrderTest < ActiveSupport::TestCase
     assert_match(/\AOAX-\d{6}\z/, order.local_folio)
   end
 
+  # La API rechaza toda clave con el segmento `COT-`: con prefijo "COT" las
+  # ventas saldrían `COT-000123`, idénticas a una cotización, y ninguna se
+  # transmitiría (16ª auditoría). Literal, no leído de la constante.
+  test "con prefijo COT el pedido toma el respaldo y la cotización conserva su forma" do
+    [ "COT", "cot", "-COT" ].each do |prefix|
+      @round.update!(folio_prefix: prefix)
+      order = build_order
+      order.order_items.build(quantity: 1, unit_price: 10, discount_percent: 0, tax_rate: 0)
+      order.save!
+
+      assert order.capture!
+      assert_match(/\ARN-\d{6}\z/, order.local_folio, "prefijo #{prefix}")
+    end
+
+    @round.update!(folio_prefix: "XCOT")
+    assert_equal "XCOT", @round.sale_folio_prefix, "solo el segmento COT choca, como en la API"
+  end
+
   # Toda rueda dada de alta antes de que el ERP tuviera la columna trae el
   # prefijo vacío. Sin el respaldo el folio saldría "-000123", y eso no se ve
   # hasta capturar el primer pedido de esa rueda.

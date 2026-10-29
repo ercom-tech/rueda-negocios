@@ -106,6 +106,17 @@ module Sync
       summary = Down.new(export_data).run!.summary
 
       assert_not summary[:missing_folio_prefix]
+      assert_nil summary[:reserved_folio_prefix]
+    end
+
+    test "el summary delata una clave de folios que es la de las cotizaciones" do
+      data = export_data
+      data["round"]["folio_prefix"] = "cot"
+
+      summary = Down.new(data).run!.summary
+
+      assert_equal "cot", summary[:reserved_folio_prefix]
+      assert_not summary[:missing_folio_prefix], "sí trae clave: el aviso es otro"
     end
 
     # --- La secuencia de folios (11ª auditoría) ---------------------------

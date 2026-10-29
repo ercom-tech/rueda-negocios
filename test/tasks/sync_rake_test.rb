@@ -93,6 +93,12 @@ class SyncRakeTest < ActiveSupport::TestCase
     assert_match(/AVISO: la información no incluyó .* \(999999\)/, output)
   end
 
+  test "sync:down avisa en consola si la clave de folios es la de las cotizaciones" do
+    output = run_down_with(minimal_export("folio_prefix" => "COT"))
+
+    assert_match(/AVISO: la clave de folios de esta rueda, COT, es la que llevan las cotizaciones/, output)
+  end
+
   test "sync:down no avisa del prefijo cuando la rueda lo trae" do
     output = run_down_with(minimal_export("folio_prefix" => "OAX"))
 

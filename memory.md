@@ -56,6 +56,33 @@ parámetros de la app: las demás ya iban en forma de hash, y el token de
 "Cambiar precios" va anclado a 32 hexadecimales. Prueba que escucha el SQL
 emitido (no solo la respuesta) y mutación que deja pasar el arreglo: muerde.
 
+**Bloque 2 — M1, M2, M3 (despliegue).** Los tres resistieron la refutación.
+- **M1, prefijo `COT`:** una venta de una rueda con prefijo `COT` y una
+  cotización sin prefijo dan el MISMO texto (`COT-000123`): ninguna regla de
+  la API puede distinguirlas. Se resuelve en la laptop: un prefijo que la API
+  leería como cotización (`/(\A|-)COT\z/i`, el mismo recorte que su regla)
+  no se usa para pedidos —salen con el respaldo `RN`— y el sync-down lo avisa
+  en el panel y en el rake ANTES del evento, cuando todavía se puede cambiar
+  en el ERP. Nota en `erp-prerequisitos.sql`. Hoy ninguna rueda del ERP lo
+  tiene (`R001`–`R004`).
+- **M2, comprobación post-deploy:** reescrita en el orden posible —servidor
+  elige rueda y obtiene; capturista captura; se descarta TODO lo de prueba—
+  con el usuario de cada renglón. La versión anterior, seguida al pie de la
+  letra, terminaba con un pedido de prueba transmitido como venta. Paso 0 en
+  la tabla: la API ya actualizada.
+- **M3, reversión:** la regla depende del sha destino. Al de hoy (`e990d81`,
+  anterior a promociones) se regresa **restaurando el respaldo**, no con
+  checkout (falla "Obtener información" por la FK de promociones). Las
+  cotizaciones se borran con el servicio DETENIDO y dentro de una
+  transacción, y se comprueba con SQL (el código viejo no tiene
+  `Order.estimate`). La "red" de la API solo cubre laptops desde `472a6a6`,
+  que mandan la clave.
+
+Lección del bloque 2: **un cambio de permisos invalida las guías que nombran
+usuarios.** `require_capturista` (15ª, bloque 4) dejó inservible la
+comprobación post-deploy, y nadie releyó la guía porque el cambio "era de
+código".
+
 Lección: **la función que escribí para un caso nuevo no pasó por la regla
 que el proyecto ya tenía** ("todo parámetro de URL pasa por
 `ParamSanitizing`"). La escribí pensando en el registro que desaparece, no en
