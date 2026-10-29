@@ -189,6 +189,29 @@ ninguna otra dimensión los habría buscado.
 
 ## Historial
 
+- **17ª (2026-10-29)** — alcance: **todo el proyecto, énfasis en la
+  remediación de la 16ª** (app `3f0985a..ada8d90`, API `04e3412..7dba692`),
+  con 7 auditores — **0 ALTA · 7 MEDIA · ~22 BAJA** → remediada en cuatro
+  bloques (detalle en "17ª auditoría" de `memory.md`). Lo que la 16ª
+  arregló aguantó 13 de 14 mutaciones. Lo grave estuvo en lo que esa
+  remediación **no alcanzó**: la puerta de observaciones que se quedó con su
+  403 vacío, el CSV que quedó fuera de la neutralización de la 13ª, y la
+  guía de despliegue, que se apoyaba en un sha de la laptop que nadie volvió a
+  comprobar. Lección: **un "coinciden" se prueba barriendo las entradas, no
+  leyendo las dos reglas** —un auditor dio por iguales las dos reglas del
+  prefijo COT y otros tres probaron que no—, y **un sha "de hoy" escrito en
+  una guía caduca sin avisar**.
+- **16ª (2026-10-29)** — alcance: **todo el proyecto, énfasis en la
+  remediación de la 15ª**, con 7 auditores — **0 CRÍTICA · 1 ALTA · 6 MEDIA ·
+  ~18 BAJA** → remediada en cuatro bloques (detalle en "16ª auditoría" de
+  `memory.md`). La ALTA fue una inyección SQL en `order_gone`: un arreglo en
+  forma posicional a `exists?` es un fragmento SQL, y la respuesta distinta
+  (404 contra 302) daba un oráculo para leer cualquier tabla.
+- **15ª (2026-10-28)** — alcance: **todo el proyecto, énfasis en
+  cotizaciones** (más la barra de totales a 1.5x y la remediación de la 14ª),
+  con 7 auditores — **0 CRÍTICA · 1 ALTA · 7 MEDIA · ~22 BAJA** → remediada en
+  cuatro bloques (detalle en "15ª auditoría" de `memory.md`). La ALTA estaba en
+  la reversión: una guía se audita contra el código VIEJO, al que regresa.
 - **14ª (2026-10-10)** — alcance: **el Cotizador** (app y API sin commit, que
   después fueron `756d02c` y `839b428`), con 5 auditores — **0 ALTA · 8 MEDIA
   · ~20 BAJA** → remediada en cinco bloques (detalle en "14ª auditoría" de

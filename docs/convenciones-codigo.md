@@ -134,9 +134,12 @@ movería también fechas, números y mensajes de Rails que hoy funcionan.
   un arreglo posicional es un FRAGMENTO SQL con sus valores: la condición
   entra tal cual al `WHERE`. En `order_gone` daba un oráculo ciego (404 contra
   302) para leer cualquier tabla (16ª auditoría, ALTA). La forma de hash
-  (`exists?(id: x)`, `find_by(id: x)`) siempre se parametriza; y aun así el
-  id se sanea, porque un `?id[x]=1` llega como `Parameters` y levanta
-  `ForbiddenAttributesError`.
+  (`exists?(id: x)`, `find_by(id: x)`) siempre se parametriza, y con un
+  `Parameters` o un arreglo no truena: da `id = NULL` o un `IN`. Aun así el id
+  se sanea, porque un `?id[x]=1` sí levanta `ForbiddenAttributesError` en la
+  forma posicional, y un `to_i` sobre arreglo o hash, `NoMethodError` (esta
+  línea decía que la forma de hash también lo levantaba, y no se reproduce —
+  17ª auditoría).
 - **Todo parámetro de URL que se use para consultar pasa por
   `ParamSanitizing`.** Un `?id[]=1` llega como **arreglo** y un `?id[x]=1` como
   `ActionController::Parameters`: sobre cualquiera de los dos, `to_i` levanta

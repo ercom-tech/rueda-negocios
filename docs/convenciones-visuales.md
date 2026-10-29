@@ -104,9 +104,10 @@ a 1024×600, no solo en la laptop donde se pidió.
 **`bg-white/10` es para fondo OSCURO, no para el marco dorado de los filtros.**
 Un botón secundario con esa clase dentro de la barra dorada se lava hasta
 volverse ilegible — el blanco sobre dorado claro no tiene dónde apoyarse. Ahí
-el secundario va con el mismo negro de los controles (`control_class`), que ya
-es el fondo de los combos vecinos. Pasó con el "Limpiar" del reporte de
-productos y solo se vio al mirar la pantalla renderizada.
+el secundario va con el mismo negro de los controles (`filter_control_class`),
+que ya es el fondo de los combos vecinos. Pasó con el "Limpiar" del reporte de
+productos y solo se vio al mirar la pantalla renderizada (hoy ese "Limpiar
+filtros" es un enlace subrayado junto a los combos, no un botón).
 
 **Una columna que ES el reporte no se oculta en tablet.** `hidden
 lg:table-cell` está bien para datos secundarios —la hora o el vendedor del

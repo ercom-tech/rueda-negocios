@@ -130,6 +130,23 @@ API, con la mutación de no mezclar los defaults).
 Fail-first: las 5 pruebas nuevas rojas sin el arreglo; la mitad de
 `promotion_id` comprobada con su propia mutación.
 
+### Bloque 4 — las BAJA de documentación
+
+- La regla de convenciones que la 16ª escribió sobre `exists?` decía que la
+  forma de hash levanta `ForbiddenAttributesError` con un `?id[x]=1`; medido:
+  da `false` (`id = NULL`), y solo la posicional levanta. El saneo sigue, por
+  la posicional y por el `to_i`. Segunda vez en dos auditorías que una regla
+  recién escrita se cae al medirla: **la regla se escribe después de generar
+  el comportamiento, no de recordarlo**.
+- `docs/auditorias.md` tenía el historial en la 14ª: se suman 15ª–17ª.
+- `local_folio` "no se envía" (se envía como `clave_rueda` desde `472a6a6`),
+  `control_class` → `filter_control_class`, "cuatro pasos" → cinco, `/health`
+  también revisa permisos, la sección de la API suma `bundle install`, y el
+  comentario de `nombre_capturado` en la API ya no dice que NULL sea "la"
+  forma nativa (desde feb-2026 el ERP escribe sobre todo `''`).
+- Comentarios: `modal#loadMissing` ya no presenta la sesión vencida como algo
+  que se explica en el modal, y la línea suelta de `order_gone`.
+
 ## 16ª auditoría (2026-10-29) — todo el proyecto, énfasis en la remediación de la 15ª
 
 7 auditores. **0 CRÍTICA · 1 ALTA · 6 MEDIA · ~18 BAJA** tras verificar. Se

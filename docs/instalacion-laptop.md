@@ -234,7 +234,7 @@ con su comprobación uno por uno. En corto: `git pull` + `bundle install` +
 `bin/rails db:migrate` + `bin/rails tailwindcss:build` +
 `sudo systemctl restart fecego-rueda-negocios`.
 
-Ninguno de esos cuatro pasos es opcional "si no cambió nada", y dos de ellos
+Ninguno de esos cinco pasos es opcional "si no cambió nada", y dos de ellos
 tumban la app entera si se saltan cuando hacían falta — está medido y explicado
 en esa guía.
 

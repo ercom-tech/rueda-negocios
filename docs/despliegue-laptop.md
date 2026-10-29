@@ -21,8 +21,10 @@ Para saber si el ERP ya está listo, sin adivinar:
 curl -s http://localhost:7011/health    # en el servidor de la API
 ```
 
-`schema: "ok"` significa que están las cuatro columnas y las dos tablas de la
-evidencia (`vta_pedido_rueda` y su detalle). Si falta algo, responde 503 y lo
+`schema: "ok"` significa que están las columnas, las dos tablas de la
+evidencia (`vta_pedido_rueda` y su detalle) y los permisos del usuario de la
+API: escritura en las cuatro tablas que transmite y lectura en las que lee el
+export (`db/erp-prerequisitos.sql` los da). Si falta algo, responde 503 y lo
 nombra; una tabla que falta entera se nombra como tabla. Sin las tablas de la
 evidencia **toda transmisión falla**: la evidencia se escribe en la misma
 transacción que el pedido. Cómo se aplica el archivo —sin transacción, con
@@ -341,6 +343,7 @@ ssh fecego@fecegowstest
 cd ~/fecego-rueda-api
 git log --oneline -1          # anota de dónde venías
 git pull origin master
+bundle install                # solo si cambió el Gemfile (git diff --stat <de dónde venías> -- Gemfile.lock)
 sudo systemctl restart fecego-rueda-api
 curl -s http://localhost:7011/health
 ```

@@ -77,13 +77,15 @@ export default class extends Controller {
       "si sigue igual, avísale al equipo del servidor.")
   }
 
-  // El servidor SÍ respondió, pero sin el contenido del frame: la sesión que
-  // terminó (redirige al login) o una respuesta inesperada.
+  // El servidor SÍ respondió, pero sin el contenido del frame: una
+  // redirección (la sesión que terminó, la rueda cerrada) o una respuesta
+  // inesperada.
   // `turbo:fetch-request-error` no se dispara —es solo para fallas de red— y
   // Turbo escribía "Content missing", en inglés, dentro del modal (14ª
   // auditoría). Se le gana con `preventDefault` y se dice qué pasó y qué
-  // hacer. (Lo que el servidor sabe explicar —una partida que ya no existe—
-  // lo responde él mismo dentro del frame.)
+  // hacer — solo para la respuesta inesperada; la redirección se sigue (abajo).
+  // (Lo que el servidor sabe explicar —una partida que ya no existe— lo
+  // responde él mismo dentro del frame.)
   //
   // Una REDIRECCIÓN se sigue, como en `followMissing`: decía "Tu sesión
   // terminó. Recarga la pantalla", y tras "Cerrar rueda" la causa real ("No

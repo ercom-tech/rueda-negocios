@@ -24,8 +24,8 @@
 
 <%# `sync-status` pregunta el estado cada 3 s MIENTRAS hay corrida viva (al
     conectar con una corrida viva arranca a preguntar; sin corrida no pide
-    nada: preguntar siempre se realimentaría, ver el controller). El broadcast de SyncRun se pierde cuando la corrida
-    termina durante la navegación del redirect —el cable se está
+    nada: preguntar siempre se realimentaría, ver el controller). El
+    broadcast de SyncRun se pierde cuando la corrida termina durante la navegación del redirect —el cable se está
     re-suscribiendo y con el adaptador async no hay reenvío—, y entonces el
     panel se queda "en progreso" hasta que alguien recarga. Va en este div
     porque es el que se reemplaza: cada actualización reconecta el controller

@@ -184,7 +184,7 @@ Desglose **por partida**: `iva_porcentaje` + `iva_monto`, `descto_porcentaje` +
 |---|---|
 | `client.erp_client_key` | `clave_cliente` |
 | `created_at` (fecha/hora) | `fecha_pedido` + `hora_pedido` |
-| — (referencia offline) | `local_folio` (no se envía) |
+| — (referencia offline) | `local_folio` (se envía como `clave_rueda`, ver abajo) |
 | (asigna rueda-api en transmisión) | `clave_pedido` → `erp_folio` |
 | `kind` invoice/remission | `remision` false/true |
 | `client_tax_profile.rfc` (solo Factura) | `rfc` (Remisión: `XAXX010101000`) |
