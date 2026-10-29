@@ -201,6 +201,11 @@ Todo elemento deshabilitado o "próximamente" se ve al **60%**:
 - **Con badge** ("Próximamente"): fondo con alpha (`bg-*/60`) + contenido
   `opacity-60` + badge dorado a plena opacidad.
 - **Sin badge** (bloqueo por estado): `opacity-60` en el contenedor completo.
+  **En un menú, todas las tarjetas bloqueadas se ven igual**, aunque una traiga
+  el motivo en su descripción: "Cambiar precios" dejaba el motivo a plena
+  opacidad y junto a sus vecinas apagadas se leía habilitada (2026-10-29). La
+  excepción de abajo es para un dato DENTRO de un control, no para una
+  tarjeta entre tarjetas.
 - Cuando dentro del bloque hay información que el usuario necesita leer justo
   en ese momento (vivió en el buscador de producto mientras hubo tope de partidas: el contador y el placeholder que explicaba por qué no se podía escribir — se quitó con el tope el 2026-09-02, pero la regla vale para el siguiente caso), el 60% se
   aplica solo al **control**, no al dato. Incluye el **placeholder** cuando al

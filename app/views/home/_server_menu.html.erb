@@ -149,9 +149,10 @@
        viva, como sus hermanas (revisar, aplicar y quitar también esperan en
        PricesController). La
        descripción dice cuántos hay cargados —es lo que el operador quiere
-       saber antes de entrar— y, si está bloqueada, POR QUÉ: apagada sin
-       motivo parecía descompuesta (13ª auditoría). Por eso el 60% va solo al
-       ícono y al título, como en "Elegir rueda": el motivo se tiene que leer. ── %>
+       saber antes de entrar— y, si está bloqueada, por qué. Bloqueada va al
+       60% COMPLETA, como sus vecinas: con el motivo a plena opacidad (13ª
+       auditoría) se leía habilitada junto a ellas (visto por el usuario,
+       2026-10-29). ── %>
   <% active_round = BusinessRound.active.exists? %>
   <% prices_ready = has_round && active_round && !sync_busy %>
   <% loaded_prices = active_round ? PriceOverride.for_active_round.count : 0 %>
@@ -176,10 +177,10 @@
       <p class="<%= desc %> text-neutral-800/75"><%= prices_note %></p>
     <% end %>
   <% else %>
-    <div class="<%= grid %> rounded-[1.75rem] bg-brand-gold px-7 py-5 shadow-lg" aria-disabled="true">
-      <div class="opacity-60"><%= prices_icon %></div>
-      <h3 class="<%= title %> text-neutral-900 opacity-60"><%= safe_join(["Cambiar", "precios"], tag.br) %></h3>
-      <p class="<%= desc %> text-neutral-900"><%= prices_note %></p>
+    <div class="<%= grid %> rounded-[1.75rem] bg-brand-gold px-7 py-5 opacity-60 shadow-lg" aria-disabled="true">
+      <%= prices_icon %>
+      <h3 class="<%= title %> text-neutral-900"><%= safe_join(["Cambiar", "precios"], tag.br) %></h3>
+      <p class="<%= desc %> text-neutral-800/75"><%= prices_note %></p>
     </div>
   <% end %>
 

@@ -601,6 +601,13 @@ obtener la información.
   de la transacción de la prueba `CURRENT_TIMESTAMP` es la hora de inicio, y
   `travel` no lo mueve. Las fechas explícitas se quedan (dan el reloj de la
   app); la regla falsa se corrigió en las convenciones.
+- **La tarjeta bloqueada se leía habilitada (2026-10-29, visto por el
+  usuario).** Desde la 13ª el 60% iba solo al ícono y al título, para que el
+  motivo se leyera, y junto a sus vecinas apagadas parecía disponible. Ahora
+  va al 60% completa, como las demás: ninguna otra tarjeta bloqueada dice por
+  qué y a ninguna le pasa nada, y "Elegir rueda" ya enuncia la causa. Se
+  probó antes un punto medio (fondo `/60`, motivo al 100%) y se descartó:
+  seguía viéndose distinta sin razón. Regla en las convenciones visuales.
 
 ## 14ª auditoría (2026-10-10) — el Cotizador
 
