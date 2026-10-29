@@ -232,12 +232,15 @@ class ReportsController < ApplicationController
   # El BOM (`﻿`) NO es adorno: sin él, Excel en Windows abre el archivo en
   # la codificación local y "MARTILLO DEMOLEDOR 3/4" sale con los acentos rotos.
   # Es la trampa clásica de exportar CSV en español, y no se ve al probarlo en
-  # una Mac.
+  # una Mac. La descripción y el No. de parte del fuera de catálogo los teclea
+  # el capturista: van neutralizados, o un `=HYPERLINK(…)` se ejecuta al abrir
+  # el archivo (17ª auditoría). El modelo viene del ERP y no se toca: 32
+  # modelos empiezan con "-" ("-40%") y con apóstrofo se verían mal.
   def products_csv
-    CSV.generate(String.new("﻿")) do |csv|
+    SafeCsv.generate do |csv|
       csv << PRODUCTS_CSV_HEADERS
       products_file_rows.each do |code, description, model, part_number, sold, gifted, sku, origin|
-        csv << [ code, description, model, part_number,
+        csv << [ code, SafeCsv.text(description), model, SafeCsv.text(part_number),
                 number_or_blank(sold), number_or_blank(gifted), sku, origin ]
       end
       if (note = products_excluded_note)

@@ -51,6 +51,22 @@ class TransmittedMeanwhileTest < ApplicationSystemTestCase
     assert_equal 2, @item.reload.quantity
   end
 
+  # La misma puerta, en el autoguardado de observaciones: respondía 403 vacío
+  # y el campo regresaba a lo guardado sin decir por qué, todavía editable (17ª).
+  test "escribir observaciones en un pedido ya transmitido lo dice y deja la captura en solo lectura" do
+    sign_in @user
+    visit order_path(@order)
+    transmit_meanwhile
+
+    find("textarea[aria-label^='Observaciones']").fill_in(with: "ENTREGAR EN BODEGA 3")
+    find("h1").click
+
+    assert_text "Este pedido ya se transmitió al ERP: ya no se puede cambiar. Así quedó."
+    assert_text "Transmitido"
+    assert_no_selector "textarea[aria-label^='Observaciones']"
+    assert_nil @order.reload.observations
+  end
+
   test "aplicar una promoción a un pedido ya transmitido lo dice en vez de cerrar el modal callado" do
     sign_in @user
     visit order_path(@order)

@@ -27,6 +27,7 @@ Si es **algo por hacer**, va al backlog.
 ## Índice de la bitácora
 
 - Decisiones generales del proyecto (abajo)
+- 17ª auditoría (2026-10-29) — todo el proyecto, énfasis en la remediación de la 16ª
 - 16ª auditoría (2026-10-29) — todo el proyecto
 - 15ª auditoría (2026-10-28) — cotizaciones y todo el proyecto
 - Cotizaciones — "Generar cotización" (2026-10-27/28)
@@ -37,6 +38,38 @@ Si es **algo por hacer**, va al backlog.
 - Fase A — scaffolding · Fase B — login, menú, reportes, pedido (arcos 1–3)
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
+
+## 17ª auditoría (2026-10-29) — todo el proyecto, énfasis en la remediación de la 16ª
+
+7 auditores. **0 CRÍTICA · 0 ALTA · 7 MEDIA · ~22 BAJA**, los 7 MEDIA
+confirmados al intentar refutarlos. Se remedia bloque por bloque.
+
+### Bloque 1 — los MEDIA de código
+
+- **Observaciones de un pedido transmitido con la pantalla abierta.** La 16ª
+  movió partidas y promociones a `ensure_editable` (redirige a la captura con
+  el aviso) y el autoguardado de observaciones se quedó con su `head
+  :forbidden`: el campo revertía a lo guardado sin decir nada y seguía
+  editable. Ahora usa `ensure_editable`, y los tres "Un pedido transmitido no
+  se puede editar." del controlador usan `ORDER_TRANSMITTED_MESSAGE`. Lo
+  encontraron dos auditores por separado. **Lección: al mover una regla a "un
+  solo lugar", buscar a TODOS los que resolvían el mismo caso a su manera**
+  (`grep head\(:forbidden\)`), no solo a los que motivaron el hallazgo.
+- **CSV del reporte de productos.** La 13ª neutralizó las fórmulas en los CSV
+  de "Cambiar precios" y este se quedó fuera: la descripción y el No. de
+  parte del fuera de catálogo los teclea el capturista, y un
+  `=HYPERLINK(…)` se ejecutaba al abrir el archivo (reproducido de punta a
+  punta). `SafeCsv` sube de `PriceList::` a la raíz, porque ya no es solo de
+  precios. El modelo (del ERP) no se neutraliza: 32 empiezan con "-". El
+  .xlsx no estaba afectado (`inlineStr`).
+- **API: `atipico_comentarios` y `empaque_observaciones` van con `' '`**
+  (`SPACE_DEFAULTS`). El ERP no tiene NULL en `atipico_comentarios` en
+  169,646 pedidos de 2025+ (`id_empresa = 1`, `id_sucursal_crea = 1`, re-medido
+  al verificar), y los dos ya valen `' '` en CAPTUR. Es la familia de
+  `BLANK_DEFAULTS`: lo que no revienta, solo queda distinto de lo nativo.
+
+Fail-first: las tres pruebas nuevas salieron rojas sin su arreglo (la de la
+API, con la mutación de no mezclar los defaults).
 
 ## 16ª auditoría (2026-10-29) — todo el proyecto, énfasis en la remediación de la 15ª
 

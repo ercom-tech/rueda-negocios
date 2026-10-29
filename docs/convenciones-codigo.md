@@ -330,6 +330,13 @@ movería también fechas, números y mensajes de Rails que hoy funcionan.
 
 ## Exportación a Excel (caxlsx)
 
+- **Todo CSV que descarga la app pasa por `SafeCsv`** (BOM + texto ajeno
+  neutralizado). Una celda que empieza con `=`, `+`, `-` o `@` Excel la
+  ejecuta al abrir el CSV; "ajeno" incluye lo que teclea el capturista, no
+  solo los archivos de terceros: el reporte de productos devolvía tal cual la
+  descripción del fuera de catálogo (17ª auditoría). El .xlsx con tipos
+  `:string` no tiene el problema.
+
 - **caxlsx ADIVINA el tipo de cada celda, y adivina mal con los códigos.**
   `"009711"` lo guarda como el número 9711: el código FECEGO pierde sus ceros
   a la izquierda, y va SIEMPRE a 6 dígitos (es como lo muestra el ERP y como

@@ -93,7 +93,7 @@ class OrdersController < ApplicationController
   # el cliente desde el buscador (recarga sobre el mismo pedido).
   def edit
     @order = current_user.orders.find(params[:id])
-    return redirect_to @order, alert: "Un pedido transmitido no se puede editar." unless @order.editable?
+    return redirect_to @order, alert: ORDER_TRANSMITTED_MESSAGE unless @order.editable?
 
     if params[:client_key].present?
       new_client = client_from_key(params[:client_key])
@@ -113,7 +113,7 @@ class OrdersController < ApplicationController
 
   def update
     @order = current_user.orders.find(params[:id])
-    return redirect_to @order, alert: "Un pedido transmitido no se puede editar." unless @order.editable?
+    return redirect_to @order, alert: ORDER_TRANSMITTED_MESSAGE unless @order.editable?
 
     if @order.update(order_params)
       redirect_to @order, notice: (@order.generic? ? "La cotización ahora es de cliente genérico." : "Encabezado actualizado.")
@@ -142,12 +142,15 @@ class OrdersController < ApplicationController
                      blocked_by: @order.promotions_blocking(@products) }, layout: false
   end
 
-  # Guarda observaciones (auto-save silencioso).
+  # Guarda observaciones (auto-save silencioso). Transmitido con la pantalla
+  # abierta, `ensure_editable` regresa a la captura con el aviso: el `head
+  # :forbidden` de antes revertía el campo sin decir por qué y lo dejaba
+  # editable, igual que la 16ª encontró en partidas y promociones (17ª).
   def observations
-    order = current_user.orders.find(params[:id])
-    return head(:forbidden) unless order.editable?
+    @order = current_user.orders.find(params[:id])
+    return ensure_editable unless @order.editable?
 
-    order.update(observations: params[:observations])
+    @order.update(observations: params[:observations])
     head :no_content
   end
 
@@ -155,7 +158,7 @@ class OrdersController < ApplicationController
   def capture
     with_locked_writable_order(params[:id]) do |order|
       @order = order
-      next redirect_to(@order, alert: "Un pedido transmitido no se puede editar.") unless @order.editable?
+      next redirect_to(@order, alert: ORDER_TRANSMITTED_MESSAGE) unless @order.editable?
 
       resolving = @order.user_id != current_user.id
 

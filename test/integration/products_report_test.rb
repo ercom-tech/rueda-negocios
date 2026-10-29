@@ -197,6 +197,19 @@ class ProductsReportTest < ActionDispatch::IntegrationTest
 
   # --- Exportación ---------------------------------------------------------
 
+  # Lo que teclea el capturista en el fuera de catálogo llega tal cual al
+  # CSV: sin neutralizar, Excel ejecutaba la fórmula al abrirlo (17ª).
+  test "el CSV no deja una fórmula activa en lo que se tecleó en el fuera de catálogo" do
+    item!(order!, @generic_product, quantity: 1, description: '=HYPERLINK("http://x","clic")', part_number: "+1")
+    login_as "cap_pr"
+
+    get products_report_path(format: :csv)
+
+    row = CSV.parse(response.body.delete_prefix("\uFEFF")).find { |r| r[1]&.include?("HYPERLINK") }
+    assert_equal "'=HYPERLINK(\"http://x\",\"clic\")", row[1]
+    assert_equal "'+1", row[3]
+  end
+
   test "el CSV trae encabezados, BOM y los renglones" do
     item!(order!, @hammer, quantity: 3)
     item!(order!, @generic_product, quantity: 2, description: "ALGO FUERA")
