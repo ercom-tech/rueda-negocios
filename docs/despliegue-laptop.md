@@ -83,7 +83,7 @@ cd ~/Proyectos/fecego-rueda-negocios
 | 3 | Respaldo de la BD (comandos en `docs/instalacion-laptop.md`, "Respaldo de la BD de la app") | `pg_restore -l "$DUMP"` lista tablas. Es la única vuelta atrás del paso 6: `git checkout` no deshace una migración |
 | 4 | `git pull origin master` | `git log --oneline -1` coincide con la versión que se quería |
 | 5 | `bundle install` | `bundle check` → `The Gemfile's dependencies are satisfied` |
-| 6 | `bin/rails db:migrate` | Sin error. Es inofensivo aunque no haya migraciones |
+| 6 | `bin/rails db:migrate` | Sin error. Es inofensivo aunque no haya migraciones. Y `bin/rails db:migrate:status \| grep -c "^\s*down"` → `0`: ninguna quedó pendiente |
 | 7 | `bin/rails tailwindcss:build` | Termina con `Done in …`. El CSS compilado **no** viaja en el repo (`app/assets/builds/` está en `.gitignore`), así que sin este paso las clases nuevas no existen. Para comprobar que una clase concreta entró, busca su **declaración** y no su nombre: en el archivo las clases van escapadas (`.min-w-\[18rem\]`) y un `grep` del nombre tal cual devuelve 0 aunque esté — p. ej. `grep -c 'min-width:18rem'` → `1` |
 | 8 | `sudo systemctl restart fecego-rueda-negocios` | `systemctl status fecego-rueda-negocios` → `active (running)`, sin reinicios acumulándose |
 | 9 | Abrir la app en el navegador | Entra al menú, sin error |
@@ -239,7 +239,7 @@ migraciones traiga el lote:
   `supplier_id`/`brand_id` de las partidas y `captured_at` del pedido; y las
   del 2026-10-08: la tabla `price_overrides` y `price_from_file`/
   `erp_unit_price` de las partidas, con valor por omisión; y la del
-  2026-10-10: `pieces_per_box` del producto, del Cotizador; y la del
+  2026-10-09: `pieces_per_box` del producto, del Cotizador; y la del
   2026-10-27: `orders.document` con default "sale", `client_id` y `kind`
   nullable, el CHECK `orders_sale_requires_client` y
   `settings.last_estimate_number`): **el checkout basta, sin rollback.**

@@ -136,7 +136,7 @@ module Sync
     test "un pedido finalizado en plena operación deshace el cierre completo" do
       # Al pasar la guarda los dos están transmitidos, así que el cierre procede.
       order(status: "transmitted", erp_folio: "1A0003")
-      rezagado = order(status: "transmitted", erp_folio: "1A0004")
+      late_order = order(status: "transmitted", erp_folio: "1A0004")
 
       # La carrera: el capturista finaliza su pedido justo DESPUÉS de la guarda.
       # Se engancha al primer `Order.transmitted` del servicio (el conteo), que
@@ -146,12 +146,12 @@ module Sync
       # scope del enum vive en el propio singleton de Order, así que quitarlo lo
       # borra para el resto del proceso. Este se desactiva solo tras la primera
       # llamada y queda como un `super` inocuo.
-      colado = false
+      fired = false
       Order.singleton_class.prepend(Module.new do
         define_method(:transmitted) do
-          unless colado
-            colado = true
-            rezagado.update_columns(status: "captured", erp_folio: nil)
+          unless fired
+            fired = true
+            late_order.update_columns(status: "captured", erp_folio: nil)
           end
           super()
         end
@@ -163,6 +163,8 @@ module Sync
       assert_equal 2, Order.count, "no se pierde ningún pedido"
       assert @round.reload.active?, "la rueda no se cierra a medias"
       assert_equal @round.erp_round_id, Setting.instance.reload.selected_round_erp_id
+    ensure
+      fired = true # desarma el stub aunque la prueba no haya llegado a él (16ª)
     end
 
     test "el cierre normal solo borra los transmitidos y devuelve su cuenta" do

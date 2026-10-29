@@ -15,18 +15,18 @@ class PromotionFlowTest < ApplicationSystemTestCase
     supplier = Supplier.create!(erp_supplier_id: 970_301, name: "MAKITA")
     BusinessRoundPerson.create!(business_round: @round, user: @user, supplier: supplier, position: 1)
 
-    @taladro = product("TALADRO", 1000, supplier)
-    @esmeril = product("ESMERIL", 500, supplier)
+    @drill_product = product("TALADRO", 1000, supplier)
+    @grinder = product("ESMERIL", 500, supplier)
     @order   = Order.create!(user: @user, business_round: @round, client: client, kind: "remission")
 
     @promo = Promotion.create!(erp_promotion_id: 970_301, code: "MAKR20", name: "MAKITA - OAXACA",
                                starts_on: 1.week.ago.to_date, ends_on: 1.week.from_now.to_date)
     @promo.promotion_tiers.create!(erp_consecutive: 1, condition_kind: "CM", unit: "MXN",
                                    quantity_from: 1000, quantity_to: 0, discount_percent: 14)
-    [ @taladro, @esmeril ].each { |p| @promo.promotion_products.create!(product: p, discount_percent: 0) }
+    [ @drill_product, @grinder ].each { |p| @promo.promotion_products.create!(product: p, discount_percent: 0) }
 
-    add_item(@taladro, 2)
-    add_item(@esmeril, 2)
+    add_item(@drill_product, 2)
+    add_item(@grinder, 2)
   end
 
   def product(description, price, supplier)

@@ -135,11 +135,7 @@ class OrderItemsController < ApplicationController
     # El botón que abrió el modal se fue con su fila, así que el foco caía al
     # <body> y había que retabular desde el inicio en cada baja. Va al buscador,
     # que es la acción natural siguiente.
-    render turbo_stream: [
-      *detail_streams,
-      turbo_stream.replace("focus-director", partial: "orders/focus_director",
-                                             locals: { selector: "#product-search input" })
-    ]
+    render turbo_stream: [ *detail_streams, focus_search_stream ]
   end
 
   private
@@ -148,13 +144,16 @@ class OrderItemsController < ApplicationController
   # y en esta se corrigió su cantidad o se tocó su bote. Con `find`, el 404
   # de Rails se pintaba EN LUGAR de la captura: "No encontramos esa
   # pantalla", sin decir qué pasó (15ª auditoría; la 14ª lo arregló solo en el
-  # Cotizador). Se repinta la tabla como está, con el aviso.
+  # Cotizador). Se repinta la tabla como está, con el aviso — y el foco va al
+  # buscador, como en una baja normal: el control desde el que se actuó se fue
+  # con su fila y el foco caía al <body> (16ª auditoría).
   def item_gone
     render turbo_stream: [
       *detail_streams,
       turbo_stream.replace("flash", partial: "shared/flash",
                                     locals: { alert: "Esa partida ya no está en #{@order.document_phrase}: " \
-                                                     "se quitó desde otra pantalla. Así está ahora." })
+                                                     "se quitó desde otra pantalla. Así está ahora." }),
+      focus_search_stream
     ]
   end
 
@@ -209,6 +208,11 @@ class OrderItemsController < ApplicationController
       # cada baja, y se actualiza sin recargar la página.
       turbo_stream.replace("product-search", method: :morph, partial: "orders/product_search", locals: { order: @order })
     ]
+  end
+
+  def focus_search_stream
+    turbo_stream.replace("focus-director", partial: "orders/focus_director",
+                                           locals: { selector: "#product-search input" })
   end
 
   def clear_search_stream

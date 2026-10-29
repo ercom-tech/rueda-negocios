@@ -175,4 +175,18 @@ class EstimateTest < ActiveSupport::TestCase
     assert_not order.valid?
     assert order.errors.of_kind?(:client, :blank)
   end
+
+  # Los textos que salen del modelo y del servicio también nombran al
+  # documento (16ª): DOCUMENT_TEXTS había llegado a vistas y controladores.
+  test "los avisos del candado de promoción y del modal nombran a la cotización" do
+    order = with_item(estimate).tap(&:save!)
+    item = order.order_items.first
+    promo = Promotion.create!(erp_promotion_id: 9601, code: "P", name: "P", starts_on: Date.current, ends_on: Date.current)
+    item.update_columns(promotion_id: promo.id)
+
+    assert_not item.reload.destroy
+    assert_match(/Quita la promoción para quitarla de la cotización\./, item.errors.full_messages.first)
+    assert_equal "Esta cotización no tiene productos de esta promoción.",
+                 Promotions::Group.new(Order.find(order.id).tap { |o| o.order_items.delete_all }, promo).blocked_reason
+  end
 end

@@ -42,8 +42,12 @@ vara (7ª auditoría).
 El coral es **#bd5343**, no el #ce6150 original: con blanco encima daba 3.85:1,
 debajo del 4.5 que pide AA para texto normal — y ahí viven los botones de
 confirmación de todos los modales y los avisos de error del paso 1, los que
-explican qué falta. Tablet en un salón con ventanal es el caso real. Por la
-misma regla el flash de alerta es `red-700` (~6:1), no `red-600` (4.08:1).
+explican qué falta. Tablet en un salón con ventanal es el caso real. El flash
+de alerta es `red-700` (**6.42:1**), no `red-600` (**4.76:1**: pasa AA, pero
+por un margen que un reflejo de ventanal se come). Medidas con la paleta de
+Tailwind 4 que compila el proyecto (oklch); esta línea decía "red-600 4.08:1"
+y no se reproducía con ninguna versión (16ª auditoría) — una cifra sin la
+paleta contra la que se midió no se puede comprobar.
 Cualquier tono nuevo que lleve texto blanco encima se mide antes de usarse.
 
 Grises del manual de identidad: `neutral-400` para el fondo de controles

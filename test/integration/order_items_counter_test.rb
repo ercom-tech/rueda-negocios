@@ -75,10 +75,10 @@ class OrderItemsCounterTest < ActionDispatch::IntegrationTest
   # Cuenta TODAS las partidas, regalos incluidos, para cuadrar con la tabla.
   test "el contador incluye los regalos" do
     fill_order_to(2)
-    regalo = @order.order_items.new(position: 3, quantity: 1, unit_price: 100,
+    gift_item = @order.order_items.new(position: 3, quantity: 1, unit_price: 100,
                                     tax_rate: 16, discount_percent: 100)
-    regalo.gift = true
-    regalo.save!(validate: false)
+    gift_item.gift = true
+    gift_item.save!(validate: false)
 
     get order_path(@order)
 

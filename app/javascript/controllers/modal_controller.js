@@ -84,14 +84,21 @@ export default class extends Controller {
   // auditoría). Se le gana con `preventDefault` y se dice qué pasó y qué
   // hacer. (Lo que el servidor sabe explicar —una partida que ya no existe—
   // lo responde él mismo dentro del frame.)
+  //
+  // Una REDIRECCIÓN se sigue, como en `followMissing`: decía "Tu sesión
+  // terminó. Recarga la pantalla", y tras "Cerrar rueda" la causa real ("No
+  // hay rueda en curso") iba en el flash de esa misma respuesta y se perdía al
+  // recargar — el capturista se enteraba dos pantallas después (16ª
+  // auditoría). Solo lo que no es redirección se queda en el modal.
   loadMissing(event) {
     event.preventDefault()
+    if (event.detail?.response?.redirected) {
+      event.detail.visit(event.detail.response)
+      return
+    }
     const dialog = event.target.closest("[data-modal-target='dialog']")
-    const message = event.detail?.response?.redirected
-      ? "Tu sesión terminó. Recarga la pantalla para volver a entrar."
-      : dialog?.dataset.loadError ||
-        "No se pudo cargar. Ciérralo y vuelve a abrirlo; si sigue igual, avísale al equipo del servidor."
-    this.showLoadProblem(dialog, message)
+    this.showLoadProblem(dialog, dialog?.dataset.loadError ||
+      "No se pudo cargar. Ciérralo y vuelve a abrirlo; si sigue igual, avísale al equipo del servidor.")
   }
 
   // El modal de promoción ante una respuesta sin su frame: el pedido o la

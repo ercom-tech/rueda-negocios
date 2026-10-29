@@ -283,7 +283,7 @@ class OrderItem < ApplicationRecord
       "Esta partida es un regalo de la promoción y la pone el sistema. " \
       "Quita la promoción si necesitas cambiarla." :
       "Esta partida tiene la promoción \"#{promotion&.name}\" aplicada. " \
-      "Quita la promoción para quitarla del pedido.")
+      "Quita la promoción para quitarla #{order&.document_text(:of_the) || 'del pedido'}.")
     throw :abort
   end
 

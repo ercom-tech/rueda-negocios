@@ -13,10 +13,13 @@
   <%# Patrón de herramientas a todo lo ancho (mismo shell que el home) %>
   <div class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.18]"
        style="background-image: url('<%= image_path "tools_pattern_white.svg" %>');"></div>
-  <%# z-20 (no z-10): este wrapper es hermano del contenido (también z-10) y
-      contiene el modal de cerrar sesión — con el mismo z, el contenido
-      posterior en el DOM taparía al modal. %>
-  <div class="relative z-20 px-6 pt-6 sm:px-10 lg:px-[5%] lg:pt-8">
+  <%# Sin z-index, ni aquí ni en el contenido: los DOS contienen modales (cerrar
+      sesión aquí, "Cliente genérico" abajo), y un z-index en el wrapper
+      encierra a sus diálogos. Con z-20 aquí y z-10 abajo, el modal de
+      "Cliente genérico" quedaba DEBAJO de esta barra y "Cerrar sesión" seguía
+      respondiendo con él abierto (16ª auditoría). Mismo arreglo que
+      orders/show (7ª): los diálogos `fixed z-50` compiten en el contexto raíz. %>
+  <div class="relative px-6 pt-6 sm:px-10 lg:px-[5%] lg:pt-8">
     <%= render "shared/top_bar" %>
     <%# El regreso va en la fila del título (estándar del sitio). Era la única
         pantalla sin salida: al editar el encabezado, las opciones eran
@@ -33,7 +36,8 @@
   </div>
 
   <%# ── Card única (ancha): Datos del cliente ── %>
-  <div class="relative z-10 mx-auto max-w-5xl px-6 py-10 lg:px-[5%]">
+  <%# Sin z-index: ver la nota del wrapper de arriba. %>
+  <div class="relative mx-auto max-w-5xl px-6 py-10 lg:px-[5%]">
     <section class="rounded-3xl bg-brand-gold p-6 sm:p-8">
       <div class="rounded-2xl bg-black py-4 text-center">
         <h2 class="text-2xl font-extrabold text-white">Datos del cliente</h2>
@@ -104,7 +108,7 @@
           <%# Elegido un cliente, la cotización todavía puede ser genérica
               mientras no exista: sin esto, la única salida era el menú, o
               crearla con el cliente equivocado y editarla (15ª auditoría). %>
-          <%= render "orders/generic_estimate_button" if estimate && !@order.persisted? %>
+          <%= render "orders/generic_estimate_button", confirm: true if estimate && !@order.persisted? %>
           <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm text-neutral-700">
             <span>Cliente: <span class="font-semibold"><%= @client.name %></span></span>
             <span>Vendedor: <span class="font-semibold"><%= @client.salesperson&.name || "—" %></span></span>

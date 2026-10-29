@@ -20,13 +20,13 @@ class SettingTest < ActiveSupport::TestCase
   end
 
   test "instance sobrevive la carrera de creación (RecordNotUnique → relee)" do
-    ganadora = Setting.create!
+    winner = Setting.create!
     # Simula al perdedor de la carrera: primero no ve la fila (create! choca
     # con el índice singleton) y en el rescue la relee.
-    respuestas = [ nil, ganadora ]
-    Setting.define_singleton_method(:first) { respuestas.shift }
+    answers = [ nil, winner ]
+    Setting.define_singleton_method(:first) { answers.shift }
 
-    assert_equal ganadora, Setting.instance
+    assert_equal winner, Setting.instance
   ensure
     Setting.singleton_class.remove_method(:first)
   end

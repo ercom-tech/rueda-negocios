@@ -62,8 +62,10 @@ class EstimateEntryTest < ActionDispatch::IntegrationTest
     assert_select "h1", "Levantamiento de cotización"
     assert_select "input[name='order[document]'][value=estimate]", visible: :all
     assert_select "input[type=submit][value=?]", "Continuar a levantamiento de cotización"
-    # Elegido un cliente, todavía puede cotizar al genérico (15ª auditoría).
-    assert_select "form[action=?] button", orders_path, text: "Cliente genérico"
+    # Elegido un cliente, todavía puede cotizar al genérico (15ª auditoría),
+    # con confirmación: se perdería lo elegido (16ª).
+    assert_select "button[data-action='modal#open']", text: /Cliente genérico/
+    assert_select "form[action=?] button", orders_path, text: "Sí, cambiar"
 
     assert_difference("Order.estimate.count", 1) do
       post orders_path, params: { order: { document: "estimate", client_id: @client.id, kind: "remission",
@@ -113,5 +115,21 @@ class EstimateEntryTest < ActionDispatch::IntegrationTest
       post orders_path, params: { order: { client_id: @client.id, kind: "remission",
                                            client_receipt_profile_id: @client.receipt_profiles.first.id } }
     end
+  end
+
+  # El único texto de DOCUMENT_TEXTS que ninguna prueba leía (16ª, mutación).
+  test "un cliente sin datos para facturar ni remisionar no admite una cotización" do
+    Client.create!(erp_client_key: "COT02", name: "Sin datos")
+
+    get new_order_path(client_key: "COT02", document: "estimate")
+
+    assert_match(/no se le puede capturar una cotización/, response.body)
+  end
+
+  test "elegir proveedor o marca con un id forjado no es pantalla de error" do
+    patch active_supplier_path, params: { supplier_id: [ "1" ] }
+    assert_response :redirect
+    patch active_brand_path, params: { brand_id: { "x" => "1" } }
+    assert_response :redirect
   end
 end

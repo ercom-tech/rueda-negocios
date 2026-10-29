@@ -305,6 +305,8 @@ class EstimateCaptureTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to root_path
     assert_match(/ya no está en esta laptop/, flash[:alert])
+  ensure
+    fired = true # desarma el stub aunque la prueba no haya llegado a él (16ª)
   end
 
   test "el servidor no resuelve cotizaciones, y si lo fuerza el aviso dice por qué" do

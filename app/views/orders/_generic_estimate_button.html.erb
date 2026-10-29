@@ -1,9 +1,26 @@
 <%# "Cliente genérico" del paso 1 de una cotización NUEVA: alguien que no
     está en el catálogo de la rueda. Crea la cotización en ese momento, sin
-    encabezado, y pasa directo a la captura. Mismo negro que el buscador (es
-    un control de captura, no una acción primaria) y `button_to`, que es la
-    regla para todo POST. Va antes y después de elegir cliente (ver
-    orders/new). %>
-<%= button_to "Cliente genérico", orders_path, params: { order: { document: "estimate" } },
-      form_class: "w-full",
-      class: "w-full cursor-pointer rounded-full bg-black px-5 py-3 text-center font-semibold text-white transition-colors hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold" %>
+    encabezado, y pasa directo a la captura. `button_to`, que es la regla para
+    todo POST. Locals: confirm (opcional).
+
+    Sin cliente elegido va directo y en el negro de los controles de captura:
+    no hay nada que perder. Con un cliente ya elegido (`confirm: true`) se
+    perdería lo elegido, así que pide confirmación y va en el gris de acción
+    secundaria — el mismo tratamiento que al editar. Negro y directo, a 20 px
+    del buscador, un toque equivocado tiraba el cliente sin preguntar, y la
+    misma acción salía en dos colores en el mismo flujo (16ª auditoría). %>
+<% if local_assigns[:confirm] %>
+  <div data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
+    <button type="button" data-action="modal#open"
+            class="w-full cursor-pointer rounded-full bg-neutral-700 px-5 py-3 text-center font-semibold text-white transition-colors hover:bg-neutral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold">
+      Cliente genérico
+    </button>
+    <%= render "home/confirm_dialog", title: "Cliente genérico",
+          message: "Se quitará el cliente elegido y la cotización empezará sin encabezado. ¿Continuar?",
+          confirm_label: "Sí, cambiar", path: orders_path, params: { order: { document: "estimate" } } %>
+  </div>
+<% else %>
+  <%= button_to "Cliente genérico", orders_path, params: { order: { document: "estimate" } },
+        form_class: "w-full",
+        class: "w-full cursor-pointer rounded-full bg-black px-5 py-3 text-center font-semibold text-white transition-colors hover:bg-neutral-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold" %>
+<% end %>

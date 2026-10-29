@@ -286,11 +286,11 @@ module Sync
       # Se engancha al primer `Order.transmitted` (el conteo del purge), que
       # ocurre después de la guarda. Módulo antepuesto que se desactiva solo:
       # quitar el scope del singleton lo borraría para el resto del proceso.
-      colado = false
+      fired = false
       Order.singleton_class.prepend(Module.new do
         define_method(:transmitted) do
-          unless colado
-            colado = true
+          unless fired
+            fired = true
             late_order.update_columns(status: "captured", erp_folio: nil)
           end
           super()
@@ -307,6 +307,8 @@ module Sync
       # esencial: la re-guarda abortó y ningún pedido se perdió.
       assert_equal 2, Order.count, "no se pierde ningún pedido"
       assert Order.exists?(late_order.id), "la venta colada sobrevive"
+    ensure
+      fired = true # desarma el stub aunque la prueba no haya llegado a él (16ª)
     end
 
     test "preserva el usuario server (no viene en el export) y limpia capturistas stale" do

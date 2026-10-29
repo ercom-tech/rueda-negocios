@@ -73,4 +73,19 @@ class SyncMenuRefreshTest < ApplicationSystemTestCase
     assert_equal 0, page.evaluate_script("window.__menuHits"),
                  "sin corrida viva no debe haber ni una consulta"
   end
+
+  # Otro equipo entró con el usuario del servidor: el sondeo recibía el login
+  # (el fetch sigue la redirección), no encontraba stream que aplicar y el
+  # panel giraba "en progreso" para siempre (16ª auditoría).
+  test "si la sesión del servidor terminó, el sondeo lleva al login con el motivo" do
+    SyncRun.create!(kind: "up", started_at: Time.current, pid: Process.pid)
+    sign_in @server
+    visit root_path
+    assert_selector "#server-menu[data-sync-status-busy-value='true']"
+
+    @server.update_column(:session_token, "otra-sesion")
+
+    assert_current_path login_path, wait: 10
+    assert_text "Tu usuario inició sesión en otro equipo"
+  end
 end

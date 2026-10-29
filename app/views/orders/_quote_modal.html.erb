@@ -19,9 +19,9 @@
 
       `data-load-error` y `frame-missing`: el texto de falla es de ESTE
       diálogo — reusaba el del modal de promoción ("No se pudo cargar la
-      promoción") —, y una respuesta sin contenido (partida quitada en otra
-      pantalla, sesión vencida) se explica en vez del "Content missing" de
-      Turbo (ver modal#loadMissing). %>
+      promoción") —, y una respuesta sin contenido se explica en vez del
+      "Content missing" de Turbo, o —si es una redirección: sesión vencida,
+      rueda cerrada— se sigue con su aviso (ver modal#loadMissing). %>
   <div id="quote-dialog" data-modal-target="dialog" style="display:none" tabindex="-1"
        role="dialog" aria-modal="true" aria-label="Cotizador"
        data-load-error="No se pudo cargar el cotizador. Ciérralo y vuelve a abrirlo; si sigue igual, avísale al equipo del servidor."

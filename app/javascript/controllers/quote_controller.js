@@ -67,14 +67,13 @@ export default class extends Controller {
     // El contenido de la partida anterior no debe verse mientras carga la
     // nueva: se pone el "Cargando" de la plantilla del servidor.
     this.fill(frame, "loading")
-    // Absoluta: Turbo guarda el `src` resuelto, y la fila trae una ruta
-    // relativa. Comparando tal cual nunca coincidían y esta rama era código
-    // muerto — funcionaba de rebote, porque reasignar el mismo destino con
-    // otra escritura sí recarga (15ª auditoría).
-    const url = new URL(row.dataset.quoteUrl, document.baseURI).href
-    // Turbo no vuelve a pedir un `src` que no cambió: misma partida, reload.
-    if (frame.getAttribute("src") === url) frame.reload()
-    else frame.src = url
+    // Reasignar el `src` recarga el frame aunque sea la MISMA partida: así la
+    // segunda apertura trae las cifras de ahora (`quote_flow_test`, "cotizar
+    // dos veces la misma partida"). Aquí hubo una rama `reload()` "porque
+    // Turbo no vuelve a pedir un src que no cambió": nunca se ejecutaba (15ª)
+    // y, corregida, resultó redundante — quitarla dejaba la prueba en verde
+    // (16ª auditoría). Lo que se afirma de Turbo se comprueba con mutación.
+    frame.src = row.dataset.quoteUrl
     this.modalOutlet.open()
   }
 

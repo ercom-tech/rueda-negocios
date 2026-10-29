@@ -146,12 +146,11 @@ class ServerController < ApplicationController
   # quedó en cero no se enuncia —"Se eliminó 0 pedidos y 1 cotización" (15ª)—,
   # salvo que todo sea cero, que también es un dato: no había nada que borrar.
   def removed_sentence(removed)
-    counts = { "pedido" => removed.orders, "cotización" => removed.estimates }
+    counts = { "sale" => removed.orders, "estimate" => removed.estimates }
     named  = counts.select { |_, n| n.positive? }
     return "No había pedidos transmitidos ni cotizaciones que eliminar." if named.empty?
 
-    plural = { "pedido" => "pedidos", "cotización" => "cotizaciones" }
-    parts  = named.map { |noun, n| "#{n} #{n == 1 ? noun : plural[noun]}" }
+    parts  = named.map { |document, n| "#{n} #{Order.document_text(document, n == 1 ? :noun : :plural)}" }
     verb   = named.size == 1 && named.values.first == 1 ? "eliminó" : "eliminaron"
     "Se #{verb} #{SpanishText.list(parts)} de esta laptop."
   end

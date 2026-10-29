@@ -97,6 +97,41 @@ emitido (no solo la respuesta) y mutación que deja pasar el arreglo: muerde.
 - **Deadlock** de la purga contra la edición de una partida: "Cerrar rueda"
   lo rescata con el mismo "no se borró nada, repite".
 
+**Bloque 4 — las BAJA.**
+- **Paso 1 de la cotización:** sin z-index en los dos wrappers (los dos tienen
+  modales; el de "Cliente genérico" quedaba bajo la barra y "Cerrar sesión"
+  respondía detrás). "Cliente genérico" con un cliente ya elegido confirma y
+  va en gris, como al editar; sin cliente sigue directo y negro.
+- **Caminos de falla:** `modal#loadMissing` SIGUE las redirecciones (el
+  Cotizador decía "Tu sesión terminó. Recarga" y el motivo real —rueda
+  cerrada— se perdía); `item_gone` devuelve el foco al buscador; el sondeo
+  del panel navega al login si la sesión del servidor se desplazó. Ese último
+  traía una trampa: el login no responde Turbo Stream y contestaba **406**, y
+  el `if (!res.ok) return` cortaba antes de mirar `redirected`. El `Accept`
+  lleva `text/html` de alternativa.
+- **Textos:** `DOCUMENT_TEXTS` gana `plural` y `Order.document_text(doc,
+  form)` para quien habla de un tipo; los dos textos de modelo y servicio que
+  decían "pedido" en una cotización y los plurales a mano (panel, flash,
+  paginador) leen de ahí. Proveedor y marca activos por `ParamSanitizing`.
+- **Pruebas:** los seis stubs antepuestos se desarman en `ensure`. Las ~60
+  variables en español de las pruebas (no 25) se renombraron con **Ripper**,
+  no con regex: solo toca identificadores, nunca cadenas ni comentarios, y
+  detectó un choque (`words` ya existía). Excluye símbolos, que Ripper entrega
+  como identificador.
+- **Cotizador, `reload()`:** la mutación que el auditor dejó "no concluyente"
+  la repetí: quitar la rama dejaba la prueba en verde. Reasignar el MISMO
+  `src` sí recarga; mi diagnóstico de la 15ª ("Turbo no vuelve a pedir un src
+  que no cambió") era falso. Quedó una sola línea, y la prueba muerde si se
+  salta la reasignación.
+- **Docs:** `db:migrate:status` en el paso 6, fecha de `pieces_per_box`, el
+  contraste del rojo medido con Tailwind 4 (red-600 4.76, red-700 6.42; el
+  "4.08" no se reproducía), comentarios del hub y del panel.
+
+Lección del bloque 4: **una mutación que sobrevive tras un "arreglo" puede
+querer decir que el arreglo descansaba en una creencia falsa.** En la 15ª
+"corregí" una comparación de URLs para que la rama `reload()` corriera; la
+rama nunca hizo falta.
+
 Lección del bloque 2: **un cambio de permisos invalida las guías que nombran
 usuarios.** `require_capturista` (15ª, bloque 4) dejó inservible la
 comprobación post-deploy, y nadie releyó la guía porque el cambio "era de

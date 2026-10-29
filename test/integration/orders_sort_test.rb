@@ -120,9 +120,9 @@ class OrdersSortTest < ActionDispatch::IntegrationTest
   # comercial y otro SIN él tienen que ordenarse por lo que se ve, no
   # agruparse por tener o no ese campo.
   test "un cliente sin nombre comercial se ordena entre los demás" do
-    sin_comercial = Client.create!(erp_client_key: "CLI3", name: "MENDOZA SILVA", commercial_name: "")
+    no_trade_name = Client.create!(erp_client_key: "CLI3", name: "MENDOZA SILVA", commercial_name: "")
     order!(user: @ana, client: @c2, folio: "RN-000001")            # ABARCA LUNA
-    order!(user: @ana, client: sin_comercial, folio: "RN-000002")  # MENDOZA SILVA
+    order!(user: @ana, client: no_trade_name, folio: "RN-000002")  # MENDOZA SILVA
     order!(user: @ana, client: @c1, folio: "RN-000003")            # ZAPATA ROJAS
     login_as "srv960"
 
@@ -199,15 +199,15 @@ class OrdersSortTest < ActionDispatch::IntegrationTest
   test "ordena por estatus siguiendo el flujo del pedido" do
     order!(user: @ana, client: @c1, folio: "RN-000003", status: "transmitted")
     order!(user: @ana, client: @c1, folio: "RN-000002", status: "captured")
-    borrador = Order.create!(user: @ana, business_round: @round, client: @c1, kind: "remission")
+    draft_order = Order.create!(user: @ana, business_round: @round, client: @c1, kind: "remission")
     login_as "srv960"
 
     get captured_orders_report_path(sort: "status", dir: "asc")
 
-    posiciones = response.body
-    assert_operator posiciones.index("Borrador"), :<, posiciones.index("Capturado")
-    assert_operator posiciones.index("Capturado"), :<, posiciones.index("Transmitido")
-    assert borrador.persisted?
+    positions = response.body
+    assert_operator positions.index("Borrador"), :<, positions.index("Capturado")
+    assert_operator positions.index("Capturado"), :<, positions.index("Transmitido")
+    assert draft_order.persisted?
   end
 
   # Un pedido SIN partidas no produce fila en el LEFT JOIN agregado: su valor
@@ -217,7 +217,7 @@ class OrdersSortTest < ActionDispatch::IntegrationTest
   # borradores vacíos antes de transmitir, y eran justo los que no subían.
   test "un pedido sin partidas se ordena por el 0 que muestra la celda" do
     order!(user: @ana, client: @c1, folio: "RN-000001", items: [ [ @p1, 1 ] ])
-    vacio = Order.create!(user: @ana, business_round: @round, client: @c1,
+    empty_one = Order.create!(user: @ana, business_round: @round, client: @c1,
                           kind: "remission", status: "captured", local_folio: "RN-000002")
     login_as "srv960"
 
@@ -227,7 +227,7 @@ class OrdersSortTest < ActionDispatch::IntegrationTest
     get captured_orders_report_path(sort: "items", dir: "desc")
     assert_equal %w[RN-000001 RN-000002], folios(response.body), "y al final al invertir"
 
-    assert vacio.order_items.empty?
+    assert empty_one.order_items.empty?
   end
 
   test "lo mismo para el total" do
@@ -311,8 +311,8 @@ class OrdersSortTest < ActionDispatch::IntegrationTest
 
   # Un pedido sin vendedor no debe encabezar la tabla solo por estar vacío.
   test "los nulos van al final en las dos direcciones" do
-    sin_vendedor = Client.create!(erp_client_key: "CLI3", name: "Sin vendedor")
-    order!(user: @ana, client: sin_vendedor, folio: "RN-000001")
+    no_salesperson = Client.create!(erp_client_key: "CLI3", name: "Sin vendedor")
+    order!(user: @ana, client: no_salesperson, folio: "RN-000001")
     order!(user: @ana, client: @c1, folio: "RN-000002")
     login_as "srv960"
 
@@ -354,10 +354,10 @@ class OrdersSortTest < ActionDispatch::IntegrationTest
     # Los dos tienen 1 renglón del proveedor filtrado: empatan, y el desempate
     # por id los deja estables en vez de bailar entre peticiones.
     get captured_orders_report_path(sort: "items", dir: "desc", supplier_id: @sup.id)
-    primero = folios(response.body)
+    first_one = folios(response.body)
 
     get captured_orders_report_path(sort: "items", dir: "desc", supplier_id: @sup.id)
-    assert_equal primero, folios(response.body), "el orden es estable entre peticiones"
+    assert_equal first_one, folios(response.body), "el orden es estable entre peticiones"
   end
 
   # --- La cabecera ---------------------------------------------------------

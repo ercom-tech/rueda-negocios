@@ -334,6 +334,8 @@ class SyncPanelDetailTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to root_path
     assert_match(/No se borró nada: vuelve a intentarlo/, flash[:alert])
+  ensure
+    fired = true # desarma el stub aunque la prueba no haya llegado a él (16ª)
   end
 
   test "si una partida se cuela mientras se cierra, el operador ve que basta repetir" do
@@ -353,5 +355,7 @@ class SyncPanelDetailTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to root_path
     assert_match(/No se borró nada: vuelve a intentarlo/, flash[:alert])
+  ensure
+    fired = true # desarma el stub aunque la prueba no haya llegado a él (16ª)
   end
 end

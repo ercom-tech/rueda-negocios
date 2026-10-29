@@ -168,29 +168,29 @@ class OrderItemTest < ActiveSupport::TestCase
   test "un pedido admite muchas más de 45 partidas" do
     fill_order_to(60)
 
-    partida = item(discount_percent: 0, position: 61)
+    line_item = item(discount_percent: 0, position: 61)
 
-    assert partida.save, "la partida 61 debe caber: ya no hay tope"
+    assert line_item.save, "la partida 61 debe caber: ya no hay tope"
     assert_equal 61, @order.reload.items_count
   end
 
   test "ninguna partida se rechaza por cantidad de renglones" do
     fill_order_to(120)
 
-    partida = item(discount_percent: 0, position: 121)
+    line_item = item(discount_percent: 0, position: 121)
 
-    assert partida.valid?
-    assert_empty partida.errors.full_messages.grep(/no puede tener más de/)
+    assert line_item.valid?
+    assert_empty line_item.errors.full_messages.grep(/no puede tener más de/)
   end
 
   # El contador del buscador cuenta TODAS las partidas, regalos incluidos
   # (decisión del usuario): tiene que cuadrar con lo que se ve en la tabla.
   test "el contador incluye los regalos" do
     fill_order_to(3)
-    regalo = @order.order_items.new(position: 4, quantity: 1, unit_price: 100,
+    gift_item = @order.order_items.new(position: 4, quantity: 1, unit_price: 100,
                                     tax_rate: 16, discount_percent: 100)
-    regalo.gift = true
-    regalo.save!(validate: false)
+    gift_item.gift = true
+    gift_item.save!(validate: false)
 
     assert_equal 4, @order.reload.items_count
   end

@@ -131,10 +131,10 @@ class GenericItemSourceTest < ActionDispatch::IntegrationTest
     add_generic(order, brand: @hitools.id, description: "DOS")
     add_generic(order, supplier: @makita.id, brand: @hitools.id, description: "TRES")
 
-    uno, dos, tres = order.order_items.order(:position).to_a
-    assert_equal [ @makita.id, nil ], [ uno.supplier_id, uno.brand_id ]
-    assert_equal [ nil, @hitools.id ], [ dos.supplier_id, dos.brand_id ]
-    assert_equal [ @makita.id, @hitools.id ], [ tres.supplier_id, tres.brand_id ]
+    one, two, three = order.order_items.order(:position).to_a
+    assert_equal [ @makita.id, nil ], [ one.supplier_id, one.brand_id ]
+    assert_equal [ nil, @hitools.id ], [ two.supplier_id, two.brand_id ]
+    assert_equal [ @makita.id, @hitools.id ], [ three.supplier_id, three.brand_id ]
   end
 
   # "Lo que el combo ofrece, el modelo lo valida": el valor viaja en un campo
@@ -152,11 +152,11 @@ class GenericItemSourceTest < ActionDispatch::IntegrationTest
   # Lo mismo con la marca: la de proveedor ya tenía prueba y la de marca no.
   test "una marca que no es de sus asignaciones se rechaza" do
     user = capturista!("cap_forja_marca", @makita, @hitools)
-    otra = Brand.create!(erp_brand_id: 966_199, name: "AJENA")
+    another_one = Brand.create!(erp_brand_id: 966_199, name: "AJENA")
     login_as "cap_forja_marca"
 
     assert_no_difference "OrderItem.count" do
-      add_generic(order_of(user), brand: otra.id)
+      add_generic(order_of(user), brand: another_one.id)
     end
     assert_match(/La marca no está entre tus asignaciones/, response.body)
   end
@@ -275,13 +275,13 @@ class GenericItemSourceTest < ActionDispatch::IntegrationTest
   # Y "999999" + proveedor no hallaba lo que "999999" solo sí (12ª auditoría).
   test "el filtro de texto encuentra al producto nuevo con o sin proveedor" do
     user = capturista!("cap_mono", @makita)
-    cespol = tagged_order(user, supplier: @makita, description: "CESPOL DE HULE")
+    drain_trap = tagged_order(user, supplier: @makita, description: "CESPOL DE HULE")
     login_as "cap_mono"
 
     [ { product_q: "cespol" }, { product_q: "cespol", supplier_id: @makita.id },
       { product_q: "999999" }, { product_q: "999999", supplier_id: @makita.id } ].each do |filter|
       get captured_orders_report_path(filter)
-      assert_match(/#{cespol.local_folio}/, response.body, filter.inspect)
+      assert_match(/#{drain_trap.local_folio}/, response.body, filter.inspect)
     end
   end
 
@@ -298,27 +298,27 @@ class GenericItemSourceTest < ActionDispatch::IntegrationTest
 
   # El mensaje nombra solo los campos que el capturista tiene en pantalla.
   test "el mensaje pide solo el campo que se muestra" do
-    solo_proveedores = capturista!("cap_solo_prov", @makita, @fandeli)
+    suppliers_only = capturista!("cap_solo_prov", @makita, @fandeli)
     login_as "cap_solo_prov"
-    add_generic(order_of(solo_proveedores))
+    add_generic(order_of(suppliers_only))
     assert_match(/Selecciona el proveedor del producto\./, response.body)
 
-    solo_marcas = capturista!("cap_solo_marca", @hitools, Brand.create!(erp_brand_id: 966_102, name: "ARATY"))
+    brands_only = capturista!("cap_solo_marca", @hitools, Brand.create!(erp_brand_id: 966_102, name: "ARATY"))
     login_as "cap_solo_marca"
-    add_generic(order_of(solo_marcas))
+    add_generic(order_of(brands_only))
     assert_match(/Selecciona la marca del producto\./, response.body)
   end
 
   # Con texto de producto, en el genérico se busca lo que el capturista tecleó.
   test "el texto del filtro busca en la descripción capturada del producto nuevo" do
     user = capturista!("cap_txt", @makita)
-    cespol = tagged_order(user, supplier: @makita, description: "CESPOL DE HULE")
-    taladro = tagged_order(user, supplier: @makita, description: "TALADRO")
+    drain_trap = tagged_order(user, supplier: @makita, description: "CESPOL DE HULE")
+    drill_product = tagged_order(user, supplier: @makita, description: "TALADRO")
     login_as "cap_txt"
 
     get captured_orders_report_path(supplier_id: @makita.id, product_q: "cespol")
 
-    assert_match(/#{cespol.local_folio}/, response.body)
-    assert_no_match(/#{taladro.local_folio}/, response.body)
+    assert_match(/#{drain_trap.local_folio}/, response.body)
+    assert_no_match(/#{drill_product.local_folio}/, response.body)
   end
 end

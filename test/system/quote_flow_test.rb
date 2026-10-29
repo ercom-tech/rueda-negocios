@@ -14,14 +14,14 @@ class QuoteFlowTest < ApplicationSystemTestCase
     @supplier = Supplier.create!(erp_supplier_id: 970_401, name: "MAKITA")
     BusinessRoundPerson.create!(business_round: @round, user: @user, supplier: @supplier, position: 1)
 
-    @taladro = product("TALADRO", 1000)
-    @esmeril = product("ESMERIL", 500)
+    @drill_product = product("TALADRO", 1000)
+    @grinder = product("ESMERIL", 500)
     @order   = Order.create!(user: @user, business_round: @round, client: client, kind: "remission")
     promo = Promotion.create!(erp_promotion_id: 970_401, code: "MAKR20", name: "MAKITA - OAXACA",
                               starts_on: 1.week.ago.to_date, ends_on: 1.week.from_now.to_date)
     promo.promotion_tiers.create!(erp_consecutive: 1, condition_kind: "CM", unit: "MXN",
                                   quantity_from: 1000, quantity_to: 0, discount_percent: 14)
-    [ @taladro, @esmeril ].each { |p| promo.promotion_products.create!(product: p, discount_percent: 0) }
+    [ @drill_product, @grinder ].each { |p| promo.promotion_products.create!(product: p, discount_percent: 0) }
   end
 
   def product(description, price)
@@ -48,35 +48,35 @@ class QuoteFlowTest < ApplicationSystemTestCase
   end
 
   test "al abrir el pedido está seleccionada la partida más reciente" do
-    add_item(@taladro)
-    esmeril = add_item(@esmeril)
+    add_item(@drill_product)
+    grinder = add_item(@grinder)
     sign_in @user
     visit order_path(@order)
 
-    assert_equal dom_id(esmeril), selected_row_id
+    assert_equal dom_id(grinder), selected_row_id
     assert_equal "Cotizar ESMERIL", find("[data-quote-target=button]")["aria-label"]
     quote_and_assert "ESMERIL"
   end
 
   test "tocar otra fila la selecciona" do
-    taladro = add_item(@taladro)
-    add_item(@esmeril)
+    drill_product = add_item(@drill_product)
+    add_item(@grinder)
     sign_in @user
     visit order_path(@order)
 
-    find("##{dom_id(taladro)} td:nth-child(3)").click
+    find("##{dom_id(drill_product)} td:nth-child(3)").click
 
-    assert_equal dom_id(taladro), selected_row_id
+    assert_equal dom_id(drill_product), selected_row_id
     quote_and_assert "TALADRO"
   end
 
   # El alta no le da el foco a la fila nueva: sin esto, agregar y cotizar
   # cotizaba la partida de antes.
   test "al agregar un producto, su fila queda seleccionada" do
-    taladro = add_item(@taladro)
+    drill_product = add_item(@drill_product)
     sign_in @user
     visit order_path(@order)
-    find("##{dom_id(taladro)} td:nth-child(3)").click
+    find("##{dom_id(drill_product)} td:nth-child(3)").click
 
     fill_in "Busca por código, nombre, modelo o No. de parte", with: "ESMERIL"
     click_button "ESMERIL", match: :first
@@ -90,45 +90,45 @@ class QuoteFlowTest < ApplicationSystemTestCase
   # El morph regresa los atributos al HTML del servidor, que no sabe qué fila
   # está seleccionada.
   test "la selección sobrevive al repintado de una cantidad" do
-    taladro = add_item(@taladro)
-    esmeril = add_item(@esmeril)
+    drill_product = add_item(@drill_product)
+    grinder = add_item(@grinder)
     sign_in @user
     visit order_path(@order)
 
-    fill_in "quantity_order_item_#{taladro.id}", with: "3"
-    find("##{dom_id(esmeril)} td:nth-child(3)").click # blur → guardar → morph
-    find("##{dom_id(taladro)} td:nth-child(3)").click
-    assert_selector "##{dom_id(taladro)}", text: "$3,480.00" # total con IVA
+    fill_in "quantity_order_item_#{drill_product.id}", with: "3"
+    find("##{dom_id(grinder)} td:nth-child(3)").click # blur → guardar → morph
+    find("##{dom_id(drill_product)} td:nth-child(3)").click
+    assert_selector "##{dom_id(drill_product)}", text: "$3,480.00" # total con IVA
 
-    assert_equal dom_id(taladro), selected_row_id
+    assert_equal dom_id(drill_product), selected_row_id
     assert_equal "Cotizar TALADRO", find("[data-quote-target=button]")["aria-label"]
     # Forma además de color: la barra negra de la primera celda.
-    assert_match(/4px 0px 0px inset/, evaluate_script("document.querySelector('##{dom_id(taladro)} td').style.boxShadow"))
+    assert_match(/4px 0px 0px inset/, evaluate_script("document.querySelector('##{dom_id(drill_product)} td').style.boxShadow"))
   end
 
   test "al quitar la seleccionada, la toma la más reciente" do
-    taladro = add_item(@taladro)
-    esmeril = add_item(@esmeril)
+    drill_product = add_item(@drill_product)
+    grinder = add_item(@grinder)
     sign_in @user
     visit order_path(@order)
-    assert_equal dom_id(esmeril), selected_row_id
+    assert_equal dom_id(grinder), selected_row_id
 
-    find("##{dom_id(esmeril)} button[aria-label^='Quitar producto']").click
-    within("##{ActionView::RecordIdentifier.dom_id(esmeril, :remove_dialog)}") { click_button "Sí, quitar" }
+    find("##{dom_id(grinder)} button[aria-label^='Quitar producto']").click
+    within("##{ActionView::RecordIdentifier.dom_id(grinder, :remove_dialog)}") { click_button "Sí, quitar" }
 
-    assert_selector "##{dom_id(taladro)}[aria-current=true]", wait: 5
+    assert_selector "##{dom_id(drill_product)}[aria-current=true]", wait: 5
   end
 
   # La partida se quitó desde otra pantalla. Con `find`, la página de error de
   # Rails pedía recargar completo y la captura ENTERA se iba a esa pantalla;
   # sin ella, Turbo escribía "Content missing" (14ª auditoría).
   test "si la partida ya no existe, el modal lo explica en español" do
-    esmeril = add_item(@esmeril)
+    grinder = add_item(@grinder)
     sign_in @user
     visit order_path(@order)
-    assert_equal dom_id(esmeril), selected_row_id
+    assert_equal dom_id(grinder), selected_row_id
 
-    OrderItem.where(id: esmeril.id).delete_all
+    OrderItem.where(id: grinder.id).delete_all
     click_button "Cotizador"
 
     within("#quote-dialog") do
@@ -139,17 +139,32 @@ class QuoteFlowTest < ApplicationSystemTestCase
   end
 
   # La sesión terminó (otro equipo entró con el mismo usuario): la respuesta
-  # es la redirección al login, sin el frame.
-  test "si la sesión terminó, el modal lo dice" do
-    add_item(@esmeril)
+  # es la redirección al login, sin el frame. Se sigue, con el aviso del
+  # servidor; el modal decía "Tu sesión terminó. Recarga" y el motivo real
+  # se perdía al recargar (16ª auditoría).
+  test "si la sesión terminó, lleva al login con el motivo" do
+    add_item(@grinder)
     sign_in @user
     visit order_path(@order)
 
     @user.update_column(:session_token, "otra-sesion")
     click_button "Cotizador"
 
-    within("#quote-dialog") { assert_text "Tu sesión terminó" }
-    assert_current_path order_path(@order)
+    assert_current_path login_path
+    assert_text "Tu usuario inició sesión en otro equipo"
+  end
+
+  test "tras cerrar la rueda, el Cotizador lleva al login con el aviso" do
+    add_item(@grinder)
+    sign_in @user
+    visit order_path(@order)
+
+    BusinessRound.update_all(active: false)
+    click_button "Cotizador"
+
+    assert_current_path login_path
+    assert_text "No hay rueda en curso en esta laptop"
+    assert_no_text "Tu sesión terminó"
   end
 
   # Turbo restaura la página desde su caché con la cotización anterior DENTRO
@@ -158,8 +173,8 @@ class QuoteFlowTest < ApplicationSystemTestCase
   # tick del clic: es lo que el capturista ve antes de que llegue la
   # respuesta.
   test "tras volver con Atrás, al abrir se ve Cargando y no la cotización anterior" do
-    taladro = add_item(@taladro)
-    esmeril = add_item(@esmeril)
+    drill_product = add_item(@drill_product)
+    grinder = add_item(@grinder)
     sign_in @user
     visit order_path(@order)
     quote_and_assert "ESMERIL"
@@ -167,11 +182,11 @@ class QuoteFlowTest < ApplicationSystemTestCase
     click_link "← Volver al menú"
     assert_text "¿Qué quieres"
     page.go_back
-    assert_selector "##{dom_id(esmeril)}"
+    assert_selector "##{dom_id(grinder)}"
 
     shown = evaluate_script(<<~JS)
       (() => {
-        document.querySelector("##{dom_id(taladro)} td:nth-child(3)").click()
+        document.querySelector("##{dom_id(drill_product)} td:nth-child(3)").click()
         document.querySelector("[data-quote-target=button]").click()
         return document.querySelector("#quote-frame").textContent.trim()
       })()
@@ -189,17 +204,17 @@ class QuoteFlowTest < ApplicationSystemTestCase
     within("#quote-dialog") { assert_text "todavía no tiene productos para cotizar" }
   end
 
-  # Misma partida dos veces: Turbo no vuelve a pedir un `src` que no cambió,
-  # así que la segunda apertura se quedaba en "Cargando" —o, sin la plantilla,
-  # con las cifras de antes—. `quote#open` lo recarga a mano (15ª auditoría,
-  # hueco de cobertura: quitar el `reload()` dejaba la suite en verde).
+  # Misma partida dos veces: la segunda apertura tiene que traer las cifras de
+  # ahora y no quedarse en "Cargando". `quote#open` reasigna el `src`, que
+  # recarga aunque sea el mismo — si dejara de hacerlo (p. ej., saltándose la
+  # reasignación cuando no cambió), esta prueba se pone roja (15ª y 16ª).
   test "cotizar dos veces la misma partida trae las cifras de ahora" do
-    taladro = add_item(@taladro)
+    drill_product = add_item(@drill_product)
     sign_in @user
     visit order_path(@order)
     quote_and_assert "TALADRO"
 
-    taladro.update_columns(unit_price: 2345)
+    drill_product.update_columns(unit_price: 2345)
     quote_and_assert "2,345"
   end
 end

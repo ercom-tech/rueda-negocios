@@ -221,16 +221,23 @@ class Order < ApplicationRecord
   # una cotización (15ª auditoría). El género va en la tabla y no en una regla:
   # "guardado/guardada", "este/esta", "al/a la".
   DOCUMENT_TEXTS = {
-    "sale" => { noun: "pedido", the: "el pedido", this: "este pedido", a: "un pedido",
+    "sale" => { noun: "pedido", plural: "pedidos", the: "el pedido", this: "este pedido", a: "un pedido",
                 to_the: "al pedido", of_the: "del pedido", another: "otro pedido",
                 saved: "guardado", discarded: "Pedido descartado." },
-    "estimate" => { noun: "cotización", the: "la cotización", this: "esta cotización", a: "una cotización",
+    "estimate" => { noun: "cotización", plural: "cotizaciones", the: "la cotización", this: "esta cotización", a: "una cotización",
                     to_the: "a la cotización", of_the: "de la cotización", another: "otra cotización",
                     saved: "guardada", discarded: "Cotización descartada." }
   }.freeze
 
   def document_text(form)
-    DOCUMENT_TEXTS.fetch(document).fetch(form)
+    self.class.document_text(document, form)
+  end
+
+  # Para quien habla de un TIPO y no de un registro (el reporte, el panel). El
+  # plural también vive aquí: `pluralize` es el inflector inglés y escrito a
+  # mano en cada lugar es como salió "2 cotizacións" (15ª, 16ª auditorías).
+  def self.document_text(document, form)
+    DOCUMENT_TEXTS.fetch(document.to_s).fetch(form)
   end
 
   # "pedido" / "cotización".

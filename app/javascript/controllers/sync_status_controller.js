@@ -54,9 +54,22 @@ export default class extends Controller {
 
   async refresh() {
     try {
+      // `text/html` como alternativa: si la sesión terminó, el fetch SIGUE la
+      // redirección al login, que solo sabe responder HTML — con el stream a
+      // secas contestaba 406 y aquí se callaba. El menú responde su stream
+      // igual (16ª auditoría).
       const res = await fetch(this.urlValue, {
-        headers: { Accept: "text/vnd.turbo-stream.html" }
+        headers: { Accept: "text/vnd.turbo-stream.html, text/html" }
       })
+      // La sesión del servidor terminó (otro equipo entró con su usuario): el
+      // panel giraba "en progreso" para siempre sin decir nada. Se navega con
+      // la respuesta ya recibida, que trae el aviso (ver la regla del fetch en
+      // convenciones-codigo).
+      if (res.redirected) {
+        window.Turbo.visit(res.url, { action: "replace",
+          response: { statusCode: res.status, redirected: true, responseHTML: await res.text() } })
+        return
+      }
       if (!res.ok) return
 
       // Turbo aplica el stream: reemplaza #server-menu y, con él, este mismo

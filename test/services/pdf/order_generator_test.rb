@@ -121,31 +121,31 @@ module Pdf
     # Los tres tramos son los que un barrido de 1 a 60 marcó como defectuosos
     # antes del arreglo — 28 de 180 combinaciones.
     test "el pie completo cae en UNA hoja para cualquier numero de partidas" do
-      casos = [
+      cases = [
         { rango: 18..24, description: "PRODUCTO",          gift: false },
         { rango: 11..15, description: DESCRIPCION_LARGA,   gift: false },
         { rango: 9..13,  description: DESCRIPCION_LARGA,   gift: true }
       ]
 
-      casos.each do |caso|
+      cases.each do |caso|
         caso[:rango].each do |n|
           order = order_with_items(n, description: caso[:description], gift: caso[:gift])
           gen   = OrderGenerator.new(order)
           gen.render # llena los importes impresos
-          letra = gen.send(:amount_in_words, gen.send(:printed_total, :total))
+          amount_words = gen.send(:amount_in_words, gen.send(:printed_total, :total))
           total = gen.send(:number_to_currency, gen.send(:printed_total, :total))
 
           pages = pdf_pages(order)
-          etiqueta = "#{n} partidas (#{caso[:description][0, 8]}, regalos=#{caso[:gift]})"
+          label_text = "#{n} partidas (#{caso[:description][0, 8]}, regalos=#{caso[:gift]})"
 
-          completas = pages.count { |p| p.include?(letra) && p.include?(total) }
-          assert_equal 1, completas,
-                       "con #{etiqueta} el pie no quedó completo en una sola hoja " \
-                       "(#{pages.size} hojas; importe en letra y Total juntos en #{completas})"
+          complete_ones = pages.count { |p| p.include?(amount_words) && p.include?(total) }
+          assert_equal 1, complete_ones,
+                       "con #{label_text} el pie no quedó completo en una sola hoja " \
+                       "(#{pages.size} hojas; importe en letra y Total juntos en #{complete_ones})"
 
           # Una hoja en blanco trae solo el folio y "Página N de M".
-          vacias = pages.count { |p| p.length < 60 }
-          assert_equal 0, vacias, "con #{etiqueta} quedaron #{vacias} hojas en blanco"
+          empty_ones = pages.count { |p| p.length < 60 }
+          assert_equal 0, empty_ones, "con #{label_text} quedaron #{empty_ones} hojas en blanco"
         end
       end
     end
@@ -163,11 +163,11 @@ module Pdf
       item!(quantity: 1, price: 100)
       @order.update_column(:created_at, ::Time.new(2026, 8, 11, 19, 30))
 
-      texto = pdf_text
-      esperado = @order.created_at.localtime.strftime("%d/%m/%Y")
+      text_value = pdf_text
+      expected_value = @order.created_at.localtime.strftime("%d/%m/%Y")
 
-      assert_includes texto, esperado
-      assert_includes texto, @order.created_at.localtime.strftime("%d/%m/%Y %H:%M")
+      assert_includes text_value, expected_value
+      assert_includes text_value, @order.created_at.localtime.strftime("%d/%m/%Y %H:%M")
     end
 
     # El cliente cuadra su copia sumando la columna Total.
@@ -180,25 +180,25 @@ module Pdf
       generator.render # llena el memo de importes impresos
       items = generator.send(:printed_items)
 
-      suma_columna = items.sum { |i| i[:total] }
-      pie          = generator.send(:printed_total, :total)
-      assert_equal suma_columna, pie
+      column_sum = items.sum { |i| i[:total] }
+      footer          = generator.send(:printed_total, :total)
+      assert_equal column_sum, footer
 
       # Y el pie cuadra consigo mismo: Subtotal − Descuento + IVA = Total.
-      assert_equal pie, generator.send(:printed_total, :amount) -
+      assert_equal footer, generator.send(:printed_total, :amount) -
                         generator.send(:printed_total, :discount) +
                         generator.send(:printed_total, :tax)
-      assert_equal pie, pie.round(2), "el total impreso va a 2 decimales"
+      assert_equal footer, footer.round(2), "el total impreso va a 2 decimales"
     end
 
     test "un pedido de 45 partidas numera todas sus páginas con el folio" do
       45.times { item!(quantity: 1, price: 1000) }
       @order.capture!
 
-      texto = pdf_text
+      text_value = pdf_text
 
-      assert_includes texto, "#{@order.folio} · Página 1 de 2"
-      assert_includes texto, "#{@order.folio} · Página 2 de 2"
+      assert_includes text_value, "#{@order.folio} · Página 1 de 2"
+      assert_includes text_value, "#{@order.folio} · Página 2 de 2"
     end
 
     # `inline_format: true` hace que Prawn parsee el texto como su
@@ -254,9 +254,9 @@ module Pdf
       pdf.font "Helvetica"
       top = pdf.cursor
       gen.send(:render_info, pdf)
-      reservado = top - pdf.cursor
-      ocupado   = gen.send(:text_height, pdf, gen.send(:left_info), 470)
-      [ reservado, ocupado ]
+      reserved = top - pdf.cursor
+      taken_slot   = gen.send(:text_height, pdf, gen.send(:left_info), 470)
+      [ reserved, taken_slot ]
     end
 
     # El caso que lo destapó: una factura con dirección larga suma RFC/Razón
@@ -273,11 +273,11 @@ module Pdf
       @order.update!(kind: "invoice", client_tax_profile: tax, cfdi_use: cfdi,
                      client_receipt_profile: nil, client_branch: branch, dividir_facturas: 5000)
 
-      reservado, ocupado = espacio_reservado_y_ocupado(@order)
+      reserved, taken_slot = espacio_reservado_y_ocupado(@order)
 
-      assert_operator ocupado, :>, OrderGenerator::INFO_MIN_HEIGHT,
+      assert_operator taken_slot, :>, OrderGenerator::INFO_MIN_HEIGHT,
                       "si este caso no rebasa el mínimo, la prueba no está midiendo el caso largo"
-      assert_operator reservado, :>=, ocupado + OrderGenerator::INFO_GAP,
+      assert_operator reserved, :>=, taken_slot + OrderGenerator::INFO_GAP,
                       "la tabla arrancaría encima del bloque y taparía sus últimas líneas"
     end
 
@@ -285,10 +285,10 @@ module Pdf
     test "un pedido corto conserva el espacio minimo" do
       item!(quantity: 1, price: 100)
 
-      reservado, ocupado = espacio_reservado_y_ocupado(@order)
+      reserved, taken_slot = espacio_reservado_y_ocupado(@order)
 
-      assert_operator ocupado, :<, OrderGenerator::INFO_MIN_HEIGHT
-      assert_equal OrderGenerator::INFO_MIN_HEIGHT + OrderGenerator::INFO_GAP, reservado
+      assert_operator taken_slot, :<, OrderGenerator::INFO_MIN_HEIGHT
+      assert_equal OrderGenerator::INFO_MIN_HEIGHT + OrderGenerator::INFO_GAP, reserved
     end
   end
 end

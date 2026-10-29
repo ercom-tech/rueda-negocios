@@ -107,10 +107,10 @@ class PromotionsTest < ActionDispatch::IntegrationTest
   # El modal es uno por PROMOCIÓN, no por fila: con 45 renglones del mismo
   # proveedor serían 45 copias idénticas repintándose en cada tecla.
   test "varias partidas de la misma promoción comparten un solo modal" do
-    otro = make_product("ESMERIL", 500)
-    @promo.promotion_products.create!(product: otro, discount_percent: 0)
+    other_one = make_product("ESMERIL", 500)
+    @promo.promotion_products.create!(product: other_one, discount_percent: 0)
     add_item(@product, 2)
-    add_item(otro, 2)
+    add_item(other_one, 2)
 
     get order_path(@order)
 
@@ -135,10 +135,10 @@ class PromotionsTest < ActionDispatch::IntegrationTest
   # Con varios regalos el gancho da la cuenta y la escalera los detalla: dos
   # nombres largos del ERP dentro de la frase la vuelven ilegible.
   test "con varios regalos el gancho cuenta y la escalera nombra" do
-    uno = make_product("EXHIBIDOR HERRAJES ZERO FUG 6010", 1.28)
-    dos = make_product("EXHIBIDOR DE LINEA 6011", 0.35)
-    @promo.promotion_tiers.last.promotion_gifts.create!(product: uno, quantity: 1)
-    @promo.promotion_tiers.last.promotion_gifts.create!(product: dos, quantity: 1)
+    one = make_product("EXHIBIDOR HERRAJES ZERO FUG 6010", 1.28)
+    two = make_product("EXHIBIDOR DE LINEA 6011", 0.35)
+    @promo.promotion_tiers.last.promotion_gifts.create!(product: one, quantity: 1)
+    @promo.promotion_tiers.last.promotion_gifts.create!(product: two, quantity: 1)
     add_item(@product, 2)
 
     get order_promotion_path(@order, @promo)
@@ -182,10 +182,10 @@ class PromotionsTest < ActionDispatch::IntegrationTest
   # Dos regalos que no se pudieron agregar (sin precio en el ERP): el aviso los
   # nombra en español. `to_sentence` de Rails decía "A and B".
   test "el aviso de regalos que no entraron los nombra en español" do
-    uno = make_product("EXHIBIDOR HERRAJES", 0)
-    dos = make_product("EXHIBIDOR DE LINEA", 0)
-    @promo.promotion_tiers.last.promotion_gifts.create!(product: uno, quantity: 1)
-    @promo.promotion_tiers.last.promotion_gifts.create!(product: dos, quantity: 1)
+    one = make_product("EXHIBIDOR HERRAJES", 0)
+    two = make_product("EXHIBIDOR DE LINEA", 0)
+    @promo.promotion_tiers.last.promotion_gifts.create!(product: one, quantity: 1)
+    @promo.promotion_tiers.last.promotion_gifts.create!(product: two, quantity: 1)
     add_item(@product, 6)   # 6,000 → escalón del regalo
 
     post order_promotions_path(@order), params: { promotion_id: @promo.id }
@@ -203,9 +203,9 @@ class PromotionsTest < ActionDispatch::IntegrationTest
   end
 
   test "sin alcanzar el mínimo, aplicar responde con el motivo y no toca nada" do
-    barato = make_product("BROCA", 10)
-    @promo.promotion_products.create!(product: barato, discount_percent: 0)
-    add_item(barato, 1)   # 10 — muy por debajo del primer escalón
+    cheap = make_product("BROCA", 10)
+    @promo.promotion_products.create!(product: cheap, discount_percent: 0)
+    add_item(cheap, 1)   # 10 — muy por debajo del primer escalón
 
     post order_promotions_path(@order), params: { promotion_id: @promo.id }
 
@@ -234,24 +234,24 @@ class PromotionsTest < ActionDispatch::IntegrationTest
   # --- Los candados ---------------------------------------------------------
 
   test "con la promoción aplicada no se puede agregar otro producto suyo" do
-    otro = make_product("ESMERIL", 500)
-    @promo.promotion_products.create!(product: otro, discount_percent: 0)
+    other_one = make_product("ESMERIL", 500)
+    @promo.promotion_products.create!(product: other_one, discount_percent: 0)
     add_item(@product, 6)
     post order_promotions_path(@order), params: { promotion_id: @promo.id }
 
     assert_no_difference -> { @order.order_items.count } do
-      post order_order_items_path(@order), params: { product_id: otro.id }
+      post order_order_items_path(@order), params: { product_id: other_one.id }
     end
     assert_match(/Quita la promoción para agregarlo/, response.body)
   end
 
   test "un producto ajeno a la promoción sí se puede agregar" do
-    ajeno = make_product("MARTILLO", 300)
+    foreign_draft = make_product("MARTILLO", 300)
     add_item(@product, 6)
     post order_promotions_path(@order), params: { promotion_id: @promo.id }
 
     assert_difference -> { @order.order_items.count }, 1 do
-      post order_order_items_path(@order), params: { product_id: ajeno.id }
+      post order_order_items_path(@order), params: { product_id: foreign_draft.id }
     end
   end
 
@@ -313,11 +313,11 @@ class PromotionsTest < ActionDispatch::IntegrationTest
   # Con override por producto, el modal leía el 0% del escalón y el flash
   # tomaba el de la primera partida como si valiera para todas.
   test "el modal y el flash anuncian el descuento que de verdad se aplica" do
-    otro = make_product("CANDADO", 500)
-    @promo.promotion_products.create!(product: otro, discount_percent: 20)
+    other_one = make_product("CANDADO", 500)
+    @promo.promotion_products.create!(product: other_one, discount_percent: 20)
     @promo.promotion_products.find_by(product: @product).update!(discount_percent: 10)
     add_item(@product, 6)
-    add_item(otro, 1)
+    add_item(other_one, 1)
 
     get order_promotion_path(@order, @promo)
     assert_match(/10% y 20% de descuento/, response.body)
@@ -436,5 +436,7 @@ class PromotionsTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to root_path
     assert_match(/ya no está en esta laptop/, flash[:alert])
+  ensure
+    fired = true # desarma el stub aunque la prueba no haya llegado a él (16ª)
   end
 end

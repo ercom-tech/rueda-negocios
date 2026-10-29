@@ -9,30 +9,30 @@ class ClientTest < ActiveSupport::TestCase
   # al alcance de las pruebas de modelo, que es donde se puede fijar.
 
   setup do
-    @exacto   = Client.create!(erp_client_key: "FERRE1", name: "FERRETERIA DEL NORTE",
+    @exact   = Client.create!(erp_client_key: "FERRE1", name: "FERRETERIA DEL NORTE",
                                commercial_name: "FERREMAQ")
-    @contiene = Client.create!(erp_client_key: "ABC001", name: "DISTRIBUIDORA FERREMAQ SUR",
+    @containing = Client.create!(erp_client_key: "ABC001", name: "DISTRIBUIDORA FERREMAQ SUR",
                                commercial_name: "DISTRISUR")
-    @otro     = Client.create!(erp_client_key: "XYZ999", name: "TORNILLOS DEL GOLFO",
+    @other_user     = Client.create!(erp_client_key: "XYZ999", name: "TORNILLOS DEL GOLFO",
                                commercial_name: "TORGOLFO")
   end
 
   test "encuentra por clave, por nombre y por nombre comercial" do
-    assert_includes Client.search("FERRE1"), @exacto
-    assert_includes Client.search("DEL NORTE"), @exacto
-    assert_includes Client.search("TORGOLFO"), @otro
+    assert_includes Client.search("FERRE1"), @exact
+    assert_includes Client.search("DEL NORTE"), @exact
+    assert_includes Client.search("TORGOLFO"), @other_user
   end
 
   test "no distingue mayúsculas" do
-    assert_includes Client.search("ferremaq"), @exacto
+    assert_includes Client.search("ferremaq"), @exact
   end
 
   # La relevancia es la razón de ser del scope: quien teclea "FERREMAQ" espera
   # primero al que SE LLAMA así, no al que lo lleva a media razón social.
   test "primero los que empiezan con lo tecleado" do
-    resultados = Client.search("FERREMAQ").to_a
+    outcomes = Client.search("FERREMAQ").to_a
 
-    assert_equal [ @exacto, @contiene ], resultados
+    assert_equal [ @exact, @containing ], outcomes
   end
 
   test "una búsqueda vacía no devuelve nada" do

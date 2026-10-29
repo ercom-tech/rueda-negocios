@@ -57,8 +57,8 @@ viejo quedó caduco — verificado en la 6ª auditoría:
   partida y `captured_at` del pedido; las del 2026-10-08: `price_overrides`
   y `price_from_file`/`erp_unit_price` de la partida; la del 2026-10-09:
   `pieces_per_box`; y la del 2026-10-27: `document`, `client_id`/`kind`
-  opcionales, el CHECK y `last_estimate_number` — la lista completa y su
-  comprobación viven en `docs/despliegue-laptop.md`) + `bin/rails
+  opcionales, el CHECK y `last_estimate_number`; su comprobación —ninguna
+  pendiente— es el paso 6 de `docs/despliegue-laptop.md`) + `bin/rails
   tailwindcss:build` (obligatorio: hay clases nuevas en cada lote).
   **`bundle install` y reiniciar el servicio son obligatorios en este lote:**
   entra la gema `roo` (leer el Excel de "Cambiar precios"), y un servidor que
@@ -207,7 +207,7 @@ aparte de la suite normal.
   y `estimate_gone_flow_test`).
 - **Paso por múltiplos del empaque** con las flechas ↑/↓ (`step="any"` y el
   paso implementado a mano) y el auto-guardado en `blur` solo si cambió.
-- **Combo custom** (`shared/_custom_select`) y los pills de contexto.
+- **Pills de contexto** (el combo custom ya lo recorre `header_combo_test`).
 - **Paso 1**: cambio de tipo factura/remisión y los campos que se ocultan.
 
 ### Unificar el estilo de las URLs (kebab-case vs snake_case)

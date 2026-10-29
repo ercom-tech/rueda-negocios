@@ -34,9 +34,9 @@ class ItemsDisplayOrderTest < ActionDispatch::IntegrationTest
     get order_path(@order)
 
     assert_response :success
-    posiciones = %w[UNO DOS TRES].map { |n| response.body.index(">#{n}<") || response.body.index(n) }
-    assert_operator posiciones[2], :<, posiciones[1], "TRES antes que DOS"
-    assert_operator posiciones[1], :<, posiciones[0], "DOS antes que UNO"
+    positions = %w[UNO DOS TRES].map { |n| response.body.index(">#{n}<") || response.body.index(n) }
+    assert_operator positions[2], :<, positions[1], "TRES antes que DOS"
+    assert_operator positions[1], :<, positions[0], "DOS antes que UNO"
   end
 
   # La columna "Consecutivo" muestra `item.position`, o sea el número real de
@@ -47,8 +47,8 @@ class ItemsDisplayOrderTest < ActionDispatch::IntegrationTest
     # La segunda celda de cada fila es "Consecutivo" (la primera es el bote de
     # basura). Por selector y no por regex: la celda del CÓDIGO usa las mismas
     # clases y se colaba en la lista.
-    consecutivos = css_select("tbody tr td:nth-child(2)").map { |td| td.text.strip }.first(3)
-    assert_equal %w[3 2 1], consecutivos
+    sequence = css_select("tbody tr td:nth-child(2)").map { |td| td.text.strip }.first(3)
+    assert_equal %w[3 2 1], sequence
   end
 
   # El candado: la asociación NO se tocó, así que todo lo que deriva el orden de
@@ -62,8 +62,8 @@ class ItemsDisplayOrderTest < ActionDispatch::IntegrationTest
     generator = Pdf::OrderGenerator.new(@order.reload)
     generator.render
 
-    impresas = generator.send(:printed_items).map { |i| i[:description] }
+    printed = generator.send(:printed_items).map { |i| i[:description] }
 
-    assert_equal %w[UNO DOS TRES], impresas, "el papel del cliente va 1, 2, 3"
+    assert_equal %w[UNO DOS TRES], printed, "el papel del cliente va 1, 2, 3"
   end
 end

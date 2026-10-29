@@ -22,8 +22,9 @@
 <% title = "justify-self-center text-right text-2xl font-extrabold leading-tight" %>
 <% desc  = "text-left text-xl leading-snug" %>
 
-<%# `sync-status` PIDE el estado al conectar y, mientras hay corrida viva,
-    sigue preguntando. El broadcast de SyncRun se pierde cuando la corrida
+<%# `sync-status` pregunta el estado cada 3 s MIENTRAS hay corrida viva (al
+    conectar con una corrida viva arranca a preguntar; sin corrida no pide
+    nada: preguntar siempre se realimentaría, ver el controller). El broadcast de SyncRun se pierde cuando la corrida
     termina durante la navegación del redirect —el cable se está
     re-suscribiendo y con el adaptador async no hay reenvío—, y entonces el
     panel se queda "en progreso" hasta que alguien recarga. Va en este div
@@ -95,7 +96,7 @@
           "#{transmitted == 1 ? 'pedido' : 'pedidos'} ya " \
           "#{transmitted == 1 ? 'transmitido' : 'transmitidos'}." if transmitted.positive?),
          ("Se #{estimates == 1 ? 'borrará' : 'borrarán'} #{estimates} " \
-          "#{estimates == 1 ? 'cotización' : 'cotizaciones'}." if estimates.positive?),
+          "#{Order.document_text('estimate', estimates == 1 ? :noun : :plural)}." if estimates.positive?),
          "¿Continuar?"
        ].compact.join(" ") %>
     <%= render "home/confirm_dialog", title: "Obtener información",

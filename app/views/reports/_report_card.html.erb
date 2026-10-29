@@ -7,7 +7,8 @@
 <%# En "Próximamente" el fondo se atenúa con alpha (bg .../60), que —a diferencia
     de opacity— NO afecta a los hijos, así el badge queda a plena opacidad. %>
 <% card_bg = soon ? "bg-brand-gold/60" : "bg-brand-gold" %>
-<%# `px-4` y no `p-6`: con cinco tarjetas en laptop (1024 px) la tarjeta mide
+<%# `px-4` y no `p-6`: con cinco tarjetas desde `lg` (1024 px, que es la tablet
+    horizontal, no la laptop) la tarjeta mide
     159 px y "Cotizaciones" a text-xl mide 122: con 24 px por lado se salía
     11 px del marco (medido 2026-10-28). El contenido va centrado, así que el
     relleno lateral no se nota.

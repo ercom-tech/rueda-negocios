@@ -44,7 +44,7 @@ class ServerResolvesDraftTest < ActionDispatch::IntegrationTest
                            role: "server", active: true)
     @cap    = User.create!(erp_person_id: 969_002, username: "cap_draft", password: "secret123",
                            role: "capturista", active: true, name: "JUAN", paternal_surname: "PEREZ")
-    @otro   = User.create!(erp_person_id: 969_003, username: "cap_otro", password: "secret123",
+    @other_user   = User.create!(erp_person_id: 969_003, username: "cap_otro", password: "secret123",
                            role: "capturista", active: true)
     @round  = BusinessRound.create!(erp_round_id: 969_001, name: "Rueda 969", active: true)
     Setting.instance.update!(selected_round_erp_id: 969_001, selected_round_name: "Rueda 969")
@@ -285,14 +285,14 @@ class ServerResolvesDraftTest < ActionDispatch::IntegrationTest
 
   # El camino normal no cambia: el candado no estorba cuando nadie más escribe.
   test "el servidor sigue pudiendo guardar y descartar un borrador quieto" do
-    guardado  = draft_with_items!
-    descartado = draft_with_items!
+    saved_order  = draft_with_items!
+    discarded = draft_with_items!
     login_as "srv_draft"
 
-    post capture_order_path(guardado)
-    assert_equal "captured", guardado.reload.status
+    post capture_order_path(saved_order)
+    assert_equal "captured", saved_order.reload.status
 
-    delete order_path(descartado)
-    assert_not Order.exists?(descartado.id)
+    delete order_path(discarded)
+    assert_not Order.exists?(discarded.id)
   end
 end

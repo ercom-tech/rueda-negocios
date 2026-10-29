@@ -41,10 +41,10 @@ class PromotionsQuoteTest < ActiveSupport::TestCase
 
   # Cifras escritas a mano (no derivadas del código): pieza $100, caja de 10.
   test "un renglón por escalón, de menor a mayor, con pieza y caja" do
-    lija = product(price: 100, pieces_per_box: 10)
-    promotion(products: [ lija ], tiers: TIERS)
+    sandpaper = product(price: 100, pieces_per_box: 10)
+    promotion(products: [ sandpaper ], tiers: TIERS)
 
-    rows = Promotions::Quote.new(item_for(lija)).rows
+    rows = Promotions::Quote.new(item_for(sandpaper)).rows
 
     assert_equal [ "En la compra de entre $10,000 y $24,999", "En la compra de entre $25,000 y $74,999",
                    "En la compra mínima de $125,000" ], rows.map(&:condition)
@@ -56,10 +56,10 @@ class PromotionsQuoteTest < ActiveSupport::TestCase
   # Caja de 500 de $0.40 al 7.85%: con la pieza ya redondeada ($0.37 × 500)
   # saldría en $185.00; redondeando una sola vez, como una partida, $184.30.
   test "la caja con promoción se redondea al final, no pieza por pieza" do
-    lija = product(price: BigDecimal("0.4"), pieces_per_box: 500)
-    promotion(products: [ lija ], tiers: [ { kind: "CM", from: 1, percent: 7.85 } ])
+    sandpaper = product(price: BigDecimal("0.4"), pieces_per_box: 500)
+    promotion(products: [ sandpaper ], tiers: [ { kind: "CM", from: 1, percent: 7.85 } ])
 
-    row = Promotions::Quote.new(item_for(lija)).rows.sole
+    row = Promotions::Quote.new(item_for(sandpaper)).rows.sole
 
     assert_equal BigDecimal("0.37"), row.promo_piece_price
     assert_equal BigDecimal("184.3"), row.promo_box_price
@@ -67,9 +67,9 @@ class PromotionsQuoteTest < ActiveSupport::TestCase
 
   test "sin piezas por caja, o con caja de 1, no hay columnas de caja" do
     [ nil, 1 ].each do |pieces|
-      lija = product(pieces_per_box: pieces)
-      promotion(products: [ lija ], tiers: TIERS)
-      quote = Promotions::Quote.new(item_for(lija))
+      sandpaper = product(pieces_per_box: pieces)
+      promotion(products: [ sandpaper ], tiers: TIERS)
+      quote = Promotions::Quote.new(item_for(sandpaper))
 
       assert_not quote.boxes?, pieces.inspect
       assert quote.rows.all? { |row| row.box_price.nil? && row.promo_box_price.nil? }, pieces.inspect
@@ -78,19 +78,19 @@ class PromotionsQuoteTest < ActiveSupport::TestCase
 
   # FANAL: el escalón en 0% y el descuento real en el código.
   test "el descuento propio del producto gana sobre el del escalón" do
-    lija = product(price: 100)
-    promotion(products: [ lija ], tiers: [ { kind: "CM", from: 1, percent: 0 } ], override: 20)
+    sandpaper = product(price: 100)
+    promotion(products: [ sandpaper ], tiers: [ { kind: "CM", from: 1, percent: 0 } ], override: 20)
 
-    row = Promotions::Quote.new(item_for(lija)).rows.sole
+    row = Promotions::Quote.new(item_for(sandpaper)).rows.sole
 
     assert_equal [ 20, 80 ], [ row.percent, row.promo_piece_price ]
   end
 
   test "un escalón 'por cada' no se cotiza" do
-    lija = product
-    promotion(products: [ lija ], tiers: [ { kind: "PC", from: 10, percent: 5 }, { kind: "CM", from: 1, percent: 3 } ])
+    sandpaper = product
+    promotion(products: [ sandpaper ], tiers: [ { kind: "PC", from: 10, percent: 5 }, { kind: "CM", from: 1, percent: 3 } ])
 
-    assert_equal [ 3 ], Promotions::Quote.new(item_for(lija)).rows.map(&:percent)
+    assert_equal [ 3 ], Promotions::Quote.new(item_for(sandpaper)).rows.map(&:percent)
   end
 
   test "un producto sin promoción no tiene renglones" do
@@ -103,10 +103,10 @@ class PromotionsQuoteTest < ActiveSupport::TestCase
   # El precio de la partida, no el del catálogo: un archivo de precios
   # cargado DESPUÉS de agregarla no cambia lo que ese pedido cobra.
   test "cotiza con el precio de la partida" do
-    lija = product(price: 100)
-    promotion(products: [ lija ], tiers: [ { kind: "CM", from: 1, percent: 10 } ])
-    item = item_for(lija)
-    lija.price.update!(credit_wholesale_price: 300)
+    sandpaper = product(price: 100)
+    promotion(products: [ sandpaper ], tiers: [ { kind: "CM", from: 1, percent: 10 } ])
+    item = item_for(sandpaper)
+    sandpaper.price.update!(credit_wholesale_price: 300)
 
     assert_equal 90, Promotions::Quote.new(item.reload).rows.sole.promo_piece_price
   end
@@ -116,9 +116,9 @@ class PromotionsQuoteTest < ActiveSupport::TestCase
   test "solo la unidad PZA cuenta como pieza" do
     { "PZA." => true, "PZA" => true, " pza. " => true, "2PZA" => false, "CAJA" => false, "PQ10" => false }
       .each do |unit, expected|
-        lija = product
-        lija.update!(unit:)
-        assert_equal expected, Promotions::Quote.new(item_for(lija)).by_piece?, unit.inspect
+        sandpaper = product
+        sandpaper.update!(unit:)
+        assert_equal expected, Promotions::Quote.new(item_for(sandpaper)).by_piece?, unit.inspect
       end
   end
 
@@ -127,11 +127,11 @@ class PromotionsQuoteTest < ActiveSupport::TestCase
   # promoción mostraba la flama y el Cotizador decía "no está en ninguna"
   # (14ª auditoría: cambiar a `Date.current` dejaba la suite en verde).
   test "la vigencia se mide en la fecha de captura del pedido, no hoy" do
-    lija = product(price: 100)
-    promo = promotion(products: [ lija ], tiers: [ { kind: "CM", from: 1, percent: 10 } ])
+    sandpaper = product(price: 100)
+    promo = promotion(products: [ sandpaper ], tiers: [ { kind: "CM", from: 1, percent: 10 } ])
     promo.update!(starts_on: 10.days.ago.to_date, ends_on: 3.days.ago.to_date)
     @order.update_columns(created_at: 5.days.ago)
 
-    assert_equal promo, Promotions::Quote.new(item_for(lija)).promotion
+    assert_equal promo, Promotions::Quote.new(item_for(sandpaper)).promotion
   end
 end

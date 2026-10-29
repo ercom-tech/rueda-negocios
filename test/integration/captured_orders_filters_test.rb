@@ -218,25 +218,25 @@ class CapturedOrdersFiltersTest < ActionDispatch::IntegrationTest
     @makita  = Supplier.create!(erp_supplier_id: 993, name: "MAKITA")
     @stihl   = Supplier.create!(erp_supplier_id: 994, name: "STIHL")
     @m_brand = Brand.create!(erp_brand_id: 993, name: "MARCA MAKITA")
-    @disco   = Product.create!(erp_product_id: 19_163, description: "DISCO CRTE 7", brand: @m_brand, unit: "PZA")
-    @motosi  = Product.create!(erp_product_id: 44_444, description: "MOTOSIERRA", unit: "PZA")
-    ProductSupplier.create!(product: @disco,  supplier: @makita)
-    ProductSupplier.create!(product: @motosi, supplier: @stihl)
+    @disc   = Product.create!(erp_product_id: 19_163, description: "DISCO CRTE 7", brand: @m_brand, unit: "PZA")
+    @chainsaw  = Product.create!(erp_product_id: 44_444, description: "MOTOSIERRA", unit: "PZA")
+    ProductSupplier.create!(product: @disc,  supplier: @makita)
+    ProductSupplier.create!(product: @chainsaw, supplier: @stihl)
   end
 
   # Pedido mixto: una partida MAKITA ($116) y una STIHL ($232).
   def mixed_kinds_order!
     o = Order.create!(user: @ana, business_round: @round, client: @c1, kind: "remission",
                       status: "captured", local_folio: next_folio)
-    o.order_items.create!(position: 1, product: @disco,  quantity: 1, unit_price: 100, tax_rate: 16, discount_percent: 0)
-    o.order_items.create!(position: 2, product: @motosi, quantity: 2, unit_price: 100, tax_rate: 16, discount_percent: 0)
+    o.order_items.create!(position: 1, product: @disc,  quantity: 1, unit_price: 100, tax_rate: 16, discount_percent: 0)
+    o.order_items.create!(position: 2, product: @chainsaw, quantity: 2, unit_price: 100, tax_rate: 16, discount_percent: 0)
     o
   end
 
   test "el filtro de proveedor trae los pedidos que traen al menos una partida suya" do
     build_catalog!
     mixed_kinds_order!
-    order!(user: @ana, client: @c1, product: @motosi)
+    order!(user: @ana, client: @c1, product: @chainsaw)
     login_as("srv990")
 
     get captured_orders_report_path(supplier_id: @makita.id)

@@ -92,9 +92,9 @@ class OrderItemsTest < ApplicationSystemTestCase
   # recreara, el foco y el estado de los campos se perderían en cada alta.
   test "una partida agregada por el buscador aparece arriba, sin recrear la tabla" do
     supplier = Supplier.find_by(erp_supplier_id: 970_001)
-    nuevo = Product.create!(erp_product_id: 970_003, description: "TALADRO NUEVO", max_discount: 50)
-    Price.create!(product: nuevo, credit_wholesale_price: 500, tax_rate: 0)
-    ProductSupplier.create!(product: nuevo, supplier: supplier)
+    new_record = Product.create!(erp_product_id: 970_003, description: "TALADRO NUEVO", max_discount: 50)
+    Price.create!(product: new_record, credit_wholesale_price: 500, tax_rate: 0)
+    ProductSupplier.create!(product: new_record, supplier: supplier)
 
     sign_in @user
     visit order_path(@order)
@@ -124,14 +124,14 @@ class OrderItemsTest < ApplicationSystemTestCase
     assert_equal %w[3 2 1], all("tbody tr td:nth-child(2)").map(&:text),
                  "la más reciente arriba"
 
-    fila_nueva = @order.order_items.order(:position).last
-    assert_equal ActionView::RecordIdentifier.dom_id(fila_nueva), all("tbody tr").first[:id],
+    new_row_id = @order.order_items.order(:position).last
+    assert_equal ActionView::RecordIdentifier.dom_id(new_row_id), all("tbody tr").first[:id],
                  "la primera fila es la partida recién agregada"
 
-    marca = page.evaluate_script(
+    brand_record = page.evaluate_script(
       "document.querySelector(\"input[aria-label='Cantidad — MARTILLO DE UÑA']\").__marca"
     )
-    assert_equal "viva", marca, "idiomorph reusó los nodos existentes en vez de recrear la tabla"
+    assert_equal "viva", brand_record, "idiomorph reusó los nodos existentes en vez de recrear la tabla"
   end
 
   # El bote de basura nombra la partida por su descripción, no por su lugar en

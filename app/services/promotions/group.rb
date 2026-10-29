@@ -117,7 +117,7 @@ module Promotions
       return nil if applicable?
       return "Esta promoción estuvo vigente del #{format_date(promotion.starts_on)} al " \
              "#{format_date(promotion.ends_on)}." unless effective?
-      return "Este pedido no tiene productos de esta promoción." if items.empty?
+      return "#{order.document_text(:this).capitalize} no tiene productos de esta promoción." if items.empty?
 
       # Tres ramas, no una. La frase única ("no alcanzas el mínimo") se
       # disparaba SIEMPRE que ningún escalón cubriera, y en la rueda hay 24

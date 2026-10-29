@@ -126,9 +126,9 @@ class ProductSearchLimitTest < ActionDispatch::IntegrationTest
 
     # El <ul> es el listbox y cierra ANTES del aviso.
     listbox_end = response.body.index("</ul>")
-    aviso       = response.body.index("Se muestran las primeras")
-    assert listbox_end && aviso, "deben existir el listbox y el aviso"
-    assert_operator listbox_end, :<, aviso, "el aviso quedó dentro del listbox"
+    warning       = response.body.index("Se muestran las primeras")
+    assert listbox_end && warning, "deben existir el listbox y el aviso"
+    assert_operator listbox_end, :<, warning, "el aviso quedó dentro del listbox"
     assert_match(/<ul[^>]*role="listbox"/, response.body)
   end
 end

@@ -10,7 +10,7 @@ class CapturedOrdersReportTest < ActionDispatch::IntegrationTest
     @client = Client.create!(erp_client_key: "C980", name: "Cliente 980")
     @cap    = User.create!(erp_person_id: 981, username: "cap981", password: "secret123",
                            role: "capturista", active: true)
-    @otro   = User.create!(erp_person_id: 982, username: "cap982", password: "secret123",
+    @other_user   = User.create!(erp_person_id: 982, username: "cap982", password: "secret123",
                            role: "capturista", active: true)
     User.create!(erp_person_id: 980, username: "srv980", password: "secret123",
                  role: "server", active: true)
@@ -76,8 +76,8 @@ class CapturedOrdersReportTest < ActionDispatch::IntegrationTest
 
   test "el capturista solo resume SUS pedidos" do
     order!(user: @cap,  status: "captured")
-    order!(user: @otro, status: "captured")
-    order!(user: @otro, status: "captured")
+    order!(user: @other_user, status: "captured")
+    order!(user: @other_user, status: "captured")
 
     assert_equal 3, Order.totals_by_status["captured"][:count], "sin acotar son todos"
     assert_equal 1, @cap.orders.totals_by_status["captured"][:count], "acotado al capturista"
@@ -104,7 +104,7 @@ class CapturedOrdersReportTest < ActionDispatch::IntegrationTest
 
   test "el reporte del capturista no muestra pedidos ajenos" do
     order!(user: @cap,  status: "captured")
-    order!(user: @otro, status: "captured")
+    order!(user: @other_user, status: "captured")
     login_as("cap981")
 
     get captured_orders_report_path

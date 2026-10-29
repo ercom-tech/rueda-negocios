@@ -57,8 +57,8 @@ class ContextPillsTest < ActionDispatch::IntegrationTest
     assert_select "input[name=brand_id][value=?]", another.id.to_s
 
     # Un id ajeno no se acepta (queda la elección previa).
-    intrusa = Brand.create!(erp_brand_id: 999, name: "MARCA AJENA")
-    patch active_brand_path, params: { brand_id: intrusa.id }
+    intruder = Brand.create!(erp_brand_id: 999, name: "MARCA AJENA")
+    patch active_brand_path, params: { brand_id: intruder.id }
     follow_redirect!
     assert_select "input[name=brand_id][value=?]", another.id.to_s
   end

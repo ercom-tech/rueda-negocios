@@ -49,11 +49,11 @@ class PromotionsGroupTest < ActiveSupport::TestCase
   # --- Acumulado y escalón -----------------------------------------------
 
   test "el acumulado suma el importe bruto de las partidas del universo" do
-    a, b, fuera = product(price: 1000), product(price: 500), product(price: 900)
+    a, b, outside_item = product(price: 1000), product(price: 500), product(price: 900)
     promo = promotion(tiers: [ { from: 1000, percent: 10 } ], products: [ a, b ])
     add_item(a, quantity: 2)   # 2,000
     add_item(b, quantity: 1)   #   500
-    add_item(fuera, quantity: 5)
+    add_item(outside_item, quantity: 5)
 
     group = group_for(promo)
 
@@ -230,11 +230,11 @@ class PromotionsGroupTest < ActiveSupport::TestCase
     promo = promotion(tiers: [ { from: 1000, percent: 0 } ], products: [ a ])
     promo.promotion_tiers.first.promotion_gifts.create!(product: gift_product, quantity: 1)
     add_item(a, quantity: 2)
-    sin_regalo = @order.reload.total
+    no_gift = @order.reload.total
 
     group_for(promo).apply!
 
-    assert_equal sin_regalo, @order.reload.total
+    assert_equal no_gift, @order.reload.total
   end
 
   # El ERP guarda por separado lo que la promoción DICTÓ y lo que se aplicó.
@@ -256,18 +256,18 @@ class PromotionsGroupTest < ActiveSupport::TestCase
   # apenas alcanza el primer escalón se llevaría un premio que nadie prometió.
   test "solo llega el regalo del escalón alcanzado" do
     a = product(price: 1000)
-    chico, grande = product(price: 50), product(price: 90)
+    small, large = product(price: 50), product(price: 90)
     promo = promotion(products: [ a ], tiers: [
       { kind: "CE", from: 1000, to: 4999, percent: 5 },
       { kind: "CM", from: 5000, percent: 9 }
     ])
-    promo.promotion_tiers.first.promotion_gifts.create!(product: chico, quantity: 1)
-    promo.promotion_tiers.last.promotion_gifts.create!(product: grande, quantity: 1)
+    promo.promotion_tiers.first.promotion_gifts.create!(product: small, quantity: 1)
+    promo.promotion_tiers.last.promotion_gifts.create!(product: large, quantity: 1)
     add_item(a, quantity: 2)   # 2,000 → primer escalón
 
     group_for(promo).apply!
 
-    assert_equal [ chico.id ], @order.reload.order_items.select(&:gift?).map(&:product_id)
+    assert_equal [ small.id ], @order.reload.order_items.select(&:gift?).map(&:product_id)
   end
 
   # El regalo entra como partida PROPIA, marcada `gift`, y el contador del
@@ -289,10 +289,10 @@ class PromotionsGroupTest < ActiveSupport::TestCase
   # explicar y que nadie configuró así.
   test "un regalo sin precio no se agrega" do
     a = product(price: 1000)
-    sin_precio = Product.create!(erp_product_id: rand(1_000_000..9_999_999),
+    no_price = Product.create!(erp_product_id: rand(1_000_000..9_999_999),
                                  description: "SIN PRECIO", brand: @brand, unit: "PZA")
     promo = promotion(tiers: [ { from: 1000, percent: 9 } ], products: [ a ])
-    promo.promotion_tiers.first.promotion_gifts.create!(product: sin_precio, quantity: 1)
+    promo.promotion_tiers.first.promotion_gifts.create!(product: no_price, quantity: 1)
     add_item(a, quantity: 2)
 
     group_for(promo).apply!
@@ -353,18 +353,18 @@ class PromotionsGroupTest < ActiveSupport::TestCase
     add_item(a, quantity: 2)
     group_for(promo).apply!
 
-    nueva = @order.order_items.build(b.to_order_item_attributes.merge(position: 9, quantity: 1))
-    assert_not nueva.valid?
-    assert_match(/Quita la promoción para agregarlo/, nueva.errors.full_messages.to_sentence)
+    new_one = @order.order_items.build(b.to_order_item_attributes.merge(position: 9, quantity: 1))
+    assert_not new_one.valid?
+    assert_match(/Quita la promoción para agregarlo/, new_one.errors.full_messages.to_sentence)
   end
 
   test "un producto ajeno a la promoción aplicada sí se puede agregar" do
-    a, fuera = product(price: 1000), product(price: 300)
+    a, outside_item = product(price: 1000), product(price: 300)
     promo = promotion(tiers: [ { from: 1000, percent: 12 } ], products: [ a ])
     add_item(a, quantity: 2)
     group_for(promo).apply!
 
-    assert add_item(fuera).persisted?
+    assert add_item(outside_item).persisted?
   end
 
   # --- El gancho del modal -------------------------------------------------
