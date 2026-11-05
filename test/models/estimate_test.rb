@@ -181,7 +181,10 @@ class EstimateTest < ActiveSupport::TestCase
   test "los avisos del candado de promoción y del modal nombran a la cotización" do
     order = with_item(estimate).tap(&:save!)
     item = order.order_items.first
-    promo = Promotion.create!(erp_promotion_id: 9601, code: "P", name: "P", starts_on: Date.current, ends_on: Date.current)
+    # La fecha LOCAL, como la que juzga la vigencia (`captured_on`): con
+    # `Date.current` (UTC) la prueba fallaba después de las 18:00.
+    today = order.captured_on
+    promo = Promotion.create!(erp_promotion_id: 9601, code: "P", name: "P", starts_on: today, ends_on: today)
     item.update_columns(promotion_id: promo.id)
 
     assert_not item.reload.destroy
