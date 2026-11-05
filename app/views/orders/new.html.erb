@@ -147,8 +147,12 @@
           <%# cfdi-default: al cambiar de razón social, el combo de Uso de CFDI
               brinca al default que ese perfil trae del ERP. %>
           <% cfdi_defaults = @client.tax_profiles.each_with_object({}) { |t, h| h[t.id] = t.default_cfdi_use&.id if t.default_cfdi_use } %>
+          <%# Al convertir, `enter-guard`: Enter sobre un radio enviaba el
+              formulario por el "Sí, convertir" del diálogo y convertía sin
+              modal (19ª auditoría; ver el controller). %>
           <%= form_with model: @order, **(converting ? { url: convert_order_path(@estimate), method: :post, id: "conversion-form" } : {}),
-                data: { controller: [("order-kind" if both_kinds), "cfdi-default"].compact.join(" "),
+                data: { controller: [("order-kind" if both_kinds), "cfdi-default", ("enter-guard" if converting)].compact.join(" "),
+                        action: ("keydown->enter-guard#block" if converting),
                         cfdi_default_map_value: cfdi_defaults.to_json }, class: "space-y-5" do |f| %>
             <%= f.hidden_field :client_id, value: @client.id %>
             <%= f.hidden_field :document, value: "estimate" if estimate && !@order.persisted? %>
@@ -254,7 +258,13 @@
                     de un toque (18ª auditoría). El botón del diálogo envía ESTE
                     formulario (`form:`), con el cliente y los perfiles elegidos. %>
                 <% count = @estimate.order_items.size %>
-                <div data-controller="modal" data-action="keydown@window->modal#closeOnEsc">
+                <%# `turbo:submit-end@document`: el envío lo hace el FORMULARIO, que
+                    es ancestro de este modal, y su evento no baja hasta aquí. Sin
+                    esto, con un sync vivo el aviso quedaba debajo del modal
+                    abierto (19ª auditoría); `confirm_dialog` lo resuelve solo en
+                    su variante de botón. %>
+                <div data-controller="modal"
+                     data-action="keydown@window->modal#closeOnEsc turbo:submit-end@document->modal#close">
                   <button type="button" data-action="modal#open" class="<%= submit_class %>">Convertir en pedido</button>
                   <%= render "home/confirm_dialog", title: "Convertir en pedido",
                         message: "Se creará el pedido del cliente elegido con #{count == 1 ? "la partida" : "las #{count} partidas"} " \

@@ -309,6 +309,18 @@ class EstimateConversionTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  # `order=x` (texto, no hash) llegaba a `require(:order).permit` como String:
+  # NoMethodError, la pantalla de depuración en la laptop (19ª auditoría).
+  test "un order forjado como texto es un 400, no un error del servidor" do
+    estimate = estimate!(client: @client)
+
+    assert_no_difference -> { Order.count } do
+      post convert_order_path(estimate), params: { order: "x" }
+    end
+
+    assert_response :bad_request
+  end
+
   test "las sugerencias de cliente siguen en la conversión" do
     estimate = estimate!
 

@@ -260,6 +260,14 @@ movería también fechas, números y mensajes de Rails que hoy funcionan.
 - **Inputs numéricos con `step="any"`: Chrome no aplica las flechas ↑/↓** — la
   tecla cae al scroll de la página. Hay que implementar el paso a mano
   (`keydown` + `preventDefault`, acotado a `min`/`max`).
+- **Un formulario que solo debe enviarse confirmando en un modal tiene que
+  anular el envío implícito (Enter).** Si su único submit es el botón del
+  diálogo oculto, Enter sobre un radio lo usa y la acción ocurre sin modal.
+  Y un botón predeterminado **deshabilitado** delante NO lo impide: Chrome lo
+  salta y toma el siguiente habilitado (medido en la 19ª, contra lo que dice
+  la especificación). La salida es `enter-guard`. Y el cierre del modal al
+  terminar el envío (`turbo:submit-end->modal#close`) va con `@document`
+  cuando el formulario es ANCESTRO del modal: su evento no baja.
 - **Enviar en `blur` solo si cambió**, no en `change`: con `change`, cada
   flecha dispara un submit que repinta la tabla y mata el foco.
 - **Campo numérico vaciado llega como `""`.** Si la columna es NOT NULL, hay

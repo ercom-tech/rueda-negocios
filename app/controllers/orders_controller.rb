@@ -373,7 +373,14 @@ class OrdersController < ApplicationController
   end
 
   def order_params
-    permitted = params.require(:order).permit(*Order::HEADER_ATTRIBUTES)
+    # Un `order=x` forjado (texto, no hash) llegaba a `permit` como String y
+    # tronaba con la pantalla de depuración; como `ParameterMissing` es un 400
+    # (19ª auditoría). No `params.expect`: rechaza también el hash que queda
+    # VACÍO al filtrarse, y "Cliente genérico" manda solo `order[document]`.
+    raw = params.require(:order)
+    raise ActionController::ParameterMissing, :order unless raw.is_a?(ActionController::Parameters)
+
+    permitted = raw.permit(*Order::HEADER_ATTRIBUTES)
     # `kind` es un enum: asignarle un valor fuera del catálogo levanta
     # ArgumentError ANTES de cualquier validación, así que no hay forma de
     # atajarlo en el modelo. El campo viaja como radio (o hidden cuando el

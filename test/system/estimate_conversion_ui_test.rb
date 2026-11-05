@@ -50,6 +50,11 @@ class EstimateConversionUiTest < ApplicationSystemTestCase
     assert top_at_logout, "el overlay del modal debe tapar 'Cerrar sesión'"
     assert dialog.visible?
     assert logout
+  ensure
+    # La sesión del navegador se reusa entre pruebas: sin regresar al tamaño
+    # de la suite, la siguiente corría a 1024×600 y `header_combo_test`
+    # fallaba según el orden (19ª auditoría).
+    page.driver.browser.manage.window.resize_to(1400, 1000)
   end
 
   # Un sync vivo responde 422 con el aviso en el flash; el modal se quedaba
@@ -59,6 +64,43 @@ class EstimateConversionUiTest < ApplicationSystemTestCase
     estimate = estimate!(client: @client)
     sign_in @user
     visit order_path(estimate)
+    SyncRun.create!(kind: "down", status: "running", pid: Process.pid, started_at: Time.current)
+
+    click_button "Convertir en pedido"
+    within("[role=dialog]") { click_button "Sí, convertir" }
+
+    assert_text "Se está actualizando la información"
+    assert_no_selector "[role=dialog]", visible: true
+    assert Order.exists?(estimate.id)
+  end
+
+  # Con factura Y remisión, el tipo es un radio; Enter sobre él hacía el envío
+  # implícito por el botón predeterminado del formulario — el "Sí, convertir"
+  # del diálogo oculto — y convertía sin modal (19ª auditoría).
+  test "Enter sobre el tipo de pedido no convierte sin confirmar" do
+    cfdi = CfdiUse.create!(code: "G03", description: "Gastos en general")
+    @client.tax_profiles.create!(rfc: "XAXX010101000", business_name: "PUBLICO EN GENERAL",
+                                 default_cfdi_use: cfdi, is_default: false)
+    estimate = estimate!
+    sign_in @user
+    visit conversion_order_path(estimate, client_key: "UIC01")
+
+    find("input[type=radio][value=remission]").click
+    find("input[type=radio][value=remission]").send_keys(:enter)
+
+    assert_no_text "se convirtió en el pedido"
+    assert_current_path conversion_order_path(estimate, client_key: "UIC01")
+    assert Order.exists?(estimate.id)
+  end
+
+  # El cierre al terminar el envío vivía solo en la variante `button_to`: el
+  # paso 1 de la genérica lo envía el FORMULARIO, que es ancestro del modal, y
+  # su `turbo:submit-end` no le llegaba. Con un sync vivo el aviso quedaba
+  # debajo del modal abierto (19ª auditoría).
+  test "en la genérica, si la conversión no procede por un sync, el modal se cierra" do
+    estimate = estimate!
+    sign_in @user
+    visit conversion_order_path(estimate, client_key: "UIC01")
     SyncRun.create!(kind: "down", status: "running", pid: Process.pid, started_at: Time.current)
 
     click_button "Convertir en pedido"

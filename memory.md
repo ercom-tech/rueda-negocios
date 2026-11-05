@@ -27,6 +27,7 @@ Si es **algo por hacer**, va al backlog.
 ## Índice de la bitácora
 
 - Decisiones generales del proyecto (abajo)
+- 19ª auditoría (2026-11-04) — todo el proyecto, énfasis en la remediación de la 18ª
 - 18ª auditoría (2026-11-04) — todo el proyecto, énfasis en PDF de cotización y Convertir en pedido
 - 17ª auditoría (2026-10-29) — todo el proyecto, énfasis en la remediación de la 16ª
 - 16ª auditoría (2026-10-29) — todo el proyecto
@@ -39,6 +40,39 @@ Si es **algo por hacer**, va al backlog.
 - Fase A — scaffolding · Fase B — login, menú, reportes, pedido (arcos 1–3)
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
+
+## 19ª auditoría (2026-11-04) — todo el proyecto, énfasis en la remediación de la 18ª
+
+Alcance: app `f0544fd..11ebc5c`, API `2c35375..34b4190`. 7 dimensiones,
+máximo 3 agentes a la vez. **0 ALTA + 4 MEDIA + ~15 BAJA.** Las cuatro MEDIA
+fueron de la remediación de la 18ª o de reglas que escribí mal: otra vez,
+remediar fue el momento de mayor riesgo. Seguridad sin hallazgos;
+`cotizacion_origen` probado de punta a punta contra Postgres real.
+
+**Bloque 1 — las MEDIA de código.** Las cuatro se confirmaron con prueba en
+rojo antes del arreglo.
+- **Enter sobre el radio Factura/Remisión convertía sin modal** (paso 1 de la
+  genérica): el único submit del formulario era el "Sí, convertir" oculto, y
+  el envío implícito lo usaba. Primer arreglo —un botón predeterminado
+  deshabilitado delante, como dice la especificación— **no funcionó**: Chrome
+  lo salta y usa el siguiente habilitado (medido con `ev.submitter`). Quedó
+  `enter-guard`, que anula Enter salvo en textarea, botones, enlaces y lo que
+  ya atendió su propio control. Regla en las convenciones.
+- **El modal de la genérica no se cerraba** cuando la conversión no procedía
+  (sync vivo): en la 18ª el cierre se puso solo en la variante de botón, y en
+  la de formulario el `turbo:submit-end` lo dispara el FORMULARIO, ancestro
+  del modal. Ahora con `@document`.
+- **`order=x` forjado daba 500.** `params.expect` lo vuelve 400, pero
+  rompió "Cliente genérico" —que manda solo `order[document]` y queda vacío
+  al filtrarse—: dos pruebas lo cazaron. Quedó `require` + rechazo explícito
+  de lo que no es hash.
+- **Mi prueba de sistema de la 18ª dejaba la ventana a 1024×600** y, según el
+  orden, rompía `header_combo_test` (la falla intermitente de la suite de
+  sistema). `ensure` que regresa a 1400×1000, como las demás.
+
+Al pasar: durante la auditoría un auditor cargó el esquema en la base de
+PRUEBAS desde su worktree; se comprobó que la de desarrollo seguía intacta
+(15,748 productos, 124 clientes, 93 usuarios).
 
 ## 18ª auditoría (2026-11-04) — todo el proyecto, énfasis en PDF de cotización y Convertir en pedido
 
