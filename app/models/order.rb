@@ -330,7 +330,10 @@ class Order < ApplicationRecord
 
       sale = Order.new((header || attributes.slice(*HEADER_ATTRIBUTES.map(&:to_s))).to_h.merge(
         "user_id" => user_id, "business_round_id" => business_round_id,
-        "document" => "sale", "status" => "draft", "observations" => observations))
+        "document" => "sale", "status" => "draft", "observations" => observations,
+        # La cotización se borra aquí abajo: el pedido guarda de cuál salió,
+        # para la evidencia del ERP (`cotizacion_origen`, 18ª auditoría).
+        "source_estimate_folio" => local_folio, "source_estimate_created_at" => created_at))
       raise ActiveRecord::Rollback unless sale.save
 
       # Directo y no partida por partida: eran válidas en la cotización, con el

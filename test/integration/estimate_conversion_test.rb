@@ -79,6 +79,9 @@ class EstimateConversionTest < ActionDispatch::IntegrationTest
                    sale.observations, sale.user_id, sale.business_round_id ]
     assert_equal items, item_snapshot(sale), "las partidas pasan tal cual: precio, descuento, posición"
     assert_equal total, sale.total
+    assert_equal [ estimate.local_folio, estimate.created_at.to_i ],
+                 [ sale.source_estimate_folio, sale.source_estimate_created_at.to_i ],
+                 "el pedido recuerda la cotización de la que salió (evidencia)"
     assert_not Order.exists?(estimate.id)
     assert_equal 0, OrderItem.where(order_id: estimate.id).count
   end

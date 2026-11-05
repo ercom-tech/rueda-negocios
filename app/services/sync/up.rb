@@ -104,6 +104,15 @@ module Sync
         capturista_nombre:  order.user.full_name.presence,
         creado_en_laptop:   order.created_at.localtime.iso8601,
         guardado_en_laptop: order.captured_at&.localtime&.iso8601,
+        # El pedido que salió de "Convertir en pedido" se armó en dos momentos:
+        # la cotización (sus precios) y la conversión (`creado_en_laptop`). Solo
+        # evidencia: el ERP liga sus conversiones con `clave_cotizacion`,
+        # varchar(7), donde el folio local no cabe ni existe (18ª auditoría).
+        # null en un pedido capturado directo.
+        cotizacion_origen: (if order.source_estimate_folio
+                              { clave: order.source_estimate_folio,
+                                creada_en_laptop: order.source_estimate_created_at&.localtime&.iso8601 }
+                            end),
         # La rueda a la que pertenece el pedido (vta_pedido.id_rueda, columna
         # nueva del ERP 2026-08-17). Los pedidos no-rueda del ERP viven en 0.
         id_rueda:      order.business_round.erp_round_id,

@@ -99,6 +99,20 @@ se sostuvieron contra el código; las 8 pruebas nuevas fallaron sin arreglo.
   rehicieron las ediciones del barrido. Para mutar: copia de respaldo y
   `cp` de vuelta, nunca `git checkout` sobre un archivo con trabajo pendiente.
 
+**Bloque 3 — la evidencia lleva la cotización de origen** (decisión del
+usuario). El ERP liga sus conversiones con `vta_pedido.clave_cotizacion`
+(11,470 de 171,313 pedidos de 2025+, `id_empresa = 1`, `id_sucursal_crea = 1`,
+medido por el auditor del ERP); ahí no cabe nuestro folio (`varchar(7)`) ni
+existe en `vta_cotizacion`, así que `clave_cotizacion` sigue en `''`.
+- El pedido guarda `source_estimate_folio` y `source_estimate_created_at`
+  (migración `20261104120000`, nullable: el checkout a un sha anterior basta).
+- `Sync::Up` manda `cotizacion_origen: { clave, creada_en_laptop }` (null en
+  un pedido capturado directo). La API **no cambia**: guarda el paquete
+  entero en `vta_pedido_rueda.payload`. Una prueba en la API fija que llegue
+  ahí (muerde si el paquete se "limpia" antes de guardarse), sin columna
+  nueva ni cambio en `erp-prerequisitos.sql`.
+- Para consultarlo: `payload->'cotizacion_origen'` en `vta_pedido_rueda`.
+
 Al pasar: una fila de `settings` con el contador de cotizaciones en 3, de una
 corrida interrumpida de `estimate_concurrency_test` (no transaccional),
 rompió dos pruebas de `estimate_test` que esperan `COT-000001`. Se limpió; no

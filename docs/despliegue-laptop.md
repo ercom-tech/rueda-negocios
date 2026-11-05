@@ -278,7 +278,9 @@ migraciones traiga el lote:
   2026-10-09: `pieces_per_box` del producto, del Cotizador; y la del
   2026-10-27: `orders.document` con default "sale", `client_id` y `kind`
   nullable, el CHECK `orders_sale_requires_client` y
-  `settings.last_estimate_number`): **el checkout basta, sin rollback.**
+  `settings.last_estimate_number`; y la del 2026-11-04:
+  `orders.source_estimate_folio`/`source_estimate_created_at`, la cotización
+  de la que salió un pedido convertido): **el checkout basta, sin rollback.**
   El código anterior ignora las columnas que no
   conoce — comprobado en la 12ª auditoría: sin migraciones pendientes,
   `capture!` y "Obtener información" corren completos. Un `db:rollback` aquí

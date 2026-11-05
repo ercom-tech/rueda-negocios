@@ -231,6 +231,27 @@ module Sync
       assert_equal saved.localtime.iso8601, body["guardado_en_laptop"]
     end
 
+    # Un pedido que nació de "Convertir en pedido" se capturó en DOS momentos:
+    # la cotización (con sus precios) y la conversión. Sin el origen, la
+    # evidencia lo mostraba capturado de un golpe y nada explicaba un precio
+    # anterior a un "Cambiar precios" (18ª auditoría). Solo en `payload`: el
+    # ERP liga sus conversiones con `clave_cotizacion`, varchar(7), donde el
+    # folio local no cabe ni existe.
+    test "un pedido convertido lleva la cotización de la que salió" do
+      armed = Time.zone.parse("2026-11-02 17:40:00")
+      @order.update_columns(source_estimate_folio: "OAX-COT-000003", source_estimate_created_at: armed)
+
+      assert_equal({ "clave" => "OAX-COT-000003", "creada_en_laptop" => armed.localtime.iso8601 },
+                   sent_payload["cotizacion_origen"])
+    end
+
+    test "un pedido capturado directo no trae cotización de origen" do
+      body = sent_payload
+
+      assert body.key?("cotizacion_origen")
+      assert_nil body["cotizacion_origen"]
+    end
+
     # Un pedido guardado antes de la columna no tiene la hora: va vacía, no
     # inventada con `updated_at` (que cambia por cosas que no son guardar).
     test "sin hora de guardado, viaja vacía" do

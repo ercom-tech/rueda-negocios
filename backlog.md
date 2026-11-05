@@ -13,9 +13,13 @@ aprendizajes de lo que ya se hizo.
 
 **La laptop corre `c63a18a`** (2026-10-11, confirmado por el usuario el
 2026-10-29): ya tiene promociones, "Cambiar precios", el Cotizador y la
-evidencia. Le falta el lote de cotizaciones y lo remediado después: **una sola
-migración** (la del 2026-10-27), sin gemas ni initializers nuevos. Objetivo al
-2026-11-04: laptop `6b98459`, API `ab5539a`. Este renglón
+evidencia. Le falta el lote de cotizaciones y lo remediado después: **dos
+migraciones** (la del 2026-10-27, cotizaciones, y la del 2026-11-04, la
+cotización de origen de un pedido convertido), sin gemas ni initializers
+nuevos. Objetivo: laptop en master a partir de la remediación de la 18ª, API
+con la prueba de `cotizacion_origen` (sin cambio de código: la API guarda el
+paquete entero). Comprobar con `git merge-base --is-ancestor <sha> HEAD`, no
+con el sha exacto: un commit de docs encima lo cambia. Este renglón
 decía "nada está desplegado desde antes de la 4ª", y la guía de reversión se
 apoyaba en un sha equivocado (17ª auditoría). **De la API de testing** el
 último dato es `b43495a` (30-jul) y no se ha vuelto a confirmar: es el paso 0
