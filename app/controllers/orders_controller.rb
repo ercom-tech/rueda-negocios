@@ -7,10 +7,10 @@ class OrdersController < ApplicationController
   # ajenos de pedido): su menú no tiene las tarjetas, pero tecleando la URL
   # levantaba cotizaciones y pedidos a su nombre — y un pedido así se
   # transmitiría con el operador como capturista (15ª auditoría).
-  before_action :require_capturista, only: %i[new create]
+  before_action :require_capturista, only: %i[new create conversion convert]
   # Solo las acciones que ESCRIBEN: abrir un pedido, el resumen y el PDF siguen
   # disponibles mientras corre un sync.
-  before_action :pause_writes_during_sync, only: %i[create update destroy capture observations]
+  before_action :pause_writes_during_sync, only: %i[create update destroy capture observations convert]
 
   # Paso 1 — encabezado. `client_key` carga al cliente (clave exacta o, si no,
   # el primer match por nombre).
@@ -41,11 +41,18 @@ class OrdersController < ApplicationController
     if params[:order_id].present? && order.nil? && !Order.exists?(id: order_id)
       return render partial: "orders/order_gone", layout: false
     end
+    # Al convertir una cotización genérica, las sugerencias siguen en la
+    # conversión; si la cotización ya no existe, el mismo aviso de arriba.
+    conversion_id = ParamSanitizing.id(params[:conversion_id])
+    conversion = current_user.orders.estimate.captured.find_by(id: conversion_id) if conversion_id
+    return render partial: "orders/order_gone", layout: false if conversion_id && conversion.nil?
+
     # `truncated` va en los locals, no como ivar: el partial lo lee con
     # `local_assigns`, así que una ivar no le llega y el aviso no se pinta
     # nunca — el corte volvía a ser silencioso sin que nada fallara (8ª aud.).
     render partial: "client_options",
-           locals: { clients: clients, order: order, truncated: truncated, document: document_param }, layout: false
+           locals: { clients: clients, order: order, truncated: truncated, document: document_param,
+                     conversion: conversion }, layout: false
   end
 
   def create
@@ -189,6 +196,45 @@ class OrdersController < ApplicationController
     @order = accessible_orders.find(params[:id])
   end
 
+  # "Convertir en pedido", cotización de cliente GENÉRICO: el paso 1 del pedido
+  # para elegir al cliente con su RFC o su remisión (decisión del usuario
+  # 2026-11-04). La que ya tiene cliente no pasa por aquí: se convierte desde
+  # su modal de confirmación.
+  def conversion
+    @estimate = convertible_estimate
+    return redirect_to(@estimate) unless @estimate.generic?
+
+    @client    = client_from_key(params[:client_key]) if params[:client_key].present?
+    @order     = Order.new(client: @client, document: "sale")
+    @cfdi_uses = CfdiUse.order(:code)
+    apply_header_defaults if @client
+    render :new
+  end
+
+  # Crea el pedido nuevo (ya guardado, con el folio que sigue) y borra la
+  # cotización. Ver Order#convert_to_sale!.
+  def convert
+    @estimate = convertible_estimate
+    sale = @estimate.convert_to_sale!(@estimate.generic? ? order_params : nil)
+    if sale.persisted?
+      redirect_to summary_order_path(sale),
+                  notice: "La cotización #{@estimate.folio} se convirtió en el pedido #{sale.folio}."
+    elsif @estimate.generic?
+      @order     = sale
+      @client    = sale.client
+      @cfdi_uses = CfdiUse.order(:code)
+      flash.now[:alert] = "Revisa los datos obligatorios del encabezado."
+      render :new, status: :unprocessable_entity
+    else
+      # El encabezado de una cotización con cliente ya pasó las mismas
+      # validaciones; si aun así no valida, se dice en vez de tronar.
+      redirect_to @estimate, alert: "No se pudo convertir: revisa el encabezado de la cotización. " \
+                                    "#{SpanishText.sentences(sale.errors.full_messages)}"
+    end
+  rescue Order::ConversionError => e
+    redirect_to @estimate, alert: e.message
+  end
+
   # Descarga del PDF del pedido o de la cotización (2026-11-04). La
   # cotización, solo GUARDADA: un borrador no tiene folio, y su papel diría
   # "(borrador)" en el pie de cada hoja — su id aquí es un 404.
@@ -238,6 +284,12 @@ class OrdersController < ApplicationController
                     alert: "Este pedido ya no es un borrador: lo guardaron desde otro equipo. No se cambió nada."
       end
     end
+  end
+
+  # Solo la cotización GUARDADA y del propio capturista: el equipo-servidor las
+  # consulta, y un borrador todavía se está capturando.
+  def convertible_estimate
+    current_user.orders.estimate.captured.find(params[:id])
   end
 
   # Rastro de la resolución de un borrador ajeno. Va al log y no a la BD: es

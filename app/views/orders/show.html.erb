@@ -76,6 +76,7 @@
                                             : "Se eliminará #{@order.document_phrase} #{@order.folio} con todas sus partidas. ¿Continuar?"),
                     confirm_label: "Sí, descartar", path: order_path(@order), method: :delete %>
             </div>
+            <%= render "orders/convert_estimate_button", order: @order if @order.estimate? && @order.captured? %>
             <% if @order.draft? %>
               <%# button_to (form real) y no link con turbo_method: el intercept
                   del link fallaba en silencio (no emitía el POST).

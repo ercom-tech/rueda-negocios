@@ -99,7 +99,9 @@ Modelo **una laptop = servidor LAN**:
   (`COT-000001`) y cliente opcional (genérico). **Nunca se transmiten** —la
   API además rechaza toda clave `COT-`—, **no bloquean** ninguna operación del
   panel, y **obtener información y cerrar rueda las borran**, avisando
-  cuántas. Toda lectura de pedidos va sobre `Order.sale`.
+  cuántas. Toda lectura de pedidos va sobre `Order.sale`. Una cotización
+  guardada se **convierte en pedido** (2026-11-04): pedido NUEVO, ya guardado,
+  con el folio que sigue; la cotización se borra.
 
 Obtener y cerrar se bloquean si queda algún pedido (no cotización) que solo
 viva en la laptop —borrador o capturado sin transmitir—; transmitir se bloquea solo por

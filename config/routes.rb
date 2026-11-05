@@ -56,6 +56,8 @@ Rails.application.routes.draw do
       post  :capture                           # finaliza (folio) → resumen
       get   :summary                           # paso 3: resumen con opciones
       get   :pdf                               # descarga PDF del pedido
+      get   :conversion                        # paso 1 para convertir una cotización genérica
+      post  :convert                           # cotización guardada → pedido nuevo
     end
     resources :order_items, only: %i[create update destroy] do # partidas (Turbo)
       member { get :quote }                    # contenido del modal del Cotizador

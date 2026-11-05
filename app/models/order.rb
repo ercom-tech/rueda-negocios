@@ -289,6 +289,52 @@ class Order < ApplicationRecord
     end
   end
 
+  # Lo que impide convertir una cotización, dicho al capturista.
+  class ConversionError < StandardError; end
+
+  # El encabezado que pasa de la cotización al pedido cuando la cotización ya
+  # tiene cliente. Es lo mismo que pide el paso 1.
+  CONVERTED_HEADER = %w[client_id kind client_tax_profile_id cfdi_use_id
+                        client_receipt_profile_id client_branch_id dividir_facturas].freeze
+
+  # "Convertir en pedido" (decisión del usuario 2026-11-04): crea un pedido
+  # NUEVO con el encabezado y las partidas de la cotización, ya guardado, y
+  # borra la cotización. Nuevo y no la misma fila con otro `document`: el folio
+  # del pedido sale del id, y "el folio que sigue disponible" es el de un
+  # registro nuevo — volteando la cotización, saldría el id viejo, desordenado
+  # entre los pedidos de después. Y `document_is_fixed` sigue en pie.
+  #
+  # `header`: el del paso 1 cuando la cotización es de cliente genérico; nil
+  # para tomar el de la cotización. Devuelve el pedido: si el encabezado no
+  # valida, sin guardar y con sus errores, y la cotización intacta.
+  def convert_to_sale!(header = nil)
+    sale = nil
+    self.class.transaction do
+      # Con candado: dos toques no crean dos pedidos. El segundo espera, y
+      # al soltarse la fila ya no existe (RecordNotFound).
+      lock!
+      raise ConversionError, "Solo una cotización guardada se puede convertir en pedido." unless estimate? && captured?
+      raise ConversionError, "La cotización no tiene productos." if order_items.empty?
+      check_promotions_still_effective!
+
+      sale = Order.new((header || attributes.slice(*CONVERTED_HEADER)).to_h.merge(
+        "user_id" => user_id, "business_round_id" => business_round_id,
+        "document" => "sale", "status" => "draft", "observations" => observations))
+      raise ActiveRecord::Rollback unless sale.save
+
+      # Directo y no partida por partida: eran válidas en la cotización, con el
+      # mismo catálogo (obtener información borra las cotizaciones), y las
+      # validaciones de ALTA rechazarían la segunda partida de un grupo de
+      # promoción ("el producto ya está en una promoción aplicada").
+      OrderItem.insert_all!(order_items.map do |item|
+        item.attributes.except("id", "order_id", "created_at", "updated_at").merge("order_id" => sale.id)
+      end)
+      sale.reload.capture!
+      discard!
+    end
+    sale
+  end
+
   # Purga del SISTEMA de los pedidos ya transmitidos: la usan el replace del
   # sync-down y "Cerrar rueda", los dos únicos lugares donde el programa
   # —no el capturista— borra ventas que ya viven en el ERP.
@@ -409,6 +455,25 @@ class Order < ApplicationRecord
 
   def document_is_fixed
     errors.add(:document, "no se puede cambiar") if document_changed?
+  end
+
+  # El pedido nace HOY: una promoción aplicada en la cotización que ya no esté
+  # vigente llegaría al ERP con un descuento fuera de su vigencia. Se bloquea
+  # en vez de quitarla en silencio, que cambiaría el precio sin que nadie lo
+  # viera (decisión del usuario 2026-11-04). Hoy LOCAL, como `captured_on`.
+  def check_promotions_still_effective!
+    today   = Time.current.localtime.to_date
+    expired = Promotion.where(id: order_items.where.not(promotion_id: nil).select(:promotion_id))
+                       .order(:name).reject { |promotion| promotion.effective_on?(today) }
+    return if expired.empty?
+
+    names = SpanishText.list(expired.map(&:name))
+    message = if expired.one?
+      "La promoción #{names} ya no está vigente. Quítala de la cotización antes de convertirla en pedido."
+    else
+      "Las promociones #{names} ya no están vigentes. Quítalas de la cotización antes de convertirla en pedido."
+    end
+    raise ConversionError, message
   end
 
   # Los campos de la rama que NO aplica se descartan al guardar. El paso 1

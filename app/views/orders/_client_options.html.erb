@@ -1,7 +1,9 @@
 <%# Sugerencias del autocompletado. Locals: clients; order (opcional, si se está
     editando un pedido → el cambio de cliente recae sobre el mismo pedido);
     document ("estimate" cuando se está generando una cotización: el enlace
-    lo conserva para que el paso 1 cree una cotización y no un pedido). %>
+    lo conserva para que el paso 1 cree una cotización y no un pedido);
+    conversion (opcional: la cotización genérica que se está convirtiendo en
+    pedido — el cliente elegido vuelve a la conversión). %>
 <% document = (local_assigns[:document] if local_assigns[:document] == "estimate") %>
 <% if clients.any? %>
   <%# `max-h-80 overflow-auto` como los buscadores de producto: con
@@ -13,7 +15,10 @@
       class="max-h-80 overflow-auto rounded-2xl border border-black/10 bg-brand-cream shadow-xl">
     <% clients.each do |c| %>
       <li>
-        <%= link_to (order ? edit_order_path(order, client_key: c.erp_client_key) : new_order_path(client_key: c.erp_client_key, document: document)),
+        <% href = if local_assigns[:conversion] then conversion_order_path(conversion, client_key: c.erp_client_key)
+                  elsif order then edit_order_path(order, client_key: c.erp_client_key)
+                  else new_order_path(client_key: c.erp_client_key, document: document) end %>
+        <%= link_to href,
               class: "flex items-center justify-between gap-4 px-5 py-3 hover:bg-black/5" do %>
           <span>
             <span class="flex flex-wrap items-baseline gap-x-2">

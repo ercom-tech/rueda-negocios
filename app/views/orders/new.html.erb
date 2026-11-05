@@ -3,6 +3,11 @@
     —que crea la cotización sin encabezado— y el campo oculto que le dice a
     `create` qué está creando. Lo demás es idéntico, a propósito. %>
 <% estimate = @order.estimate? %>
+<%# "Convertir en pedido" de una cotización genérica (2026-11-04): el paso 1
+    de un pedido NUEVO, que en vez de crearlo vacío lo crea con las partidas
+    de `@estimate`. Cambian el regreso, a dónde van el buscador y el
+    formulario, y el botón. %>
+<% converting = @estimate.present? %>
 <%# Mismo título en los tres pasos, como el pedido (que tampoco se llama como
     su tarjeta del menú): "Generar cotización" en el paso 1 y "Levantamiento
     de cotización" en el 2 y el 3 eran dos nombres para la misma captura (15ª). %>
@@ -27,7 +32,9 @@
         pedido en el que se estaba trabajando (5ª auditoría). %>
     <div class="mt-8 flex flex-wrap items-center justify-between gap-4">
       <h1 class="text-3xl font-extrabold text-white sm:text-4xl"><%= screen_title %></h1>
-      <% if @order&.persisted? %>
+      <% if converting %>
+        <%= link_to "← Volver a la cotización", order_path(@estimate), class: back_link_class %>
+      <% elsif @order&.persisted? %>
         <%= link_to "← Volver #{@order.document_text(:to_the)}", order_path(@order), class: back_link_class %>
       <% else %>
         <%= link_to "← Volver al menú", root_path, class: back_link_class %>
@@ -44,6 +51,14 @@
       </div>
 
       <div class="mt-6 space-y-5">
+        <% if converting %>
+          <% count = @estimate.order_items.size %>
+          <p class="rounded-2xl border border-black/10 bg-brand-cream px-5 py-4 text-sm text-neutral-700">
+            Elige al cliente del pedido. <%= count == 1 ? "La partida" : "Las #{count} partidas" %> de la
+            cotización <span class="font-semibold"><%= @estimate.folio %></span> <%= count == 1 ? "pasa" : "pasan" %> tal cual,
+            y la cotización se elimina.
+          </p>
+        <% end %>
         <%# Buscador de cliente con autocompletado (clave o nombre) %>
         <%# Autofoco mientras no hay cliente elegido: es el campo con el que
             EMPIEZA cada pedido, y el paso 3 ofrece "Capturar otro pedido"
@@ -52,10 +67,10 @@
             paso 2 ya lo hacía; faltaba aquí. Al editar el encabezado NO se
             enfoca: ahí el cliente ya está y el foco robaría el scroll. %>
         <div class="relative" data-controller="autocomplete"
-             data-autocomplete-url-value="<%= client_options_orders_path(order_id: @order.persisted? ? @order.id : nil, document: (estimate && !@order.persisted? ? "estimate" : nil)) %>"
+             data-autocomplete-url-value="<%= client_options_orders_path(order_id: @order.persisted? ? @order.id : nil, document: (estimate && !@order.persisted? ? "estimate" : nil), conversion_id: @estimate&.id) %>"
              data-autocomplete-autofocus-value="<%= @client.nil? %>"
              data-action="click@window->autocomplete#hide">
-          <%= form_with url: (@order.persisted? ? edit_order_path(@order) : new_order_path), method: :get do %>
+          <%= form_with url: (converting ? conversion_order_path(@estimate) : (@order.persisted? ? edit_order_path(@order) : new_order_path)), method: :get do %>
             <%# Al escribir y dar Enter, el GET tiene que seguir pidiendo una
                 cotización; las sugerencias lo llevan en su enlace. %>
             <%= hidden_field_tag :document, "estimate" if estimate && !@order.persisted? %>
@@ -132,7 +147,7 @@
           <%# cfdi-default: al cambiar de razón social, el combo de Uso de CFDI
               brinca al default que ese perfil trae del ERP. %>
           <% cfdi_defaults = @client.tax_profiles.each_with_object({}) { |t, h| h[t.id] = t.default_cfdi_use&.id if t.default_cfdi_use } %>
-          <%= form_with model: @order,
+          <%= form_with model: @order, **(converting ? { url: convert_order_path(@estimate), method: :post } : {}),
                 data: { controller: [("order-kind" if both_kinds), "cfdi-default"].compact.join(" "),
                         cfdi_default_map_value: cfdi_defaults.to_json }, class: "space-y-5" do |f| %>
             <%= f.hidden_field :client_id, value: @client.id %>
@@ -232,7 +247,7 @@
             <% end %>
 
             <div class="pt-2 text-center">
-              <%= f.submit (@order.persisted? ? "Guardar cambios" : "Continuar a levantamiento de #{@order.document_noun}"),
+              <%= f.submit (converting ? "Convertir en pedido" : (@order.persisted? ? "Guardar cambios" : "Continuar a levantamiento de #{@order.document_noun}")),
                     class: "cursor-pointer rounded-full bg-brand-coral px-8 py-3 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
             </div>
           <% end %>

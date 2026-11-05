@@ -431,7 +431,36 @@ coral), adaptado a la norma: el regreso va en la fila del título.
 - **Borradores genéricos abandonados** (entrar y salir sin capturar) se dejan:
   no bloquean nada y se van con obtener/cerrar.
 
-**Fuera, a propósito:** convertirla en pedido (backlog).
+**Convertir en pedido (2026-11-04, pedido por el usuario).** Botón en el
+detalle de la cotización guardada y en su resumen, solo para su capturista.
+Decisiones del usuario: la cotización **se borra** al convertirse; el pedido
+**nace guardado** (con folio, listo para transmitir; sigue editable hasta
+transmitirse); una promoción aplicada que **ya no esté vigente bloquea** la
+conversión y dice cuál quitar (quitarla sola cambiaría el precio sin que
+nadie lo viera).
+- **Pedido NUEVO, no la misma fila con otro `document`.** El folio del pedido
+  sale del id (`<prefijo>-000123`): "el folio que sigue disponible" es el de
+  un registro nuevo. Volteando la cotización saldría su id viejo, desordenado
+  entre los pedidos capturados después. Y `document_is_fixed` sigue en pie.
+- **Con cliente, directo** desde un modal que nombra cliente, partidas y
+  folio de la cotización. **Genérica, por el paso 1 del pedido** en modo
+  conversión (`orders#conversion`): las mismas validaciones del encabezado,
+  así que no hay pedido sin cliente ni con la remisión de otro.
+- **Las partidas se copian con `insert_all!`**, no con `create`: la
+  validación de alta "el producto ya está en una promoción aplicada"
+  rechazaba la segunda partida de un grupo (comprobado por mutación). Eran
+  válidas en la cotización y el catálogo es el mismo: obtener información
+  borra las cotizaciones. Precio, descuento, promoción y regalo pasan tal cual.
+- Candado de fila sobre la cotización: un segundo toque espera y encuentra
+  la cotización borrada. Pausa por sync como toda escritura.
+
+Validación: 15 pruebas nuevas (`estimate_conversion_test`) y 7 mutaciones,
+cada una atrapada (sin borrar la cotización, sin revisar vigencia, pedido en
+borrador, copia partida por partida, sin pausa, aceptar borrador, sugerencias
+fuera de la conversión). Las pruebas pasaron a la primera, así que la
+mutación fue la comprobación de que muerden. Recorrido en navegador a 1366 y
+768 con datos efímeros de prueba: botón, modal, resumen, paso 1 de la
+genérica y las dos conversiones.
 
 **PDF de la cotización (2026-11-04, pedido por el usuario).** El mismo
 `Pdf::OrderGenerator`, sin clase aparte: la cotización es un `Order` y el
