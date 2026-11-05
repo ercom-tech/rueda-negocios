@@ -128,7 +128,10 @@ renglón dice con qué usuario va:
    desde su captura) y la cotización del 5. **El pedido no se guarda ni se
    transmite**: un borrador bloquea el siguiente "Obtener información", y su
    aviso ofrece "guárdalo y transmítelo" — seguido al pie de la letra, el
-   pedido de prueba llegaría al ERP como **venta real**.
+   pedido de prueba llegaría al ERP como **venta real**. Lo mismo si se
+   prueba **"Convertir en pedido"**: el pedido que resulta nace YA guardado
+   (sale en la siguiente transmisión) y la cotización desaparece — descartar
+   ese pedido desde su captura.
 7. **Servidor → Cambiar precios → Quitar precios cargados**, y **Reportes**:
    las tarjetas habilitadas abren sin error.
 
