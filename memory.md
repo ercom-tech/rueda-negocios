@@ -360,7 +360,8 @@ entrar: buscar un cliente (mismo paso 1 del pedido) o **"Cliente genérico"**
 (alguien que no está en la rueda). La captura es LA MISMA pantalla del pedido
 —promociones, Cotizador, barra de totales, genérico de producto—, con su
 folio (`COT-000001`), sin transmitirse, y se guarda, edita y descarta. Reporte
-propio en "Reportes de venta → Cotizaciones capturadas". Sin PDF por ahora.
+propio en "Reportes de venta → Cotizaciones capturadas". PDF desde el
+2026-11-04 (ver "PDF de la cotización", abajo).
 Diseño del usuario (imagen con buscador + "Cliente genérico" + "Regresar" en
 coral), adaptado a la norma: el regreso va en la fila del título.
 
@@ -430,7 +431,37 @@ coral), adaptado a la norma: el regreso va en la fila del título.
 - **Borradores genéricos abandonados** (entrar y salir sin capturar) se dejan:
   no bloquean nada y se van con obtener/cerrar.
 
-**Fuera, a propósito:** PDF de la cotización y convertirla en pedido (backlog).
+**Fuera, a propósito:** convertirla en pedido (backlog).
+
+**PDF de la cotización (2026-11-04, pedido por el usuario).** El mismo
+`Pdf::OrderGenerator`, sin clase aparte: la cotización es un `Order` y el
+papel del pedido ya resolvía partidas, regalos, totales, importe en letra y
+paginación. Lo que cambia, todo decidido con el usuario:
+- Título "COTIZACIÓN" (de `document_noun`), archivo
+  `cotizacion-COT-000001.pdf`.
+- **Leyenda bajo el importe en letra:** "Cotización informativa: no es un
+  pedido. Precios válidos solo durante la <rueda>, sujetos a disponibilidad."
+  Sin ella, el papel que se lleva el cliente se ve igual que un pedido. El
+  nombre de la rueda va tal cual viene del ERP ("RUEDA DE NEGOCIOS OAXACA"),
+  de ahí el "durante la". Su alto entra a la medida del pie (8ª auditoría).
+- Genérica: "Cliente: CLIENTE GENÉRICO" y nada más en el bloque izquierdo; el
+  generador leía `client.erp_client_key` y `client.salesperson` y tronaba.
+- **Solo guardada:** la acción `pdf` acepta `sale` o `estimate.captured`. Un
+  borrador no tiene folio y su pie diría "(borrador)" en cada hoja.
+- Paso 3 con "Descargar PDF" y "Enviar por correo" en Próximamente, como el
+  del pedido; el equipo-servidor lo descarga desde el detalle.
+
+Validación: fail-first (6 de las 9 pruebas nuevas en rojo sin el cambio; las
+otras 3 son guardas que el código viejo ya cumplía: borrador, cotización
+ajena, pedido sin leyenda), mutación de la guarda del borrador, y los dos
+papeles (genérica y con cliente) renderizados y revisados a ojo, generados
+dentro de una transacción revertida.
+
+De paso salió una prueba que fallaba solo de noche (`estimate_test`, avisos
+del candado de promoción): creaba la promoción con `Date.current`, que es
+UTC, y la app juzga la vigencia con la fecha LOCAL (`captured_on`). Después
+de las 18:00 la promoción "aún no empezaba". Ahora toma `order.captured_on`;
+comprobado a las 19:50, dentro de la franja en que fallaba.
 
 **Validación:** fail-first y mutación en cada bloque; navegador a 1400 y 768
 con usuario efímero `val_cot` (menú → entrada → genérica → partida con

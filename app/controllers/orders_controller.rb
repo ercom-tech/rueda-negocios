@@ -189,12 +189,14 @@ class OrdersController < ApplicationController
     @order = accessible_orders.find(params[:id])
   end
 
-  # Descarga del PDF del pedido. Solo pedidos: la cotización no lleva PDF
-  # (decisión del usuario 2026-10-27), así que su id aquí es un 404.
+  # Descarga del PDF del pedido o de la cotización (2026-11-04). La
+  # cotización, solo GUARDADA: un borrador no tiene folio, y su papel diría
+  # "(borrador)" en el pie de cada hoja — su id aquí es un 404.
   def pdf
-    @order = accessible_orders.sale.find(params[:id])
+    @order = accessible_orders.sale.or(accessible_orders.estimate.captured).find(params[:id])
+    filename = @order.sale? ? "pedido" : "cotizacion"
     send_data Pdf::OrderGenerator.new(@order).render,
-              filename: "pedido-#{@order.folio}.pdf", type: "application/pdf", disposition: "attachment"
+              filename: "#{filename}-#{@order.folio}.pdf", type: "application/pdf", disposition: "attachment"
   end
 
   private

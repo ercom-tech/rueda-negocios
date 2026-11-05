@@ -1,6 +1,6 @@
 <%# La misma pantalla captura pedidos y cotizaciones (decisión del usuario
     2026-10-27): el sustantivo sale de `document_noun`, el encabezado del
-    cliente genérico va vacío, y la cotización no lleva PDF. %>
+    cliente genérico va vacío, y la cotización lleva PDF ya guardada. %>
 <% noun = @order.document_noun %>
 <% content_for :title, "Levantamiento de #{noun} · Rueda de Negocios" %>
 
@@ -91,7 +91,7 @@
                     class: "cursor-pointer rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
             <% else %>
               <%# Ya está capturado: el coral lleva al resumen (ahí vive el
-                  PDF del pedido; la cotización no lleva), no a "finalizarlo" otra vez — con ese rótulo, llegar
+                  PDF), no a "finalizarlo" otra vez — con ese rótulo, llegar
                   al PDF del cliente exigía tocar un botón que mentía.
                   Dice "Guardar" (decisión del usuario 2026-08-24) porque es lo
                   que el capturista cree que está haciendo al terminar de
@@ -132,9 +132,10 @@
                              "Después ya no podrás descartarlo. ¿Continuar?",
                     confirm_label: "Sí, guardar", path: capture_order_path(@order), method: :post %>
             </div>
-          <% elsif @order.sale? %>
-            <%# Solo pedidos: la cotización no tiene PDF, y a quien solo la
-                consulta (el equipo-servidor) no le queda ningún botón. %>
+          <% elsif @order.sale? || @order.captured? %>
+            <%# La cotización, solo guardada (la acción `pdf` rechaza el
+                borrador): a quien consulta un borrador ajeno no le queda
+                ningún botón. %>
             <%= link_to "Descargar PDF", pdf_order_path(@order),
                   class: "rounded-full bg-brand-gold px-6 py-2.5 font-bold text-neutral-900 transition-colors hover:bg-brand-gold-dark" %>
           <% end %>

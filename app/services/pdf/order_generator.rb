@@ -7,6 +7,10 @@ module Pdf
   # logo + datos de la empresa, "PEDIDO" + clave/fecha, bloque cliente +
   # atributos, tabla con bordes (Código/Descripción/Unidad/Cantidad/Precio/
   # Monto/%Dto./Subtotal/%IVA/Total), importe en letra y totales. Offline.
+  #
+  # También es el PDF de la cotización (2026-11-04): mismo papel con título
+  # "COTIZACIÓN", una leyenda que dice que no es un pedido, y el bloque del
+  # cliente reducido a "CLIENTE GENÉRICO" cuando no lo hay.
   class OrderGenerator
     include ActionView::Helpers::NumberHelper
 
@@ -31,7 +35,7 @@ module Pdf
     def render
       pdf = Prawn::Document.new(
         page_size: "LETTER", page_layout: :landscape, margin: [ 36, 36, 54, 36 ],
-        info: { Title: "Pedido #{@order.folio}", Author: COMPANY_NAME, Creator: "rueda-negocios" }
+        info: { Title: "#{@order.document_noun.capitalize} #{@order.folio}", Author: COMPANY_NAME, Creator: "rueda-negocios" }
       )
       pdf.font "Helvetica"
 
@@ -53,7 +57,7 @@ module Pdf
       pdf.text_box "<b>#{COMPANY_NAME}</b>\n#{COMPANY_RFC}\n#{COMPANY_ADDRESS}\n#{COMPANY_PHONE}",
                    at: [ 130, top ], width: 300, size: 9, inline_format: true, leading: 1
 
-      pdf.text_box "PEDIDO", at: [ 455, top - 18 ], width: 110, size: 16, style: :bold, align: :center
+      pdf.text_box @order.document_noun.upcase, at: [ 455, top - 18 ], width: 110, size: 16, style: :bold, align: :center
 
       pdf.text_box "<b>CLAVE:  #{esc(@order.folio)}</b>\n<b>Fecha:  #{date_only}</b>",
                    at: [ pdf.bounds.right - 180, top - 14 ], width: 180, size: 10, inline_format: true, align: :right, leading: 2
@@ -168,6 +172,10 @@ module Pdf
       # Importe en letra + observaciones (izquierda, en flujo)
       pdf.bounding_box([ 0, y + 4 ], width: FOOTER_LEFT_WIDTH) do
         pdf.text amount_in_words(printed_total(:total)), size: 9, style: :bold
+        if estimate_notice
+          pdf.move_down 6
+          pdf.text estimate_notice, size: 9
+        end
         if @order.observations.present?
           pdf.move_down 6
           pdf.text "<b>Observaciones:</b>  #{esc(@order.observations)}", size: 9, inline_format: true
@@ -213,6 +221,7 @@ module Pdf
     def left_footer_height(pdf)
       height = pdf.height_of(amount_in_words(printed_total(:total)),
                              size: 9, style: :bold, width: FOOTER_LEFT_WIDTH)
+      height += 6 + pdf.height_of(estimate_notice, size: 9, width: FOOTER_LEFT_WIDTH) if estimate_notice
       if @order.observations.present?
         formatted = Prawn::Text::Formatted::Parser.format(
           "<b>Observaciones:</b>  #{esc(@order.observations)}"
@@ -279,8 +288,22 @@ module Pdf
 
     # ---- Bloques de texto -------------------------------------------------
 
+    # Sin leyenda, el papel de una cotización se ve igual que el de un pedido,
+    # y es el que se lleva el cliente. El nombre de la rueda va tal cual viene
+    # del ERP ("RUEDA DE NEGOCIOS OAXACA"), por eso "durante la".
+    def estimate_notice
+      return unless @order.estimate?
+
+      "Cotización informativa: no es un pedido. Precios válidos solo durante la " \
+        "#{@order.business_round.name}, sujetos a disponibilidad."
+    end
+
     def left_info
       client = @order.client
+      # Cotización de cliente genérico: no hay tipo, perfil, sucursal ni datos
+      # fiscales que imprimir.
+      return "<b>Cliente:</b>  CLIENTE GENÉRICO" unless client
+
       lines = [ "<b>Cliente:</b>  (#{esc(client.erp_client_key)})  #{esc(client.commercial_name.presence || client.name)}" ]
       if @order.invoice?
         t = @order.client_tax_profile
@@ -301,7 +324,7 @@ module Pdf
     end
 
     def right_info
-      vendor     = @order.client.salesperson
+      vendor     = @order.client&.salesperson
       captured_by = @order.user.full_name.presence || @order.user.username
       [
         "<b>#{esc(@order.business_round.name)}</b>",

@@ -2,7 +2,8 @@ require "test_helper"
 
 # La captura de una cotización es la misma pantalla del pedido (decisión del
 # usuario 2026-10-27): cambian los textos, el encabezado del cliente genérico,
-# el paso 3 sin PDF ni correo, y el aviso cuando la cotización ya no existe.
+# el aviso cuando la cotización ya no existe. El paso 3 lleva PDF y correo
+# (Próximamente) desde 2026-11-04, como el del pedido.
 class EstimateCaptureTest < ActionDispatch::IntegrationTest
   setup do
     @round  = BusinessRound.create!(erp_round_id: 9702, name: "Rueda Cap", active: true)
@@ -68,7 +69,7 @@ class EstimateCaptureTest < ActionDispatch::IntegrationTest
     assert_not Order.exists?(estimate.id)
   end
 
-  test "guardar asigna folio COT-, muestra Guardada y lleva al resumen sin PDF ni correo" do
+  test "guardar asigna folio COT-, muestra Guardada y lleva al resumen con PDF y correo" do
     estimate = estimate!
     item!(estimate)
 
@@ -79,7 +80,8 @@ class EstimateCaptureTest < ActionDispatch::IntegrationTest
     follow_redirect!
     assert_select "h2", "Resumen de la cotización"
     assert_match(/Cotización <span class="font-bold">#COT-000001<\/span> guardada correctamente/, response.body)
-    assert_no_match(/Descargar PDF|Enviar por correo/, response.body)
+    assert_select "a[href=?]", pdf_order_path(estimate), text: /Descargar PDF/
+    assert_select "[aria-disabled=true][title='Próximamente']", text: /Enviar por correo/
     assert_select "a[href=?]", new_estimate_path, text: "Capturar otra cotización"
     assert_select "a[href=?]", order_path(estimate), text: "← Volver a la cotización"
 
@@ -97,13 +99,45 @@ class EstimateCaptureTest < ActionDispatch::IntegrationTest
     assert_equal "Agrega al menos un producto antes de guardar la cotización.", flash[:alert]
   end
 
-  test "una cotización no tiene PDF" do
+  test "una cotización guardada se descarga en PDF con su nombre" do
     estimate = estimate!(status: "captured")
     estimate.update_columns(local_folio: "COT-000009")
+    item!(estimate)
+
+    get pdf_order_path(estimate)
+
+    assert_response :success
+    assert_equal "application/pdf", response.media_type
+    assert_match(/filename="cotizacion-COT-000009\.pdf"/, response.headers["Content-Disposition"])
+  end
+
+  # Un borrador no tiene folio: su papel diría "(borrador)" en cada hoja.
+  test "una cotización en borrador no tiene PDF" do
+    get pdf_order_path(estimate!)
+
+    assert_response :not_found
+  end
+
+  test "la cotización de otro capturista no se descarga" do
+    estimate = estimate!(status: "captured")
+    estimate.update_columns(local_folio: "COT-000010", user_id: @other.id)
 
     get pdf_order_path(estimate)
 
     assert_response :not_found
+  end
+
+  test "el servidor descarga el PDF de una cotización guardada desde su detalle" do
+    estimate = estimate!(status: "captured")
+    estimate.update_columns(local_folio: "COT-000011")
+    item!(estimate)
+    login_as "srv_est"
+
+    get order_path(estimate)
+    assert_select "a[href=?]", pdf_order_path(estimate), text: "Descargar PDF"
+
+    get pdf_order_path(estimate)
+    assert_response :success
   end
 
   # --- Editar el encabezado en los dos sentidos ------------------------------

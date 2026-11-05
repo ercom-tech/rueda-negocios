@@ -121,7 +121,8 @@ renglón dice con qué usuario va:
 5. **Mismo capturista → Generar cotización → Cliente genérico**: agregar una
    partida y "Guardar"; da un folio que termina en `COT-` y seis dígitos (con
    el prefijo de la rueda delante si lo tiene; el número no vuelve a 1, así
-   que no tiene que ser `000001`) y el resumen sin PDF. En **Reportes →
+   que no tiene que ser `000001`) y el resumen con "Descargar PDF": el papel
+   dice COTIZACIÓN, CLIENTE GENÉRICO y la leyenda de que no es un pedido. En **Reportes →
    Cotizaciones capturadas** aparece como "Guardada".
 6. **Descartar lo de prueba, las dos cosas**: el pedido del paso 3 (Descartar,
    desde su captura) y la cotización del 5. **El pedido no se guarda ni se

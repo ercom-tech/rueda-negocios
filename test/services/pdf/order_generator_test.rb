@@ -290,5 +290,55 @@ module Pdf
       assert_operator used, :<, OrderGenerator::INFO_MIN_HEIGHT
       assert_equal OrderGenerator::INFO_MIN_HEIGHT + OrderGenerator::INFO_GAP, reserved
     end
+
+    # --- La cotización (2026-11-04) -------------------------------------------
+
+    def estimate!(client: nil)
+      estimate = Order.create!(user: @user, business_round: @round, document: "estimate", client: client,
+                               kind: (client ? "remission" : nil), status: "captured")
+      estimate.update_columns(local_folio: "COT-000007")
+      estimate.order_items.create!(position: 1, quantity: 2, unit_price: 100, tax_rate: 16,
+                                   discount_percent: 0, code: "000001", description: "MARTILLO", unit: "PZA")
+      estimate
+    end
+
+    # La de cliente genérico no tiene cliente, tipo, perfil ni sucursal: el
+    # generador leía `client.erp_client_key` y `client.salesperson` y tronaba.
+    test "la cotización de cliente genérico se imprime como cotización" do
+      text_value = pdf_text(estimate!)
+
+      assert_includes text_value, "COTIZACIÓN"
+      assert_not_includes text_value, "PEDIDO"
+      assert_includes text_value, "CLIENTE GENÉRICO"
+      assert_includes text_value, "COT-000007"
+      assert_includes text_value, "Estatus: GUARDADA"
+      assert_includes text_value, "DOSCIENTOS TREINTA Y DOS PESOS 00/100 M.N."
+      assert_no_match(/REMISIÓN|Sucursal|Vendedor|Transmitido/, text_value)
+    end
+
+    test "la cotización dice que no es un pedido y hasta cuándo valen sus precios" do
+      text_value = pdf_text(estimate!)
+
+      assert_includes text_value, "Cotización informativa: no es un pedido."
+      assert_includes text_value, "Precios válidos solo durante la RUEDA PDF, sujetos a disponibilidad."
+    end
+
+    test "la cotización con cliente lleva su bloque como el pedido" do
+      @client.update!(salesperson: Salesperson.create!(erp_salesperson_id: 77, name: "ZULEMA"))
+      text_value = pdf_text(estimate!(client: @client))
+
+      assert_includes text_value, "COTIZACIÓN"
+      assert_includes text_value, "(PDF01)  COMERCIAL PDF"
+      assert_includes text_value, "REMISIÓN:"
+      assert_includes text_value, "Vendedor: 77 ZULEMA"
+    end
+
+    test "el PDF del pedido no lleva la leyenda de la cotización" do
+      item!(quantity: 1, price: 100)
+      text_value = pdf_text
+
+      assert_includes text_value, "PEDIDO"
+      assert_not_includes text_value, "Cotización informativa"
+    end
   end
 end

@@ -239,10 +239,9 @@ como copia de respaldo por si el folio se llegara a armar del lado de la app.
 
 - Read-only: productos, clientes, rueda activa.
 - Asistencia de clientes.
-- Cotización — pendiente, sin pedir todavía: **PDF de la cotización** (el del pedido con título
-  "Cotización" y "Cliente genérico" cuando aplique; hoy el paso 3 no ofrece
-  PDF ni correo) y **convertir una cotización en pedido** (la pregunta
-  natural siguiente: el cliente dice quién es cuando ya le gustó el precio).
+- Cotización — pendiente, sin pedir todavía: **convertir una cotización en
+  pedido** (la pregunta natural siguiente: el cliente dice quién es cuando ya
+  le gustó el precio).
 - Modal de promoción: misma trampa que la 14ª encontró en el Cotizador. Si
   su frame pide una promoción que ya no existe (`Promotion.find` en
   `PromotionsController#group_for`), la página de error de development
