@@ -205,7 +205,10 @@ Todo elemento deshabilitado o "próximamente" se ve al **60%**:
   el motivo en su descripción: "Cambiar precios" dejaba el motivo a plena
   opacidad y junto a sus vecinas apagadas se leía habilitada (2026-10-29). La
   excepción de abajo es para un dato DENTRO de un control, no para una
-  tarjeta entre tarjetas.
+  tarjeta entre tarjetas. Vale también para "Elegir rueda", aunque su párrafo
+  sea el único lugar con el nombre de la rueda: al 60% queda en 3.20:1 sobre
+  el patrón, arriba del 3:1 del texto grande (`text-xl`), sin mucho margen
+  (decisión del usuario 2026-11-04).
 - Cuando dentro del bloque hay información que el usuario necesita leer justo
   en ese momento (vivió en el buscador de producto mientras hubo tope de partidas: el contador y el placeholder que explicaba por qué no se podía escribir — se quitó con el tope el 2026-09-02, pero la regla vale para el siguiente caso), el 60% se
   aplica solo al **control**, no al dato. Incluye el **placeholder** cuando al

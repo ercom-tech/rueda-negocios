@@ -70,10 +70,11 @@ tiene sigue escrito porque la VM de la API puede no tenerlo:
   opcionales, el CHECK y `last_estimate_number`; su comprobación —ninguna
   pendiente— es el paso 6 de `docs/despliegue-laptop.md`) + `bin/rails
   tailwindcss:build` (obligatorio: hay clases nuevas en cada lote).
-  **`bundle install` y reiniciar el servicio son obligatorios en este lote:**
-  entra la gema `roo` (leer el Excel de "Cambiar precios"), y un servidor que
-  arrancó sin ella da pantalla de error con un .xlsx (con un .csv funciona,
-  porque el CSV no usa roo: probar con .xlsx).
+  **`bundle install` y reiniciar el servicio fueron obligatorios desde el
+  lote del 2026-10-08:** entró la gema `roo` (leer el Excel de "Cambiar
+  precios"), y un servidor que arrancó sin ella da pantalla de error con un
+  .xlsx (con un .csv funciona, porque el CSV no usa roo: probar con .xlsx).
+  La laptop (`c63a18a`) ya la tiene: el lote pendiente no trae gemas.
 - **Check de "Cambiar precios"** (2026-10-08): en el panel del servidor, subir
   un .xlsx con el layout (CODIGO y PRECIO LISTA S/IVA), revisar, aplicar,
   agregar una partida de un producto del archivo (debe nacer con el precio
@@ -128,7 +129,12 @@ tiene sigue escrito porque la VM de la API puede no tenerlo:
   transmitido dice **en qué pedidos del ERP quedó** cuando se separó; y de
   octubre: el **Cotizador** de la captura, **"Cambiar precios"** en el panel
   del servidor, **"Generar cotización"** (con su reporte "Cotizaciones
-  capturadas") y la **barra de totales a 1.5x** en la laptop.
+  capturadas") y la **barra de totales a 1.5x** en la laptop; y de
+  noviembre: el **PDF de la cotización**, **"Convertir en pedido"** (pedido
+  ya guardado, la cotización se borra), la **ilustración nueva del menú**,
+  la **tarjeta de Teotihuacán** en el login, y las tarjetas bloqueadas del
+  panel del servidor ("Cambiar precios", "Elegir rueda") **apagadas al 60%
+  completas**, como las demás.
 - Candidato aparte: no existe handshake de versión laptop↔API (`/` y
   `/health` no la exponen) — esta clase de desfase seguirá siendo invisible
   hasta que exista.
@@ -198,8 +204,8 @@ y cómo aislarla (transacción con rollback por prueba, como ya se hace a mano).
 ### Pruebas de sistema: ampliar la cobertura del JavaScript
 
 **Arranque hecho (2026-08-11):** existe `test/system/` con
-`ApplicationSystemTestCase` (Chrome headless); hoy son doce archivos
-(`ls test/system`), del modal de quitar partida a la cotización que
+`ApplicationSystemTestCase` (Chrome headless); cuántos archivos hay lo
+dice `ls test/system` (el número escrito aquí se desactualizaba), del modal de quitar partida a la cotización que
 desaparece con la pantalla abierta. Se corren con `bin/rails test:system`,
 aparte de la suite normal.
 

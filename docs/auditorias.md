@@ -189,6 +189,21 @@ ninguna otra dimensión los habría buscado.
 
 ## Historial
 
+- **18ª (2026-11-04)** — alcance: **todo el proyecto, énfasis en el arco
+  del PDF de la cotización y "Convertir en pedido"** (app
+  `47c58ad..f0544fd` más la remediación de la 17ª), con 7 auditores, **no
+  más de 3 a la vez** (pedido del usuario por el límite de tokens de la
+  sesión: el reparto en tandas no cambió el método, solo el reloj) — **0
+  ALTA · 2 MEDIA · ~25 BAJA** → remediada en cuatro bloques (detalle en "18ª
+  auditoría" de `memory.md`). Las dos MEDIA fueron del arco nuevo y las
+  dos, de lo que rodea a la función y no de la función: el modal de
+  conversión debajo de la barra superior en el resumen (la trampa del
+  z-index por **tercera** vez, siempre al poner el primer modal en una
+  pantalla) y el aviso de "ya no está" que no decía "se convirtió en
+  pedido". Seguridad, sin hallazgos. Lección de la verificación: **una
+  prueba de regresión no es una prueba que muerde** — el barrido del PDF
+  con la leyenda no detectó quitarle la leyenda a la medida, y se dijo así
+  en vez de presentarlo como protección.
 - **17ª (2026-10-29)** — alcance: **todo el proyecto, énfasis en la
   remediación de la 16ª** (app `3f0985a..ada8d90`, API `04e3412..7dba692`),
   con 7 auditores — **0 ALTA · 7 MEDIA · ~22 BAJA** → remediada en cuatro

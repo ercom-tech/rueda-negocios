@@ -134,6 +134,12 @@ renglón dice con qué usuario va:
    ese pedido desde su captura.
 7. **Servidor → Cambiar precios → Quitar precios cargados**, y **Reportes**:
    las tarjetas habilitadas abren sin error.
+8. **Que no quedó nada de prueba**, en consola: `bin/rails runner 'puts
+   [Order.sale.count, Order.estimate.count].inspect'` → `[0, 0]`. El paso 6
+   lo pide en texto; esto lo comprueba. Un pedido de prueba olvidado —el que
+   deja "Convertir en pedido" nace YA guardado— bloquea el siguiente
+   "Obtener información" con "Transmítelo", y seguido al pie de la letra
+   llegaría al ERP como venta real (18ª auditoría).
 
 - Si el lote trae cambios en el PDF, **imprimir un pedido de ~20 partidas** y
   verificar que los cuatro totales y el importe en letra caen en la misma hoja.

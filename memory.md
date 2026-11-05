@@ -113,6 +113,23 @@ existe en `vta_cotizacion`, así que `clave_cotizacion` sigue en `''`.
   nueva ni cambio en `erp-prerequisitos.sql`.
 - Para consultarlo: `payload->'cotizacion_origen'` en `vta_pedido_rueda`.
 
+**Bloque 4 — documentación y "Elegir rueda".**
+- **"Elegir rueda" bloqueada al 60% completa** (decisión del usuario): la
+  regla de "todas las tarjetas bloqueadas del menú se ven igual" ya no tiene
+  excepción. Costo medido: el nombre de la rueda —único lugar de la app
+  donde aparece— baja de 4.69:1 a 3.20:1 (sobre el patrón) / 3.36:1 (sobre
+  negro), arriba del 3:1 del texto grande. La nota de la 4ª que lo dejaba a
+  plena opacidad y la justificación falsa de la de "Cambiar precios" quedan
+  corregidas en su lugar.
+- API: el comentario de `empaque_observaciones` dejó de ser invariante —96 de
+  164 en CAPTUR van NULL; re-medido por el coordinador— y ahora lo dice; el
+  `' '` sigue siendo seguro.
+- Guía de despliegue: la comprobación posterior cierra con `[Order.sale.count,
+  Order.estimate.count]` → `[0, 0]`; backlog con las dos migraciones, el
+  objetivo por ancestro y no por sha, la gema `roo` ya instalada, y los
+  cambios visibles de noviembre; `alt` de la ilustración del menú; assets
+  borrados anotados donde se registraron; historial en `docs/auditorias.md`.
+
 Al pasar: una fila de `settings` con el contador de cotizaciones en 3, de una
 corrida interrumpida de `estimate_concurrency_test` (no transaccional),
 rompió dos pruebas de `estimate_test` que esperan `COT-000001`. Se limpió; no
@@ -467,9 +484,10 @@ coral), adaptado a la norma: el regreso va en la fila del título.
   "COT" ya la identifica. No retrocede al borrar cotizaciones, para que un
   número no se repita a media rueda. **Y no se reinicia al cerrar la rueda**
   (15ª auditoría, decisión registrada): el consecutivo es de la LAPTOP, como
-  el folio `RN-` de los pedidos, que sale del id y tampoco vuelve a 1. Si
-  algún día la cotización lleva PDF, un cliente podría tener en la mano un
-  `COT-000001` de cada rueda sin prefijo; así no puede pasar. El costo es que
+  el folio `RN-` de los pedidos, que sale del id y tampoco vuelve a 1. Desde
+  que la cotización lleva PDF (2026-11-04) esto ya no es hipótesis: un cliente
+  podría tener en la mano un `COT-000001` de cada rueda sin prefijo; así no
+  puede pasar. El costo es que
   la siguiente rueda arranca donde quedó la anterior. Vive en `settings` y no en una secuencia
   de Postgres porque `db/schema.rb` no volcaría la secuencia y la base de
   pruebas se quedaría sin ella.
@@ -743,10 +761,12 @@ obtener la información.
 - **La tarjeta bloqueada se leía habilitada (2026-10-29, visto por el
   usuario).** Desde la 13ª el 60% iba solo al ícono y al título, para que el
   motivo se leyera, y junto a sus vecinas apagadas parecía disponible. Ahora
-  va al 60% completa, como las demás: ninguna otra tarjeta bloqueada dice por
-  qué y a ninguna le pasa nada, y "Elegir rueda" ya enuncia la causa. Se
-  probó antes un punto medio (fondo `/60`, motivo al 100%) y se descartó:
-  seguía viéndose distinta sin razón. Regla en las convenciones visuales.
+  va al 60% completa, como las demás. Se probó antes un punto medio (fondo
+  `/60`, motivo al 100%) y se descartó: seguía viéndose distinta sin razón.
+  Regla en las convenciones visuales. **La justificación que se escribió aquí
+  era falsa** ("ninguna otra tarjeta bloqueada dice por qué"): "Elegir rueda"
+  sí lo decía, con su párrafo a plena opacidad — la 18ª lo encontró, y el
+  usuario la alineó también al 60% completa (2026-11-04).
 
 ## 14ª auditoría (2026-10-10) — el Cotizador
 
@@ -2563,6 +2583,10 @@ le dice y **salir** de donde quedó.
 - **El nombre de la rueda en curso** sale del bloque atenuado: es el único
   lugar de la app donde aparece, y al 60% quedaba en ~2.9:1 con el patrón del
   fondo asomándose. El 60% va al ícono y al título, no al dato.
+  *(Revertido el 2026-11-04, 18ª auditoría: el usuario prefirió la regla
+  "todas las tarjetas bloqueadas del menú se ven igual". Re-medido con la
+  paleta actual —el coral ya es #bd5343—: 3.20:1 sobre el patrón y 3.36:1
+  sobre negro, arriba del 3:1 del texto grande pero sin margen.)*
 - **El buscador de cliente recibe el foco** mientras no hay cliente elegido. El
   paso 2 ya lo hacía; faltaba en el campo con el que EMPIEZA cada pedido, y el
   paso 3 ofrece "Capturar otro pedido" justo para no volver al menú.
@@ -3031,6 +3055,9 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
   `app/assets/images` con nombres propios: `fecego_logo_white.png`,
   `tools_pattern_white.svg` (era `13.svg`; el `12.svg` es la versión negra),
   `event_card_oaxaca.svg` (tarjeta del evento; luego dinámica por rueda).
+  *(2026-11-04: reemplazada por `event_card_teotihuacan.jpg`, la del evento
+  del 26-27 de noviembre. Sigue FIJA por evento, no dinámica: cada rueda
+  nueva pide cambiar la imagen, hacer commit y desplegar.)*
   Regla del usuario: **al copiar assets, renombrarlos con nombre adecuado**.
 - **Paginación:** gem `pagy` agregado (aún sin uso; para los listados futuros).
 - **Seed dev** (`db/seeds.rb`, solo development): rueda activa Oaxaca 2026 +
@@ -3047,6 +3074,8 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
   de venta, Asistencia de clientes, Generar cotización (amarillas). Partial
   `home/_menu_card`. Hoy enlazan a `#`; se cablean cuando se construya cada una.
 - **Assets** copiados a `app/assets/images` con nombres propios: `expo_illustration.svg`
+  *(2026-11-04: reemplazada por `menu_illustration.png`, el stand de FECEGO
+  con el fondo hecho transparente y el margen recortado)*
   e `icon_{register_order,sales_reports,client_attendance,generate_quote}.svg`.
 - **Barra superior:** logo + pills `Usuario` (real, `current_user`) y `Proveedor`
   + `Cerrar sesión`.
