@@ -46,8 +46,12 @@ class ApplicationController < ActionController::Base
   # encontramos esa pantalla", sin explicación; ahora regresa al menú y dice
   # qué pasó. Solo cuando el registro no existe: uno que existe y no es del
   # usuario sigue siendo 404, que es la respuesta correcta a un id ajeno.
+  #
+  # Una cotización también desaparece al CONVERTIRSE en pedido (2026-11-04), y
+  # el aviso no lo decía: el capturista la creía perdida y podía capturarla
+  # otra vez — una venta duplicada al ERP (18ª auditoría).
   ORDER_GONE_MESSAGE = "Ese pedido o cotización ya no está en esta laptop: se descartó, " \
-                       "o se borró al obtener la información o al cerrar la rueda.".freeze
+                       "se convirtió en pedido, o se borró al obtener la información o al cerrar la rueda.".freeze
 
   # El id pasa por `ParamSanitizing` y la consulta va en forma de hash: con
   # `Order.exists?(params[:order_id])` un `?order_id[]=<condición>` llegaba
@@ -66,9 +70,12 @@ class ApplicationController < ActionController::Base
     if action_name == "product_options"
       render partial: "orders/order_gone", layout: false
     else
-      redirect_to root_path, alert: ORDER_GONE_MESSAGE
+      redirect_to root_path, alert: gone_message
     end
   end
+
+  # Lo redefine quien sabe más del caso (la conversión de una cotización).
+  def gone_message = ORDER_GONE_MESSAGE
 
   # Un pedido transmitido al ERP ya no se edita. Respondía `head :forbidden`
   # y, con la pantalla abierta mientras el servidor transmitía, la cantidad

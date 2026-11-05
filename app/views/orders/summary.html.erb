@@ -8,9 +8,13 @@
   <div class="pointer-events-none absolute inset-0 bg-cover bg-center opacity-[0.18]"
        style="background-image: url('<%= image_path "tools_pattern_white.svg" %>');"></div>
 
-  <%# z-20 (no z-10): hermano del contenido (z-10) y contiene el modal de
-      cerrar sesión — con el mismo z, el contenido lo taparía. %>
-  <div class="relative z-20 px-6 pt-6 sm:px-10 lg:px-[5%] lg:pt-8">
+  <%# Sin z-index, ni aquí ni en el contenido: los DOS contienen modales
+      (cerrar sesión aquí, "Convertir en pedido" abajo), y un z-index en el
+      wrapper encierra a sus diálogos. Con z-20 aquí y z-10 abajo, el modal de
+      conversión quedaba DEBAJO de esta barra y "Cerrar sesión" seguía
+      respondiendo con él abierto (18ª auditoría). Mismo arreglo que
+      orders/show (7ª) y orders/new (16ª). %>
+  <div class="relative px-6 pt-6 sm:px-10 lg:px-[5%] lg:pt-8">
     <%= render "shared/top_bar" %>
     <%# El regreso va en la fila del título con `back_link_class` (estándar
         del sitio): dentro de la card iba en estilo de botón de acción — la
@@ -23,7 +27,7 @@
     </div>
   </div>
 
-  <div class="relative z-10 mx-auto max-w-xl px-6 py-12">
+  <div class="relative mx-auto max-w-xl px-6 py-12">
     <section class="rounded-3xl bg-brand-gold p-6 sm:p-8">
       <div class="rounded-2xl bg-black py-4 text-center">
         <h2 class="text-2xl font-extrabold text-white">Resumen <%= @order.document_text(:of_the) %></h2>

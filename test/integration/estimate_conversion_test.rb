@@ -124,7 +124,10 @@ class EstimateConversionTest < ActionDispatch::IntegrationTest
     assert Order.exists?(estimate.id)
   end
 
-  test "dos toques no crean dos pedidos" do
+  # El segundo toque decía "se descartó, o se borró al obtener la información":
+  # el capturista creía perdida una cotización que ya era pedido, y podía
+  # capturarla otra vez — una venta duplicada al ERP (18ª auditoría).
+  test "dos toques no crean dos pedidos, y el segundo dice que pudo convertirse" do
     estimate = estimate!(client: @client)
 
     post convert_order_path(estimate)
@@ -133,7 +136,59 @@ class EstimateConversionTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to root_path
-    assert_equal ApplicationController::ORDER_GONE_MESSAGE, flash[:alert]
+    assert_equal OrdersController::ESTIMATE_GONE_MESSAGE, flash[:alert]
+    assert_match(/se convirtió en pedido/, flash[:alert])
+  end
+
+  test "volver al paso 1 de una conversión ya hecha dice que pudo convertirse" do
+    estimate = estimate!
+    post convert_order_path(estimate), params: { order: { client_id: @client.id, kind: "remission",
+                                                          client_receipt_profile_id: @receipt.id,
+                                                          client_branch_id: @branch.id } }
+
+    get conversion_order_path(estimate)
+
+    assert_redirected_to root_path
+    assert_equal OrdersController::ESTIMATE_GONE_MESSAGE, flash[:alert]
+  end
+
+  test "el aviso general de 'ya no está' también nombra la conversión" do
+    assert_match(/se convirtió en pedido/, ApplicationController::ORDER_GONE_MESSAGE)
+  end
+
+  # --- La cotización cambió de forma entre la pantalla y el envío -----------
+  # El controlador decidía con la forma de AHORA: el paso 1 de una genérica a
+  # la que en otra pestaña le asignaron cliente convertía con ESE cliente e
+  # ignoraba el elegido en pantalla; y el modal de una con cliente que se
+  # volvió genérica daba 400 (`params.require`).
+
+  test "si a la genérica le asignaron cliente en otra pestaña, no se convierte con otro" do
+    estimate = estimate!
+    other = Client.create!(erp_client_key: "CNV09", name: "OTRO CLIENTE")
+    other_receipt = other.receipt_profiles.create!(name: "REMISION OTRO")
+    other_branch  = other.branches.create!(erp_branch_id: 1, name: "MATRIZ", is_default: true)
+    estimate.update!(client: @client, kind: "remission", client_receipt_profile: @receipt, client_branch: @branch)
+
+    assert_no_difference -> { Order.count } do
+      post convert_order_path(estimate), params: { order: { client_id: other.id, kind: "remission",
+                                                            client_receipt_profile_id: other_receipt.id,
+                                                            client_branch_id: other_branch.id } }
+    end
+
+    assert_redirected_to order_path(estimate)
+    assert_equal Order::CONVERSION_CHANGED_MESSAGE, flash[:alert]
+  end
+
+  test "si la que tenía cliente se volvió genérica, el modal no da error" do
+    estimate = estimate!(client: @client)
+    estimate.update!(client: nil)
+
+    assert_no_difference -> { Order.count } do
+      post convert_order_path(estimate)
+    end
+
+    assert_redirected_to order_path(estimate)
+    assert_equal Order::CONVERSION_CHANGED_MESSAGE, flash[:alert]
   end
 
   # --- Genérica: paso 1 -----------------------------------------------------
@@ -159,8 +214,8 @@ class EstimateConversionTest < ActionDispatch::IntegrationTest
     assert_match(/Las 2 partidas de la\s+cotización <span class="font-semibold">#{estimate.local_folio}/, response.body)
 
     get conversion_order_path(estimate, client_key: "CNV01")
-    assert_select "form[action=?][method=post]", convert_order_path(estimate)
-    assert_select "input[type=submit][value=?]", "Convertir en pedido"
+    assert_select "form#conversion-form[action=?][method=post]", convert_order_path(estimate)
+    assert_select "button[type=submit][form=conversion-form]", text: "Sí, convertir"
 
     post convert_order_path(estimate), params: { order: { client_id: @client.id, kind: "remission",
                                                           client_receipt_profile_id: @receipt.id,

@@ -186,7 +186,11 @@ movería también fechas, números y mensajes de Rails que hoy funcionan.
   diálogos `fixed z-50` compitan en el contexto raíz. El síntoma es sutil: la
   barra superior se pinta sobre el modal y un toque cerca de su borde acciona
   un botón del header — en `orders/show` eso era "Cerrar sesión" a media
-  captura (7ª auditoría).
+  captura (7ª auditoría). **Va TRES veces** (`show` en la 7ª, `new` en la 16ª,
+  `summary` en la 18ª), siempre igual: la pantalla no tenía modales en el
+  contenido, el z-index sobraba sin hacer daño, y el primer modal que llegó
+  quedó debajo. Al poner el PRIMER modal en una pantalla, revisar el z-index
+  de sus wrappers.
 - **En un diálogo que carga su contenido después de abrirse, el foco hay que
   reintentarlo.** `focusables()[0]` al abrir encuentra el placeholder, que no
   tiene ninguno, y el foco se queda fuera para siempre: el focus-trap no

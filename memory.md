@@ -27,6 +27,7 @@ Si es **algo por hacer**, va al backlog.
 ## Índice de la bitácora
 
 - Decisiones generales del proyecto (abajo)
+- 18ª auditoría (2026-11-04) — todo el proyecto, énfasis en PDF de cotización y Convertir en pedido
 - 17ª auditoría (2026-10-29) — todo el proyecto, énfasis en la remediación de la 16ª
 - 16ª auditoría (2026-10-29) — todo el proyecto
 - 15ª auditoría (2026-10-28) — cotizaciones y todo el proyecto
@@ -38,6 +39,43 @@ Si es **algo por hacer**, va al backlog.
 - Fase A — scaffolding · Fase B — login, menú, reportes, pedido (arcos 1–3)
 - Fase C — `rueda-api` export / sync-down
 - Fase D — rake `sync:down`, sync-up, panel del servidor, estatus del pedido
+
+## 18ª auditoría (2026-11-04) — todo el proyecto, énfasis en PDF de cotización y Convertir en pedido
+
+Alcance: `47c58ad..f0544fd` (PDF de la cotización, Convertir en pedido,
+imágenes del menú y del login, tarjeta "Cambiar precios" bloqueada) más la
+remediación de la 17ª. 7 dimensiones, máximo 3 agentes a la vez (por el
+límite de tokens de la sesión). **0 ALTA + 2 MEDIA + ~25 BAJA.** Seguridad
+sin hallazgos (forjar `user_id`/`status`/`document`/rueda en la conversión no
+pasa); despliegue `c63a18a`→HEAD y reversión reproducidos completos.
+
+**Bloque 1 — la conversión (las 2 MEDIA y 3 BAJA).** Refutación: las cinco
+se sostuvieron contra el código; las 8 pruebas nuevas fallaron sin arreglo.
+- **MEDIA: el modal de conversión quedaba DEBAJO de la barra superior en el
+  resumen** (`z-20`/`z-10` en los wrappers; "Cerrar sesión" respondía con el
+  modal abierto a 1024×600). Tercera vez la misma trampa; la regla de las
+  convenciones ahora dice "al poner el PRIMER modal en una pantalla, revisar
+  el z-index de sus wrappers".
+- **MEDIA: tras convertir, el aviso de "ya no está" no decía que se volvió
+  pedido** (segundo toque, "Atrás", otra pestaña). El capturista podía
+  recapturarla: venta duplicada. Ahora `convert`/`conversion` dicen "se
+  convirtió en pedido o se descartó" y dónde está el pedido, y el aviso
+  general suma "se convirtió en pedido". `gone_message` lo redefine el
+  controlador que sabe más del caso.
+- **La forma la dice lo ENVIADO, no la cotización de ahora:** con `order` en
+  los params es el paso 1 de la genérica; sin él, el modal de la que tiene
+  cliente. Si no coincide bajo el candado → `CONVERSION_CHANGED_MESSAGE`. Antes
+  la genérica que recibió cliente en otra pestaña se convertía con ESE
+  cliente, ignorando el de la pantalla, y la otra dirección daba 400.
+- **La genérica confirma** con el mismo `confirm_dialog`, que ahora acepta
+  `form:` (el botón envía el formulario de la página en vez de armar el suyo).
+- **`confirm_dialog` se cierra al terminar su envío:** con un sync vivo, el
+  422 dejaba el modal abierto encima del aviso (también en Descartar/Guardar).
+
+Al pasar: una fila de `settings` con el contador de cotizaciones en 3, de una
+corrida interrumpida de `estimate_concurrency_test` (no transaccional),
+rompió dos pruebas de `estimate_test` que esperan `COT-000001`. Se limpió; no
+es defecto del código.
 
 ## 17ª auditoría (2026-10-29) — todo el proyecto, énfasis en la remediación de la 16ª
 

@@ -215,11 +215,14 @@ class OrdersController < ApplicationController
   # cotización. Ver Order#convert_to_sale!.
   def convert
     @estimate = convertible_estimate
-    sale = @estimate.convert_to_sale!(@estimate.generic? ? order_params : nil)
+    # La forma la dice lo ENVIADO, no la cotización de ahora: el paso 1 de la
+    # genérica manda `order`, el modal de la que tiene cliente no. Si en otra
+    # pestaña cambió de forma, el modelo lo detecta bajo el candado.
+    sale = @estimate.convert_to_sale!(params[:order].present? ? order_params : nil)
     if sale.persisted?
       redirect_to summary_order_path(sale),
                   notice: "La cotización #{@estimate.folio} se convirtió en el pedido #{sale.folio}."
-    elsif @estimate.generic?
+    elsif params[:order].present?
       @order     = sale
       @client    = sale.client
       @cfdi_uses = CfdiUse.order(:code)
@@ -284,6 +287,17 @@ class OrdersController < ApplicationController
                     alert: "Este pedido ya no es un borrador: lo guardaron desde otro equipo. No se cambió nada."
       end
     end
+  end
+
+  # En la conversión, lo más probable es que la cotización ya se haya
+  # convertido (segundo toque, "Atrás" desde el resumen, otra pestaña), y es
+  # justo lo que el aviso general dice al último. Aquí va primero, con dónde
+  # encontrar el pedido.
+  ESTIMATE_GONE_MESSAGE = "Esta cotización ya no está en esta laptop: se convirtió en pedido o se descartó. " \
+                          "Si se convirtió, el pedido está en Reportes de venta → Pedidos capturados.".freeze
+
+  def gone_message
+    %w[conversion convert].include?(action_name) ? ESTIMATE_GONE_MESSAGE : super
   end
 
   # Solo la cotización GUARDADA y del propio capturista: el equipo-servidor las

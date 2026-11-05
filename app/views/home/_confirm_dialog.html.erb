@@ -2,7 +2,10 @@
   Diálogo de confirmación. Va DENTRO de un contenedor con
   data-controller="modal"; el botón que lo abre usa data-action="modal#open".
   Locals: title, message, confirm_label, path, method (default :post),
-  params (Hash opcional — viaja en el form del botón de confirmación).
+  params (Hash opcional — viaja en el form del botón de confirmación);
+  form (opcional: id de un formulario de la página — el botón lo envía en
+  vez de armar su propio form; así confirma el paso 1 de una conversión
+  sin duplicar sus campos, y `path`/`method` no se usan).
 %>
 <%# `id`: obligatorio cuando el diálogo vive dentro de una región que se
     repinta con morph. Con `permanent: true` se marca `data-turbo-permanent`,
@@ -25,9 +28,20 @@
               class="rounded-full bg-neutral-700 px-6 py-2.5 font-bold text-white transition-colors hover:bg-neutral-600">
         Cancelar
       </button>
-      <%= button_to confirm_label, path, method: (local_assigns[:method] || :post),
-            params: (local_assigns[:params] || {}),
-            class: "rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
+      <% confirm_class = "rounded-full bg-brand-coral px-6 py-2.5 font-bold text-white transition-colors hover:bg-brand-coral-dark" %>
+      <% if local_assigns[:form] %>
+        <button type="submit" form="<%= form %>" class="cursor-pointer <%= confirm_class %>"><%= confirm_label %></button>
+      <% else %>
+        <%# Se cierra al terminar el envío (convenciones: "un modal que actúa
+            debe cerrarse al terminar"). Con éxito no se nota —la página
+            navega—, pero cuando la acción no procede (un sync vivo responde
+            422 con el aviso en el flash) el modal se quedaba abierto encima
+            del aviso (18ª auditoría). %>
+        <%= button_to confirm_label, path, method: (local_assigns[:method] || :post),
+              params: (local_assigns[:params] || {}),
+              form: { data: { action: "turbo:submit-end->modal#close" } },
+              class: confirm_class %>
+      <% end %>
     </div>
   </div>
 </div>

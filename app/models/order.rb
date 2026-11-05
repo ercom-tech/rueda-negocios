@@ -292,6 +292,9 @@ class Order < ApplicationRecord
   # Lo que impide convertir una cotización, dicho al capturista.
   class ConversionError < StandardError; end
 
+  CONVERSION_CHANGED_MESSAGE = "La cotización cambió mientras la convertías: se le asignó o se le quitó " \
+                               "el cliente. Revísala y vuelve a convertirla.".freeze
+
   # El encabezado que pasa de la cotización al pedido cuando la cotización ya
   # tiene cliente. Es lo mismo que pide el paso 1.
   CONVERTED_HEADER = %w[client_id kind client_tax_profile_id cfdi_use_id
@@ -307,6 +310,11 @@ class Order < ApplicationRecord
   # `header`: el del paso 1 cuando la cotización es de cliente genérico; nil
   # para tomar el de la cotización. Devuelve el pedido: si el encabezado no
   # valida, sin guardar y con sus errores, y la cotización intacta.
+  #
+  # El `header` dice además con qué FORMA se pintó la pantalla, y se compara
+  # bajo el candado: si en otra pestaña la genérica recibió cliente (o al
+  # revés), convertir con la forma de ahora ignoraba el cliente elegido en
+  # pantalla, o tronaba (18ª auditoría).
   def convert_to_sale!(header = nil)
     sale = nil
     self.class.transaction do
@@ -315,6 +323,7 @@ class Order < ApplicationRecord
       lock!
       raise ConversionError, "Solo una cotización guardada se puede convertir en pedido." unless estimate? && captured?
       raise ConversionError, "La cotización no tiene productos." if order_items.empty?
+      raise ConversionError, CONVERSION_CHANGED_MESSAGE if generic? != header.present?
       check_promotions_still_effective!
 
       sale = Order.new((header || attributes.slice(*CONVERTED_HEADER)).to_h.merge(
