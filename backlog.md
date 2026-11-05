@@ -19,7 +19,9 @@ cotización de origen de un pedido convertido), sin gemas ni initializers
 nuevos. Objetivo: la laptop con master que CONTENGA `97c8d22` (remediación
 de la 19ª: `git merge-base --is-ancestor 97c8d22 HEAD && echo ok`); la API
 con master que contenga `2c35375` (la prueba de `cotizacion_origen`; sin
-cambio de código, la API guarda el paquete entero). Por ancestro y no por
+cambio de código, la API guarda el paquete entero). **La API sí cambia de
+gemas** desde el 2026-11-04 (`json` 2.21.2, ver "Vulnerabilidades de
+dependencias"): ahí el `bundle install` de la guía deja de ser opcional. Por ancestro y no por
 sha exacto: un commit de docs encima lo cambia. Este renglón
 decía "nada está desplegado desde antes de la 4ª", y la guía de reversión se
 apoyaba en un sha equivocado (17ª auditoría). **De la API de testing** el
@@ -639,11 +641,18 @@ Qué cuesta cada una cuando toque:
   no es un `bundle update`: necesita su propio ciclo de pruebas y despliegue
   aislado. La laptop no está afectada — corre puma 8.0.2, fuera del rango
   vulnerable (`>= 5.5.0, < 7.2.1`).
-- **json → 2.21.2**: parche, gema transitiva, `bundle update json` en los dos
-  repos. Barato; se puede hacer en cualquier momento que haya un lote abierto.
+- **json → 2.21.2**: **hecho en `rueda-api` el 2026-11-04** (parche, solo esa
+  gema: `bundle lock --update json --patch --strict --conservative`; un
+  `bundle update json --conservative` a secas la subía a la 3.1.0 y movía
+  rubocop). Entra en el siguiente despliegue de la API, que por eso SÍ pide
+  `bundle install`. En la app (`rueda-negocios`) sigue en 2.21.1 a propósito:
+  ahí no aplica, GitHub no la reporta (0 alertas abiertas, revisado el
+  2026-11-04), y subirla le agregaría `bundle install` a un despliegue de la
+  laptop que hoy no trae gemas. Va con el próximo lote que sí traiga.
 
-Sin revisar: el Dependabot de `ercom-tech/rueda-negocios` (solo se miró el de
-`rueda-api`, que fue el que avisó al hacer push).
+Revisado de nuevo el 2026-11-04 (19ª auditoría): las dos de Puma siguen sin
+aplicar —`config/puma.rb` de la API sigue fijando solo el puerto—, y siguen
+esperando al borde TLS/proxy, con el que se vuelven reales.
 
 ### Punto único de falla: la laptop-servidor
 
