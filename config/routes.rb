@@ -55,7 +55,7 @@ Rails.application.routes.draw do
       patch :observations                      # guarda observaciones
       post  :capture                           # finaliza (folio) → resumen
       get   :summary                           # paso 3: resumen con opciones
-      get   :pdf                               # descarga PDF del pedido
+      get   :pdf                               # descarga PDF del pedido o de la cotización guardada
       get   :conversion                        # paso 1 para convertir una cotización genérica
       post  :convert                           # cotización guardada → pedido nuevo
     end

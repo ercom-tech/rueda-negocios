@@ -86,8 +86,16 @@ module Pdf
     # Pedido aparte con N partidas, para barrer alturas de tabla sin arrastrar
     # el estado del pedido del setup. La descripción y los regalos son
     # parámetros porque cada forma mueve la franja a otro conteo.
-    def order_with_items(count, description: "PRODUCTO", gift: false)
-      order = Order.create!(user: @user, business_round: @round, client: @client, kind: "remission")
+    def order_with_items(count, description: "PRODUCTO", gift: false, estimate: false)
+      order = if estimate
+        # Genérica, con observaciones: el pie más alto que tiene el papel — la
+        # leyenda de la cotización más dos renglones de observaciones.
+        Order.create!(user: @user, business_round: @round, document: "estimate",
+                      observations: "ENTREGAR EN BODEGA 3 DE LA SUCURSAL CENTRO, EN HORARIO DE 9 A 14 HORAS. " \
+                                    "LLAMAR ANTES AL ENCARGADO DE ALMACEN PARA CONFIRMAR LA CITA Y EL ANDEN.")
+      else
+        Order.create!(user: @user, business_round: @round, client: @client, kind: "remission")
+      end
       count.times do |i|
         @seq = (@seq || 950_000) + 1
         product = Product.create!(erp_product_id: @seq, description: description, max_discount: 50)
@@ -124,12 +132,17 @@ module Pdf
       cases = [
         { range: 18..24, description: "PRODUCTO",          gift: false },
         { range: 11..15, description: LONG_DESCRIPTION,    gift: false },
-        { range: 9..13,  description: LONG_DESCRIPTION,    gift: true }
+        { range: 9..13,  description: LONG_DESCRIPTION,    gift: true },
+        # La cotización suma la leyenda al pie (18ª auditoría). Barrida de 1 a
+        # 60 en la 18ª no falló en ningún conteo, ni quitando la leyenda de la
+        # medida del pie: este tramo es regresión, no la franja que lo prueba.
+        { range: 14..24, description: "PRODUCTO",          gift: false, estimate: true }
       ]
 
       cases.each do |test_case|
         test_case[:range].each do |n|
-          order = order_with_items(n, description: test_case[:description], gift: test_case[:gift])
+          order = order_with_items(n, description: test_case[:description], gift: test_case[:gift],
+                                      estimate: test_case.fetch(:estimate, false))
           gen   = OrderGenerator.new(order)
           gen.render # llena los importes impresos
           amount_words = gen.send(:amount_in_words, gen.send(:printed_total, :total))
@@ -138,7 +151,10 @@ module Pdf
           pages = pdf_pages(order)
           label_text = "#{n} partidas (#{test_case[:description][0, 8]}, regalos=#{test_case[:gift]})"
 
-          complete_ones = pages.count { |p| p.include?(amount_words) && p.include?(total) }
+          complete_ones = pages.count do |p|
+            p.include?(amount_words) && p.include?(total) &&
+              (!order.estimate? || (p.include?("Cotización informativa") && p.include?("Observaciones")))
+          end
           assert_equal 1, complete_ones,
                        "con #{label_text} el pie no quedó completo en una sola hoja " \
                        "(#{pages.size} hojas; importe en letra y Total juntos en #{complete_ones})"

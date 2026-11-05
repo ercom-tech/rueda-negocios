@@ -2,8 +2,9 @@ require "prawn"
 require "prawn/table"
 
 module Pdf
-  # Genera el PDF del pedido con Prawn replicando el formato impreso del ERP
-  # de FECEGO (ver docs/design-reference / muestras PedidoKE*.pdf del b2b):
+  # Genera el PDF del pedido (y de la cotización, ver abajo) con Prawn
+  # replicando el formato impreso del ERP de FECEGO (ver
+  # docs/design-reference / muestras PedidoKE*.pdf del b2b):
   # logo + datos de la empresa, "PEDIDO" + clave/fecha, bloque cliente +
   # atributos, tabla con bordes (Código/Descripción/Unidad/Cantidad/Precio/
   # Monto/%Dto./Subtotal/%IVA/Total), importe en letra y totales. Offline.

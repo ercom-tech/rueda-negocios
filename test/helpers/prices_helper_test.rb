@@ -22,13 +22,17 @@ class PricesHelperTest < ActionView::TestCase
 
   # Con una cotización en la lista el encabezado ya no puede decir "pedido", y
   # la cotización se nombra en su paréntesis (genérica: "Cliente genérico").
+  # Cada tipo con su número: con las cotizaciones GUARDADAS dentro (18ª),
+  # "borrador" ya no las cubría a todas.
   test "el aviso nombra a las cotizaciones y no las llama pedidos" do
     sale     = PriceList::Review::StaleDraft.new(capturista: "ANA", client: "Ferretería", items: 1, locked: 0, estimate: false)
     estimate = PriceList::Review::StaleDraft.new(capturista: "LUIS", client: "Cliente genérico", items: 1, locked: 0, estimate: true)
 
-    assert_match(/\AHay 2 borradores con partidas al precio anterior: ANA \(Ferretería\) y LUIS \(cotización, Cliente genérico\)\./,
+    assert_match(/\AHay 1 pedido en borrador y 1 cotización con partidas al precio anterior: ANA \(Ferretería\) y LUIS \(cotización, Cliente genérico\)\./,
                  stale_drafts_sentence([ sale, estimate ]))
-    assert_match(/\AHay 1 borrador con partidas/, stale_drafts_sentence([ estimate ]))
+    assert_match(/\AHay 2 cotizaciones con partidas/, stale_drafts_sentence([ estimate, estimate ]))
+    assert_match(/Una cotización que se convierte en pedido conserva sus precios\.\z/, stale_drafts_sentence([ estimate ]))
+    assert_no_match(/se convierte en pedido/, stale_drafts_sentence([ sale ]))
   end
 
   test "desglosa los motivos: los dos más frecuentes y el resto como N más" do

@@ -163,6 +163,19 @@ module PriceList
       assert_equal [ "LUIS", "Cliente genérico", true ], [ draft.capturista, draft.client, draft.estimate ]
     end
 
+    # Una cotización GUARDADA se puede convertir en pedido, y el pedido
+    # conserva su precio: si la revisión no la nombra, llega al ERP con el
+    # viejo sin que el operador lo supiera (18ª auditoría).
+    test "una cotización guardada también se reporta" do
+      user     = User.create!(erp_person_id: 9504, username: "cap_pl4", password: "x", role: "capturista", name: "EVA")
+      estimate = Order.create!(user:, business_round: @round, document: "estimate")
+      estimate.order_items.create!(@saw.to_order_item_attributes.merge(quantity: 1, unit_price: 6500))
+      estimate.capture!
+
+      draft = review([ [ 3021, 6900 ] ]).stale_drafts.sole
+      assert_equal [ "EVA", true ], [ draft.capturista, draft.estimate ]
+    end
+
     # El precio de un regalo no mueve el total (va al 100%): avisar de él
     # mandaba a quitar partidas que el candado de promoción no deja quitar.
     test "los regalos no cuentan y las partidas con promoción se cuentan aparte" do

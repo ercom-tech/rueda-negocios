@@ -72,6 +72,33 @@ se sostuvieron contra el código; las 8 pruebas nuevas fallaron sin arreglo.
 - **`confirm_dialog` se cierra al terminar su envío:** con un sync vivo, el
   422 dejaba el modal abierto encima del aviso (también en Descartar/Guardar).
 
+**Bloque 2 — las BAJA de código.**
+- **"Cambiar precios" no nombraba las cotizaciones GUARDADAS** con precio
+  viejo (`stale_drafts` filtraba `status: draft`). Desde que se convierten en
+  pedido, una así llega al ERP con el precio anterior — que es lo nativo: el
+  ERP conserva el precio de la cotización en el 99.4% de sus partidas
+  convertidas (13,161 de 13,239; pedidos con `clave_cotizacion`,
+  `fecha_pedido >= 2026-09-01`, `id_empresa = 1`, `id_sucursal_crea = 1`,
+  medido por el auditor del ERP). No se cambia el precio; se avisa. El aviso
+  cuenta cada tipo con su número ("1 pedido en borrador y 1 cotización") y,
+  con cotizaciones, dice que al convertirse conservan sus precios. El pedido
+  capturado sigue fuera: ya se le ofreció al cliente así.
+- **Una sola lista del encabezado** (`Order::HEADER_ATTRIBUTES`) para el
+  `permit` del paso 1 y para lo que pasa al convertir; `convertible_estimates`
+  y `render_header_errors` reemplazan lo copiado en dos y tres lugares.
+- La rama de "encabezado que ya no valida" decía "Client branch es
+  obligatoria": ahora un texto fijo con el camino (Editar).
+- Pruebas que faltaban: regalo + 999999 con proveedor y No. de parte en la
+  conversión, concordancia del modal (1 y 2 partidas), dos promociones
+  vencidas en plural, y la cotización en el barrido del pie del PDF. Ese
+  último NO muerde la mutación de quitar la leyenda de la medida del pie:
+  barrido de 1 a 60 sin fallar — el pie tiene holgura para esos 28 pt. Queda
+  como regresión, y dicho así en la prueba.
+- Lección de proceso: restaurar un archivo mutado con `git checkout` tira
+  también los cambios SIN COMMIT de ese archivo. Se perdieron y se
+  rehicieron las ediciones del barrido. Para mutar: copia de respaldo y
+  `cp` de vuelta, nunca `git checkout` sobre un archivo con trabajo pendiente.
+
 Al pasar: una fila de `settings` con el contador de cotizaciones en 3, de una
 corrida interrumpida de `estimate_concurrency_test` (no transaccional),
 rompió dos pruebas de `estimate_test` que esperan `COT-000001`. Se limpió; no

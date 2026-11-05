@@ -44,7 +44,7 @@ class OrdersController < ApplicationController
     # Al convertir una cotización genérica, las sugerencias siguen en la
     # conversión; si la cotización ya no existe, el mismo aviso de arriba.
     conversion_id = ParamSanitizing.id(params[:conversion_id])
-    conversion = current_user.orders.estimate.captured.find_by(id: conversion_id) if conversion_id
+    conversion = convertible_estimates.find_by(id: conversion_id) if conversion_id
     return render partial: "orders/order_gone", layout: false if conversion_id && conversion.nil?
 
     # `truncated` va en los locals, no como ivar: el partial lo lee con
@@ -61,10 +61,7 @@ class OrdersController < ApplicationController
       redirect_to @order, notice: (@order.generic? ? "Cotización iniciada. Continúa con el detalle."
                                                    : "Encabezado guardado. Continúa con el detalle.")
     else
-      @client = @order.client
-      @cfdi_uses = CfdiUse.order(:code)
-      flash.now[:alert] = "Revisa los datos obligatorios del encabezado."
-      render :new, status: :unprocessable_entity
+      render_header_errors
     end
   end
 
@@ -126,10 +123,7 @@ class OrdersController < ApplicationController
     if @order.update(order_params)
       redirect_to @order, notice: (@order.generic? ? "La cotización ahora es de cliente genérico." : "Encabezado actualizado.")
     else
-      @client    = @order.client
-      @cfdi_uses = CfdiUse.order(:code)
-      flash.now[:alert] = "Revisa los datos obligatorios del encabezado."
-      render :new, status: :unprocessable_entity
+      render_header_errors
     end
   end
 
@@ -191,7 +185,8 @@ class OrdersController < ApplicationController
     end
   end
 
-  # Paso 3: resumen con opciones (PDF / correo, solo en el pedido).
+  # Paso 3: resumen con opciones (PDF y correo; en la cotización, además,
+  # convertirla en pedido).
   def summary
     @order = accessible_orders.find(params[:id])
   end
@@ -223,16 +218,15 @@ class OrdersController < ApplicationController
       redirect_to summary_order_path(sale),
                   notice: "La cotización #{@estimate.folio} se convirtió en el pedido #{sale.folio}."
     elsif params[:order].present?
-      @order     = sale
-      @client    = sale.client
-      @cfdi_uses = CfdiUse.order(:code)
-      flash.now[:alert] = "Revisa los datos obligatorios del encabezado."
-      render :new, status: :unprocessable_entity
+      @order = sale
+      render_header_errors
     else
       # El encabezado de una cotización con cliente ya pasó las mismas
-      # validaciones; si aun así no valida, se dice en vez de tronar.
-      redirect_to @estimate, alert: "No se pudo convertir: revisa el encabezado de la cotización. " \
-                                    "#{SpanishText.sentences(sale.errors.full_messages)}"
+      # validaciones; si aun así no valida, se dice en vez de tronar. Sin los
+      # mensajes del modelo: sus nombres de campo salen en inglés ("Client
+      # branch es obligatoria"), y el camino es el mismo para todos (18ª).
+      redirect_to @estimate, alert: "No se pudo convertir: al encabezado de la cotización le falta un dato. " \
+                                    "Ábrelo con Editar, complétalo y vuelve a convertirla."
     end
   rescue Order::ConversionError => e
     redirect_to @estimate, alert: e.message
@@ -302,8 +296,21 @@ class OrdersController < ApplicationController
 
   # Solo la cotización GUARDADA y del propio capturista: el equipo-servidor las
   # consulta, y un borrador todavía se está capturando.
+  def convertible_estimates
+    current_user.orders.estimate.captured
+  end
+
   def convertible_estimate
-    current_user.orders.estimate.captured.find(params[:id])
+    convertible_estimates.find(params[:id])
+  end
+
+  # El paso 1 con los datos que no validaron. Lo comparten crear, editar y
+  # convertir una genérica: estaba copiado en los tres (18ª auditoría).
+  def render_header_errors
+    @client    = @order.client
+    @cfdi_uses = CfdiUse.order(:code)
+    flash.now[:alert] = "Revisa los datos obligatorios del encabezado."
+    render :new, status: :unprocessable_entity
   end
 
   # Rastro de la resolución de un borrador ajeno. Va al log y no a la BD: es
@@ -366,10 +373,7 @@ class OrdersController < ApplicationController
   end
 
   def order_params
-    permitted = params.require(:order).permit(
-      :client_id, :kind, :client_tax_profile_id, :cfdi_use_id,
-      :client_receipt_profile_id, :client_branch_id, :dividir_facturas
-    )
+    permitted = params.require(:order).permit(*Order::HEADER_ATTRIBUTES)
     # `kind` es un enum: asignarle un valor fuera del catálogo levanta
     # ArgumentError ANTES de cualquier validación, así que no hay forma de
     # atajarlo en el modelo. El campo viaja como radio (o hidden cuando el

@@ -84,9 +84,12 @@ module PriceList
     # auditoría). Los regalos no cuentan: van al 100% de descuento y su precio
     # no mueve el total. `locked` son las partidas con promoción aplicada, que
     # no se pueden quitar sin quitar antes la promoción.
-    # `estimate`: también cuentan las cotizaciones en borrador —conservan el
-    # precio con que se armaron—, y el aviso las nombra como tales. Sin
-    # cliente (genérica), `client` dice "Cliente genérico".
+    # `estimate`: también cuentan las cotizaciones —conservan el precio con
+    # que se armaron—, y el aviso las nombra como tales. Sin cliente
+    # (genérica), `client` dice "Cliente genérico". Las GUARDADAS también: desde
+    # que se pueden convertir en pedido (2026-11-04), una con el precio viejo
+    # llega al ERP con él, y la revisión no la nombraba (18ª auditoría). El
+    # pedido capturado no entra: ya se le ofreció al cliente así.
     StaleDraft = Data.define(:capturista, :client, :items, :locked, :estimate)
 
     def stale_drafts
@@ -94,7 +97,8 @@ module PriceList
       return [] if new_price.empty?
 
       stale = OrderItem.joins(:order, :product)
-                       .where(orders: { status: "draft" }, products: { erp_product_id: new_price.keys }, gift: false)
+                       .merge(Order.draft.or(Order.estimate.captured))
+                       .where(products: { erp_product_id: new_price.keys }, gift: false)
                        .pluck("orders.id", "products.erp_product_id", :unit_price, :promotion_id)
                        .select { |_, code, price, _| price != new_price[code] }
                        .group_by(&:first)

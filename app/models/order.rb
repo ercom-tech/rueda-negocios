@@ -295,10 +295,12 @@ class Order < ApplicationRecord
   CONVERSION_CHANGED_MESSAGE = "La cotización cambió mientras la convertías: se le asignó o se le quitó " \
                                "el cliente. Revísala y vuelve a convertirla.".freeze
 
-  # El encabezado que pasa de la cotización al pedido cuando la cotización ya
-  # tiene cliente. Es lo mismo que pide el paso 1.
-  CONVERTED_HEADER = %w[client_id kind client_tax_profile_id cfdi_use_id
-                        client_receipt_profile_id client_branch_id dividir_facturas].freeze
+  # Los campos del encabezado: los que el paso 1 deja escribir
+  # (`OrdersController#order_params`) y los que pasan de la cotización al
+  # pedido al convertirla. Una sola lista: estaban escritas dos veces, y un
+  # campo nuevo del paso 1 se habría perdido al convertir (18ª auditoría).
+  HEADER_ATTRIBUTES = %i[client_id kind client_tax_profile_id cfdi_use_id
+                         client_receipt_profile_id client_branch_id dividir_facturas].freeze
 
   # "Convertir en pedido" (decisión del usuario 2026-11-04): crea un pedido
   # NUEVO con el encabezado y las partidas de la cotización, ya guardado, y
@@ -326,7 +328,7 @@ class Order < ApplicationRecord
       raise ConversionError, CONVERSION_CHANGED_MESSAGE if generic? != header.present?
       check_promotions_still_effective!
 
-      sale = Order.new((header || attributes.slice(*CONVERTED_HEADER)).to_h.merge(
+      sale = Order.new((header || attributes.slice(*HEADER_ATTRIBUTES.map(&:to_s))).to_h.merge(
         "user_id" => user_id, "business_round_id" => business_round_id,
         "document" => "sale", "status" => "draft", "observations" => observations))
       raise ActiveRecord::Rollback unless sale.save

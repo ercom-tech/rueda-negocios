@@ -110,6 +110,70 @@ class EstimateConversionTest < ActionDispatch::IntegrationTest
     assert_equal items, item_snapshot(sale)
   end
 
+  # Los dos tipos de partida que más columnas propias llevan: el regalo (al
+  # 100%) y el fuera de catálogo 999999 con su proveedor y su No. de parte. La
+  # copia es directa; que no se pierda ninguna columna (18ª, hueco de cobertura).
+  test "un regalo y un fuera de catálogo pasan con todas sus columnas" do
+    supplier = Supplier.find_by!(erp_supplier_id: 9801)
+    generic  = Product.create!(erp_product_id: Product::GENERIC_ERP_ID, description: "PRODUCTO NUEVO", unit: "PZA")
+    estimate = estimate!(client: @client, status: "draft")
+    estimate.order_items.first.update_columns(gift: true, discount_percent: 100)
+    estimate.order_items.new(product: generic, position: 3, quantity: 4, unit_price: 250, tax_rate: 16,
+                             discount_percent: 0, code: "999999", description: "SOPLADORA X", unit: "PZA",
+                             part_number: "SX-1", supplier_id: supplier.id).save!(validate: false)
+    estimate.capture!
+    items = item_snapshot(estimate.reload)
+    total = estimate.total
+
+    post convert_order_path(estimate)
+
+    sale = Order.sale.last
+    assert_equal items, item_snapshot(sale)
+    assert_equal total, sale.total
+    assert sale.order_items.find_by(code: "999999").then { |i| i.supplier_id == supplier.id && i.part_number == "SX-1" }
+  end
+
+  # La concordancia con número literal (convenciones: una regla con número
+  # necesita una prueba que lo escriba).
+  test "el modal concuerda con una y con varias partidas" do
+    get order_path(estimate!(client: @client))
+    assert_match(/con las 2 partidas de esta cotización/, response.body)
+
+    single = estimate!(client: @client, status: "draft")
+    single.order_items.last.delete
+    single.capture!
+    get order_path(single)
+    assert_match(/con la partida de esta cotización/, response.body)
+  end
+
+  test "varias promociones vencidas se nombran juntas, en plural" do
+    estimate = promoted_estimate!
+    second = Promotion.create!(erp_promotion_id: 980_102, code: "CNV2", name: "DEWALT CONV",
+                               starts_on: 1.week.ago.to_date, ends_on: 1.week.from_now.to_date)
+    estimate.order_items.last.update_columns(promotion_id: second.id)
+    Promotion.where(code: %w[CNV CNV2]).update_all(ends_on: 2.days.ago.to_date)
+
+    post convert_order_path(estimate)
+
+    assert_equal "Las promociones DEWALT CONV y MAKITA CONV ya no están vigentes. " \
+                 "Quítalas de la cotización antes de convertirla en pedido.", flash[:alert]
+  end
+
+  # Inalcanzable en operación (el encabezado de la cotización pasó las mismas
+  # validaciones); forzado, decía "Client branch es obligatoria", en inglés.
+  test "un encabezado que ya no valida se dice sin nombres de campo" do
+    estimate = estimate!(client: @client)
+    estimate.update_columns(client_branch_id: nil)
+
+    assert_no_difference -> { Order.count } do
+      post convert_order_path(estimate)
+    end
+
+    assert_redirected_to order_path(estimate)
+    assert_equal "No se pudo convertir: al encabezado de la cotización le falta un dato. " \
+                 "Ábrelo con Editar, complétalo y vuelve a convertirla.", flash[:alert]
+  end
+
   test "una promoción vencida bloquea la conversión y dice cuál quitar" do
     estimate = promoted_estimate!
     Promotion.find_by(code: "CNV").update_columns(ends_on: 2.days.ago.to_date)

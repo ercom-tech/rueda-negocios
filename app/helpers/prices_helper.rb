@@ -21,17 +21,18 @@ module PricesHelper
     who = drafts.first(3).map { |d| "#{d.capturista} (#{d.estimate ? 'cotización, ' : ''}#{d.client})" }
     who << "#{drafts.size - 3} más" if drafts.size > 3
     locked = drafts.sum(&:locked)
-    # "pedido en borrador" mientras todos lo sean; con alguna cotización en la
-    # lista, el sustantivo que los cubre a todos es "borrador".
-    heading = if drafts.any?(&:estimate)
-      drafts.size == 1 ? "Hay 1 borrador" : "Hay #{drafts.size} borradores"
-    else
-      drafts.size == 1 ? "Hay 1 pedido en borrador" : "Hay #{drafts.size} pedidos en borrador"
-    end
-    [ "#{heading} con partidas " \
+    # Cada tipo con su sustantivo y su número: desde que entran las
+    # cotizaciones GUARDADAS, "borrador" ya no las cubre a todas (18ª).
+    sales     = drafts.count { |d| !d.estimate }
+    estimates = drafts.count(&:estimate)
+    counted   = []
+    counted << (sales == 1 ? "1 pedido en borrador" : "#{sales} pedidos en borrador") if sales.positive?
+    counted << (estimates == 1 ? "1 cotización" : "#{estimates} cotizaciones") if estimates.positive?
+    [ "Hay #{SpanishText.list(counted)} con partidas " \
       "al precio anterior: #{SpanishText.list(who)}.",
       "No cambian solas: pide a cada capturista que las quite y las agregue otra vez" +
-        (locked.positive? ? "; las que tienen promoción aplicada, después de quitar la promoción." : ".") ].join(" ")
+        (locked.positive? ? "; las que tienen promoción aplicada, después de quitar la promoción." : "."),
+      ("Una cotización que se convierte en pedido conserva sus precios." if estimates.positive?) ].compact.join(" ")
   end
 
   # Singular y plural de cada tipo de motivo: `pluralize` es del inglés.
