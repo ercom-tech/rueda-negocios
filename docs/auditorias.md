@@ -189,6 +189,20 @@ ninguna otra dimensión los habría buscado.
 
 ## Historial
 
+- **19ª (2026-11-04)** — alcance: **todo el proyecto, énfasis en la
+  remediación de la 18ª** (app `f0544fd..11ebc5c`, API `2c35375..34b4190`),
+  7 auditores, no más de 3 a la vez — **0 ALTA · 4 MEDIA · ~15 BAJA** →
+  remediada en tres bloques (detalle en "19ª auditoría" de `memory.md`).
+  **Las cuatro MEDIA fueron de la remediación anterior o de reglas mal
+  escritas por el propio coordinador**: Enter que convertía sin modal, el
+  modal de la genérica que no cerraba, el umbral de "texto grande" leído en
+  píxeles en vez de puntos (con él se justificó una decisión de diseño del
+  usuario) y dos convenciones de z-index que se contradecían. Dos arreglos
+  "de libro" fallaron al probarse: el botón predeterminado deshabilitado (Chrome
+  lo salta) y `params.expect` (rompió "Cliente genérico"). Lección: **la
+  norma escrita también se audita** — dos de las MEDIA eran reglas de
+  `docs/convenciones-*.md`, que se cargan en cada sesión y por eso propagan
+  su error a todo lo que se haga después.
 - **18ª (2026-11-04)** — alcance: **todo el proyecto, énfasis en el arco
   del PDF de la cotización y "Convertir en pedido"** (app
   `47c58ad..f0544fd` más la remediación de la 17ª), con 7 auditores, **no

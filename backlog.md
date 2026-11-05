@@ -9,17 +9,18 @@ aprendizajes de lo que ya se hizo.
 
 ## Prioridad alta
 
-### Desplegar en la laptop y en la VM de testing (cotizaciones y las remediaciones de la 15ª a la 17ª)
+### Desplegar en la laptop y en la VM de testing (cotizaciones, Convertir en pedido y las remediaciones de la 15ª a la 19ª)
 
 **La laptop corre `c63a18a`** (2026-10-11, confirmado por el usuario el
 2026-10-29): ya tiene promociones, "Cambiar precios", el Cotizador y la
 evidencia. Le falta el lote de cotizaciones y lo remediado después: **dos
 migraciones** (la del 2026-10-27, cotizaciones, y la del 2026-11-04, la
 cotización de origen de un pedido convertido), sin gemas ni initializers
-nuevos. Objetivo: laptop en master a partir de la remediación de la 18ª, API
-con la prueba de `cotizacion_origen` (sin cambio de código: la API guarda el
-paquete entero). Comprobar con `git merge-base --is-ancestor <sha> HEAD`, no
-con el sha exacto: un commit de docs encima lo cambia. Este renglón
+nuevos. Objetivo: la laptop con master que CONTENGA `97c8d22` (remediación
+de la 19ª: `git merge-base --is-ancestor 97c8d22 HEAD && echo ok`); la API
+con master que contenga `2c35375` (la prueba de `cotizacion_origen`; sin
+cambio de código, la API guarda el paquete entero). Por ancestro y no por
+sha exacto: un commit de docs encima lo cambia. Este renglón
 decía "nada está desplegado desde antes de la 4ª", y la guía de reversión se
 apoyaba en un sha equivocado (17ª auditoría). **De la API de testing** el
 último dato es `b43495a` (30-jul) y no se ha vuelto a confirmar: es el paso 0
@@ -66,8 +67,9 @@ tiene sigue escrito porque la VM de la API puede no tenerlo:
   de la rueda, `erp_folios` del pedido, `supplier_id`/`brand_id` de la
   partida y `captured_at` del pedido; las del 2026-10-08: `price_overrides`
   y `price_from_file`/`erp_unit_price` de la partida; la del 2026-10-09:
-  `pieces_per_box`; y la del 2026-10-27: `document`, `client_id`/`kind`
-  opcionales, el CHECK y `last_estimate_number`; su comprobación —ninguna
+  `pieces_per_box`; la del 2026-10-27: `document`, `client_id`/`kind`
+  opcionales, el CHECK y `last_estimate_number`; y la del 2026-11-04:
+  `source_estimate_folio`/`source_estimate_created_at`; su comprobación —ninguna
   pendiente— es el paso 6 de `docs/despliegue-laptop.md`) + `bin/rails
   tailwindcss:build` (obligatorio: hay clases nuevas en cada lote).
   **`bundle install` y reiniciar el servicio fueron obligatorios desde el

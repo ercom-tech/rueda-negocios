@@ -81,6 +81,27 @@ rojo antes del arreglo.
 - La conversión genérica también prueba que deja `source_estimate_folio`; el
   rótulo del barrido del PDF distingue la cotización.
 
+**Bloque 3 — documentación.**
+- **El umbral de "texto grande" estaba mal escrito** en
+  `convenciones-visuales.md`: "≥18.66 px, o ≥14 px en negrita" — los 18 pt y
+  14 pt de WCAG leídos como píxeles. Es **≥24 px, o ≥18.66 px en negrita**. Con
+  la regla mal se dio por bueno el 3.20:1 de "Elegir rueda" (20 px, texto
+  normal: pide 4.5:1). Corregido en los cinco lugares que lo usaban; cumple
+  solo por la excepción de WCAG para componentes inactivos, y el usuario la
+  mantuvo al 60% con el dato correcto.
+- **La convención visual prescribía `z-20` para el wrapper con modal**, lo
+  contrario de la de código; ahora remite a ella (ninguno lleva z-index).
+- Backlog: título hasta la 19ª, objetivo por ancestro con shas concretos
+  (`97c8d22` app, `2c35375` API), la migración del 2026-11-04 en la lista.
+  Guía: `roo` ya no es "la gema nueva"; al revertir, transmitir antes los
+  pedidos convertidos (si no, pierden `cotizacion_origen`).
+  `erp-esquema-pedidos.md` documenta `cotizacion_origen` con su consulta.
+  El "99.4%" de la 18ª se cambió por la cifra que sí prueba algo (143 de 156,
+  las partidas cuyo precio de lista cambió). El comentario de
+  `empaque_observaciones` en la API, con fechas y cifras re-medidas.
+- La cotización 200 que desapareció del entorno de desarrollo la convirtió
+  el usuario (pedido 209); no fue la auditoría.
+
 Al pasar: durante la auditoría un auditor cargó el esquema en la base de
 PRUEBAS desde su worktree; se comprobó que la de desarrollo seguía intacta
 (15,748 productos, 124 clientes, 93 usuarios).
@@ -120,11 +141,16 @@ se sostuvieron contra el código; las 8 pruebas nuevas fallaron sin arreglo.
 **Bloque 2 — las BAJA de código.**
 - **"Cambiar precios" no nombraba las cotizaciones GUARDADAS** con precio
   viejo (`stale_drafts` filtraba `status: draft`). Desde que se convierten en
-  pedido, una así llega al ERP con el precio anterior — que es lo nativo: el
-  ERP conserva el precio de la cotización en el 99.4% de sus partidas
-  convertidas (13,161 de 13,239; pedidos con `clave_cotizacion`,
-  `fecha_pedido >= 2026-09-01`, `id_empresa = 1`, `id_sucursal_crea = 1`,
-  medido por el auditor del ERP). No se cambia el precio; se avisa. El aviso
+  pedido, una así llega al ERP con el precio anterior — que es lo nativo: en
+  las partidas convertidas cuyo precio de lista SÍ cambió entre la
+  cotización y el pedido, el ERP conservó el de la cotización en 143 de 156
+  (91.7%) (pedidos con `clave_cotizacion`, `fecha_pedido >= 2026-09-01`,
+  `id_empresa = 1`, `id_sucursal_crea = 1`, precio de lista vigente a cada
+  fecha por `com_producto_has_precio.fecha_crea`; medido en la 19ª). *Aquí
+  decía "99.4% (13,161 de 13,239)": se reproduce, pero en el 98.8% de esas
+  partidas el precio de lista nunca cambió, así que conservarlo no probaba
+  nada — una cifra correcta con la conclusión apoyada en el recorte
+  equivocado.* No se cambia el precio; se avisa. El aviso
   cuenta cada tipo con su número ("1 pedido en borrador y 1 cotización") y,
   con cotizaciones, dice que al convertirse conservan sus precios. El pedido
   capturado sigue fuera: ya se le ofreció al cliente así.
@@ -163,7 +189,10 @@ existe en `vta_cotizacion`, así que `clave_cotizacion` sigue en `''`.
   regla de "todas las tarjetas bloqueadas del menú se ven igual" ya no tiene
   excepción. Costo medido: el nombre de la rueda —único lugar de la app
   donde aparece— baja de 4.69:1 a 3.20:1 (sobre el patrón) / 3.36:1 (sobre
-  negro), arriba del 3:1 del texto grande. La nota de la 4ª que lo dejaba a
+  negro). *Aquí decía "arriba del 3:1 del texto grande", y era falso: 20 px es
+  texto normal (grande es ≥24 px) y pide 4.5:1. La 19ª lo encontró; cumple
+  solo por la excepción de WCAG para componentes inactivos, y el usuario lo
+  mantuvo con el dato correcto.* La nota de la 4ª que lo dejaba a
   plena opacidad y la justificación falsa de la de "Cambiar precios" quedan
   corregidas en su lugar.
 - API: el comentario de `empaque_observaciones` dejó de ser invariante —96 de
@@ -2631,7 +2660,9 @@ le dice y **salir** de donde quedó.
   *(Revertido el 2026-11-04, 18ª auditoría: el usuario prefirió la regla
   "todas las tarjetas bloqueadas del menú se ven igual". Re-medido con la
   paleta actual —el coral ya es #bd5343—: 3.20:1 sobre el patrón y 3.36:1
-  sobre negro, arriba del 3:1 del texto grande pero sin margen.)*
+  sobre negro: ABAJO del 4.5:1 que pide su tamaño —20 px es texto normal—;
+  cumple solo por la excepción de WCAG para componentes inactivos, y el
+  usuario lo mantuvo con ese dato en la 19ª.)*
 - **El buscador de cliente recibe el foco** mientras no hay cliente elegido. El
   paso 2 ya lo hacía; faltaba en el campo con el que EMPIEZA cada pedido, y el
   paso 3 ofrece "Capturar otro pedido" justo para no volver al menú.
@@ -3121,7 +3152,9 @@ Detalle completo en `docs/erp-esquema-catalogos.md`. Puntos duros:
 - **Assets** copiados a `app/assets/images` con nombres propios: `expo_illustration.svg`
   *(2026-11-04: reemplazada por `menu_illustration.png`, el stand de FECEGO
   con el fondo hecho transparente y el margen recortado)*
-  e `icon_{register_order,sales_reports,client_attendance,generate_quote}.svg`.
+  e `icon_{register_order,sales_reports,client_attendance,generate_quote}.svg`
+  *(borrados después: los reemplazaron Heroicons inline en las tarjetas del
+  capturista y del hub de reportes, `22edbd4`/`ff45099`)*.
 - **Barra superior:** logo + pills `Usuario` (real, `current_user`) y `Proveedor`
   + `Cerrar sesión`.
 - **Proveedor del capturista** (pill) — RESUELTO: modelado con

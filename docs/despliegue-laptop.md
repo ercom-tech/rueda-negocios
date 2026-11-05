@@ -110,8 +110,8 @@ renglón dice con qué usuario va:
    Cotizador dependen de este paso con la API nueva.
 2. **Servidor → Cambiar precios**: subir un **.xlsx** con el layout (primera
    fila CODIGO y PRECIO LISTA S/IVA; el de FECEGO es "Cambio precio de lista
-   Stihl.xlsx") —un .xlsx y no un .csv: el CSV no usa la gema nueva y no
-   comprueba el reinicio—, revisar y aplicar. Anota un código del archivo.
+   Stihl.xlsx") —un .xlsx y no un .csv: el CSV no usa la gema `roo` y no
+   comprueba que el servidor arrancó con ella—, revisar y aplicar. Anota un código del archivo.
 3. **Capturista** (uno de la rueda: que entre él, o pídele su usuario) **→
    Registrar pedido**: elegir un cliente, agregar el producto anotado; nace con
    el precio del archivo y el contador del buscador sube.
@@ -308,6 +308,14 @@ migraciones traiga el lote:
   archivo**: el `Sync::Up` anterior no manda `precio_archivo`/`precio_erp`, y
   la evidencia se escribe una sola vez — lo que se transmita después de
   revertir llega al ERP con el precio de archivo y sin rastro de que lo fue.
+- **Ojo con la del 2026-11-04 (cotización de origen):** las columnas no
+  estorban al código anterior, pero un pedido que salió de "Convertir en
+  pedido" y se transmita DESPUÉS de revertir llega sin `cotizacion_origen` —el
+  `Sync::Up` anterior no lo manda— y la evidencia se escribe una sola vez: se
+  queda sin rastro de su cotización. **Transmitir antes del checkout** los
+  pedidos convertidos (`bin/rails runner 'puts Order.sale.captured.where.not(source_estimate_folio: nil).count'`
+  → `0` sin transmitir), por la misma razón que los de precio de archivo
+  (19ª auditoría).
 - **Tablas o llaves foráneas que el código viejo no contempla** (las de
   promociones): ahí la app vieja choca con ellas —"Obtener información" falla
   al purgar el catálogo—. Es el caso de regresar a un sha anterior a

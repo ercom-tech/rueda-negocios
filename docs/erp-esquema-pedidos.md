@@ -282,6 +282,24 @@ FROM fecego.vta_pedido_rueda ev, jsonb_array_elements(ev.payload->'items') it
 WHERE ev.id_empresa = 1 AND ev.id_rueda = <rueda> AND (it->>'precio_archivo')::boolean;
 ```
 
+**Pedido que salió de una cotización (2026-11-04):** "Convertir en pedido"
+crea un pedido nuevo y borra la cotización; el paquete dice de cuál salió en
+`cotizacion_origen` —`clave` (el folio local `COT-…`) y `creada_en_laptop`
+(cuándo se armó la cotización, es decir cuándo se fijaron sus precios)—, o
+`null` si el pedido se capturó directo. Solo en `payload`: el ERP liga sus
+propias conversiones con `vta_pedido.clave_cotizacion`, `varchar(7)` y
+referida a `vta_cotizacion`, donde el folio local ni cabe ni existe, así que
+esa columna sigue en `''`.
+
+```sql
+SELECT ev.clave_rueda, ev.payload->'cotizacion_origen'->>'clave' AS cotizacion,
+       ev.payload->'cotizacion_origen'->>'creada_en_laptop' AS cotizada,
+       ev.creado_en_laptop AS convertida
+FROM fecego.vta_pedido_rueda ev
+WHERE ev.id_empresa = 1 AND ev.id_rueda = <rueda>
+  AND jsonb_typeof(ev.payload->'cotizacion_origen') = 'object';
+```
+
 ### Reconstruirla desde un respaldo de la laptop
 
 Para las ruedas transmitidas antes de que existiera la tabla — hoy, **solo

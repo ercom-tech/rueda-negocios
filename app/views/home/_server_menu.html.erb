@@ -47,8 +47,10 @@
         (decisión del usuario 2026-11-04, 18ª auditoría). Antes el párrafo iba
         a plena opacidad porque este es el único lugar de la app con el nombre
         de la rueda cargada; con la tarjeta entera al 60% ese nombre queda en
-        3.20:1 (sobre el patrón) – 3.36:1 (sobre negro), arriba del 3:1 del
-        texto grande (`text-xl`, 20 px) pero sin mucho margen. %>
+        3.20:1 (sobre el patrón) – 3.36:1 (sobre negro). `text-xl` (20 px) es
+        texto NORMAL —grande es ≥24 px—, así que pide 4.5:1 y no alcanza;
+        cumple AA solo por la excepción de WCAG para un componente inactivo
+        (`aria-disabled`). El usuario lo mantuvo con este dato (19ª). %>
     <div class="<%= grid %> rounded-[1.75rem] bg-brand-coral px-7 py-5 opacity-60 shadow-lg" aria-disabled="true">
       <%= round_icon %>
       <h3 class="<%= title %> whitespace-nowrap text-white">Elegir rueda</h3>

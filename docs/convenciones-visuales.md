@@ -34,7 +34,12 @@ desde `CLAUDE.md`. El relato de cómo se llegó a cada una vive en `memory.md`.
 
 **El umbral depende de si el elemento es texto o gráfico, y es fácil aplicar el
 equivocado.** AA pide 4.5:1 para texto normal y 3:1 para gráficos y texto
-grande (≥18.66 px, o ≥14 px en negrita solo si además es grande). El coral
+grande. **Texto grande es ≥24 px en peso normal, o ≥18.66 px en negrita**
+(18 pt y 14 pt: la norma está en PUNTOS, y 1 pt = 1.333 px). Un `text-xl`
+(20 px) en peso normal es texto NORMAL y pide 4.5:1; un `font-semibold` no
+cuenta como negrita. Esta línea decía "≥18.66 px, o ≥14 px en negrita" —los
+puntos leídos como píxeles— y con eso se dio por bueno un 3.20:1 (19ª
+auditoría). El coral
 #bd5343 sobre crema da 4.04:1: alcanza para un ícono, **no** para un porcentaje
 a 14 px — ahí va `brand-coral-dark` (5.06:1). Medir antes, y decir contra qué
 vara (7ª auditoría).
@@ -155,7 +160,11 @@ renderizándolo a 16 px, no a 256.
   diálogo solo cuenta DENTRO de su contexto de apilamiento, así que si la
   página se parte en dos `relative z-10` hermanos (header con modal +
   contenido), el contenido gana por estar después en el DOM y esconde el
-  modal. El wrapper que contiene un modal va **`z-20`**.
+  modal. **La salida es que NINGUNO lleve z-index** y los diálogos `fixed z-50`
+  compitan en el contexto raíz (ver `convenciones-codigo.md`, "Un z-index
+  sobre un wrapper…"). Esta línea decía "el wrapper que contiene un modal va
+  `z-20`", y seguirla al pie de la letra fue la trampa que pasó tres veces
+  (19ª auditoría).
 - Las cards bloqueadas **no** escalan (llevan `opacity-60` en su lugar). Pills
   y botones chicos usan hover de color, no de escala.
 
@@ -207,8 +216,10 @@ Todo elemento deshabilitado o "próximamente" se ve al **60%**:
   excepción de abajo es para un dato DENTRO de un control, no para una
   tarjeta entre tarjetas. Vale también para "Elegir rueda", aunque su párrafo
   sea el único lugar con el nombre de la rueda: al 60% queda en 3.20:1 sobre
-  el patrón, arriba del 3:1 del texto grande (`text-xl`), sin mucho margen
-  (decisión del usuario 2026-11-04).
+  el patrón, ABAJO del 4.5:1 que pide su tamaño (`text-xl` es texto normal).
+  Cumple AA solo por la excepción de WCAG 1.4.3 para componentes inactivos
+  (la tarjeta lleva `aria-disabled`). El usuario lo decidió así con este dato
+  (2026-11-04, 19ª auditoría).
 - Cuando dentro del bloque hay información que el usuario necesita leer justo
   en ese momento (vivió en el buscador de producto mientras hubo tope de partidas: el contador y el placeholder que explicaba por qué no se podía escribir — se quitó con el tope el 2026-09-02, pero la regla vale para el siguiente caso), el 60% se
   aplica solo al **control**, no al dato. Incluye el **placeholder** cuando al

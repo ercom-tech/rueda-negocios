@@ -284,8 +284,8 @@ class OrdersController < ApplicationController
   end
 
   # En la conversión, lo más probable es que la cotización ya se haya
-  # convertido (segundo toque, "Atrás" desde el resumen, otra pestaña), y es
-  # justo lo que el aviso general dice al último. Aquí va primero, con dónde
+  # convertido (segundo toque, "Atrás" desde el resumen, otra pestaña), y el
+  # aviso general la menciona entre otras causas. Aquí va primero, con dónde
   # encontrar el pedido.
   ESTIMATE_GONE_MESSAGE = "Esta cotización ya no está en esta laptop: se convirtió en pedido o se descartó. " \
                           "Si se convirtió, el pedido está en Reportes de venta → Pedidos capturados.".freeze
