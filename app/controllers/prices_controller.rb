@@ -93,7 +93,7 @@ class PricesController < ApplicationController
     upload = find_upload or return
     review = PriceList::Review.new(upload.read)
     applied = review.apply!(filename: upload.filename, loaded_by: current_user.username)
-    drafts = review.stale_drafts
+    drafts = review.stale_orders
     upload.mark_applied!
 
     redirect_to server_prices_path, notice: applied_message(applied, drafts)
@@ -167,6 +167,6 @@ class PricesController < ApplicationController
              "Se #{applied == 1 ? 'cambió 1 precio' : "cambiaron #{applied.to_fs(:delimited)} precios"}. " \
              "Las partidas nuevas se capturan con el precio nuevo."
     end
-    drafts.any? ? "#{text} #{helpers.stale_drafts_sentence(drafts)}" : text
+    drafts.any? ? "#{text} #{helpers.stale_orders_sentence(drafts)}" : text
   end
 end

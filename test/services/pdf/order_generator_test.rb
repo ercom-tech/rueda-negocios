@@ -149,7 +149,8 @@ module Pdf
           total = gen.send(:number_to_currency, gen.send(:printed_total, :total))
 
           pages = pdf_pages(order)
-          label_text = "#{n} partidas (#{test_case[:description][0, 8]}, regalos=#{test_case[:gift]})"
+          label_text = "#{n} partidas (#{test_case[:description][0, 8]}, regalos=#{test_case[:gift]}, " \
+                       "cotización=#{test_case.fetch(:estimate, false)})"
 
           complete_ones = pages.count do |p|
             p.include?(amount_words) && p.include?(total) &&

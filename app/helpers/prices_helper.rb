@@ -11,11 +11,12 @@ module PricesHelper
     parts.any? ? parts.join(" · ") : "Ninguno"
   end
 
-  # Aviso de los borradores con partidas al precio anterior, dicho para quien
+  # Aviso de los pedidos en borrador y las cotizaciones con partidas al precio
+  # anterior (`PriceList::Review#stale_orders`), dicho para quien
   # puede actuar: a qué capturista avisarle y de qué cliente es el pedido (el
   # servidor no puede editar borradores ajenos). Hasta 3 nombres; el resto,
   # "y N más".
-  def stale_drafts_sentence(drafts)
+  def stale_orders_sentence(drafts)
     # Una cotización se dice como tal: el operador decide a quién avisar y
     # con qué urgencia — una venta no es lo mismo que una cotización.
     who = drafts.first(3).map { |d| "#{d.capturista} (#{d.estimate ? 'cotización, ' : ''}#{d.client})" }

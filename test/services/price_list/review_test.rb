@@ -145,7 +145,7 @@ module PriceList
       item.(draft.(), @blower, 1000)                              # producto que no cambia
       item.(draft.(status: "captured").tap { _1.update_column(:local_folio, "RN-1") }, @saw, 6500) # no es borrador
 
-      drafts = review([ [ 3021, 6900 ] ]).stale_drafts
+      drafts = review([ [ 3021, 6900 ] ]).stale_orders
       assert_equal [ [ "ANA", "Cliente", 1, 0 ], [ "ANA", "Cliente", 1, 0 ] ],
                    drafts.map { |d| [ d.capturista, d.client, d.items, d.locked ] }
     end
@@ -159,7 +159,7 @@ module PriceList
       estimate = Order.create!(user:, business_round: @round, document: "estimate")
       estimate.order_items.create!(@saw.to_order_item_attributes.merge(quantity: 1, unit_price: 6500))
 
-      draft = review([ [ 3021, 6900 ] ]).stale_drafts.sole
+      draft = review([ [ 3021, 6900 ] ]).stale_orders.sole
       assert_equal [ "LUIS", "Cliente genérico", true ], [ draft.capturista, draft.client, draft.estimate ]
     end
 
@@ -172,7 +172,7 @@ module PriceList
       estimate.order_items.create!(@saw.to_order_item_attributes.merge(quantity: 1, unit_price: 6500))
       estimate.capture!
 
-      draft = review([ [ 3021, 6900 ] ]).stale_drafts.sole
+      draft = review([ [ 3021, 6900 ] ]).stale_orders.sole
       assert_equal [ "EVA", true ], [ draft.capturista, draft.estimate ]
     end
 
@@ -189,7 +189,7 @@ module PriceList
       promoted.update_columns(promotion_id: promo.id)
       order.order_items.create!(@saw.to_order_item_attributes.merge(quantity: 3))
 
-      draft = review([ [ 3021, 6900 ] ]).stale_drafts.sole
+      draft = review([ [ 3021, 6900 ] ]).stale_orders.sole
       assert_equal [ "cap_pl2", "Otro", 2, 1 ], [ draft.capturista, draft.client, draft.items, draft.locked ],
                    "sin el regalo; de las dos que quedan, una con promoción"
     end

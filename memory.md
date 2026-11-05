@@ -70,6 +70,17 @@ rojo antes del arreglo.
   orden, rompía `header_combo_test` (la falla intermitente de la suite de
   sistema). `ensure` que regresa a 1400×1000, como las demás.
 
+**Bloque 2 — las BAJA de código.**
+- Los dos modales de "Convertir en pedido" (con cliente y paso 1 de la
+  genérica) dicen lo mismo con la misma redacción: `OrdersHelper`
+  (`estimate_items_phrase`, `conversion_confirm_message`). Estaba escrito a
+  mano en dos lugares, redactado distinto, y el singular del paso 1 sin
+  probar; ahora una prueba escribe literal los dos modales con 1 y 2 partidas.
+- `stale_drafts`/`StaleDraft` → `stale_orders`/`StaleOrder`: desde la 18ª
+  incluyen cotizaciones GUARDADAS, que no son borradores.
+- La conversión genérica también prueba que deja `source_estimate_folio`; el
+  rótulo del barrido del PDF distingue la cotización.
+
 Al pasar: durante la auditoría un auditor cargó el esquema en la base de
 PRUEBAS desde su worktree; se comprobó que la de desarrollo seguía intacta
 (15,748 productos, 124 clientes, 93 usuarios).

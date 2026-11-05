@@ -9,13 +9,13 @@ class PricesHelperTest < ActionView::TestCase
   end
 
   test "el aviso de borradores dice a quién avisarle, hasta tres, y qué hacer" do
-    draft = ->(name, client, locked = 0) { PriceList::Review::StaleDraft.new(capturista: name, client:, items: 1, locked:, estimate: false) }
+    draft = ->(name, client, locked = 0) { PriceList::Review::StaleOrder.new(capturista: name, client:, items: 1, locked:, estimate: false) }
 
     assert_equal "Hay 1 pedido en borrador con partidas al precio anterior: ANA (Ferretería Inti). " \
                  "No cambian solas: pide a cada capturista que las quite y las agregue otra vez.",
-                 stale_drafts_sentence([ draft.("ANA", "Ferretería Inti") ])
+                 stale_orders_sentence([ draft.("ANA", "Ferretería Inti") ])
 
-    sentence = stale_drafts_sentence([ draft.("A", "1"), draft.("B", "2", 1), draft.("C", "3"), draft.("D", "4"), draft.("E", "5") ])
+    sentence = stale_orders_sentence([ draft.("A", "1"), draft.("B", "2", 1), draft.("C", "3"), draft.("D", "4"), draft.("E", "5") ])
     assert_match(/\AHay 5 pedidos en borrador con partidas al precio anterior: A \(1\), B \(2\), C \(3\) y 2 más\./, sentence)
     assert_match(/las que tienen promoción aplicada, después de quitar la promoción\.\z/, sentence)
   end
@@ -25,14 +25,14 @@ class PricesHelperTest < ActionView::TestCase
   # Cada tipo con su número: con las cotizaciones GUARDADAS dentro (18ª),
   # "borrador" ya no las cubría a todas.
   test "el aviso nombra a las cotizaciones y no las llama pedidos" do
-    sale     = PriceList::Review::StaleDraft.new(capturista: "ANA", client: "Ferretería", items: 1, locked: 0, estimate: false)
-    estimate = PriceList::Review::StaleDraft.new(capturista: "LUIS", client: "Cliente genérico", items: 1, locked: 0, estimate: true)
+    sale     = PriceList::Review::StaleOrder.new(capturista: "ANA", client: "Ferretería", items: 1, locked: 0, estimate: false)
+    estimate = PriceList::Review::StaleOrder.new(capturista: "LUIS", client: "Cliente genérico", items: 1, locked: 0, estimate: true)
 
     assert_match(/\AHay 1 pedido en borrador y 1 cotización con partidas al precio anterior: ANA \(Ferretería\) y LUIS \(cotización, Cliente genérico\)\./,
-                 stale_drafts_sentence([ sale, estimate ]))
-    assert_match(/\AHay 2 cotizaciones con partidas/, stale_drafts_sentence([ estimate, estimate ]))
-    assert_match(/Una cotización que se convierte en pedido conserva sus precios\.\z/, stale_drafts_sentence([ estimate ]))
-    assert_no_match(/se convierte en pedido/, stale_drafts_sentence([ sale ]))
+                 stale_orders_sentence([ sale, estimate ]))
+    assert_match(/\AHay 2 cotizaciones con partidas/, stale_orders_sentence([ estimate, estimate ]))
+    assert_match(/Una cotización que se convierte en pedido conserva sus precios\.\z/, stale_orders_sentence([ estimate ]))
+    assert_no_match(/se convierte en pedido/, stale_orders_sentence([ sale ]))
   end
 
   test "desglosa los motivos: los dos más frecuentes y el resto como N más" do

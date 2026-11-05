@@ -54,7 +54,7 @@
         <% if converting %>
           <% count = @estimate.order_items.size %>
           <p class="rounded-2xl border border-black/10 bg-brand-cream px-5 py-4 text-sm text-neutral-700">
-            Elige al cliente del pedido. <%= count == 1 ? "La partida" : "Las #{count} partidas" %> de la
+            Elige al cliente del pedido. <%= estimate_items_phrase(count).upcase_first %> de la
             cotización <span class="font-semibold"><%= @estimate.folio %></span> <%= count == 1 ? "pasa" : "pasan" %> tal cual,
             y la cotización se elimina.
           </p>
@@ -257,7 +257,6 @@
                     en la siguiente transmisión— y borra la cotización. Convertía
                     de un toque (18ª auditoría). El botón del diálogo envía ESTE
                     formulario (`form:`), con el cliente y los perfiles elegidos. %>
-                <% count = @estimate.order_items.size %>
                 <%# `turbo:submit-end@document`: el envío lo hace el FORMULARIO, que
                     es ancestro de este modal, y su evento no baja hasta aquí. Sin
                     esto, con un sync vivo el aviso quedaba debajo del modal
@@ -267,9 +266,7 @@
                      data-action="keydown@window->modal#closeOnEsc turbo:submit-end@document->modal#close">
                   <button type="button" data-action="modal#open" class="<%= submit_class %>">Convertir en pedido</button>
                   <%= render "home/confirm_dialog", title: "Convertir en pedido",
-                        message: "Se creará el pedido del cliente elegido con #{count == 1 ? "la partida" : "las #{count} partidas"} " \
-                                 "de la cotización #{@estimate.folio}, ya guardado: se enviará al ERP en la siguiente " \
-                                 "transmisión. La cotización se eliminará. ¿Continuar?",
+                        message: conversion_confirm_message(@estimate),
                         confirm_label: "Sí, convertir", form: "conversion-form" %>
                 </div>
               <% else %>

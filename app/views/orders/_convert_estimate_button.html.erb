@@ -6,8 +6,6 @@
     guardado —sale en la siguiente transmisión— y borra la cotización, así
     que se pide confirmar. La genérica va primero al paso 1 a elegir cliente. %>
 <% row   = local_assigns[:row] %>
-<% count = order.order_items.size %>
-<% items = count == 1 ? "la partida" : "las #{count} partidas" %>
 <% css   = row ? "flex w-full cursor-pointer items-center gap-4 rounded-2xl bg-black px-6 py-5 text-left text-lg font-semibold text-white transition-colors hover:bg-neutral-800"
                : "cursor-pointer rounded-full bg-brand-gold px-6 py-2.5 font-bold text-neutral-900 transition-colors hover:bg-brand-gold-dark" %>
 <% icon = capture do %>
@@ -25,10 +23,7 @@
       <%= icon if row %>Convertir en pedido
     </button>
     <%= render "home/confirm_dialog", title: "Convertir en pedido",
-          message: "Se creará el pedido de (#{order.client.erp_client_key}) " \
-                   "#{order.client.commercial_name.presence || order.client.name} con #{items} de esta " \
-                   "cotización, ya guardado: se enviará al ERP en la siguiente transmisión. " \
-                   "La cotización #{order.folio} se eliminará. ¿Continuar?",
+          message: conversion_confirm_message(order, order.client),
           confirm_label: "Sí, convertir", path: convert_order_path(order), method: :post %>
   </div>
 <% end %>

@@ -137,16 +137,27 @@ class EstimateConversionTest < ActionDispatch::IntegrationTest
   end
 
   # La concordancia con número literal (convenciones: una regla con número
-  # necesita una prueba que lo escriba).
-  test "el modal concuerda con una y con varias partidas" do
-    get order_path(estimate!(client: @client))
-    assert_match(/con las 2 partidas de esta cotización/, response.body)
+  # necesita una prueba que lo escriba), en los DOS modales: el de la
+  # cotización con cliente y el del paso 1 de la genérica, que hasta la 19ª
+  # armaban la frase cada uno a su manera.
+  test "los dos modales concuerdan con una y con varias partidas" do
+    many = estimate!(client: @client)
+    get order_path(many)
+    assert_match(/Se creará el pedido de \(CNV01\) CLIENTE CONV con las 2 partidas de la cotización #{many.local_folio}, ya guardado/,
+                 response.body)
 
     single = estimate!(client: @client, status: "draft")
     single.order_items.last.delete
     single.capture!
     get order_path(single)
-    assert_match(/con la partida de esta cotización/, response.body)
+    assert_match(/con la partida de la cotización #{single.local_folio}/, response.body)
+
+    generic = estimate!(status: "draft")
+    generic.order_items.last.delete
+    generic.capture!
+    get conversion_order_path(generic, client_key: "CNV01")
+    assert_match(/Se creará el pedido del cliente elegido con la partida de la cotización #{generic.local_folio}/, response.body)
+    assert_match(/La partida de la\s+cotización <span class="font-semibold">#{generic.local_folio}<\/span> pasa tal cual/, response.body)
   end
 
   test "varias promociones vencidas se nombran juntas, en plural" do
@@ -291,6 +302,7 @@ class EstimateConversionTest < ActionDispatch::IntegrationTest
     sale = Order.sale.last
     assert_redirected_to summary_order_path(sale)
     assert_equal [ @client.id, "remission", @receipt.id ], [ sale.client_id, sale.kind, sale.client_receipt_profile_id ]
+    assert_equal estimate.local_folio, sale.source_estimate_folio, "la genérica también deja su origen para la evidencia"
     assert_equal items, item_snapshot(sale)
     assert_not Order.exists?(estimate.id)
   end

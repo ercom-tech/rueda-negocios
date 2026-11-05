@@ -75,8 +75,9 @@ module PriceList
        end).sort_by(&:line)
     end
 
-    # Borradores con alguna partida de estos productos a un precio distinto del
-    # nuevo. No se tocan —el precio de una partida es el que se le ofreció al
+    # Pedidos en borrador y cotizaciones (en borrador o guardadas) con alguna
+    # partida de estos productos a un precio distinto del nuevo — `stale_orders`
+    # y no `stale_drafts` desde que entran las guardadas (19ª). No se tocan —el precio de una partida es el que se le ofreció al
     # cliente—, pero el operador tiene que saber que existen.
     #
     # Con QUIÉN y de qué cliente: el servidor no puede editar borradores ajenos,
@@ -90,9 +91,9 @@ module PriceList
     # que se pueden convertir en pedido (2026-11-04), una con el precio viejo
     # llega al ERP con él, y la revisión no la nombraba (18ª auditoría). El
     # pedido capturado no entra: ya se le ofreció al cliente así.
-    StaleDraft = Data.define(:capturista, :client, :items, :locked, :estimate)
+    StaleOrder = Data.define(:capturista, :client, :items, :locked, :estimate)
 
-    def stale_drafts
+    def stale_orders
       new_price = changes.to_h { |c| [ c.code, c.new_price ] }
       return [] if new_price.empty?
 
@@ -105,7 +106,7 @@ module PriceList
       orders = Order.where(id: stale.keys).includes(:user, :client).order(:id)
       orders.map do |order|
         items = stale[order.id]
-        StaleDraft.new(capturista: order.user.full_name.presence || order.user.username,
+        StaleOrder.new(capturista: order.user.full_name.presence || order.user.username,
                        client: order.client&.name || "Cliente genérico", estimate: order.estimate?,
                        items: items.size, locked: items.count { |*, promotion_id| promotion_id })
       end

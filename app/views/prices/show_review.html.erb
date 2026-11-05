@@ -15,7 +15,7 @@
 <% review     = @review %>
 <% applicable = review.changes.size %>
 <% large      = review.large_variations.size %>
-<% drafts     = review.stale_drafts %>
+<% drafts     = review.stale_orders %>
 <%# El umbral viaja en todos los enlaces —tarjetas, paginador, CSV— para que
     cambiar de grupo o de página no lo regrese al de omisión. Se omite cuando
     es el de omisión: URLs limpias. %>
@@ -93,7 +93,7 @@
         se aplican igual, revísalos por si hay un error en el archivo.
       <% end %>
       <% if drafts.any? %>
-        <%= stale_drafts_sentence(drafts) %>
+        <%= stale_orders_sentence(drafts) %>
       <% end %>
       Los precios ya cargados de otros archivos se conservan; en un código repetido gana este archivo.
     </p>
